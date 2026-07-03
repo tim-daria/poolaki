@@ -1,0 +1,33 @@
+# Caddyfile
+
+poolaki.localhost {                          # or domain name
+
+	handle {
+		reverse_proxy backend:8000
+	}
+
+#    # API requests → Django
+#    handle /api/* {
+#        reverse_proxy backend:8000
+#    }
+#
+#    # Django admin
+#    handle /admin/* {
+#        reverse_proxy backend:8000
+#    }
+#
+#    # Django static/media files
+#    handle /static/* {
+#        reverse_proxy backend:8000
+#    }
+#
+#    handle /media/* {
+#        reverse_proxy backend:8000
+#    }
+#
+#    # Everything else → React
+#    handle {
+#        reverse_proxy frontend:5173
+#    }
+
+}

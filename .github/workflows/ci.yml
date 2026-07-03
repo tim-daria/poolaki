@@ -1,0 +1,63 @@
+name: CI
+
+# Runs on every pull request targeting main, and on pushes to main.
+# Only the part of the app that changed is built/tested. The `ci` job at the
+# bottom always runs and is the single status check required by branch
+# protection — so PRs never get stuck waiting on a job that didn't run.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # Detect which areas changed.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  # Runs ONLY when backend/** changed.
+  backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Backend checks
+        run: echo "Run backend build / lint / test here."
+
+  # Runs ONLY when frontend/** changed.
+  frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Frontend checks
+        run: echo "Run frontend build / lint / test here."
+
+  # Required status check. Always runs; fails only if a job that ran failed.
+  ci:
+    needs: [backend, frontend]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs passed
+        run: |
+          if [[ "${{ needs.backend.result }}" == "failure" || "${{ needs.frontend.result }}" == "failure" ]]; then
+            echo "A required job failed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }})."
+            exit 1
+          fi
+          echo "CI gate passed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }})."
