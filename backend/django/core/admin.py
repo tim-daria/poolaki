@@ -1,12 +1,15 @@
 from django.contrib import admin
-from .models import User
-from .models import Organization
-from .models import Membership
-from .models import Goal
-from .models import Transaction
-from .models import RecurringTransaction
-from .models import Category
-from .models import ActivityLog
+
+from .models import (
+    ActivityLog,
+    Category,
+    Goal,
+    Membership,
+    Organization,
+    RecurringTransaction,
+    Transaction,
+    User,
+)
 
 # Register your models here.
 admin.site.register(User)

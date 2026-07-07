@@ -33,10 +33,32 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/django
     steps:
       - uses: actions/checkout@v4
-      - name: Backend checks
-        run: echo "Run backend build / lint / test here."
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff check (lint)
+        run: uv run ruff check .
+
+      - name: Ruff check (format)
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy .
+
+      - name: Tests
+        run: uv run pytest
 
   # Runs ONLY when frontend/** changed.
   frontend:
