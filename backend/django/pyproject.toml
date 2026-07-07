@@ -16,6 +16,8 @@ dev = [
     "django-stubs>=6.0.6",
     "mypy>=2.1.0",
     "pre-commit>=4.6.0",
+    "pytest>=9.1.1",
+    "pytest-django>=4.12.0",
     "ruff>=0.15.20",
 ]
 
@@ -47,3 +49,7 @@ exclude = ["migrations/"]
 
 [tool.django-stubs]
 django_settings_module = "django_project.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "django_project.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
