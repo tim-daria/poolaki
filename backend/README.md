@@ -1,3 +1,3 @@
-# Backend (owner: @MukhammadIbrokhimov)
+# Backend
 
 Backend service code lives here.

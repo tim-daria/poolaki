@@ -10,11 +10,9 @@ RUN apt-get update && apt-get install -y curl
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-
-COPY ./django/requirements.txt .
-RUN uv pip install -r requirements.txt --system
-
 COPY ./django .
+
+RUN uv sync
 
 RUN chmod +x entrypoint.sh
 

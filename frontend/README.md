@@ -1,3 +1,3 @@
-# Frontend (owner: @ghazalehans)
+# Frontend
 
 Frontend app code lives here.
