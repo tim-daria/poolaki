@@ -12,7 +12,7 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
-      # - frontend
+      - frontend
     networks:
       - frontend_net
       - backend_net
@@ -39,7 +39,7 @@ services:
     image: postgres:18
     container_name: postgres_db
     volumes:
-      - postgres_db:/var/lib/postgresql/
+      - ./backend/postgres_db/:/var/lib/postgresql/
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -66,14 +66,13 @@ services:
     # environment:
       # - NODE_ENV=production
     volumes:
-      - ./frontend/react-app:/home/node/app
+      - ./frontend/react-app/:/home/node/app
       - node_modules:/home/node/app/node_modules
     networks:
       - frontend_net
 
 
 volumes:
-  postgres_db:
   caddy_data:
   caddy_config:
   node_modules:

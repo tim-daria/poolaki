@@ -29,7 +29,6 @@ class CategoryType(models.TextChoices):
 
 # Create your models here.
 class User(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True, max_length=254)
     password_hash = models.CharField(max_length=512, null=False)
     name = models.CharField(unique=True, max_length=100)
@@ -44,7 +43,6 @@ class User(models.Model):
 
 
 class Organization(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(unique=True, max_length=100)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
@@ -53,7 +51,6 @@ class Organization(models.Model):
 
 
 class Membership(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=Role.choices)
@@ -68,7 +65,6 @@ class Membership(models.Model):
 
 
 class Category(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50)
     type = models.CharField(max_length=10, choices=CategoryType.choices)
 
@@ -77,7 +73,6 @@ class Category(models.Model):
 
 
 class Transaction(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
@@ -89,7 +84,6 @@ class Transaction(models.Model):
 
 
 class RecurringTransaction(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
@@ -105,7 +99,6 @@ class RecurringTransaction(models.Model):
 
 
 class Goal(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
     name = models.CharField(max_length=100)
@@ -119,7 +112,6 @@ class Goal(models.Model):
 
 
 class ActivityLog(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     action = models.CharField(max_length=50)
