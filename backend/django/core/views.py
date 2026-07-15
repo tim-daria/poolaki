@@ -11,13 +11,13 @@ from .models import (
 def testPage(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         print("Received email: ", request.POST["email"])
-        print("Received password_hash: ", request.POST["password_hash"])
-        print("Received name: ", request.POST["name"])
+        # print("Received password_hash: ", request.POST["password_hash"])
+        # print("Received name: ", request.POST["name"])
 
         User.objects.create(
             email=request.POST["email"],
-            password_hash=request.POST["password_hash"],
-            name=request.POST["name"],
+            # password_hash=request.POST["password_hash"],
+            # name=request.POST["name"],
         )
 
     all_user = User.objects.all()

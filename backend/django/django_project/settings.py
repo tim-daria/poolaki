@@ -43,11 +43,29 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     "core",
     "rest_framework",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
+    "allauth.headless",
 ]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "openid_connect": {
+        "APP": {
+            "provider_id": "42",
+            "name": "42 Intra",
+            "client_id": os.environ.get("OPENID_CLIENT_ID", ""),
+            "secret": os.environ.get("OPENID_CLIENT_SECRET", ""),
+            "settings": {
+                "server_url": "...",
+            },
+        },
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -154,3 +172,11 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 LOGIN_REDIRECT_URL = "secret"
 LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
 ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+
+HEADLESS_ONLY = True
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+SITE_ID = 1
+
+AUTH_USER_MODEL = "core.User"

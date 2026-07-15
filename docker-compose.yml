@@ -27,7 +27,8 @@ services:
     volumes:
       - ./backend/django:/app
     env_file:
-      - .env
+      - path: .env
+        required: true
     networks:
       - backend_net
     depends_on:
