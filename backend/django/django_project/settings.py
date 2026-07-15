@@ -49,20 +49,15 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "allauth.socialaccount.providers.openid_connect",
+    "core.providers.intra42",
     "allauth.headless",
 ]
 
 SOCIALACCOUNT_PROVIDERS = {
-    "openid_connect": {
+    "intra42": {
         "APP": {
-            "provider_id": "42",
-            "name": "42 Intra",
-            "client_id": os.environ.get("OPENID_CLIENT_ID", ""),
-            "secret": os.environ.get("OPENID_CLIENT_SECRET", ""),
-            "settings": {
-                "server_url": "...",
-            },
+            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
         },
     },
 }
@@ -169,9 +164,9 @@ ACCOUNT_EMAIL_VERIFICATION = "optional"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # redirectes to this page after login
-LOGIN_REDIRECT_URL = "secret"
-LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
-ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+# LOGIN_REDIRECT_URL = "secret"
+# LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
+# ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
 
 HEADLESS_ONLY = True
 ACCOUNT_LOGIN_METHODS = {"email"}
