@@ -20,6 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
+# ======================================================
+# SECURITY
+# ======================================================
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-+$i@vp)h)reff4hm9+!qf8g!90#=aq7s0ju-phg(a#qzw&zw&&"
 
@@ -34,7 +38,15 @@ CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
 ]
 
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # Application definition
+# ======================================================
+# APPS
+# ======================================================
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -43,24 +55,19 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.sites",
+		"django.contrib.sites",
     "core",
     "rest_framework",
     "allauth",
     "allauth.account",
-    "allauth.socialaccount",
-    "core.providers.intra42",
-    "allauth.headless",
+		"allauth.headless",
+		"allauth.socialaccount",
+		"allauth.socialaccount.providers.openid_connect",
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    "intra42": {
-        "APP": {
-            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
-            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
-        },
-    },
-}
+# ======================================================
+# MIDDLEWARE
+# ======================================================
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -73,7 +80,16 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
+# ======================================================
+# URLS / WSGI
+# ======================================================
+
 ROOT_URLCONF = "django_project.urls"
+WSGI_APPLICATION = "django_project.wsgi.application"
+
+# ======================================================
+# TEMPLATES
+# ======================================================
 
 TEMPLATES = [
     {
@@ -91,8 +107,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "django_project.wsgi.application"
 
+# ======================================================
+# DATABASE
+# ======================================================
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -109,8 +127,19 @@ DATABASES = {
 }
 
 
+# ======================================================
+# AUTH
+# ======================================================
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+    # `allauth` specific authentication methods, such as login by email
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -127,18 +156,62 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# ======================================================
+# ALLAUTH
+# ======================================================
+
+SITE_ID = 1
+HEADLESS_ONLY = True
+
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "https://poolaki.localhost/auth/verify-email/{key}",
+    "account_reset_password": "https://poolaki.localhost/auth/reset-password",
+    "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
+    "socialaccount_login_error": "https://poolaki.localhost/auth/social/error",
+}
+
+# ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+# ACCOUNT_EMAIL_REQUIRED = True
+
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+
+# 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
+# can login without email verification or not
+ACCOUNT_EMAIL_VERIFICATION = "optional"
+
+SOCIALACCOUNT_PROVIDERS = {
+    "openid_connect": {
+        "SERVERS": [
+            {
+                "id": "42school",
+                "name": "42",
+                "server_url": "https://api.intra.42.fr",
+                "APP": {
+                    "client_id": os.environ.get("42_CLIENT_ID"),
+                    "secret": os.environ.get("42_CLIENT_SECRET"),
+                },
+            }
+        ]
+    }
+}
+
+
+# ======================================================
+# INTERNATIONALIZATION
+# ======================================================
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "Europe/Berlin"
-
 USE_I18N = True
-
 USE_TZ = True
 
+# ======================================================
+# STATIC FILES
+# ======================================================
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -150,28 +223,15 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-    # `allauth` specific authentication methods, such as login by email
-    "allauth.account.auth_backends.AuthenticationBackend",
-]
 
-# 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
-# can login without email verification or not
-ACCOUNT_EMAIL_VERIFICATION = "optional"
+# ======================================================
+# EMAIL (dev)
+# ======================================================
+
 # allows to confirm the email in the terminal --> only for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # redirectes to this page after login
-# LOGIN_REDIRECT_URL = "secret"
-# LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
-# ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
-
-HEADLESS_ONLY = True
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
-
-SITE_ID = 1
-
-AUTH_USER_MODEL = "core.User"
+LOGIN_REDIRECT_URL = "secret"
+LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
+ACCOUNT_SIGNUP_REDIRECT_URL = "secret"

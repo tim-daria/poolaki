@@ -65,6 +65,7 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "djangorestframework" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -83,6 +84,7 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"], specifier = "==65.18.0" },
     { name = "djangorestframework", specifier = "==3.17.1" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [package.metadata.requires-dev]

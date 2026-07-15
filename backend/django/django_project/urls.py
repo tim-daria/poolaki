@@ -18,9 +18,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from core.views import create_organisation, csrf, secret, testPage
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("_allauth/", include("allauth.headless.urls")),
-    path("api/", include("core.urls")),
+    path("api/csrf/", csrf),
+    path("api/organisations/", create_organisation),
     # path("accounts/", include("allauth.urls")),
+		path("_allauth/", include("allauth.headless.urls")),
+    path("secret/", secret),
+    path("api/test/", testPage),
 ]

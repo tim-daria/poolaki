@@ -12,7 +12,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 COPY ./django .
 
-RUN uv sync --frozen --no-install-project
+RUN uv sync
 
 RUN chmod +x entrypoint.sh
 

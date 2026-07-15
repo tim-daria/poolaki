@@ -1,28 +1,6 @@
-from decimal import Decimal
+from datetime import date
 
-from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-# ============ User & Auth ============
-
-
-class User(AbstractUser):
-    email = models.EmailField(unique=True, max_length=254)
-    mfa_secret = models.CharField(max_length=32, blank=True, default="")
-    is_mfa_active = models.BooleanField(default=False)
-
-    def __str__(self) -> str:
-        return self.email
-
-
-# ============ Organization ============
-
-
-class Organization(models.Model):
-    name = models.CharField(max_length=100)
-    initial_balance = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
-    is_personal = models.BooleanField(default=False)  # flag for UI/logic, not for database
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
 
 class Role(models.TextChoices):
@@ -30,10 +8,53 @@ class Role(models.TextChoices):
     MEMBER = "MEMBER", "Member"
 
 
+class Currency(models.TextChoices):
+    EUR = "EUR", "Euro"
+    USD = "USD", "US Dollar"
+    GBP = "GBP", "British Pound"
+
+
+class Frequency(models.TextChoices):
+    DAILY = "DAILY", "Daily"
+    WEEKLY = "WEEKLY", "Weekly"
+    MONTHLY = "MONTHLY", "Monthly"
+    YEARLY = "YEARLY", "Yearly"
+
+
+class CategoryType(models.TextChoices):
+    INCOME = "INCOME", "Income"
+    EXPENSE = "EXPENSE", "Expense"
+
+
+# Create your models here.
+class User(models.Model):
+    email = models.EmailField(unique=True, max_length=254)
+    password_hash = models.CharField(max_length=512, null=False)
+    name = models.CharField(unique=True, max_length=100)
+    avatar_url = models.CharField(max_length=500, blank=True, null=True)
+    mfa_secret = models.CharField(max_length=32, blank=True, null=True)
+    is_mfa_active = models.BooleanField(default=False)
+    # created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    created_at = models.DateTimeField(default=date.today, editable=False)
+
+    def __str__(self) -> str:
+        return str(self.id) + " - " + self.name
+
+
+class Organization(models.Model):
+    name = models.CharField(unique=True, max_length=100)
+    is_personal = models.BooleanField(default=False)
+    initial_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self) -> str:
+        return str(self.id) + " - " + self.name
+
+
 class Membership(models.Model):
-    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="memberships")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="memberships")
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=Role.choices)
     joined_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     # prevents that a user can't be added to the same org twice
@@ -41,15 +62,7 @@ class Membership(models.Model):
         unique_together = ("org", "user")
 
     def __str__(self) -> str:
-        return f"{self.user} - {self.org} ({self.role})"
-
-
-# ============ Finance ============
-
-
-class CategoryType(models.TextChoices):
-    INCOME = "INCOME", "Income"
-    EXPENSE = "EXPENSE", "Expense"
+        return self.role
 
 
 class Category(models.Model):
@@ -60,102 +73,49 @@ class Category(models.Model):
         return self.name
 
 
-class GoalStatus(models.TextChoices):
-    ACTIVE = "ACTIVE", "Active"
-    COMPLETED = "COMPLETED", "Completed"
-    ARCHIVED = "ARCHIVED", "Archived"
-
-
-class Goal(models.Model):
-    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="goals")
-    name = models.CharField(max_length=100)
-    target_amount = models.DecimalField(max_digits=14, decimal_places=2)
-    target_date = models.DateField()
-    status = models.CharField(max_length=20, choices=GoalStatus.choices, default=GoalStatus.ACTIVE)
-    created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_goals"
-    )
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class EntryType(models.TextChoices):
-    INCOME = "INCOME", "Income"
-    EXPENSE = "EXPENSE", "Expense"
-    CONTRIBUTION = "CONTRIBUTION", "Goal contribution"
-
-
 class Transaction(models.Model):
-    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="transactions")
-    goal = models.ForeignKey(
-        Goal, on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions"
-    )
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
-    entry_type = models.CharField(max_length=20, choices=EntryType.choices)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
+    currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.EUR)
     description = models.CharField(max_length=1024, blank=True, null=True)
     transaction_date = models.DateField(blank=False)
-    is_tax_deductible = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions"
-    )
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    def __str__(self) -> str:
-        return f"{self.entry_type} {self.amount} ({self.transaction_date})"
-
-
-class Frequency(models.TextChoices):
-    DAILY = "DAILY", "Daily"
-    WEEKLY = "WEEKLY", "Weekly"
-    MONTHLY = "MONTHLY", "Monthly"
-    YEARLY = "YEARLY", "Yearly"
 
 
 class RecurringTransaction(models.Model):
-    org = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="recurring_transactions"
-    )
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
+    currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.EUR)
     frequency = models.CharField(
         max_length=10, choices=Frequency.choices, default=Frequency.MONTHLY
     )
     description = models.CharField(max_length=1024, blank=True, null=True)
     next_execution = models.DateField()
     is_active = models.BooleanField(default=True)
-    is_tax_deductible = models.BooleanField(default=False)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
 
-# ============ Audit ============
+class Goal(models.Model):
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
+    name = models.CharField(max_length=100)
+    target_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    target_date = models.DateField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_goals")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
-
-class AuditAction(models.TextChoices):
-    CREATE = "CREATE", "Create"
-    UPDATE = "UPDATE", "Update"
-    DELETE = "DELETE", "Delete"
+    def __str__(self) -> str:
+        return self.name
 
 
 class ActivityLog(models.Model):
-    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="activity_logs")
-    user = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="activity_logs"
-    )
-    action = models.CharField(max_length=10, choices=AuditAction.choices)
-    entity_type = models.CharField(max_length=50)  # "Transaction", "Goal", "Membership"
-    entity_id = models.BigIntegerField(null=True, blank=True)
-    changes = models.JSONField(default=dict, blank=True)  # {"amount": {"old": 100, "new": 150}}
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=50)
+    entity_id = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["org", "created_at"]),
-            models.Index(fields=["entity_type", "entity_id"]),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.user} {self.action} {self.entity_type}#{self.entity_id}"

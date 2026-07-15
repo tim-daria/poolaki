@@ -1,14 +1,15 @@
-FROM node:25.1
+FROM node:20-alpine
 
 WORKDIR /home/node/app
 
-COPY ./react-app/package*.json .
+COPY package*.json ./
 RUN npm install
 
-COPY ./react-app .
-COPY ./entrypoint.sh /entrypoint.sh
+COPY . .
 
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT []
-CMD ["/bin/sh", "/entrypoint.sh"]
+EXPOSE 5173
+
+ENTRYPOINT ["/entrypoint.sh"]

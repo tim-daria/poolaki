@@ -27,8 +27,7 @@ services:
     volumes:
       - ./backend/django:/app
     env_file:
-      - path: .env
-        required: true
+      - .env
     networks:
       - backend_net
     depends_on:
@@ -67,17 +66,18 @@ services:
     # environment:
       # - NODE_ENV=production
     volumes:
-      - ./frontend/react-app/:/home/node/app
+      - ./frontend:/home/node/app
       - node_modules:/home/node/app/node_modules
     networks:
       - frontend_net
+    command: npm run dev -- --host 0.0.0.0
 
 
 volumes:
+  postgres_db:
   caddy_data:
   caddy_config:
   node_modules:
-  postgres_db:
 
 networks:
   backend_net:
