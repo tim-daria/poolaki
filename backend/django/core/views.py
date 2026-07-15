@@ -6,10 +6,10 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
-from .models import Membership, Organization, Role, User
-
+from .models import Organization, User
 
 # Create your views here.
+
 
 @ensure_csrf_cookie
 def csrf(request: HttpRequest) -> JsonResponse:
@@ -27,6 +27,8 @@ def create_organisation(request: HttpRequest) -> JsonResponse:
         initial_balance=initial_balance,
     )
     return JsonResponse({"id": org.id}, status=201)
+
+
 def testPage(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         print("Received email: ", request.POST["email"])

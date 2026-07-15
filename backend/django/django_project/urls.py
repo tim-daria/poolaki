@@ -25,7 +25,7 @@ urlpatterns = [
     path("api/csrf/", csrf),
     path("api/organisations/", create_organisation),
     # path("accounts/", include("allauth.urls")),
-		path("_allauth/", include("allauth.headless.urls")),
+    path("_allauth/", include("allauth.headless.urls")),
     path("secret/", secret),
     path("api/test/", testPage),
 ]

@@ -55,14 +55,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-		"django.contrib.sites",
+    "django.contrib.sites",
     "core",
     "rest_framework",
     "allauth",
     "allauth.account",
-		"allauth.headless",
-		"allauth.socialaccount",
-		"allauth.socialaccount.providers.openid_connect",
+    "allauth.headless",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
 ]
 
 # ======================================================
@@ -173,8 +173,8 @@ HEADLESS_FRONTEND_URLS = {
 # ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 # ACCOUNT_EMAIL_REQUIRED = True
 
-ACCOUNT_LOGIN_METHODS = {'username', 'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 
 # 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
 # can login without email verification or not
