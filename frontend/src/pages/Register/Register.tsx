@@ -39,7 +39,7 @@ export default function Register() {
 
   useEffect(() => {
     // Ensure the CSRF cookie is set for unauthenticated users
-    fetch("/api/csrf/", { credentials: "include" });
+    console.log(fetch("/api/csrf/", { credentials: "include" }));
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {
@@ -102,8 +102,8 @@ export default function Register() {
       return;
     }
 
-    const res = await fetch("/api/organisations/", {
-      method: "POST",
+    const res = await fetch("/api/organizations/personal/initial-balance/", {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": getCsrfToken(),
@@ -170,11 +170,11 @@ export default function Register() {
           type="button"
           className={styles.oauthBtn}
           onClick={() => {
-            // TODO: enable when 42 OAuth app is configured
-            // const callback = encodeURIComponent(
-            //   "https://poolaki.localhost/oauth-callback",
-            // );
-            // window.location.href = `/_allauth/browser/v1/auth/provider/redirect?provider=openid_connect&process=login&callback_url=${callback}`;
+            // window.location.href =
+            //   "/_allauth/browser/v1/auth/provider/redirect" +
+            //   "?provider=intra42" +
+            //   "&process=login" +
+            //   "&callback_url=https://poolaki.localhost/auth/callback";
           }}
         >
           Sign Up with 42

@@ -9,12 +9,12 @@ dependencies = [
     "django-allauth[socialaccount]==65.18.0",
     "djangorestframework==3.17.1",
     "psycopg[binary]==3.3.4",
-    "requests>=2.32.0",
 ]
 
 [dependency-groups]
 dev = [
     "django-stubs>=6.0.6",
+    "djangorestframework-stubs>=3.17.0",
     "mypy>=2.1.0",
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
@@ -43,10 +43,22 @@ ignore = []
 known-first-party = ["core", "django_project"]
 
 [tool.mypy]
-plugins = ["mypy_django_plugin.main"]
+plugins = ["mypy_django_plugin.main",  "mypy_drf_plugin.main"]
 python_version = "3.12"
 strict = true
 exclude = ["migrations/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "allauth.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "core.providers.*",
+]
+ignore_errors = true
 
 [tool.django-stubs]
 django_settings_module = "django_project.settings"

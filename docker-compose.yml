@@ -70,7 +70,6 @@ services:
       - node_modules:/home/node/app/node_modules
     networks:
       - frontend_net
-    command: npm run dev -- --host 0.0.0.0
 
 
 volumes:

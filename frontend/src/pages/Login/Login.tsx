@@ -29,7 +29,7 @@ export default function Login() {
       body: JSON.stringify(
         identifier.includes("@")
           ? { email: identifier, password }
-          : { username: identifier, password }
+          : { username: identifier, password },
       ),
     });
 
@@ -70,7 +70,9 @@ export default function Login() {
             required
           />
           {error && <p className={styles.error}>{error}</p>}
-          <button type="submit" className={styles.submitBtn}>Login</button>
+          <button type="submit" className={styles.submitBtn}>
+            Login
+          </button>
         </form>
         <div className={styles.divider}>or</div>
         <button
