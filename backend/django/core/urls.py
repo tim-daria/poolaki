@@ -1,8 +1,9 @@
 from django.urls import path
 
-from core.views import SetInitialBalanceView, secret, testPage
+from core.views import SetInitialBalanceView, csrf, secret, testPage
 
 urlpatterns = [
+    path("csrf/", csrf),
     path("secret/", secret),
     path("test/", testPage),
     path("organizations/personal/initial-balance/", SetInitialBalanceView.as_view()),

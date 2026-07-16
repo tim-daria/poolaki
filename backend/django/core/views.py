@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -58,3 +59,8 @@ def testPage(request: HttpRequest) -> HttpResponse:
 @login_required
 def secret(request: HttpRequest) -> HttpResponse:
     return render(request, "secret.html")
+
+
+@ensure_csrf_cookie
+def csrf(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"detail": "CSRF cookie set"})
