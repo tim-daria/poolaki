@@ -63,8 +63,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-allauth", extra = ["socialaccount"] },
-    { name = "django-prometheus" },
     { name = "djangorestframework" },
+    { name = "django-prometheus" },
     { name = "prometheus-client" },
     { name = "psycopg", extra = ["binary"] },
     { name = "requests" },
@@ -73,6 +73,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "django-stubs" },
+    { name = "djangorestframework-stubs" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -94,6 +95,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "django-stubs", specifier = ">=6.0.6" },
+    { name = "djangorestframework-stubs", specifier = ">=3.17.0" },
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "pytest", specifier = ">=9.1.1" },
@@ -418,6 +420,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/d7/c016e69fac19ff8afdc89db9d31d9ae43ae031e4d1993b20aca179b8301a/djangorestframework-3.17.1.tar.gz", hash = "sha256:a6def5f447fe78ff853bff1d47a3c59bf38f5434b031780b351b0c73a62db1a5", size = 905742, upload-time = "2026-03-24T16:58:33.705Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/e1/2c516bdc83652b1a60c6119366ac2c0607b479ed05cd6093f916ca8928f8/djangorestframework-3.17.1-py3-none-any.whl", hash = "sha256:c3c74dd3e83a5a3efc37b3c18d92bd6f86a6791c7b7d4dff62bb068500e76457", size = 898844, upload-time = "2026-03-24T16:58:31.845Z" },
+]
+
+[[package]]
+name = "djangorestframework-stubs"
+version = "3.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django-stubs" },
+    { name = "types-pyyaml" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9d/a1/45e25dab89b3dfc5da7a138f7e82aca4e970269c53a3fceed1e94b31d390/djangorestframework_stubs-3.17.0.tar.gz", hash = "sha256:74c0307cad304c03c15aee5955ec2fdeab0ac854b5bea569dc124892792e2b96", size = 33115, upload-time = "2026-05-13T18:58:36.554Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/ff/6e27d4aea12f67d14e0c0ec41869307ae98ad3816858ddc2a56bc3f4e0b5/djangorestframework_stubs-3.17.0-py3-none-any.whl", hash = "sha256:babe2703f0401507780848439f49f76222a178b4fc73a6dcb30d0952a0a6dbc6", size = 57629, upload-time = "2026-05-13T18:58:34.779Z" },
 ]
 
 [[package]]

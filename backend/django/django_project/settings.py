@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
+    "http://localhost:5173",
 ]
 
 CSRF_COOKIE_HTTPONLY = False
@@ -56,19 +57,24 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
-    "core",
+    "core.apps.CoreConfig",
     "rest_framework",
     "allauth",
     "allauth.account",
-    "allauth.headless",
     "allauth.socialaccount",
-    "allauth.socialaccount.providers.openid_connect",
+    "core.providers.intra42",
+    "allauth.headless",
 	"django_prometheus",
 ]
 
-# ======================================================
-# MIDDLEWARE
-# ======================================================
+SOCIALACCOUNT_PROVIDERS = {
+    "intra42": {
+        "APP": {
+            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
+        },
+    },
+}
 
 MIDDLEWARE = [
 	"django_prometheus.middleware.PrometheusBeforeMiddleware",
@@ -235,6 +241,22 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # redirectes to this page after login
-LOGIN_REDIRECT_URL = "secret"
-LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
-ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+# LOGIN_REDIRECT_URL = "secret"
+# LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
+# ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+
+HEADLESS_ONLY = True
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "https://poolaki.localhost/confirm-email/{key}",
+    "account_reset_password": "https://poolaki.localhost/reset-password",
+    "account_reset_password_from_key": "https://poolaki.localhost/reset-password/{key}",
+    "account_signup": "https://poolaki.localhost/register",
+    "socialaccount_login_error": "https://poolaki.localhost/login",
+}
+
+SITE_ID = 1
+
+AUTH_USER_MODEL = "core.User"
