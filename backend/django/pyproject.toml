@@ -10,6 +10,8 @@ dependencies = [
     "djangorestframework==3.17.1",
     "psycopg[binary]==3.3.4",
     "requests>=2.32.0",
+	"django-prometheus==2.5.0",
+	"prometheus-client==0.25.0",
 ]
 
 [dependency-groups]

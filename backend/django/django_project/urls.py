@@ -28,4 +28,5 @@ urlpatterns = [
     path("_allauth/", include("allauth.headless.urls")),
     path("secret/", secret),
     path("api/test/", testPage),
+    path("", include("django_prometheus.urls")),
 ]

@@ -31,7 +31,7 @@ SECRET_KEY = "django-insecure-+$i@vp)h)reff4hm9+!qf8g!90#=aq7s0ju-phg(a#qzw&zw&&
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "poolaki.localhost",
+    "poolaki.localhost", "backend", "django.localhost"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.openid_connect",
+	"django_prometheus",
 ]
 
 # ======================================================
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
 # ======================================================
 
 MIDDLEWARE = [
+	"django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -78,6 +80,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+	"django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 # ======================================================
