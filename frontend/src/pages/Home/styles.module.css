@@ -1,0 +1,96 @@
+.homeContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  align-content: start;
+}
+
+.statsHead {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.statsXS {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.statsXS span:nth-child(1) {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sub-text);
+  font-weight: 500;
+}
+
+.statsXS span:nth-child(2) {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+  font-family: var(--mono);
+}
+
+.statsXS span:nth-child(3) {
+  font-size: 0.8rem;
+  color: var(--sub-text);
+}
+
+.statsColumn {
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+}
+
+.statsM,
+.statsL {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  width: 93%;
+}
+
+.statsM h2,
+.statsL h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statsM h2 button,
+.statsL h2 button {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.8rem;
+  background: var(--accent-light);
+  color: var(--accent-middle);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.statsM h2 button:hover,
+.statsL h2 button:hover {
+  background: var(--accent-middle);
+  color: white;
+}
+
+.statsM {
+  height: 220px;
+}
+
+.statsL {
+  height: 320px;
+}

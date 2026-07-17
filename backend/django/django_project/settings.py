@@ -28,10 +28,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "poolaki.localhost",
+    "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
+    "http://localhost:5173",
 ]
 
 # Application definition
@@ -43,11 +45,24 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core",
+    "django.contrib.sites",
+    "core.apps.CoreConfig",
     "rest_framework",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
+    "core.providers.intra42",
+    "allauth.headless",
 ]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "intra42": {
+        "APP": {
+            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
+        },
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -151,6 +166,22 @@ ACCOUNT_EMAIL_VERIFICATION = "optional"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # redirectes to this page after login
-LOGIN_REDIRECT_URL = "secret"
-LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
-ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+# LOGIN_REDIRECT_URL = "secret"
+# LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
+# ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
+
+HEADLESS_ONLY = True
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "https://poolaki.localhost/confirm-email/{key}",
+    "account_reset_password": "https://poolaki.localhost/reset-password",
+    "account_reset_password_from_key": "https://poolaki.localhost/reset-password/{key}",
+    "account_signup": "https://poolaki.localhost/register",
+    "socialaccount_login_error": "https://poolaki.localhost/login",
+}
+
+SITE_ID = 1
+
+AUTH_USER_MODEL = "core.User"
