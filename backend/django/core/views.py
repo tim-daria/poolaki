@@ -7,6 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+
 from core.services.balance import set_initial_balance
 
 from .models import (
@@ -64,3 +65,6 @@ def secret(request: HttpRequest) -> HttpResponse:
 @ensure_csrf_cookie
 def csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"detail": "CSRF cookie set"})
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})

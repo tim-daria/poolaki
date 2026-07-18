@@ -14,6 +14,12 @@ services:
       - frontend_net
       - backend_net
       - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
     depends_on:
       backend:
         condition: service_healthy
@@ -36,16 +42,16 @@ services:
     networks:
       - backend_net
       - monitor_net
-    depends_on:
-      db:
-        condition: service_healthy
-        restart: true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
       retries: 3
       start_period: 30s
       timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
 
   db:
     image: postgres:18
@@ -104,6 +110,12 @@ services:
       - monitor_net
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
 
   grafana:
     image: grafana/grafana:13.1
@@ -127,6 +139,16 @@ services:
       - grafana_data:/var/lib/grafana
     networks:
       - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+        restart: true
 
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
@@ -135,6 +157,12 @@ services:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
     networks:
       - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
     depends_on:
       db:
         condition: service_healthy

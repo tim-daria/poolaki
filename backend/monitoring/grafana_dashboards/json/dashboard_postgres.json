@@ -2,21 +2,21 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adxnnzc",
+    "name": "adg82sl",
     "namespace": "default",
-    "uid": "ef650cdf-4d0d-4937-ac02-fdee70ac67fc",
-    "resourceVersion": "1784372167713001",
-    "generation": 6,
-    "creationTimestamp": "2026-07-18T10:20:46Z",
+    "uid": "c73dab9f-dd29-4edb-a62e-6668d8270a4f",
+    "resourceVersion": "1784388874831996",
+    "generation": 7,
+    "creationTimestamp": "2026-07-18T15:25:39Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "2265303549698048"
+      "grafana.app/deprecatedInternalID": "2342032051650560"
     },
     "annotations": {
       "grafana.app/createdBy": "user:efsgs4nbmt4w0e",
       "grafana.app/folder": "",
       "grafana.app/saved-from-ui": "Grafana v13.1.0 (b309c9bb3b)",
       "grafana.app/updatedBy": "user:efsgs4nbmt4w0e",
-      "grafana.app/updatedTimestamp": "2026-07-18T10:56:07Z"
+      "grafana.app/updatedTimestamp": "2026-07-18T15:34:34Z"
     }
   },
   "spec": {
@@ -1938,8 +1938,8 @@
         "kind": "Panel",
         "spec": {
           "id": 62,
-          "title": "Random Page Cost",
-          "description": "",
+          "title": "Status",
+          "description": "Check if the database is up or down.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1956,9 +1956,14 @@
                         "name": "PBFA97CFB590B2093"
                       },
                       "spec": {
-                        "expr": "pg_settings_random_page_cost{instance=\"$instance\"}",
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "pg_up",
                         "format": "time_series",
-                        "intervalFactor": 1
+                        "instant": false,
+                        "intervalFactor": 1,
+                        "legendFormat": "__auto",
+                        "range": true
                       }
                     },
                     "refId": "A",
@@ -1978,10 +1983,10 @@
             "version": "13.1.0",
             "spec": {
               "options": {
-                "colorMode": "none",
+                "colorMode": "value",
                 "graphMode": "none",
                 "justifyMode": "auto",
-                "orientation": "horizontal",
+                "orientation": "auto",
                 "percentChangeColorMode": "standard",
                 "reduceOptions": {
                   "calcs": [
@@ -1991,7 +1996,7 @@
                   "values": false
                 },
                 "showPercentChange": false,
-                "textMode": "auto",
+                "textMode": "value",
                 "wideLayout": true
               },
               "fieldConfig": {
@@ -1999,11 +2004,17 @@
                   "unit": "none",
                   "mappings": [
                     {
-                      "type": "special",
+                      "type": "value",
                       "options": {
-                        "match": "null",
-                        "result": {
-                          "text": "N/A"
+                        "0": {
+                          "text": "Down",
+                          "color": "dark-red",
+                          "index": 1
+                        },
+                        "1": {
+                          "text": "Up",
+                          "color": "green",
+                          "index": 0
                         }
                       }
                     }
@@ -2311,102 +2322,6 @@
           }
         }
       },
-      "panel-70": {
-        "kind": "Panel",
-        "spec": {
-          "id": 70,
-          "title": "Seq Page Cost",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PBFA97CFB590B2093"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "pg_settings_seq_page_cost",
-                        "format": "time_series",
-                        "intervalFactor": 1,
-                        "range": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {
-                "maxDataPoints": 100
-              }
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "stat",
-            "version": "13.1.0",
-            "spec": {
-              "options": {
-                "colorMode": "none",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "horizontal",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "none",
-                  "mappings": [
-                    {
-                      "type": "special",
-                      "options": {
-                        "match": "null",
-                        "result": {
-                          "text": "N/A"
-                        }
-                      }
-                    }
-                  ],
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
       "panel-8": {
         "kind": "Panel",
         "spec": {
@@ -2581,18 +2496,18 @@
                       "spec": {
                         "x": 3,
                         "y": 0,
-                        "width": 3,
+                        "width": 4,
                         "height": 3,
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-54"
+                          "name": "panel-58"
                         }
                       }
                     },
                     {
                       "kind": "GridLayoutItem",
                       "spec": {
-                        "x": 6,
+                        "x": 7,
                         "y": 0,
                         "width": 4,
                         "height": 3,
@@ -2605,20 +2520,7 @@
                     {
                       "kind": "GridLayoutItem",
                       "spec": {
-                        "x": 10,
-                        "y": 0,
-                        "width": 4,
-                        "height": 3,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-58"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 14,
+                        "x": 11,
                         "y": 0,
                         "width": 4,
                         "height": 3,
@@ -2631,26 +2533,13 @@
                     {
                       "kind": "GridLayoutItem",
                       "spec": {
-                        "x": 18,
+                        "x": 15,
                         "y": 0,
                         "width": 3,
                         "height": 3,
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-66"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 21,
-                        "y": 0,
-                        "width": 3,
-                        "height": 3,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-32"
                         }
                       }
                     },
@@ -2672,19 +2561,6 @@
                       "spec": {
                         "x": 3,
                         "y": 3,
-                        "width": 3,
-                        "height": 3,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-70"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 6,
-                        "y": 3,
                         "width": 4,
                         "height": 3,
                         "element": {
@@ -2696,13 +2572,39 @@
                     {
                       "kind": "GridLayoutItem",
                       "spec": {
-                        "x": 10,
+                        "x": 7,
                         "y": 3,
                         "width": 4,
                         "height": 3,
                         "element": {
                           "kind": "ElementReference",
                           "name": "panel-68"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 11,
+                        "y": 3,
+                        "width": 4,
+                        "height": 3,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-54"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 15,
+                        "y": 3,
+                        "width": 3,
+                        "height": 3,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-32"
                         }
                       }
                     }
@@ -2878,9 +2780,9 @@
     "tags": [],
     "timeSettings": {
       "timezone": "browser",
-      "from": "now-30m",
+      "from": "now-15m",
       "to": "now",
-      "autoRefresh": "10s",
+      "autoRefresh": "5s",
       "autoRefreshIntervals": [
         "5s",
         "10s",
