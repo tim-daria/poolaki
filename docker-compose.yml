@@ -65,6 +65,7 @@ services:
     networks:
       - backend_net
       - monitor_net
+      - backup_net
     ports:
       - "5432:5432"
     healthcheck:
@@ -96,6 +97,10 @@ services:
       retries: 3
       start_period: 30s
       timeout: 5s
+
+######################################################
+# Monitoring #
+######################################################
 
   prometheus:
     image: prom/prometheus
@@ -186,6 +191,29 @@ services:
     depends_on:
       - caddy
 
+######################################################
+# Backup #
+######################################################
+
+  db_backup:
+    image: postgres:18
+    container_name: db_backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./backend/backups:/backups
+      - ./backend/backups/backup.sh:/backup.sh
+    entrypoint: ["sh", "-c", "while true; do sh /backup.sh; sleep 86400; done"]
+    networks:
+      - backup_net
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "find /backups/.last_success -mmin -1500 | grep -q . || exit 1"]
+      interval: 1h
+      timeout: 10s
+      retries: 1
 
 volumes:
   postgres_db:
@@ -202,3 +230,5 @@ networks:
     name: frontend_net
   monitor_net:
     name: monitor_net
+  backup_net:
+    name: backup_net
