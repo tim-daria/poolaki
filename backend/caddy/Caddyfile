@@ -1,3 +1,12 @@
+{
+	admin 0.0.0.0:2019
+	servers {
+		metrics {
+			per_host
+		}
+	}
+}
+
 poolaki.localhost {
 
     handle /admin/* {

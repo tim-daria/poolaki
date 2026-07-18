@@ -1,5 +1,3 @@
-import json
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -41,26 +39,6 @@ class SetInitialBalanceView(APIView):
 
 
 # Create your views here.
-
-
-@ensure_csrf_cookie
-def csrf(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"detail": "CSRF cookie set"})
-
-
-@login_required
-@require_POST
-def create_organisation(request: HttpRequest) -> JsonResponse:
-    body = json.loads(request.body)
-    initial_balance = body.get("initial_balance", 0)
-    org = Organization.objects.create(
-        name=f"{request.user.username}'s Organisation",
-        is_personal=True,
-        initial_balance=initial_balance,
-    )
-    return JsonResponse({"id": org.id}, status=201)
-
-
 def testPage(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         print("Received email: ", request.POST["email"])

@@ -10,13 +10,17 @@ services:
       - ./backend/caddy/:/etc/caddy
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - backend
-      - frontend
     networks:
       - frontend_net
       - backend_net
       - monitor_net
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+      frontend:
+        condition: service_healthy
+        restart: true
 
   backend:
     build:
@@ -36,6 +40,12 @@ services:
       db:
         condition: service_healthy
         restart: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
 
   db:
     image: postgres:18
@@ -74,6 +84,12 @@ services:
     networks:
       - frontend_net
       - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
 
   prometheus:
     image: prom/prometheus
@@ -99,11 +115,48 @@ services:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
       GF_SERVER_ROOT_URL: "https://grafana.localhost"
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_AUTH_DISABLE_LOGIN_FORM: false
+      GF_SECURITY_COOKIE_SECURE: true
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: true
     volumes:
-      - ./backend/monitoring/grafana.yml:/etc/grafana/provisioning/datasources/prometheus.yml
-      - ./backend/monitoring/grafana_data:/var/lib/grafana
+      - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
+      - grafana_data:/var/lib/grafana
     networks:
       - monitor_net
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
+    networks:
+      - monitor_net
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - "8080"
+    networks:
+      - monitor_net
+    depends_on:
+      - caddy
 
 
 volumes:
@@ -111,6 +164,7 @@ volumes:
   caddy_data:
   caddy_config:
   node_modules:
+  grafana_data:
   prom_data:
 
 networks:

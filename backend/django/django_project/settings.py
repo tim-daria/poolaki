@@ -31,12 +31,12 @@ SECRET_KEY = "django-insecure-+$i@vp)h)reff4hm9+!qf8g!90#=aq7s0ju-phg(a#qzw&zw&&
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "poolaki.localhost", "backend", "django.localhost"
+    "poolaki.localhost", "backend", "django.localhost", "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
-    "http://localhost:5173",
+    # "http://localhost:5173",
 ]
 
 CSRF_COOKIE_HTTPONLY = False
