@@ -13,6 +13,7 @@ from .models import (
     User,
 )
 
+
 class SetInitialBalanceView(APIView):
     permission_classes = [IsAuthenticated]
 
