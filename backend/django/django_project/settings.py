@@ -193,7 +193,7 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 # can login without email verification or not
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
-SOCIALACCOUNT_PROVIDERS: dict[str, Any] = {
+SOCIALACCOUNT_PROVIDERS = {
     "openid_connect": {
         "SERVERS": [
             {
