@@ -7,13 +7,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
 from core.services.balance import set_initial_balance
 
 from .models import (
     User,
 )
-
 
 class SetInitialBalanceView(APIView):
     permission_classes = [IsAuthenticated]
