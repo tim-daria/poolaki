@@ -23,7 +23,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("_allauth/", include("allauth.headless.urls")),
     path("api/", include("core.urls")),
-	path("", include("django_prometheus.urls")),
-	path("health/", health_check),
+    path("", include("django_prometheus.urls")),
+    path("health/", health_check),
     # path("accounts/", include("allauth.urls")),
 ]
