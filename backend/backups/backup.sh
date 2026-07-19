@@ -1,5 +1,5 @@
 #!/bin/sh
-# backup.sh
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOGTIME=$(date '+%Y-%m-%d %H:%M:%S')
 BACKUP_FILE="/backups/backup_${TIMESTAMP}.sql"
@@ -7,7 +7,7 @@ BACKUP_FILE="/backups/backup_${TIMESTAMP}.sql"
 echo "[$LOGTIME] Starting backup..."
 
 if pg_dump -h db -U ${POSTGRES_USER} ${POSTGRES_DB} > "$BACKUP_FILE" 2>/tmp/pg_dump_err; then
-    # Extra safety check: make sure the file isn't empty/tiny
+    # Check if the file is empty
     FILESIZE=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || echo 0)
 
     if [ "$FILESIZE" -gt 100 ]; then
@@ -24,7 +24,7 @@ else
     exit 1
 fi
 
-# Cleanup old backups
+# Cleanup for backups older then 7 days
 DELETED=$(find /backups -name "backup_*.sql" -mtime +7 -print -delete)
 if [ -n "$DELETED" ]; then
     echo "[$LOGTIME] Deleted old backups:"
