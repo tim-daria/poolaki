@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from typing import Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -70,14 +71,14 @@ INSTALLED_APPS = [
     "django_prometheus",
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    "intra42": {
-        "APP": {
-            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
-            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
-        },
-    },
-}
+# SOCIALACCOUNT_PROVIDERS = {
+#     "intra42": {
+#         "APP": {
+#             "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+#             "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
+#         },
+#     },
+# }
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
@@ -103,7 +104,7 @@ WSGI_APPLICATION = "django_project.wsgi.application"
 # TEMPLATES
 # ======================================================
 
-TEMPLATES = [
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
@@ -192,7 +193,7 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 # can login without email verification or not
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
-SOCIALACCOUNT_PROVIDERS = {
+SOCIALACCOUNT_PROVIDERS: dict[str, Any] = {
     "openid_connect": {
         "SERVERS": [
             {

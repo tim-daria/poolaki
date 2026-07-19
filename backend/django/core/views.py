@@ -66,5 +66,5 @@ def csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"detail": "CSRF cookie set"})
 
 
-def health_check(request):
+def health_check(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok"})
