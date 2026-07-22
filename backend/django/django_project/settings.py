@@ -51,16 +51,18 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "core.providers.intra42",
+    "core.providers.intra42.apps.Intra42Config",
     "allauth.headless",
 ]
 
 SOCIALACCOUNT_PROVIDERS = {
     "intra42": {
-        "APP": {
-            "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
-            "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
-        },
+        "APPS": [
+            {
+                "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+                "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
+            }
+        ],
     },
 }
 
@@ -153,10 +155,10 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
     # `allauth` specific authentication methods, such as login by email
     "allauth.account.auth_backends.AuthenticationBackend",
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 # 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
@@ -180,8 +182,19 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password_from_key": "https://poolaki.localhost/reset-password/{key}",
     "account_signup": "https://poolaki.localhost/register",
     "socialaccount_login_error": "https://poolaki.localhost/login",
+    "socialaccount_login": "https://poolaki.localhost/oauth/callback",
 }
 
 SITE_ID = 1
 
 AUTH_USER_MODEL = "core.User"
+
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
+
+CORS_ALLOW_HEADERS = ("x-session-token",)
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = False

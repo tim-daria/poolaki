@@ -1,5 +1,11 @@
-from allauth.socialaccount.providers.oauth2.urls import default_urlpatterns
+from django.urls import path
 
-from .provider import FortyTwoProvider
+from .views import oauth2_callback
 
-urlpatterns = default_urlpatterns(FortyTwoProvider)
+urlpatterns = [
+    path(
+        "callback/",
+        oauth2_callback,
+        name="intra42_callback",
+    ),
+]

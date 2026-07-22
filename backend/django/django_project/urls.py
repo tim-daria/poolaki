@@ -21,6 +21,6 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("_allauth/", include("allauth.headless.urls")),
+    path("accounts/intra42/", include("core.providers.intra42.urls")),
     path("api/", include("core.urls")),
-    # path("accounts/", include("allauth.urls")),
 ]

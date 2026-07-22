@@ -15,6 +15,11 @@ class FortyTwoProvider(OAuth2Provider):
     name = "42"
     account_class = FortyTwoAccount
 
+    def get_oauth2_adapter(self, request):
+        from .views import FortyTwoOAuth2Adapter  # need here
+
+        return FortyTwoOAuth2Adapter(request)
+
     def extract_uid(self, data: dict[str, Any]) -> str:
         return str(data["id"])
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
+import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "../Register/styles.module.css";
 
 export default function Login() {
@@ -78,9 +79,7 @@ export default function Login() {
         <button
           type="button"
           className={styles.oauthBtn}
-          onClick={() => {
-            // TODO: enable when 42 OAuth app is configured
-          }}
+          onClick={() => startSocialAuth("intra42", "login", "/oauth-callback", getCsrfToken())}
         >
           Login with 42
         </button>

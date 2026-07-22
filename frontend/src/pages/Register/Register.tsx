@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
+import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "./styles.module.css";
 
 /*
@@ -169,13 +170,7 @@ export default function Register() {
         <button
           type="button"
           className={styles.oauthBtn}
-          onClick={() => {
-            // window.location.href =
-            //   "/_allauth/browser/v1/auth/provider/redirect" +
-            //   "?provider=intra42" +
-            //   "&process=login" +
-            //   "&callback_url=https://poolaki.localhost/auth/callback";
-          }}
+          onClick={() => startSocialAuth("intra42", "signup", "/oauth-callback", getCsrfToken())}
         >
           Sign Up with 42
         </button>
