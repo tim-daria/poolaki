@@ -7,11 +7,15 @@ version = "0.1.0"
 # Minimum supported Python version
 requires-python = ">=3.12"
 
-# Later: pgvector, embedings and LLM client (when implemented)
+# Later: pgvector, embeddings and LLM client (when implemented)
 
 dependencies = [
-	"fastapi",
-	"uvicorn[standard]",
-	"httpx",
-	"pydantic-settings",
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
+    "pydantic-settings",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
