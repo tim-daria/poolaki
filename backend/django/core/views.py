@@ -7,27 +7,36 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.services.balance import set_initial_balance
-
-from .models import (
+from core.models import (
     User,
 )
+from core.serializers import InitialBalanceSerializer
+from core.services.balance import set_initial_balance
 
 
 class SetInitialBalanceView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request: Request) -> Response:
+        needs_initial_balance = bool(request.session.get("needs_initial_balance", False))
+        return Response({"needs_initial_balance": needs_initial_balance})
+
     def _handle(self, request: Request) -> Response:
         assert isinstance(request.user, User)
 
-        initial_balance = request.data.get("initial_balance")
-        if initial_balance is None:
-            return Response({"error": "initial_balance is required"}, status=400)
+        serializer = InitialBalanceSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        initial_balance = serializer.validated_data["initial_balance"]
 
         try:
             org = set_initial_balance(request.user, initial_balance)
         except ValueError as e:
             return Response({"error": str(e)}, status=404)
+
+        request.session.pop("needs_initial_balance", None)
+        request.session.modified = True
 
         return Response({"initial_balance": str(org.initial_balance)})
 

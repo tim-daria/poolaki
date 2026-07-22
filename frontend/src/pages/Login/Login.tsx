@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import { startSocialAuth } from "../../lib/socialAuth";
@@ -9,12 +9,19 @@ export default function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
   useEffect(() => {
     fetch("/api/csrf/", { credentials: "include" });
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("error") === "account_not_found") {
+      setError("No 42 account is linked to this login. Please sign up first.");
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
@@ -35,7 +42,6 @@ export default function Login() {
     });
 
     const data = await res.json();
-    console.log("login response:", JSON.stringify(data));
 
     if (res.ok) {
       setUser(data.data.user);
@@ -79,7 +85,14 @@ export default function Login() {
         <button
           type="button"
           className={styles.oauthBtn}
-          onClick={() => startSocialAuth("intra42", "login", "/oauth-callback", getCsrfToken())}
+          onClick={() =>
+            startSocialAuth(
+              "intra42",
+              "login",
+              "/oauth-callback?flow=login",
+              getCsrfToken(),
+            )
+          }
         >
           Login with 42
         </button>

@@ -14,7 +14,7 @@ export function startSocialAuth(
     provider,
     process,
     callback_url: new URL(callbackPath, window.location.origin).toString(),
-	csrfmiddlewaretoken: csrfToken,
+    csrfmiddlewaretoken: csrfToken,
   };
 
   for (const [name, value] of Object.entries(fields)) {
