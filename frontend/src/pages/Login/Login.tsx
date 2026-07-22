@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
+import { parseAllauthErrors } from "../../lib/authErrors";
 import styles from "../Register/styles.module.css";
 
 export default function Login() {
@@ -40,7 +41,7 @@ export default function Login() {
       setUser(data.data.user);
       navigate("/");
     } else {
-      const msg = data.errors?.[0]?.message ?? "Login failed";
+      const msg = parseAllauthErrors(data.errors, "Login failed. Please check your credentials.");
       setError(msg);
     }
   }

@@ -1,11 +1,16 @@
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useMatches } from "react-router";
 import { useAuth } from "../context/useAuth";
 import { getCsrfToken } from "../lib/csrf";
+import Header from "./Header/Header";
 import "../App.css";
 
 export default function AppLayout() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
+  const matches = useMatches();
+  const pageTitle = matches.findLast(
+    (m) => (m.handle as { title?: string })?.title,
+  )?.handle as { title: string } | undefined;
 
   async function handleLogout() {
     await fetch("/_allauth/browser/v1/auth/session", {
@@ -19,26 +24,20 @@ export default function AppLayout() {
 
   return (
     <div className="appContainer">
-      <header>
-        <span>Page Name</span>
-        <button>Notifications</button>
-      </header>
+      <Header title={pageTitle?.title ?? ""} onLogout={handleLogout} />
       <nav>
+        {/* <h2>Poolaki</h2> */}
         <ul>
-          <li>Home</li>
+          <li>Overview</li>
           <li>Transactions</li>
           <li>Goals</li>
           <li>Categories</li>
-          <div>--------</div>
-          <li>Recurring</li>
+          <div></div>
           <li>Settings</li>
         </ul>
-        <div className="user-avatar">
-          <img src="" alt="User Avatar" />
-          <span>Username</span>
-          <a onClick={handleLogout} style={{ cursor: "pointer" }}>
-            Logout
-          </a>
+        <div className="nav-footer">
+          <a href="/about">About Us</a>
+          <a href="/terms">Terms of Use</a>
         </div>
       </nav>
       <main style={{ gridArea: "main", overflowY: "auto" }}>

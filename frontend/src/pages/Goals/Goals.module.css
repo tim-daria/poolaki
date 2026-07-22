@@ -1,0 +1,211 @@
+.page {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--sub-text, #aaa);
+  padding: 0.5rem 0 0.1rem;
+}
+
+/* Goal cards */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: var(--bg-card, #fff);
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.cardName {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--accent-deep, #3d3580);
+}
+
+.cardMeta {
+  font-size: 0.78rem;
+  color: var(--sub-text, #999);
+  margin: 0.15rem 0 0;
+}
+
+.cardRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cardSaved {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-family: var(--mono, monospace);
+  color: var(--accent-deep, #3d3580);
+}
+
+.cardPct {
+  font-size: 0.78rem;
+  color: var(--sub-text, #999);
+  margin: 0;
+}
+
+/* Progress bar */
+.progressTrack {
+  width: 100%;
+  height: 7px;
+  background: var(--accent-light, #eee);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Dropdown menu */
+.menuWrapper {
+  position: relative;
+}
+
+.menuTrigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--sub-text, #aaa);
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.menuTrigger:hover {
+  background: var(--accent-light, #f0eeff);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 130px;
+}
+
+.menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  font-size: 0.88rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.menu button:hover {
+  background: var(--accent-light, #f8f8ff);
+}
+
+.menuDelete {
+  color: #e74c3c !important;
+}
+
+.menuDelete:hover {
+  background: #fdecea !important;
+}
+
+/* Add goal card */
+.addCard {
+  background: none;
+  border: 2px dashed var(--border, #d0d0d0);
+  border-radius: 14px;
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--sub-text, #aaa);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, color 0.2s;
+  min-height: 110px;
+}
+
+.addCard span:first-child {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.addCard:hover {
+  border-color: var(--accent-middle, #6c63ff);
+  color: var(--accent-middle, #6c63ff);
+}
+
+/* Savings overview */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.overviewCard {
+  background: var(--bg-card, #fff);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.overviewLabel {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sub-text, #999);
+  font-weight: 500;
+  margin: 0;
+}
+
+.overviewValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-deep, #3d3580);
+  font-family: var(--mono, monospace);
+  margin: 0;
+}
+
+.overviewSub {
+  font-size: 0.8rem;
+  color: var(--sub-text, #aaa);
+  margin: 0;
+}

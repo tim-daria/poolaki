@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
+import { parseAllauthErrors } from "../../lib/authErrors";
 import styles from "./styles.module.css";
 
 /*
@@ -87,7 +88,10 @@ export default function Register() {
       setPendingUser(data.data.user);
       setShowBalanceModal(true);
     } else {
-      const msg = data.errors?.[0]?.message ?? "Registration failed";
+      const msg = parseAllauthErrors(
+        data.errors,
+        "Registration failed. Please try again.",
+      );
       setError(msg);
     }
   }

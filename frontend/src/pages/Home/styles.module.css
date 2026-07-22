@@ -6,6 +6,10 @@
   align-content: start;
 }
 
+.heading {
+  grid-column: 1 / -1;
+}
+
 .statsHead {
   grid-column: 1 / -1;
   display: grid;
