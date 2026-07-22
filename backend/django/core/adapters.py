@@ -2,7 +2,8 @@ from urllib.parse import parse_qs, urlparse
 
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.core.internal import httpkit
-from allauth.socialaccount.adapter import DefaultSocialAccountAdapter, SocialLogin
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.models import SocialLogin
 from django.http import HttpRequest, HttpResponseRedirect
 
 
