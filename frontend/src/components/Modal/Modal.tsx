@@ -1,16 +1,42 @@
 import { useState } from "react";
+// import type { ReactNode } from "react";
+import { TODAY } from "../../lib/date";
+
+/* Mock data */
 import { CATEGORIES } from "../../pages/Home/mockData";
 import type { TransactionType } from "../../pages/Home/mockData";
+
+/* Styles */
 import styles from "./Modal.module.css";
 
-export type ModalMode = "transaction" | "goal";
+/* ---------------------------------- */
+/*           Subcomponents            */
+/* ---------------------------------- */
+
+// interface HeaderProps {
+//   label: string;
+//   onClose: () => void;
+// }
+
+// function Header({ label, onClose }: HeaderProps) {
+//   return (
+//     <div>
+//       <h3>{label}</h3>
+//       <button onClick={onClose}>x</button>
+//     </div>
+//   );
+// }
+
+/* ---------------------------------- */
+/*           Main component           */
+/* ---------------------------------- */
+
+export type ModalMode = "transaction" | "goal" | "category";
 
 interface Props {
   mode: ModalMode;
   onClose: () => void;
 }
-
-const TODAY = new Date().toISOString().slice(0, 10);
 
 function Toggle({
   label,
