@@ -22,3 +22,9 @@ build/
 .DS_Store
 .idea/
 .vscode/
+
+# Backups
+backups/
+*.sql
+*.dump
+*.backup
