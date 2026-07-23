@@ -23,8 +23,6 @@ build/
 .idea/
 .vscode/
 
-# Backups
-backups/
-*.sql
-*.dump
-*.backup
+# Backup files
+.last_success
+backup_*.sql
