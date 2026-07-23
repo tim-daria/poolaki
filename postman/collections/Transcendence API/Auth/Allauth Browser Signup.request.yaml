@@ -1,0 +1,37 @@
+$kind: http-request
+name: Allauth Browser Signup
+method: POST
+url: "{{base_url}}/_allauth/browser/v1/auth/signup"
+order: 9000
+headers:
+  Content-Type: application/json
+  X-CSRFToken: "{{csrf_token}}"
+body:
+  type: json
+  content: |-
+    {
+      "email": "user@example.com",
+      "username": "testuser",
+      "password": "ChangeMe123!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      let json = {};
+      try {
+        json = pm.response.json();
+      } catch (e) {}
+
+      const user = json.data?.user || json.user || json.meta?.user || null;
+      const statusOk = pm.response.code >= 200 && pm.response.code < 300;
+
+      if (statusOk) {
+        pm.environment.set('is_authenticated', 'true');
+      }
+
+      if (user) {
+        if (user.id !== undefined && user.id !== null) pm.environment.set('current_user_id', String(user.id));
+        if (user.username) pm.environment.set('current_username', user.username);
+        if (user.email) pm.environment.set('current_email', user.email);
+      }
+    language: text/javascript
