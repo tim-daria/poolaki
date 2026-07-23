@@ -214,6 +214,10 @@ services:
       interval: 1h
       timeout: 10s
       retries: 1
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
 
 volumes:
   postgres_db:
