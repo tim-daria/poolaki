@@ -12,7 +12,10 @@ AI capabilities will be implemented in a dedicated FastAPI microservice, separat
 
 ### Reason
 
-This allows AI components to evolve independently, simplifies future model/provider changes, and avoids coupling AI workflows with core application logic.
+- Allows independent scaling of AI workloads.
+- Keeps Django responsible for business rules, users, and financial data ownership.
+- Enables changing LLM providers or AI components without impacting the main backend.
+- Reduces coupling between application logic and AI infrastructure.
 
 ### Consequences
 
