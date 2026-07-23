@@ -10,12 +10,23 @@ services:
       - ./backend/caddy/:/etc/caddy
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - backend
-      - frontend
     networks:
       - frontend_net
       - backend_net
+      - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+      frontend:
+        condition: service_healthy
+        restart: true
 
   backend:
     build:
@@ -30,6 +41,13 @@ services:
       - .env
     networks:
       - backend_net
+      - monitor_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
     depends_on:
       db:
         condition: service_healthy
@@ -46,6 +64,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
     networks:
       - backend_net
+      - monitor_net
+      - backup_net
     ports:
       - "5432:5432"
     healthcheck:
@@ -70,16 +90,149 @@ services:
       - node_modules:/home/node/app/node_modules
     networks:
       - frontend_net
+      - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
 
+######################################################
+# Monitoring #
+######################################################
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    expose:
+      - "9090"
+    restart: unless-stopped
+    volumes:
+      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./backend/monitoring/prometheus_data:/var/prometheus
+    networks:
+      - monitor_net
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
+
+  grafana:
+    image: grafana/grafana:13.1
+    container_name: grafana
+    expose:
+      - "3000"
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: "https://grafana.localhost"
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_AUTH_DISABLE_LOGIN_FORM: false
+      GF_SECURITY_COOKIE_SECURE: true
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: true
+    volumes:
+      - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+        restart: true
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
+    networks:
+      - monitor_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - "8080"
+    networks:
+      - monitor_net
+    depends_on:
+      - caddy
+
+######################################################
+# Backup #
+######################################################
+
+  db_backup:
+    image: postgres:18
+    container_name: db_backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./backend/backups:/backups
+      - ./backend/backups/backup.sh:/backup.sh
+    entrypoint: ["sh", "-c", "while true; do sh /backup.sh; sleep 86400; done"]
+    networks:
+      - backup_net
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "find /backups/.last_success -mmin -1500 | grep -q . || exit 1"]
+      interval: 1h
+      timeout: 10s
+      retries: 1
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
 
 volumes:
   postgres_db:
   caddy_data:
   caddy_config:
   node_modules:
+  grafana_data:
+  prom_data:
 
 networks:
   backend_net:
     name: backend_net
   frontend_net:
     name: frontend_net
+  monitor_net:
+    name: monitor_net
+  backup_net:
+    name: backup_net
