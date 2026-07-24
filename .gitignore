@@ -18,3 +18,7 @@ build/
 .vscode/
 .venv/
 .postman
+
+# Backup files
+.last_success
+backup_*.sql

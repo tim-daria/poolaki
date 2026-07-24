@@ -18,9 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from core.views import health_check
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("_allauth/", include("allauth.headless.urls")),
     path("accounts/intra42/", include("core.providers.intra42.urls")),
     path("api/", include("core.urls")),
+    path("", include("django_prometheus.urls")),
+    path("health/", health_check),
 ]

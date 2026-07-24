@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from typing import Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,6 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+
+# ======================================================
+# SECURITY
+# ======================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-+$i@vp)h)reff4hm9+!qf8g!90#=aq7s0ju-phg(a#qzw&zw&&"
@@ -28,6 +33,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "poolaki.localhost",
+    "backend",
+    "django.localhost",
     "localhost",
 ]
 
@@ -36,7 +43,20 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
 ]
 
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = "x-session-token"
+
 # Application definition
+# ======================================================
+# APPS
+# ======================================================
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -53,6 +73,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "core.providers.intra42.apps.Intra42Config",
     "allauth.headless",
+    "django_prometheus",
 ]
 
 SOCIALACCOUNT_PROVIDERS = {
@@ -67,6 +88,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -75,11 +97,21 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
-ROOT_URLCONF = "django_project.urls"
+# ======================================================
+# URLS / WSGI
+# ======================================================
 
-TEMPLATES = [
+ROOT_URLCONF = "django_project.urls"
+WSGI_APPLICATION = "django_project.wsgi.application"
+
+# ======================================================
+# TEMPLATES
+# ======================================================
+
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
@@ -95,8 +127,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "django_project.wsgi.application"
 
+# ======================================================
+# DATABASE
+# ======================================================
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -113,8 +147,21 @@ DATABASES = {
 }
 
 
+# ======================================================
+# AUTH
+# ======================================================
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+
+AUTH_USER_MODEL = "core.User"
+
+AUTHENTICATION_BACKENDS = [
+    # `allauth` specific authentication methods, such as login by email
+    "allauth.account.auth_backends.AuthenticationBackend",
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -131,18 +178,47 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# ======================================================
+# ALLAUTH
+# ======================================================
+
+SITE_ID = 1
+HEADLESS_ONLY = True
+
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "https://poolaki.localhost/auth/verify-email/{key}",
+    "account_reset_password": "https://poolaki.localhost/auth/reset-password",
+    "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
+    "account_signup": "https://poolaki.localhost/register",
+    "socialaccount_login_error": "https://poolaki.localhost/auth/social/error",
+    "socialaccount_login": "https://poolaki.localhost/oauth/callback",
+}
+
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+# 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
+# can login without email verification or not
+ACCOUNT_EMAIL_VERIFICATION = "optional"
+
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
+
+# ======================================================
+# INTERNATIONALIZATION
+# ======================================================
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "Europe/Berlin"
-
 USE_I18N = True
-
 USE_TZ = True
 
+# ======================================================
+# STATIC FILES
+# ======================================================
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -154,16 +230,11 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTHENTICATION_BACKENDS = [
-    # `allauth` specific authentication methods, such as login by email
-    "allauth.account.auth_backends.AuthenticationBackend",
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-]
 
-# 3 values - 'mandatory', 'optional' and 'none' --> checks if the user
-# can login without email verification or not
-ACCOUNT_EMAIL_VERIFICATION = "optional"
+# ======================================================
+# EMAIL (dev)
+# ======================================================
+
 # allows to confirm the email in the terminal --> only for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -171,31 +242,3 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # LOGIN_REDIRECT_URL = "secret"
 # LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
 # ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
-
-HEADLESS_ONLY = True
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
-
-HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "https://poolaki.localhost/confirm-email/{key}",
-    "account_reset_password": "https://poolaki.localhost/reset-password",
-    "account_reset_password_from_key": "https://poolaki.localhost/reset-password/{key}",
-    "account_signup": "https://poolaki.localhost/register",
-    "socialaccount_login_error": "https://poolaki.localhost/login",
-    "socialaccount_login": "https://poolaki.localhost/oauth/callback",
-}
-
-SITE_ID = 1
-
-AUTH_USER_MODEL = "core.User"
-
-CORS_ALLOW_CREDENTIALS = True
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "None"
-CSRF_COOKIE_SECURE = True
-
-CORS_ALLOW_HEADERS = ("x-session-token",)
-
-# SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_REQUIRED = False
-SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"

@@ -1,3 +1,12 @@
+{
+	admin 0.0.0.0:2019
+	servers {
+		metrics {
+			per_host
+		}
+	}
+}
+
 poolaki.localhost {
 
     handle /admin/* {
@@ -23,5 +32,12 @@ poolaki.localhost {
     handle {
         reverse_proxy frontend:5173
     }
-
 }
+
+prometheus.localhost {
+        reverse_proxy prometheus:9090
+    }
+
+grafana.localhost {
+        reverse_proxy grafana:3000
+    }
