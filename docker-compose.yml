@@ -1,4 +1,15 @@
 services:
+
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
+  #   environment:
+  #     TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+  #   networks:
+  #     - tunnel_net
+
   caddy:
     image: caddy:2.11-alpine
     container_name: caddy
@@ -11,9 +22,9 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks:
+      - tunnel_net
       - frontend_net
       - backend_net
-      - monitor_net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
       interval: 30s
@@ -41,7 +52,6 @@ services:
       - .env
     networks:
       - backend_net
-      - monitor_net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -64,7 +74,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
     networks:
       - backend_net
-      - monitor_net
       - backup_net
     ports:
       - "5432:5432"
@@ -90,7 +99,6 @@ services:
       - node_modules:/home/node/app/node_modules
     networks:
       - frontend_net
-      - monitor_net
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
       interval: 30s
@@ -112,7 +120,10 @@ services:
       - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./backend/monitoring/prometheus_data:/var/prometheus
     networks:
-      - monitor_net
+      - tunnel_net
+      - backend_net
+      - frontend_net
+      - backup_net
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
     healthcheck:
@@ -143,7 +154,7 @@ services:
       - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
       - grafana_data:/var/lib/grafana
     networks:
-      - monitor_net
+      - backend_net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -161,7 +172,7 @@ services:
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
     networks:
-      - monitor_net
+      - backend_net
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
       interval: 30s
@@ -187,7 +198,10 @@ services:
     expose:
       - "8080"
     networks:
-      - monitor_net
+      - tunnel_net
+      - backend_net
+      - frontend_net
+      - backup_net
     depends_on:
       - caddy
 
@@ -232,7 +246,7 @@ networks:
     name: backend_net
   frontend_net:
     name: frontend_net
-  monitor_net:
-    name: monitor_net
   backup_net:
     name: backup_net
+  tunnel_net:
+    name: tunnel_net
