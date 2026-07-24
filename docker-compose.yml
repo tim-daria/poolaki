@@ -175,7 +175,6 @@ services:
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
     restart: unless-stopped
     privileged: true
     volumes:
@@ -218,6 +217,52 @@ services:
       db:
         condition: service_healthy
         restart: true
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: ai-service
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - ./ai-service/.env
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - backend_net
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Future:
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+    # Future observability:
+    # networks:
+    #   - backend_net
+    #   - monitor_net
+    #
+    # Prometheus:
+    # - Add /metrics endpoint
+    # - Add FastAPI metrics exporter
+    #
+    # Grafana:
+    # - Add AI Service dashboard
+    # - Monitor latency, requests, errors, token usage
+
 
 volumes:
   postgres_db:

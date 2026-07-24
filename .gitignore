@@ -7,6 +7,12 @@
 node_modules/
 **/node_modules/
 
+# Python cache / virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
 # Build output
 dist/
 build/
