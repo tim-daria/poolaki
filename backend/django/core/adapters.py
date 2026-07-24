@@ -11,6 +11,9 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):  # type: ignore[misc]
     def pre_social_login(self, request: HttpRequest, sociallogin: SocialLogin) -> None:
         super().pre_social_login(request, sociallogin)
 
+        if sociallogin.state.get("process") == "connect":
+            return
+
         next_url = sociallogin.state.get("next", "")
         flow = parse_qs(urlparse(next_url).query).get("flow", ["login"])[0]
 
