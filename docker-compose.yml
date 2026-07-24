@@ -33,7 +33,6 @@ services:
       context: ./backend
       dockerfile: django/Dockerfile
     container_name: django
-    user: "${UID}:${GID}"
     expose:
     - "8000"
     volumes:
@@ -81,7 +80,6 @@ services:
       context: ./frontend
       dockerfile: ./Dockerfile
     container_name: nodejs
-    user: "${UID}:${GID}"
     expose:
       - "5173"
     working_dir: /home/node/app
@@ -224,7 +222,6 @@ services:
     build:
       context: ./ai-service
     container_name: ai-service
-    user: "${UID}:${GID}"
     restart: unless-stopped
     expose:
       - "8000"
