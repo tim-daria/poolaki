@@ -51,7 +51,7 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "None"
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = "x-session-token"
+CORS_ALLOW_HEADERS = ("x-session-token",)
 
 # Application definition
 # ======================================================
@@ -190,8 +190,8 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password": "https://poolaki.localhost/auth/reset-password",
     "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
     "account_signup": "https://poolaki.localhost/register",
-    "socialaccount_login_error": "https://poolaki.localhost/auth/social/error",
-    "socialaccount_login": "https://poolaki.localhost/oauth/callback",
+    "socialaccount_login_error": "https://poolaki.localhost/login",
+    "socialaccount_login": "https://poolaki.localhost/oauth-callback",
 }
 
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
