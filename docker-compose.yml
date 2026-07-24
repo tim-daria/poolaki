@@ -226,12 +226,61 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "find /backups/.last_success -mmin -1500 | grep -q . || exit 1"]
       interval: 1h
-      timeout: 10s
-      retries: 1
+      timeout: 30s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
         restart: true
+
+######################################################
+# RAG - System #
+######################################################
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: ai-service
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - ./ai-service/.env
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - backend_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Future:
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+    # Future observability:
+    # networks:
+    #   - backend_net
+    #   - monitor_net
+    #
+    # Prometheus:
+    # - Add /metrics endpoint
+    # - Add FastAPI metrics exporter
+    #
+    # Grafana:
+    # - Add AI Service dashboard
+    # - Monitor latency, requests, errors, token usage
+
 
 volumes:
   postgres_db:
