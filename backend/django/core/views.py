@@ -1,6 +1,4 @@
-from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -42,32 +40,6 @@ class SetInitialBalanceView(APIView):
 
     def post(self, request: Request) -> Response:
         return self._handle(request)
-
-    def patch(self, request: Request) -> Response:
-        return self._handle(request)
-
-
-# Create your views here.
-def testPage(request: HttpRequest) -> HttpResponse:
-    if request.method == "POST":
-        print("Received email: ", request.POST["email"])
-        # print("Received password_hash: ", request.POST["password_hash"])
-        # print("Received name: ", request.POST["name"])
-
-        User.objects.create(
-            email=request.POST["email"],
-            # password_hash=request.POST["password_hash"],
-            # name=request.POST["name"],
-        )
-
-    all_user = User.objects.all()
-
-    return render(request, "poolaki_test.html", {"all_user": all_user})
-
-
-@login_required
-def secret(request: HttpRequest) -> HttpResponse:
-    return render(request, "secret.html")
 
 
 @ensure_csrf_cookie

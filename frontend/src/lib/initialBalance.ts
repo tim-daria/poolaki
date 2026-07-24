@@ -9,7 +9,7 @@ export async function submitInitialBalance(
   }
 
   const res = await fetch("/api/organizations/personal/initial-balance/", {
-    method: "PATCH",
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": csrfToken,

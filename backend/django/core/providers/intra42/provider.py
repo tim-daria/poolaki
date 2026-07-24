@@ -3,6 +3,7 @@ from typing import Any
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
+from django.http import HttpRequest
 
 
 class FortyTwoAccount(ProviderAccount):
@@ -15,7 +16,7 @@ class FortyTwoProvider(OAuth2Provider):
     name = "42"
     account_class = FortyTwoAccount
 
-    def get_oauth2_adapter(self, request):
+    def get_oauth2_adapter(self, request: HttpRequest):
         from .views import FortyTwoOAuth2Adapter  # need here
 
         return FortyTwoOAuth2Adapter(request)
