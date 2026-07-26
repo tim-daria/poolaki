@@ -1,0 +1,31 @@
+$kind: http-request
+name: Allauth Browser Get Session
+method: GET
+url: "{{base_url}}/_allauth/browser/v1/auth/session"
+order: 11000
+scripts:
+  - type: afterResponse
+    code: |-
+      let json = {};
+      try {
+        json = pm.response.json();
+      } catch (e) {}
+
+      const user = json.data?.user || json.user || null;
+      if (pm.response.code >= 200 && pm.response.code < 300 && user) {
+        pm.environment.set('is_authenticated', 'true');
+        if (user.id !== undefined && user.id !== null) pm.environment.set('current_user_id', String(user.id));
+        if (user.username) pm.environment.set('current_username', user.username);
+        if (user.email) pm.environment.set('current_email', user.email);
+        const cookieValue = pm.cookies.get('csrftoken');
+        if (cookieValue) {
+          pm.environment.set('csrf_token', cookieValue);
+        }
+        const sessionIdValue = pm.cookies.get('sessionid');
+        if (sessionIdValue) {
+          pm.environment.set('session_id', sessionIdValue);
+        }
+      } else {
+        pm.environment.set('is_authenticated', 'false');
+      }
+    language: text/javascript

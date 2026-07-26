@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import { parseAllauthErrors } from "../../lib/authErrors";
+import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "../Register/styles.module.css";
 
 export default function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
+  const [error, setError] = useState(() =>
+    searchParams.get("error") === "account_not_found"
+      ? "No 42 account is linked to this login. Please sign up first."
+      : "",
+  );
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -35,13 +41,15 @@ export default function Login() {
     });
 
     const data = await res.json();
-    console.log("login response:", JSON.stringify(data));
 
     if (res.ok) {
       setUser(data.data.user);
       navigate("/");
     } else {
-      const msg = parseAllauthErrors(data.errors, "Login failed. Please check your credentials.");
+      const msg = parseAllauthErrors(
+        data.errors,
+        "Login failed. Please check your credentials.",
+      );
       setError(msg);
     }
   }
@@ -79,9 +87,14 @@ export default function Login() {
         <button
           type="button"
           className={styles.oauthBtn}
-          onClick={() => {
-            // TODO: enable when 42 OAuth app is configured
-          }}
+          onClick={() =>
+            startSocialAuth(
+              "intra42",
+              "login",
+              "/oauth-callback?flow=login",
+              getCsrfToken(),
+            )
+          }
         >
           Login with 42
         </button>

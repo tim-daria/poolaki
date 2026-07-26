@@ -40,6 +40,10 @@ docker compose up --build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Project Documentation
+
+- AI Service documentation: [ai-service/README.md](ai-service/README.md)
+
 ## Resources
 
 - Project subject: 42 `ft_transcendence`

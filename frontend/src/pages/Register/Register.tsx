@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import { parseAllauthErrors } from "../../lib/authErrors";
+import { submitInitialBalance } from "../../lib/initialBalance";
+import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "./styles.module.css";
 
 /*
@@ -40,7 +42,7 @@ export default function Register() {
 
   useEffect(() => {
     // Ensure the CSRF cookie is set for unauthenticated users
-    console.log(fetch("/api/csrf/", { credentials: "include" }));
+    void fetch("/api/csrf/", { credentials: "include" });
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {
@@ -82,7 +84,6 @@ export default function Register() {
     });
 
     const data = await res.json();
-    console.log("signup response:", data);
 
     if (res.ok) {
       setPendingUser(data.data.user);
@@ -100,27 +101,15 @@ export default function Register() {
     e.preventDefault();
     setBalanceError("");
 
-    const parsed = parseFloat(balance);
-    if (isNaN(parsed) || parsed < 0) {
-      setBalanceError("Please enter a valid amount");
-      return;
-    }
+    const result = await submitInitialBalance(balance, getCsrfToken());
 
-    const res = await fetch("/api/organizations/personal/initial-balance/", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCsrfToken(),
-      },
-      credentials: "include",
-      body: JSON.stringify({ initial_balance: parsed }),
-    });
-
-    if (res.ok) {
+    if (result.ok) {
       setUser(pendingUser);
       navigate("/");
     } else {
-      setBalanceError("Failed to create organisation. Please try again.");
+      setBalanceError(
+        result.error ?? "Failed to create organisation. Please try again.",
+      );
     }
   }
 
@@ -173,13 +162,14 @@ export default function Register() {
         <button
           type="button"
           className={styles.oauthBtn}
-          onClick={() => {
-            // window.location.href =
-            //   "/_allauth/browser/v1/auth/provider/redirect" +
-            //   "?provider=intra42" +
-            //   "&process=login" +
-            //   "&callback_url=https://poolaki.localhost/auth/callback";
-          }}
+          onClick={() =>
+            startSocialAuth(
+              "intra42",
+              "login",
+              "/oauth-callback?flow=signup",
+              getCsrfToken(),
+            )
+          }
         >
           Sign Up with 42
         </button>
