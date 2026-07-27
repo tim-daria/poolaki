@@ -40,13 +40,18 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
-    # "http://localhost:5173",
+    "http://localhost:5173",
 ]
 
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ("x-session-token",)
 
 # Application definition
 # ======================================================
@@ -66,19 +71,21 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "core.providers.intra42",
+    "core.providers.intra42.apps.Intra42Config",
     "allauth.headless",
     "django_prometheus",
 ]
 
-# SOCIALACCOUNT_PROVIDERS = {
-#     "intra42": {
-#         "APP": {
-#             "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
-#             "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
-#         },
-#     },
-# }
+SOCIALACCOUNT_PROVIDERS = {
+    "intra42": {
+        "APPS": [
+            {
+                "client_id": os.environ.get("INTRA42_CLIENT_ID", ""),
+                "secret": os.environ.get("INTRA42_CLIENT_SECRET", ""),
+            }
+        ],
+    },
+}
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
@@ -147,11 +154,13 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
+AUTH_USER_MODEL = "core.User"
+
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
     # `allauth` specific authentication methods, such as login by email
     "allauth.account.auth_backends.AuthenticationBackend",
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -180,11 +189,10 @@ HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "https://poolaki.localhost/auth/verify-email/{key}",
     "account_reset_password": "https://poolaki.localhost/auth/reset-password",
     "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
-    "socialaccount_login_error": "https://poolaki.localhost/auth/social/error",
+    "account_signup": "https://poolaki.localhost/register",
+    "socialaccount_login_error": "https://poolaki.localhost/login",
+    "socialaccount_login": "https://poolaki.localhost/oauth-callback",
 }
-
-# ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-# ACCOUNT_EMAIL_REQUIRED = True
 
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
@@ -193,22 +201,8 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 # can login without email verification or not
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
-SOCIALACCOUNT_PROVIDERS = {
-    "openid_connect": {
-        "SERVERS": [
-            {
-                "id": "42school",
-                "name": "42",
-                "server_url": "https://api.intra.42.fr",
-                "APP": {
-                    "client_id": os.environ.get("42_CLIENT_ID"),
-                    "secret": os.environ.get("42_CLIENT_SECRET"),
-                },
-            }
-        ]
-    }
-}
-
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
 
 # ======================================================
 # INTERNATIONALIZATION
@@ -248,19 +242,3 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # LOGIN_REDIRECT_URL = "secret"
 # LOGOUT_REDIRECT_URL = "https://poolaki.localhost/api/test"
 # ACCOUNT_SIGNUP_REDIRECT_URL = "secret"
-
-HEADLESS_ONLY = True
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
-
-HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "https://poolaki.localhost/confirm-email/{key}",
-    "account_reset_password": "https://poolaki.localhost/reset-password",
-    "account_reset_password_from_key": "https://poolaki.localhost/reset-password/{key}",
-    "account_signup": "https://poolaki.localhost/register",
-    "socialaccount_login_error": "https://poolaki.localhost/login",
-}
-
-SITE_ID = 1
-
-AUTH_USER_MODEL = "core.User"

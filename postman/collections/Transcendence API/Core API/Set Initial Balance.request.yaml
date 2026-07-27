@@ -1,0 +1,14 @@
+$kind: http-request
+name: Set Initial Balance
+method: POST
+url: "{{base_url}}/api/organizations/personal/initial-balance/"
+order: 6000
+headers:
+  Content-Type: application/json
+  X-CSRFToken: "{{csrf_token}}"
+body:
+  type: json
+  content: |-
+    {
+      "initial_balance": "100.00"
+    }

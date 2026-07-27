@@ -5,7 +5,7 @@ from allauth.socialaccount.providers.oauth2.views import (
     OAuth2LoginView,
 )
 
-from .provider import FortyTwoProvider
+from core.providers.intra42.provider import FortyTwoProvider
 
 
 class FortyTwoOAuth2Adapter(OAuth2Adapter):

@@ -1,0 +1,18 @@
+name: 'Transcendence Local'
+values:
+  - key: base_url
+    value: 'https://poolaki.localhost'
+  - key: csrf_token
+    value: ''
+  - key: is_authenticated
+    value: 'false'
+  - key: current_user_id
+    value: ''
+  - key: current_username
+    value: ''
+  - key: current_email
+    value: ''
+  - key: password_reset_key
+    value: ''
+  - key: email_verification_key
+    value: ''
