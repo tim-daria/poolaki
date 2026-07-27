@@ -36,6 +36,26 @@ jobs:
     defaults:
       run:
         working-directory: backend/django
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test_user"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      DB_HOST: localhost
+      DB_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
@@ -57,8 +77,25 @@ jobs:
       - name: Mypy
         run: uv run mypy .
 
+      - name: Django system check
+        run: uv run python manage.py check
+
+      - name: Check for missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Apply migrations
+        run: uv run python manage.py migrate
+
       - name: Tests
         run: uv run pytest
+
+      - name: Smoke test — server starts and responds
+        run: |
+          uv run python manage.py runserver 0.0.0.0:8000 &
+          SERVER_PID=$!
+          sleep 3
+          curl --fail http://localhost:8000/health || (kill $SERVER_PID && exit 1)
+          kill $SERVER_PID
 
   # Runs ONLY when frontend/** changed.
   frontend:
