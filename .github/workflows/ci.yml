@@ -94,7 +94,7 @@ jobs:
           uv run python manage.py runserver 0.0.0.0:8000 &
           SERVER_PID=$!
           sleep 3
-          curl --fail http://localhost:8000/health || (kill $SERVER_PID && exit 1)
+          curl --fail http://localhost:8000/health/ || (kill $SERVER_PID && exit 1)
           kill $SERVER_PID
 
   # Runs ONLY when frontend/** changed.
