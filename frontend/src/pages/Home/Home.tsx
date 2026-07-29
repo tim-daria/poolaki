@@ -1,17 +1,19 @@
 import styles from "./styles.module.css";
 import { mockUser, mockStats, mockTransactions, mockGoals } from "./mockData";
 
-export default function Home() {
+export function Home() {
   const { currentMonth, lastMonth } = mockStats;
   const netBalance = currentMonth.income - currentMonth.expenses;
 
   return (
     <div className={styles.homeContainer}>
       <div className={styles.heading}>
-        <h2>Hello {mockUser.name}👋</h2>
-        <p>
-          Balance: <span>€{(currentMonth.income - currentMonth.expenses).toFixed(2)}</span>
-        </p>
+        {/* <p>
+          Balance:{" "}
+          <span>
+            €{(currentMonth.income - currentMonth.expenses).toFixed(2)}
+          </span>
+        </p> */}
       </div>
       <div className={styles.statsHead}>
         <div className={styles.statsXS}>
@@ -63,3 +65,6 @@ export default function Home() {
     </div>
   );
 }
+
+// Named alias for react-router's route-level `lazy`
+export { Home as Component };

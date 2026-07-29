@@ -4,7 +4,7 @@ interface ToggleProps {
   onChange: (v: boolean) => void;
 }
 
-export default function Toggle({ label, value, onChange }: ToggleProps) {
+export function Toggle({ label, value, onChange }: ToggleProps) {
   return (
     <label>
       <span>{label}</span>

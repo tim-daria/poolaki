@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { mockTransactions, CATEGORIES } from "../Home/mockData";
 import type { Transaction, TransactionType } from "../Home/mockData";
 import styles from "./Transactions.module.css";
-import Modal from "../../components/Modal/Modal";
+import { UniversalModal as Modal } from "../../components/Modal/Modal";
 const PAGE_SIZE = 10;
 
 function formatDate(iso: string) {
@@ -16,7 +16,7 @@ function formatDate(iso: string) {
 
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
-export default function Transactions() {
+export function Transactions() {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -309,3 +309,6 @@ export default function Transactions() {
     </div>
   );
 }
+
+// Named alias for react-router's route-level `lazy`
+export { Transactions as Component };

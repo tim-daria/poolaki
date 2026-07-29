@@ -1,6 +1,6 @@
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router";
 
-export default function ErrorPage() {
+export function ErrorPage() {
   const error = useRouteError();
   const nav = useNavigate();
   const status = isRouteErrorResponse(error) ? error.status : 500;

@@ -5,11 +5,11 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-export default function Header({ title, onLogout }: HeaderProps) {
+export function Header({ title, onLogout }: HeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
-    <div className="header">
+    <header className="header">
       <h2>{title}</h2>
       <div className="header-actions">
         <div className="notif-wrapper">
@@ -28,6 +28,6 @@ export default function Header({ title, onLogout }: HeaderProps) {
         </div>
         <button onClick={onLogout}>Logout</button>
       </div>
-    </div>
+    </header>
   );
 }

@@ -1,4 +1,4 @@
-interface AllauthError {
+export interface AllauthError {
   message: string;
   code?: string;
 }
@@ -9,7 +9,8 @@ const CODE_MESSAGES: Record<string, string> = {
   // email_verification_required:
   //   "Please verify your email address before logging in.",
   email_taken: "Registration failed. Please check your details and try again.",
-  username_taken: "Registration failed. Please check your details and try again.",
+  username_taken:
+    "Registration failed. Please check your details and try again.",
   password_too_short: "Password must be at least 8 characters long.",
   password_too_common: "Password is too common. Please choose a stronger one.",
   password_entirely_numeric: "Password cannot be entirely numeric.",

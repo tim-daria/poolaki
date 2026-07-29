@@ -1,10 +1,10 @@
-import { Outlet, useNavigate, useMatches } from "react-router";
+import { Outlet, useNavigate, useMatches, NavLink } from "react-router";
 import { useAuth } from "../context/useAuth";
 import { getCsrfToken } from "../lib/csrf";
-import Header from "./Header/Header";
+import { Header } from "./Header/Header";
 import "../App.css";
 
-export default function AppLayout() {
+export function AppLayout() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
   const matches = useMatches();
@@ -28,17 +28,26 @@ export default function AppLayout() {
       <nav>
         {/* <h2>Poolaki</h2> */}
         <ul>
-          <li>Overview</li>
-          <li>Transactions</li>
-          <li>Goals</li>
-          <li>Categories</li>
-          <div></div>
-          <li>Settings</li>
+          <li></li>
+          {/* NavLink can be styled when active, too */}
+          <li>
+            <NavLink to="/">Overview</NavLink>
+          </li>
+          <li>
+            <NavLink to="/transactions">Transactions</NavLink>
+          </li>
+          <li>
+            <NavLink to="/goals">Goals</NavLink>
+          </li>
+          <li>
+            <NavLink to="/categories">Categories</NavLink>
+          </li>
+          <li className="spacer"></li>
+          <li>
+            <NavLink to="/settings">Settings</NavLink>
+          </li>
         </ul>
-        <div className="nav-footer">
-          <a href="/about">About Us</a>
-          <a href="/terms">Terms of Use</a>
-        </div>
+        <div className="nav-footer"></div>
       </nav>
       <main style={{ gridArea: "main", overflowY: "auto" }}>
         <Outlet />

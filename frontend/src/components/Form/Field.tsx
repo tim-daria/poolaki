@@ -6,7 +6,7 @@ interface FieldProps {
   children: ReactNode;
 }
 
-export default function Field({ label, required, children }: FieldProps) {
+export function Field({ label, required, children }: FieldProps) {
   return (
     <label>
       {label} {required && <span>*</span>}

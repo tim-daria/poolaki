@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { CATEGORY_META, mockTransactions } from "../Home/mockData";
 import type { CategoryMeta } from "../Home/mockData";
-import CategoryModal from "./CategoryModal";
+import { CategoryModal } from "./CategoryModal";
 import styles from "./Categories.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface PeriodOption { label: string; from: string; to: string; }
+interface PeriodOption {
+  label: string;
+  from: string;
+  to: string;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
 function isoMonth(offset = 0) {
   const d = new Date();
   d.setMonth(d.getMonth() + offset);
@@ -18,12 +24,24 @@ function isoMonth(offset = 0) {
 }
 
 const PERIODS: PeriodOption[] = [
-  { label: "Today",        from: today(),           to: today() },
-  { label: "This week",    from: (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); })(), to: today() },
-  { label: "This month",   from: `${isoMonth()}-01`, to: today() },
-  { label: "Last month",   from: `${isoMonth(-1)}-01`, to: `${isoMonth(-1)}-31` },
-  { label: "Last 3 months",from: `${isoMonth(-3)}-01`, to: today() },
-  { label: "This year",    from: `${new Date().getFullYear()}-01-01`, to: today() },
+  { label: "Today", from: today(), to: today() },
+  {
+    label: "This week",
+    from: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - d.getDay());
+      return d.toISOString().slice(0, 10);
+    })(),
+    to: today(),
+  },
+  { label: "This month", from: `${isoMonth()}-01`, to: today() },
+  { label: "Last month", from: `${isoMonth(-1)}-01`, to: `${isoMonth(-1)}-31` },
+  { label: "Last 3 months", from: `${isoMonth(-3)}-01`, to: today() },
+  {
+    label: "This year",
+    from: `${new Date().getFullYear()}-01-01`,
+    to: today(),
+  },
 ];
 
 // ─── SVG Pie Chart ────────────────────────────────────────────────────────────
@@ -55,7 +73,12 @@ function PieChart({ slices }: { slices: { color: string; value: number }[] }) {
   }
 
   return (
-    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.pie}>
+    <svg
+      width={SIZE}
+      height={SIZE}
+      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      className={styles.pie}
+    >
       {paths.map((p, i) => (
         <path key={i} d={p.d} fill={p.color} stroke="#fff" strokeWidth={2} />
       ))}
@@ -67,12 +90,29 @@ function PieChart({ slices }: { slices: { color: string; value: number }[] }) {
 
 // ─── Category card in "Your Categories" ──────────────────────────────────────
 
-function CategoryCard({ meta, onEdit }: { meta: CategoryMeta; onEdit: () => void }) {
+function CategoryCard({
+  meta,
+  onEdit,
+}: {
+  meta: CategoryMeta;
+  onEdit: () => void;
+}) {
   return (
     <div className={styles.catCard}>
-      <span className={styles.catIcon} style={{ background: `${meta.color}22` }}>{meta.icon}</span>
+      <span
+        className={styles.catIcon}
+        style={{ background: `${meta.color}22` }}
+      >
+        {meta.icon}
+      </span>
       <span className={styles.catName}>{meta.name}</span>
-      <button className={styles.catEdit} onClick={onEdit} aria-label={`Edit ${meta.name}`}>✏️</button>
+      <button
+        className={styles.catEdit}
+        onClick={onEdit}
+        aria-label={`Edit ${meta.name}`}
+      >
+        ✏️
+      </button>
     </div>
   );
 }
@@ -81,10 +121,12 @@ function CategoryCard({ meta, onEdit }: { meta: CategoryMeta; onEdit: () => void
 
 const MAX_VISIBLE = 8;
 
-export default function Categories() {
+export function Categories() {
   const [categories, setCategories] = useState<CategoryMeta[]>(CATEGORY_META);
   const [showAll, setShowAll] = useState(false);
-  const [modalTarget, setModalTarget] = useState<CategoryMeta | null | "new">(null);
+  const [modalTarget, setModalTarget] = useState<CategoryMeta | null | "new">(
+    null,
+  );
   const [statType, setStatType] = useState<"expense" | "income">("expense");
   const [periodIdx, setPeriodIdx] = useState(2); // "This month" default
   const [periodOpen, setPeriodOpen] = useState(false);
@@ -105,7 +147,9 @@ export default function Categories() {
     setCategories((prev) =>
       modalTarget === "new"
         ? [...prev, meta]
-        : prev.map((c) => (c.name === (modalTarget as CategoryMeta).name ? meta : c))
+        : prev.map((c) =>
+            c.name === (modalTarget as CategoryMeta).name ? meta : c,
+          ),
     );
   }
 
@@ -124,7 +168,8 @@ export default function Categories() {
       .filter((t) => t.category === meta.name)
       .reduce((s, t) => s + t.amount, 0);
     return { ...meta, sum };
-  }).filter((c) => c.sum > 0)
+  })
+    .filter((c) => c.sum > 0)
     .sort((a, b) => b.sum - a.sum);
 
   const total = byCategory.reduce((s, c) => s + c.sum, 0);
@@ -134,17 +179,30 @@ export default function Categories() {
       {/* ── Your Categories ── */}
       <div className={styles.sectionHeader}>
         <span className={styles.sectionTitle}>Your Categories</span>
-        <span className={styles.sectionCount}>{categories.length} categories</span>
-        <button className={styles.addBtn} onClick={() => setModalTarget("new")}>+ New Category</button>
+        <span className={styles.sectionCount}>
+          {categories.length} categories
+        </span>
+        <button className={styles.addBtn} onClick={() => setModalTarget("new")}>
+          + New Category
+        </button>
       </div>
       <div className={styles.catGrid}>
         {visible.map((meta) => (
-          <CategoryCard key={meta.name} meta={meta} onEdit={() => setModalTarget(meta)} />
+          <CategoryCard
+            key={meta.name}
+            meta={meta}
+            onEdit={() => setModalTarget(meta)}
+          />
         ))}
       </div>
       {categories.length > MAX_VISIBLE && (
-        <button className={styles.showMoreBtn} onClick={() => setShowAll((v) => !v)}>
-          {showAll ? "Show less ▴" : `Show ${CATEGORY_META.length - MAX_VISIBLE} more ▾`}
+        <button
+          className={styles.showMoreBtn}
+          onClick={() => setShowAll((v) => !v)}
+        >
+          {showAll
+            ? "Show less ▴"
+            : `Show ${CATEGORY_META.length - MAX_VISIBLE} more ▾`}
         </button>
       )}
 
@@ -178,7 +236,10 @@ export default function Categories() {
                 <button
                   key={p.label}
                   className={i === periodIdx ? styles.periodActive : ""}
-                  onClick={() => { setPeriodIdx(i); setPeriodOpen(false); }}
+                  onClick={() => {
+                    setPeriodIdx(i);
+                    setPeriodOpen(false);
+                  }}
                 >
                   {p.label}
                 </button>
@@ -190,7 +251,9 @@ export default function Categories() {
 
       <div className={styles.statsPanel}>
         <div className={styles.chartCol}>
-          <PieChart slices={byCategory.map((c) => ({ color: c.color, value: c.sum }))} />
+          <PieChart
+            slices={byCategory.map((c) => ({ color: c.color, value: c.sum }))}
+          />
           {total > 0 && (
             <p className={styles.chartTotal}>
               Total: <strong>€{total.toFixed(2)}</strong>
@@ -203,10 +266,15 @@ export default function Categories() {
           ) : (
             byCategory.map((c) => (
               <div key={c.name} className={styles.legendCard}>
-                <span className={styles.legendDot} style={{ background: c.color }} />
+                <span
+                  className={styles.legendDot}
+                  style={{ background: c.color }}
+                />
                 <span className={styles.legendIcon}>{c.icon}</span>
                 <span className={styles.legendName}>{c.name}</span>
-                <span className={styles.legendPct}>{((c.sum / total) * 100).toFixed(1)}%</span>
+                <span className={styles.legendPct}>
+                  {((c.sum / total) * 100).toFixed(1)}%
+                </span>
                 <span className={styles.legendAmt}>€{c.sum.toFixed(2)}</span>
               </div>
             ))
@@ -225,3 +293,6 @@ export default function Categories() {
     </div>
   );
 }
+
+// Named alias for react-router's route-level `lazy`
+export { Categories as Component };

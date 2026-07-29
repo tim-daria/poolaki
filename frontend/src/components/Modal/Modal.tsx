@@ -62,7 +62,7 @@ function Toggle({
   );
 }
 
-export default function UniversalModal({ mode, onClose }: Props) {
+export function UniversalModal({ mode, onClose }: Props) {
   const [error, setError] = useState("");
 
   // --- Transaction fields ---

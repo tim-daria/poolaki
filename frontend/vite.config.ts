@@ -21,7 +21,6 @@ export default defineConfig({
     allowedHosts: ["poolaki.localhost"],
     hmr: {
       host: "poolaki.localhost",
-      port: 443,
       protocol: "wss",
       clientPort: 443,
     },
