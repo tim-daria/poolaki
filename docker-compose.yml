@@ -44,6 +44,7 @@ services:
       context: ./backend
       dockerfile: django/Dockerfile
     container_name: django
+    restart: unless-stopped
     expose:
     - "8000"
     volumes:
@@ -66,6 +67,7 @@ services:
   db:
     image: postgres:18
     container_name: postgres_db
+    restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
     environment:
@@ -89,6 +91,7 @@ services:
       context: ./frontend
       dockerfile: ./Dockerfile
     container_name: nodejs
+    restart: unless-stopped
     expose:
       - "5173"
     working_dir: /home/node/app
@@ -113,9 +116,9 @@ services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
+    restart: unless-stopped
     expose:
       - "9090"
-    restart: unless-stopped
     volumes:
       - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./backend/monitoring/prometheus_data:/var/prometheus
@@ -136,9 +139,9 @@ services:
   grafana:
     image: grafana/grafana:13.1
     container_name: grafana
+    restart: unless-stopped
     expose:
       - "3000"
-    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
@@ -148,6 +151,14 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: false
       GF_SECURITY_COOKIE_SECURE: true
       GF_SECURITY_STRICT_TRANSPORT_SECURITY: true
+      # SMTP Settings
+      # GF_SMTP_ENABLED: true
+      # GF_SMTP_HOST: ${SMTP_HOST}
+      # GF_SMTP_USER: ${SMTP_USER}
+      # GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      # GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+      # GF_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Grafana Alerts}
+      # GF_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-false}
     volumes:
       - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
@@ -169,6 +180,7 @@ services:
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
     container_name: postgres_exporter
+    restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
     networks:
