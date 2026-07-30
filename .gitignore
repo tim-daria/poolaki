@@ -28,3 +28,4 @@ build/
 # Backup files
 .last_success
 backup_*.sql
+pre-disaster-recovery_*.sql

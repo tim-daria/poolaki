@@ -40,7 +40,8 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://poolaki.localhost",
-    "http://localhost:5173",
+    "https://poolaki.localhost:8443",
+    # "http://localhost:5173",
 ]
 
 CSRF_COOKIE_HTTPONLY = False

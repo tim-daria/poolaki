@@ -17,6 +17,8 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
+    environment:
+      TZ: Europe/Berlin
     volumes:
       - ./backend/caddy/:/etc/caddy
       - caddy_data:/data
@@ -48,6 +50,8 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     expose:
     - "8000"
+    environment:
+      TZ: Europe/Berlin
     volumes:
       - ./backend/django:/app
     tmpfs:
@@ -77,6 +81,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
+      # PG Values are needed for psql to restore the database from backup
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      TZ: Europe/Berlin
     networks:
       - backend_net
       - backup_net
@@ -98,8 +107,9 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     expose:
       - "5173"
-    working_dir: /home/node/app
-    # environment:
+    # working_dir: /home/node/app
+    environment:
+      TZ: Europe/Berlin
       # - NODE_ENV=production
     volumes:
       - ./frontend:/home/node/app
@@ -124,6 +134,8 @@ services:
     restart: unless-stopped
     expose:
       - "9090"
+    environment:
+      TZ: Europe/Berlin
     volumes:
       - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./backend/monitoring/prometheus_data:/var/prometheus
@@ -164,6 +176,7 @@ services:
       # GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
       # GF_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Grafana Alerts}
       # GF_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-false}
+      TZ: Europe/Berlin
     volumes:
       - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
@@ -230,8 +243,6 @@ services:
     image: postgres:18
     container_name: db_backup
     restart: unless-stopped
-    env_file:
-      - .env
     volumes:
       - ./backend/backups:/backups
       - ./backend/backups/backup.sh:/backup.sh
@@ -239,10 +250,14 @@ services:
     networks:
       - backup_net
     environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      TZ: Europe/Berlin
     healthcheck:
-      test: ["CMD-SHELL", "find /backups/.last_success -mmin -1500 | grep -q . || exit 1"]
-      interval: 1h
+      test: ["CMD-SHELL", "find /backups/.last_success -mmin -2600 | grep -q . || exit 1"]
+      interval: 30s
       timeout: 30s
       retries: 3
     depends_on:
