@@ -144,8 +144,19 @@ GET /health
 
 Used by:
 
-- Docker healthcheck
-- Prometheus
+- Docker healthcheck and CI to recieve the current health status
+
+
+### Metrics
+
+```
+
+GET /metrics
+```
+
+Used by:
+
+- Prometheus to collect performance and runtime metrics for monitoring and alerting
 
 
 # Monitoring
