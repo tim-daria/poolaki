@@ -1,6 +1,3 @@
-# Create your tests here.
-
-
 from decimal import Decimal
 
 import pytest

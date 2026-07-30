@@ -38,7 +38,7 @@ jobs:
         working-directory: backend/django
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: test_user
