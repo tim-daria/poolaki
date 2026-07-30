@@ -4,8 +4,8 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./backend/caddy/:/etc/caddy
       - caddy_data:/data
@@ -33,10 +33,13 @@ services:
       context: ./backend
       dockerfile: django/Dockerfile
     container_name: django
+    user: "${UID:-1000}:${GID:-1000}"
     expose:
     - "8000"
     volumes:
       - ./backend/django:/app
+    tmpfs:
+      - /tmp:exec,mode=777
     env_file:
       - .env
     networks:
@@ -80,6 +83,7 @@ services:
       context: ./frontend
       dockerfile: ./Dockerfile
     container_name: nodejs
+    user: "${UID:-1000}:${GID:-1000}"
     expose:
       - "5173"
     working_dir: /home/node/app
@@ -88,6 +92,7 @@ services:
     volumes:
       - ./frontend:/home/node/app
       - node_modules:/home/node/app/node_modules
+      - /home/node/app/node_modules
     networks:
       - frontend_net
       - monitor_net
@@ -222,6 +227,7 @@ services:
     build:
       context: ./ai-service
     container_name: ai-service
+    user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
     expose:
       - "8000"
