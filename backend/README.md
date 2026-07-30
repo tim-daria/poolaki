@@ -2,6 +2,151 @@
 
 Backend service code lives here.
 
+## Authentification
+Authentication is implemented using **django-allauth Headless**.
+
+Users can:
+
+- register with email, username and password
+- log in with email and password
+- register and sign in using social authentification via intra42 (42 OAuth)
+
+The callback configured in the 42 Developer Portal should be:
+
+```
+
+http://poolaki.localhost/accounts/intra42/callback/
+
+```
+
+
+## APIs
+### Get CSRF token
+
+```
+
+GET /api/csrf/
+
+```
+
+---
+
+### Get current session
+
+```
+
+GET /\_allauth/browser/v1/auth/session
+
+```
+
+---
+
+### Sign in
+
+```
+
+POST /\_allauth/browser/v1/auth/signup
+
+```
+
+### Login
+
+```
+
+POST /\_allauth/browser/v1/auth/login
+
+```
+
+---
+
+### Logout
+
+```
+
+DELETE /\_allauth/browser/v1/auth/session
+
+```
+
+---
+
+### Social login
+
+```
+
+POST /\_allauth/browser/v1/auth/provider/redirect
+
+```
+
+Parameters:
+
+```
+
+provider
+process
+callback_url
+
+```
+
+Example:
+
+```
+
+provider=intra42
+process=login
+callback_url=https://poolaki.localhost/oauth/callback
+
+```
+
+---
+
+
+### Initial balance
+
+Check whether initial balance is required:
+
+```
+
+GET /api/organizations/personal/initial-balance/
+
+```
+Response:
+
+```json
+{
+  "needs_initial_balance": true
+}
+```
+
+Set initial balance:
+
+```
+
+POST /api/organizations/personal/initial-balance/
+
+```
+
+Body:
+
+```json
+{
+  "initial_balance": 1000
+}
+```
+
+---
+
+### Health
+
+```
+
+GET /health
+```
+
+Used by:
+
+- Docker healthcheck
+- Prometheus
+
 
 # Monitoring
 

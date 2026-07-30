@@ -1,11 +1,16 @@
 FROM python:3.12-slim-bookworm
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1\
+	UV_SYSTEM_PYTHON=1
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 WORKDIR /app
 
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 
-RUN pip install --upgrade pip \
-    && pip install .
+RUN uv export --frozen --no-dev | uv pip install --system --no-cache -r -
 
 COPY app/ ./app/
 

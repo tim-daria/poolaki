@@ -1,0 +1,26 @@
+$kind: http-request
+name: Get CSRF Cookie
+method: GET
+url: "{{base_url}}/api/csrf/"
+order: 1000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const responseHeaders = pm.response.headers;
+      const setCookieHeader = responseHeaders.get('set-cookie') || responseHeaders.get('Set-Cookie');
+      if (setCookieHeader) {
+        const match = setCookieHeader.match(/csrftoken=([^;]+)/);
+        if (match && match[1]) {
+          pm.environment.set('csrf_token', match[1]);
+        }
+      }
+
+      const cookieValue = pm.cookies.get('csrftoken');
+      if (cookieValue) {
+        pm.environment.set('csrf_token', cookieValue);
+      }
+
+      pm.test('CSRF token saved to environment', function () {
+        pm.expect(pm.environment.get('csrf_token')).to.be.a('string').and.not.empty;
+      });
