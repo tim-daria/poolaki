@@ -8,7 +8,7 @@ headers:
 body:
   type: json
   content: |-
-    {  "name": "Family account",
-       "initial_balance": "1000.00"
+    {  "name": "Trip to France",
+       "initial_balance": "1500.00"
     }
 order: 3269326534608491

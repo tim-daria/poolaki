@@ -6,13 +6,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import (
-    User,
-)
+from core.models import Membership, User
 from core.serializers import InitialBalanceSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import create_shared_organization
+
+
+@ensure_csrf_cookie
+def csrf(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"detail": "CSRF cookie set"})
+
+
+def health_check(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"status": "ok"})
 
 
 class SetInitialBalanceView(APIView):
@@ -66,9 +73,18 @@ class SetInitialBalanceView(APIView):
         return self._handle(request)
 
 
-class OrganizationCreateView(APIView):
+class OrganizationListCreateView(APIView):
     """
-    Create a new shared organization.
+    Manage organizations for the authenticated user.
+
+    GET:
+    Returns a list of organizations where the current user is a member.
+
+    Returns:
+    - 200 OK with a list of organizations for GET requests.
+
+    POST:
+    Create a new shared organization for the authenticated user.
 
     Request body:
     - name (string): Organization name.
@@ -79,6 +95,25 @@ class OrganizationCreateView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        assert isinstance(request.user, User)
+        memberships = Membership.objects.filter(user=request.user).select_related("org")
+        current_org_id = request.session.get("current_organization_id")
+
+        organizations = [
+            {
+                "id": m.org.id,
+                "name": m.org.name,
+                "is_personal": m.org.is_personal,
+                "role": m.role,
+            }
+            for m in memberships
+        ]
+        return Response(
+            {"current_organization_id": current_org_id, "organizations": organizations},
+            status=status.HTTP_200_OK,
+        )
 
     def post(self, request: Request) -> Response:
         assert isinstance(request.user, User)
@@ -93,15 +128,27 @@ class OrganizationCreateView(APIView):
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
         return Response(
-            {"id": org.id, "name": org.name, "initial_balance": str(org.initial_balance)},
+            {
+                "id": org.id,
+                "name": org.name,
+                "initial_balance": str(org.initial_balance),
+                "is_personal": org.is_personal,
+            },
             status=status.HTTP_201_CREATED,
         )
 
 
-@ensure_csrf_cookie
-def csrf(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"detail": "CSRF cookie set"})
+class SwitchOrganizationView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
 
-def health_check(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"status": "ok"})
+        if not Membership.objects.filter(user=request.user, org_id=org_id).exists():
+            return Response(
+                {"error": "You are not a member of this organization"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        request.session["current_organization_id"] = org_id
+        request.session.modified = True
+        return Response({"current_organization_id": org_id})
