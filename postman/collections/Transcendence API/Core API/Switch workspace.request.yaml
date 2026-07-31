@@ -1,6 +1,6 @@
 $kind: http-request
 name: Switch workspace
-url: "{{base_url}}/api/organizations/3/select/"
+url: "{{base_url}}/api/organizations/2/select/"
 method: POST
 headers:
   X-CSRFToken: "{{csrf_token}}"

@@ -84,7 +84,7 @@ class OrganizationListCreateView(APIView):
     - 200 OK with a list of organizations for GET requests.
 
     POST:
-    Create a new shared organization for the authenticated user.
+    Create a new shared organization for the authenticated user and switch to it.
 
     Request body:
     - name (string): Organization name.
@@ -127,6 +127,9 @@ class OrganizationListCreateView(APIView):
 
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
+
+        request.session["current_organization_id"] = org.id
+        request.session.modified = True
         return Response(
             {
                 "id": org.id,
@@ -139,6 +142,21 @@ class OrganizationListCreateView(APIView):
 
 
 class SwitchOrganizationView(APIView):
+    """
+    Switch the current organization for the authenticated user.
+
+    The selected organization is stored in the user's session and is used
+    as the default organization after page reloads.
+
+    Request:
+    - POST /organizations/{org_id}/select/
+    - org_id (int): ID of the organization to select.
+
+    Returns:
+    - 200 OK with the selected organization ID.
+    - 403 Forbidden if the user is not a member of the organization.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, org_id: int) -> Response:

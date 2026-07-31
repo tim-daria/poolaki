@@ -1,10 +1,10 @@
 $kind: http-request
 name: Get list of all groups
-url: "{{base_url}}/api/organizations/?=3"
+url: "{{base_url}}/api/organizations/"
 method: GET
 queryParams:
   - key: ""
-    value: "3"
-    disabled: false
+    value: ""
+    disabled: true
     description: ""
 order: 3606831345487812
