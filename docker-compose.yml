@@ -17,6 +17,8 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
+      # - "80:80"
+      # - "443:443"
     environment:
       TZ: Europe/Berlin
     volumes:
@@ -169,18 +171,22 @@ services:
       GF_SECURITY_COOKIE_SECURE: true
       GF_SECURITY_STRICT_TRANSPORT_SECURITY: true
       # SMTP Settings
-      # GF_SMTP_ENABLED: true
-      # GF_SMTP_HOST: ${SMTP_HOST}
-      # GF_SMTP_USER: ${SMTP_USER}
-      # GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      # GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
-      # GF_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Grafana Alerts}
-      # GF_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-false}
+      GF_SMTP_ENABLED: true
+      GF_SMTP_HOST: ${SMTP_HOST}
+      GF_SMTP_USER: ${SMTP_USER}
+      GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+      GF_SMTP_FROM_NAME: "Grafana Alerts"
+      GF_SMTP_SKIP_VERIFY: false
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "provisioningWithEnvVars"
+      ALERT_RECIPIENT_EMAIL: ${ALERT_RECIPIENT_EMAIL}
       TZ: Europe/Berlin
     volumes:
-      - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-      - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
-      - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
+      - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      # - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      # - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      # - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
       - grafana_data:/var/lib/grafana
     networks:
       - backend_net
