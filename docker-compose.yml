@@ -4,8 +4,8 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./backend/caddy/:/etc/caddy
       - caddy_data:/data
@@ -40,6 +40,10 @@ services:
       - ./backend/django:/app
     tmpfs:
       - /tmp:exec,mode=777
+    environment:
+      HOME: /tmp
+      UV_CACHE_DIR: /tmp/uv
+      UV_PROJECT_ENVIRONMENT: /tmp/uv-venv
     env_file:
       - .env
     networks:
@@ -87,12 +91,9 @@ services:
     expose:
       - "5173"
     working_dir: /home/node/app
-    # environment:
-      # - NODE_ENV=production
     volumes:
       - ./frontend:/home/node/app
       - node_modules:/home/node/app/node_modules
-      - /home/node/app/node_modules
     networks:
       - frontend_net
       - monitor_net
