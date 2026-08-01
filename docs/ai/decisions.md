@@ -44,3 +44,25 @@ This keeps data ownership, authorization rules, and business logic centralized i
 - Django validates access permissions before sharing data.
 - AI Service focuses on retrieval, context preparation, and LLM interaction.
 - Database schema changes remain isolated from AI workflows.
+
+---
+
+## Decision 3: Vector Retrieval Usage
+
+### Context
+Some supported questions can be answered from the SQL retrieval but others might need vector retrieval.
+
+
+### Decision
+Vector retrieval is used only for semantic context.
+
+
+### Reason
+Examples:
+- Financial explanations.
+- User-provided documents.
+- Knowledge base information.
+
+
+### Consequences
+- The information we'll be retrieved from SQL and vectors.
