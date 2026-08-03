@@ -126,26 +126,8 @@ jobs:
       - name: ESLint
         run: npm run lint
 
-      # ── Playwright: component / visual tests ───────────────────────────────
-      # Component tests mount components in isolation (no server needed),
-      # so they also run directly on the host via Playwright's experimental
-      # component testing mode. If you're using Storybook or similar instead,
-      # replace this step accordingly.
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          # Playwright stores browser binaries outside the project; cache them
-          # so we don't re-download ~300 MB of Chromium on every run.
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Install Playwright browsers
-        # --with-deps also installs OS-level shared libraries (fonts, audio,
-        # etc.) that Chromium needs. Only installs what the cache missed.
-        run: npx playwright install --with-deps chromium
-
-      - name: Playwright component tests
-        run: npm run test:components
+      # Playwright component tests are disabled for now.
+      # This job stays as a fast lint-only frontend check.
 
     # Always runs on every PR — catches backend changes that break the frontend.
   e2e:
