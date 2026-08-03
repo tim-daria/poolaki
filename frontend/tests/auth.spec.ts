@@ -51,8 +51,8 @@ test.describe.serial("User authentication", () => {
     );
 
     await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-    await expect(page).toHaveURL("/");
     // expect(page.locator("#header")).toBeVisible();
+    await page.waitForURL("/");
     await expect(page.getByRole("banner")).toBeVisible();
   });
 

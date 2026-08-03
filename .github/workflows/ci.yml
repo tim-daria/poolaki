@@ -226,6 +226,8 @@ jobs:
           echo "Waiting for backend..."
           timeout 60 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
 
+        # docker compose exec -T backend python manage.py migrate
+
       - name: Playwright e2e tests
         env:
           # Playwright reads this in playwright.config.ts as the baseURL.
@@ -242,6 +244,11 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 7
+
+      - name: Show docker logs
+        if: failure()
+        working-directory: .
+        run: docker compose logs backend
 
       - name: Stop services
         if: always()
