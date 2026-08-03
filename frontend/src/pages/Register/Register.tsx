@@ -58,6 +58,7 @@ export function Register() {
         username,
         email,
         password,
+        password2,
       }),
     });
 

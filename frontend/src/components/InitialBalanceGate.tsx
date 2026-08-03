@@ -11,13 +11,13 @@ interface GateProps {
 
 export function InitialBalanceGate({ children }: GateProps) {
   const { user } = useAuth();
-  const [needsBalance, setNeedsBalance] = useState(false);
+  const [needsBalance, setNeedsBalance] = useState(true);
   const [balance, setBalance] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    fetch("/api/organizations/personal/initial-balance", {
+    fetch("/api/organizations/personal/initial-balance/", {
       credentials: "include",
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -39,34 +39,32 @@ export function InitialBalanceGate({ children }: GateProps) {
     }
   }
 
-  return (
-    <>
-      {children}
-      {needsBalance && (
-        <dialog open className={styles.modal}>
-          <h2>One more step!</h2>
-          <p>Enter your initial balance:</p>
-          <form onSubmit={handleSubmit}>
-            <label>
-              Initial Balance (€)
-              <input
-                id="balance"
-                type="number"
-                min="0"
-                step="0.01"
-                value={balance}
-                onChange={(e) => setBalance(e.target.value)}
-                required
-                autoFocus
-              />
-            </label>
-            {error && <p className={styles.error}>{error}</p>}
-            <button type="submit" className={styles.submitBtn}>
-              Get Started
-            </button>
-          </form>
-        </dialog>
-      )}
-    </>
-  );
+  if (!user) return null;
+  if (needsBalance)
+    return (
+      <dialog open className={styles.modal}>
+        <h2>One more step!</h2>
+        <p>Enter your initial balance:</p>
+        <form onSubmit={handleSubmit}>
+          <label>
+            Initial Balance (€)
+            <input
+              id="balance"
+              type="number"
+              min="0"
+              step="0.01"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+              required
+              autoFocus
+            />
+          </label>
+          {error && <p className={styles.error}>{error}</p>}
+          <button type="submit" className={styles.submitBtn}>
+            Get Started
+          </button>
+        </form>
+      </dialog>
+    );
+  return <>{children}</>;
 }

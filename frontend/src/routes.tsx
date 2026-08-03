@@ -3,7 +3,7 @@ import { App } from "./App";
 import { AppLayout } from "./components/AppLayout";
 import { GuestRoute } from "./components/GuestRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { InitialBalanceGate } from "./components/InitialBalancrGate";
+import { InitialBalanceGate } from "./components/InitialBalanceGate";
 import { ErrorPage } from "./pages/ErrorPage/ErrorPage";
 
 // Each lazy page is its own code-split chunk, loaded on first navigation.

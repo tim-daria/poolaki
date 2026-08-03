@@ -45,6 +45,11 @@ test.describe.serial("User authentication", () => {
     await page.getByLabel("Password", { exact: true }).fill(testUser.password);
     await page.getByLabel("Confirm Password").fill(testUser.password);
     await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+
+    await page.route(
+      "**/api/organizations/personal/initial-balance/",
+      (route) => route.fulfill({ json: { needs_initial_balance: false } }),
+    );
     await page.waitForURL("/");
     // expect(page.locator("#header")).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
@@ -57,17 +62,19 @@ test.describe.serial("User authentication", () => {
     await logoutBtn.click();
     await page.waitForURL("/");
 
-    expect(page.getByRole("button", { name: "Login", exact: true }));
+    await expect(page.getByRole("button", { name: "Login", exact: true }));
   });
 
   test("login with username: success", async () => {
-    // await page.goto("/");
+    await page.goto("/");
 
     await page.getByLabel("Username or Email").fill(testUser.username);
     await page.getByLabel("Password").fill(testUser.password);
     await page.getByRole("button", { name: "Login", exact: true }).click();
     await page.waitForURL("/");
 
-    expect(page.getByRole("button", { name: /log\s*out/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /log\s*out/i }),
+    ).toBeVisible();
   });
 });
