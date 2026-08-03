@@ -44,12 +44,16 @@ test.describe.serial("User authentication", () => {
     await page.getByLabel("Username").fill(testUser.username);
     await page.getByLabel("Password", { exact: true }).fill(testUser.password);
     await page.getByLabel("Confirm Password").fill(testUser.password);
-    await page.getByRole("button", { name: "Sign Up", exact: true }).click();
 
     await page.route(
       "**/api/organizations/personal/initial-balance/",
       (route) => route.fulfill({ json: { needs_initial_balance: false } }),
     );
+
+    await Promise.all([
+      page.waitForURL("/"),
+      page.getByRole("button", { name: "Sign Up", exact: true }).click(),
+    ]);
     await page.waitForURL("/");
     // expect(page.locator("#header")).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
