@@ -1,5 +1,5 @@
 import styles from "./styles.module.css";
-import { mockUser, mockStats, mockTransactions, mockGoals } from "./mockData";
+import { mockStats, mockTransactions, mockGoals } from "./mockData";
 
 export function Home() {
   const { currentMonth, lastMonth } = mockStats;
