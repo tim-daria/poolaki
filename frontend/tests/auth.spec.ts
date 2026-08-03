@@ -50,11 +50,8 @@ test.describe.serial("User authentication", () => {
       (route) => route.fulfill({ json: { needs_initial_balance: false } }),
     );
 
-    await Promise.all([
-      page.waitForURL("/"),
-      page.getByRole("button", { name: "Sign Up", exact: true }).click(),
-    ]);
-    await page.waitForURL("/");
+    await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+    await expect(page).toHaveURL("/");
     // expect(page.locator("#header")).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
   });
