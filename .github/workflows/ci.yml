@@ -179,17 +179,17 @@ jobs:
         working-directory: .
         run: |
           cat > .env << EOF 
-          POSTGRES_DB=${{ vars.POSTGRES_DB }}
-          POSTGRES_USER=${{ vars.POSTGRES_USER }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           DB_HOST=db
           DB_PORT=5432
-          DJANGO_SUPERUSER_USERNAME=${{ vars.DJANGO_SUPERUSER_USERNAME }}
-          DJANGO_SUPERUSER_EMAIL=${{ vars.DJANGO_SUPERUSER_EMAIL }}
+          DJANGO_SUPERUSER_USERNAME=${{ secrets.DJANGO_SUPERUSER_USERNAME }}
+          DJANGO_SUPERUSER_EMAIL=${{ secrets.DJANGO_SUPERUSER_EMAIL }}
           DJANGO_SUPERUSER_PASSWORD=${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
           INTRA42_CLIENT_ID=${{ secrets.INTRA42_CLIENT_ID }}
           INTRA42_CLIENT_SECRET=${{ secrets.INTRA42_CLIENT_SECRET }}
-          GF_ADMIN_USER=${{ vars.GF_ADMIN_USER }}
+          GF_ADMIN_USER=${{ secrets.GF_ADMIN_USER }}
           GF_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASSWORD }}
           TZ=Europe/Berlin
           EOF
