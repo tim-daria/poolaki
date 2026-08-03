@@ -9,7 +9,7 @@ export function Header({ title, onLogout }: HeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
-    <header className="header">
+    <header id="header" className="header">
       <h2>{title}</h2>
       <div className="header-actions">
         <div className="notif-wrapper">
@@ -26,7 +26,9 @@ export function Header({ title, onLogout }: HeaderProps) {
             </div>
           )}
         </div>
-        <button onClick={onLogout}>Logout</button>
+        <button aria-label="Log out" onClick={onLogout}>
+          Logout
+        </button>
       </div>
     </header>
   );

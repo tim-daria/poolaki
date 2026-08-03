@@ -19,7 +19,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v3.0.2
         id: filter
         with:
           filters: |
@@ -36,6 +36,26 @@ jobs:
     defaults:
       run:
         working-directory: backend/django
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test_user"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      DB_HOST: localhost
+      DB_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
@@ -57,22 +77,176 @@ jobs:
       - name: Mypy
         run: uv run mypy .
 
+      - name: Django system check
+        run: uv run python manage.py check
+
+      - name: Check for missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Apply migrations
+        run: uv run python manage.py migrate
+
       - name: Tests
         run: uv run pytest
 
-  # Runs ONLY when frontend/** changed.
+      - name: Smoke test — server starts and responds
+        run: |
+          uv run python manage.py runserver 0.0.0.0:8000 &
+          SERVER_PID=$!
+          sleep 3
+          curl --fail http://localhost:8000/health/ || (kill $SERVER_PID && exit 1)
+          kill $SERVER_PID
+  # ── Frontend — runs ONLY when frontend/** changed ─────────────────────────
   frontend:
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Adjust this path to where package.json lives.
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Frontend checks
-        run: echo "Run frontend build / lint / test here."
 
-  # Required status check. Always runs; fails only if a job that ran failed.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # Caches npm dependencies keyed on package-lock.json so subsequent
+          # runs skip the full install when deps haven't changed.
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── ESLint ─────────────────────────────────────────────────────────────
+      # Runs ESLint directly on the host (no Docker needed — ESLint has no
+      # runtime dependency on backend or database).
+      - name: ESLint
+        run: npm run lint
+
+      # ── Playwright: component / visual tests ───────────────────────────────
+      # Component tests mount components in isolation (no server needed),
+      # so they also run directly on the host via Playwright's experimental
+      # component testing mode. If you're using Storybook or similar instead,
+      # replace this step accordingly.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          # Playwright stores browser binaries outside the project; cache them
+          # so we don't re-download ~300 MB of Chromium on every run.
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        # --with-deps also installs OS-level shared libraries (fonts, audio,
+        # etc.) that Chromium needs. Only installs what the cache missed.
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright component tests
+        run: npm run test:components
+
+    # Always runs on every PR — catches backend changes that break the frontend.
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Create .env for CI
+        working-directory: .
+        run: |
+          cat > .env << EOF 
+          POSTGRES_DB=${{ vars.POSTGRES_DB }}
+          POSTGRES_USER=${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          DB_HOST=db
+          DB_PORT=5432
+          DJANGO_SUPERUSER_USERNAME=${{ vars.DJANGO_SUPERUSER_USERNAME }}
+          DJANGO_SUPERUSER_EMAIL=${{ vars.DJANGO_SUPERUSER_EMAIL }}
+          DJANGO_SUPERUSER_PASSWORD=${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
+          INTRA42_CLIENT_ID=${{ secrets.INTRA42_CLIENT_ID }}
+          INTRA42_CLIENT_SECRET=${{ secrets.INTRA42_CLIENT_SECRET }}
+          GF_ADMIN_USER=${{ vars.GF_ADMIN_USER }}
+          GF_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASSWORD }}
+          TZ=Europe/Berlin
+          EOF
+
+      # ── Playwright: e2e tests (full stack via docker compose) ──────────────
+      # E2e tests need the real app running. We use docker compose to spin up
+      # both services (frontend on 5173, backend on 3000) directly — bypassing
+      # Caddy entirely. This avoids the self-signed TLS cert problem that would
+      # cause Playwright/Chromium to reject https://poolaki.localhost in CI.
+      #
+      # In playwright.config.ts, set:
+      #   baseURL: process.env.BASE_URL ?? 'https://poolaki.localhost'
+      # so local dev still uses Caddy while CI uses the direct ports.
+      - name: Start services via docker compose
+        working-directory: .
+        env:
+          # Tells docker compose which profile/override to use in CI.
+          # Create a docker-compose.ci.yml that exposes ports 3000 and 5173
+          # directly without Caddy, or just ensure your base compose file
+          # already exposes those ports.
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
+        run: |
+          docker compose up -d --build frontend backend
+          # Wait until the frontend dev server is actually responding.
+          # Vite can take a few seconds to finish its initial build.
+          echo "Waiting for frontend..."
+          timeout 60 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
+          echo "Waiting for backend..."
+          timeout 60 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
+
+      - name: Playwright e2e tests
+        env:
+          # Playwright reads this in playwright.config.ts as the baseURL.
+          BASE_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:8000 # optional, if your tests call the API directly
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        # Always upload the HTML report so you can inspect failures even when
+        # the job itself is green. The report is kept for 7 days.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        working-directory: .
+        run: docker compose down
+
+  # ── Required status check ─────────────────────────────────────────────────
+  # Always runs; fails only if a job that actually ran failed.
+  # This is the single check to enable in branch protection settings.
   ci:
-    needs: [backend, frontend]
+    needs: [backend, frontend, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
