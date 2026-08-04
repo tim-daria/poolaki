@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
-import { submitInitialBalance } from "../../lib/initialBalance";
-import {
-  startSocialAuth
-} from "../../lib/socialAuth";
+import { parseAllauthErrors, type AllauthError } from "../../lib/authErrors";
+import { startSocialAuth } from "../../lib/socialAuth";
+import type { User } from "../../context/AuthContext";
 import styles from "./styles.module.css";
 
 /*
@@ -24,20 +23,13 @@ import styles from "./styles.module.css";
 
  */
 
-export default function Register() {
+export function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [error, setError] = useState("");
-  const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [balance, setBalance] = useState("");
-  const [balanceError, setBalanceError] = useState("");
-  const [pendingUser, setPendingUser] = useState<{
-    id: number;
-    username: string;
-    email: string;
-  } | null>(null);
+
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -49,21 +41,6 @@ export default function Register() {
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     setError("");
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return;
-    }
-
-    if (/^\d+$/.test(password)) {
-      setError("Password cannot be entirely numeric");
-      return;
-    }
-
-    if (username && password.toLowerCase().includes(username.toLowerCase())) {
-      setError("Password is too similar to your username");
-      return;
-    }
 
     if (password !== password2) {
       setError("Passwords do not match");
@@ -81,31 +58,26 @@ export default function Register() {
         username,
         email,
         password,
+        password2,
       }),
     });
 
-    const data = await res.json();
-
-    if (res.ok) {
-      setPendingUser(data.data.user);
-      setShowBalanceModal(true);
-    } else {
-      const msg = data.errors?.[0]?.message ?? "Registration failed";
-      setError(msg);
+    let data: { data?: { user: User }; errors?: AllauthError[] } | null = null;
+    try {
+      data = await res.json();
+    } catch {
+      // non-JSON responce
     }
-  }
 
-  async function handleBalanceSubmit(e: { preventDefault(): void }) {
-    e.preventDefault();
-    setBalanceError("");
-
-    const result = await submitInitialBalance(balance, getCsrfToken());
-
-    if (result.ok) {
-      setUser(pendingUser);
+    if (res.ok && data?.data?.user) {
+      setUser(data.data.user);
       navigate("/");
     } else {
-      setBalanceError(result.error ?? "Failed to create organisation. Please try again.");
+      const msg = parseAllauthErrors(
+        data?.errors,
+        "Login failed. Please check your credentials.",
+      );
+      setError(msg);
     }
   }
 
@@ -113,7 +85,7 @@ export default function Register() {
     <div className={styles.helloPage}>
       <div className={styles.formContainer}>
         <p>
-          Already have an account? <a href="/login">Login</a>
+          Already have an account? <Link to="/login">Login</Link>
         </p>
         <h1>Sign Up</h1>
         <form onSubmit={handleSubmit}>
@@ -169,30 +141,15 @@ export default function Register() {
         >
           Sign Up with 42
         </button>
+        <p>
+          By creating an account, you accept our{" "}
+          <Link to="/policy">Privacy Policy</Link> and{" "}
+          <Link to="/terms">Terms of Use</Link>
+        </p>
       </div>
       <div className={styles.decorContainer}></div>
-
-      <dialog open={showBalanceModal} className={styles.modal}>
-        <h2>One more step!</h2>
-        <p>Enter your initial balance:</p>
-        <form onSubmit={handleBalanceSubmit}>
-          <label htmlFor="balance">Initial Balance (€)</label>
-          <input
-            id="balance"
-            type="number"
-            min="0"
-            step="0.01"
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
-            required
-            autoFocus
-          />
-          {balanceError && <p className={styles.error}>{balanceError}</p>}
-          <button type="submit" className={styles.submitBtn}>
-            Get Started
-          </button>
-        </form>
-      </dialog>
     </div>
   );
 }
+// Named alias for react-router's route-level `lazy`
+export { Register as Component };

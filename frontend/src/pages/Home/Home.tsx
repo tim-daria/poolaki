@@ -1,49 +1,70 @@
 import styles from "./styles.module.css";
+import { mockStats, mockTransactions, mockGoals } from "./mockData";
 
-export default function Home() {
+export function Home() {
+  const { currentMonth, lastMonth } = mockStats;
+  const netBalance = currentMonth.income - currentMonth.expenses;
+
   return (
     <div className={styles.homeContainer}>
+      <div className={styles.heading}>
+        {/* <p>
+          Balance:{" "}
+          <span>
+            €{(currentMonth.income - currentMonth.expenses).toFixed(2)}
+          </span>
+        </p> */}
+      </div>
       <div className={styles.statsHead}>
         <div className={styles.statsXS}>
-          <span>Total income</span>
-          <span>€{}</span>
-          <span>vs €{} last month</span>
+          <span>Income ({currentMonth.label})</span>
+          <span>€{currentMonth.income.toFixed(2)}</span>
+          <span>vs €{lastMonth.income.toFixed(2)} last month</span>
         </div>
         <div className={styles.statsXS}>
-          <span>Total expenses</span>
-          <span>€{}</span>
-          <span>vs €{} last month</span>
-        </div>
-      </div>
-      <div className={styles.statsColumn}>
-        <div className={styles.statsL}>
-          <h2>
-            Recent Transactions <button>Add</button>
-          </h2>
-          <div>Transactions container</div>
-        </div>
-        <div className={styles.statsM}>
-          <h2>
-            Goals <button>Add</button>
-          </h2>
-          <div>Goal container</div>
+          <span>Expenses ({currentMonth.label})</span>
+          <span>€{currentMonth.expenses.toFixed(2)}</span>
+          <span>vs €{lastMonth.expenses.toFixed(2)} last month</span>
         </div>
       </div>
       <div className={styles.statsColumn}>
         <div className={styles.statsM}>
           <h2>Net Balance</h2>
-          <span>+ €1.650</span>
-          <h3>Savings rate</h3>
-          <span>43% of income</span>
-          <span>vs last month ↑ €310</span>
+          <span>
+            {netBalance >= 0 ? "+" : ""}€{netBalance.toFixed(2)}
+          </span>
         </div>
         <div className={styles.statsL}>
-          <h2>
-            Top Categories <button>Add</button>
-          </h2>
-          <div>Categories container</div>
+          <h2>Recent Transactions</h2>
+          {mockTransactions.map((t) => (
+            <div key={t.id}>
+              <span>{t.date}</span>
+              <span>{t.category}</span>
+              <span>{t.name}</span>
+              <span>
+                {t.type === "income" ? "+" : "-"}€{t.amount.toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={styles.statsColumn}>
+        <div className={styles.statsL}>
+          <h2>Goals</h2>
+          {mockGoals.map((g) => (
+            <div key={g.id}>
+              <span>{g.name}</span>
+              <span>
+                €{g.savedAmount.toFixed(2)} / €{g.targetAmount.toFixed(2)}
+              </span>
+              <span>Deadline: {g.deadline}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
+
+// Named alias for react-router's route-level `lazy`
+export { Home as Component };
