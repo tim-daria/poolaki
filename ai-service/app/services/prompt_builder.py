@@ -1,19 +1,40 @@
-# Build the final prompt before calling the LLM.
-# This is where the context of the future RAG is injected.
+from pathlib import Path
 
-# In put:
-# {
-#  "question": "How much did I spend?",
-#  "context": "January expenses: 200€"
-# }
+APP_DIR = Path(__file__).resolve().parent.parent
+PROMPTS_PATH = APP_DIR / "prompts"
 
-# output:
 
-# System prompt
+class PromptBuilder:
+    def __init__(self):
+        self.base_system = self._load("system_base.md")
+        self.financial_assistant = self._load("financial_assistant_v0.md")
+        # self.out_of_scope = self._load("rules/out_of_scope.md")
 
-# Context:
-# January expenses: 200€
+    def _load(self, path: str) -> str:
+        file_path = PROMPTS_PATH / path
+        if not file_path.exists():
+            raise FileNotFoundError(f"prompt file not found: {file_path}")
+        return file_path.read_text(encoding="utf-8")
 
-# Question:
-# How much did I spend?
+    def build(
+        self,
+        user_question: str,
+        context: str = "",
+    ) -> str:
 
+        prompt = "\n\n".join([
+            self.base_system,
+            self.financial_assistant,
+            # self.out_of_scope,
+        ])
+
+        return (
+            prompt.replace(
+                "{{user_question}}",
+                user_question
+            )
+            .replace(
+                "{{context}}",
+                context
+            )
+        )
