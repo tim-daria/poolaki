@@ -22,6 +22,11 @@ class PromptBuilder:
         context: str = "",
     ) -> str:
 
+        if not context.strip():
+            formatted_context = "Not relevant data found for your question"
+        else:
+            formatted_context = context
+    
         prompt = "\n\n".join([
             self.base_system,
             self.financial_assistant,
