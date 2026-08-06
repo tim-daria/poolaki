@@ -26,7 +26,11 @@ services:
   frontend:
     ports:
       - "5173:5173"
+    networks:
+      - CI-test
 
   backend:
     ports:
       - "8000:8000"
+    networks:
+      - CI-test
