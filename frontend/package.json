@@ -37,12 +37,12 @@
     "vite": "^8.1.1"
   },
   "overrides": {
-    "keyv": "^4.5.4",
+    "keyv": "4.5.4",
     "flat-cache": "^4.0.1",
     "file-entry-cache": "^8.0.0"
   },
   "engines": {
-    "npm": ">=11.0.0"
+    "npm": ">=11.6.0"
   },
   "msw": {
     "workerDirectory": [

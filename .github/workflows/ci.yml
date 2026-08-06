@@ -126,6 +126,14 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      # ── Build ──────────────────────────────────────────────────────────────
+      # Typechecks and bundles. ESLint alone does not resolve imports, so
+      # without this a branch whose package.json is missing a dependency the
+      # source imports still passes CI green — it only breaks on a clean
+      # checkout, once no one's stale node_modules is masking it.
+      - name: Build
+        run: npm run build
+
       # ── Playwright: component / visual tests ───────────────────────────────
       # Component tests mount components in isolation (no server needed),
       # so they also run directly on the host via Playwright's experimental
@@ -265,8 +273,8 @@ jobs:
     steps:
       - name: Verify required jobs passed
         run: |
-          if [[ "${{ needs.backend.result }}" == "failure" || "${{ needs.frontend.result }}" == "failure" ]]; then
-            echo "A required job failed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }})."
+          if [[ "${{ needs.backend.result }}" == "failure" || "${{ needs.frontend.result }}" == "failure" || "${{ needs.e2e.result }}" == "failure" ]]; then
+            echo "A required job failed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }}, e2e="${{ needs.e2e.result }})."
             exit 1
           fi
-          echo "CI gate passed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }})."
+          echo "CI gate passed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }}, e2e="${{ needs.e2e.result }})."

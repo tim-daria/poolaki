@@ -2,7 +2,7 @@ FROM node:24-alpine
 
 WORKDIR /home/node/app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci && chown -R node:node node_modules
 
 COPY --chown=node:node . .
