@@ -147,3 +147,25 @@ Future infrastructure:
 - Embedding generation.
 - LLM provider integration.
 - AI metrics and observability.
+
+---
+##  Authentication
+All internal AI requests require:
+- Service authentication
+- User authorization validation
+
+### Authentication Between Backend and AI Service
+The AI service does not authenticate users directly.
+
+The main backend:
+- validates JWT tokens
+- verifies organization permissions
+- sends only authorized context
+
+### Error Handling
+
+`404`: Data not found
+
+`403`: Unauthorized access
+
+`500`: AI service unavailable
