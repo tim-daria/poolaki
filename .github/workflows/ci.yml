@@ -273,8 +273,24 @@ jobs:
     steps:
       - name: Verify required jobs passed
         run: |
-          if [[ "${{ needs.backend.result }}" == "failure" || "${{ needs.frontend.result }}" == "failure" || "${{ needs.e2e.result }}" == "failure" ]]; then
-            echo "A required job failed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }}, e2e="${{ needs.e2e.result }})."
+          backend='${{ needs.backend.result }}'
+          frontend='${{ needs.frontend.result }}'
+          e2e='${{ needs.e2e.result }}'
+
+          status="backend=$backend, frontend=$frontend, e2e=$e2e"
+          failed=0
+          for result in "$backend" "$frontend" "$e2e"; do
+            # "skipped" is expected — jobs only run when their area changed.
+            # Anything other than success/skipped (failure, cancelled,
+            # timed_out) must fail the gate.
+            case "$result" in
+              success|skipped) ;;
+              *) failed=1 ;;
+            esac
+          done
+
+          if [[ $failed -eq 1 ]]; then
+            echo "A required job did not pass ($status)."
             exit 1
           fi
-          echo "CI gate passed (backend=${{ needs.backend.result }}, frontend=${{ needs.frontend.result }}, e2e="${{ needs.e2e.result }})."
+          echo "CI gate passed ($status)."
