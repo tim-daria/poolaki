@@ -1,11 +1,16 @@
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useMatches, NavLink } from "react-router";
 import { useAuth } from "../context/useAuth";
 import { getCsrfToken } from "../lib/csrf";
+import { Header } from "./Header/Header";
 import "../App.css";
 
-export default function AppLayout() {
+export function AppLayout() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
+  const matches = useMatches();
+  const pageTitle = matches.findLast(
+    (m) => (m.handle as { title?: string })?.title,
+  )?.handle as { title: string } | undefined;
 
   async function handleLogout() {
     await fetch("/_allauth/browser/v1/auth/session", {
@@ -19,27 +24,30 @@ export default function AppLayout() {
 
   return (
     <div className="appContainer">
-      <header>
-        <span>Page Name</span>
-        <button>Notifications</button>
-      </header>
+      <Header title={pageTitle?.title ?? ""} onLogout={handleLogout} />
       <nav>
+        {/* <h2>Poolaki</h2> */}
         <ul>
-          <li>Home</li>
-          <li>Transactions</li>
-          <li>Goals</li>
-          <li>Categories</li>
-          <div>--------</div>
-          <li>Recurring</li>
-          <li>Settings</li>
+          <li></li>
+          {/* NavLink can be styled when active, too */}
+          <li>
+            <NavLink to="/">Overview</NavLink>
+          </li>
+          <li>
+            <NavLink to="/transactions">Transactions</NavLink>
+          </li>
+          <li>
+            <NavLink to="/goals">Goals</NavLink>
+          </li>
+          <li>
+            <NavLink to="/categories">Categories</NavLink>
+          </li>
+          <li className="spacer"></li>
+          <li>
+            <NavLink to="/settings">Settings</NavLink>
+          </li>
         </ul>
-        <div className="user-avatar">
-          <img src="" alt="User Avatar" />
-          <span>Username</span>
-          <a onClick={handleLogout} style={{ cursor: "pointer" }}>
-            Logout
-          </a>
-        </div>
+        <div className="nav-footer"></div>
       </nav>
       <main style={{ gridArea: "main", overflowY: "auto" }}>
         <Outlet />
