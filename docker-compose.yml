@@ -15,10 +15,10 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "8080:80"
-      - "8443:443"
-      # - "80:80"
-      # - "443:443"
+      # - "8080:80"
+      # - "8443:443"
+      - "80:80"
+      - "443:443"
     environment:
       TZ: Europe/Berlin
     volumes:
@@ -184,9 +184,6 @@ services:
       TZ: Europe/Berlin
     volumes:
       - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
-      # - ./backend/monitoring/grafana_datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-      # - ./backend/monitoring/grafana_dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
-      # - ./backend/monitoring/grafana_dashboards/json:/etc/grafana/provisioning/dashboards/json
       - grafana_data:/var/lib/grafana
     networks:
       - backend_net
