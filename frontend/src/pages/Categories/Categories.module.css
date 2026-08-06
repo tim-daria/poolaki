@@ -1,0 +1,278 @@
+.page {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Section header ── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-deep, #3d3580);
+}
+
+.sectionCount {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--accent-light, #f0eeff);
+  color: var(--accent-middle, #6c63ff);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.addBtn {
+  margin-left: auto;
+  padding: 0.5rem 1.1rem;
+  background: var(--accent-deep, #3d3580);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addBtn:hover { opacity: 0.9; }
+
+/* ── Category cards ── */
+.catGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.catCard {
+  background: var(--bg-card, #fff);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.catIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.catName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catEdit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.4;
+  padding: 0.1rem 0.2rem;
+  border-radius: 4px;
+}
+
+.catEdit:hover { opacity: 1; background: var(--accent-light, #f0eeff); }
+
+.showMoreBtn {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--accent-middle, #6c63ff);
+}
+
+.showMoreBtn:hover { background: var(--accent-light, #f0eeff); }
+
+/* ── Toggle pill ── */
+.togglePill {
+  display: flex;
+  background: var(--accent-light, #f0eeff);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.togglePill button {
+  padding: 0.3rem 0.9rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--sub-text, #888);
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pillActive {
+  background: var(--accent-deep, #3d3580) !important;
+  color: #fff !important;
+}
+
+/* ── Period dropdown ── */
+.periodWrapper {
+  position: relative;
+}
+
+.periodBtn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.periodBtn:hover { background: var(--accent-light, #f0eeff); }
+
+.periodDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  min-width: 150px;
+}
+
+.periodDropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.periodDropdown button:hover { background: var(--accent-light, #f8f8ff); }
+
+.periodActive {
+  background: var(--accent-light, #f0eeff) !important;
+  color: var(--accent-middle, #6c63ff) !important;
+  font-weight: 600;
+}
+
+/* ── Stats panel ── */
+.statsPanel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2rem;
+  background: var(--bg-card, #fff);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  align-items: start;
+}
+
+@media (max-width: 600px) {
+  .statsPanel { grid-template-columns: 1fr; }
+}
+
+/* Pie */
+.chartCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pie { display: block; }
+
+.pieEmpty {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sub-text, #aaa);
+  font-size: 0.9rem;
+}
+
+.chartTotal {
+  font-size: 0.85rem;
+  color: var(--sub-text, #888);
+  margin: 0;
+}
+
+/* Legend */
+.legendCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.legendCard {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: var(--accent-light, #f8f8ff);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendIcon { font-size: 0.95rem; }
+
+.legendName {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.legendPct {
+  font-size: 0.8rem;
+  color: var(--sub-text, #aaa);
+  min-width: 40px;
+  text-align: right;
+}
+
+.legendAmt {
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: var(--mono, monospace);
+  color: var(--accent-deep, #3d3580);
+  min-width: 70px;
+  text-align: right;
+}
+
+.noData {
+  color: var(--sub-text, #aaa);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2rem;
+}

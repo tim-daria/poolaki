@@ -29,6 +29,7 @@ build/
 # Backup files
 .last_success
 backup_*.sql
+pre-disaster-recovery_*.sql
 
-# Scripts
+# CI
 ci-precheck.sh
