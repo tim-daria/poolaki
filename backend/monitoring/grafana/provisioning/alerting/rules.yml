@@ -1,0 +1,65 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: poolaki - admins
+      folder: Docker
+      interval: 10s
+      rules:
+        - uid: aftv1q23is6wwe
+          title: Container down
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 300
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                editorMode: code
+                exemplar: false
+                expr: time() - max by (name) (container_last_seen{job="cadvisor", image!=""})
+                format: time_series
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 7
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          dashboardUid: addwp62
+          panelId: 8
+          noDataState: NoData
+          execErrState: Error
+          annotations:
+            __dashboardUid__: addwp62
+            __panelId__: "8"
+            summary: "Attention:\nContainer \U0001F433 needs maintenance..."
+          labels: {}
+          isPaused: false
+          notification_settings:
+            receiver: email-contact-point
