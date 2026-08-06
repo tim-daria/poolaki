@@ -2,16 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /home/node/app
 
-COPY --chown=1000:1000 package*.json ./
-RUN chown -R 1000:1000 /home/node/app
-USER 1000:1000
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm install && chown -R node:node node_modules
 
-COPY --chown=1000:1000 . .
+COPY --chown=node:node . .
 
-COPY --chown=1000:1000 entrypoint.sh /entrypoint.sh
+COPY --chown=node:node entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER node
 EXPOSE 5173
 
 ENTRYPOINT ["/entrypoint.sh"]

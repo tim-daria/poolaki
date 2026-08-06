@@ -15,8 +15,6 @@ services:
     container_name: caddy
     restart: unless-stopped
     ports:
-      # - "8080:80"
-      # - "8443:443"
       - "80:80"
       - "443:443"
     environment:
@@ -116,7 +114,6 @@ services:
     volumes:
       - ./frontend:/home/node/app
       - node_modules:/home/node/app/node_modules
-      - /home/node/app/node_modules
     networks:
       - frontend_net
     healthcheck:

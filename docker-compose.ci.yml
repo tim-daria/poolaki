@@ -1,0 +1,32 @@
+# CI override — strips Caddy and monitoring, exposes ports to the host.
+# Used via COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml
+
+services:
+  caddy:
+    profiles: [donotstart]
+
+  prometheus:
+    profiles: [donotstart]
+
+  grafana:
+    profiles: [donotstart]
+
+  postgres_exporter:
+    profiles: [donotstart]
+
+  cadvisor:
+    profiles: [donotstart]
+
+  db_backup:
+    profiles: [donotstart]
+
+  ai-service:
+    profiles: [donotstart]
+
+  frontend:
+    ports:
+      - "5173:5173"
+
+  backend:
+    ports:
+      - "8000:8000"
