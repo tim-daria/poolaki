@@ -36,3 +36,9 @@ scrape_configs:
       - regex: 'container_label_.*'
         action: labeldrop
     scrape_interval: 5s
+
+  - job_name: 'cloudflared'
+    static_configs:
+      - targets: ['cloudflared:60123']
+    metrics_path: /metrics
+    scrape_interval: 5s

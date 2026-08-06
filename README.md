@@ -1,5 +1,4 @@
-_This project has been created as part of the 42 curriculum._
-<!-- Add all team logins above, e.g.: ...by <login1>, <login2>, <login3>, <login4>, <login5>. -->
+_This project has been created as part of the 42 curriculum by albetanc, cwick, dtimofee, nefimov, tsemenov._
 
 # poolaki
 
@@ -18,6 +17,8 @@ Key planned features:
 - Secure user accounts (email + password, hashed & salted)
 - Personal and shared expense tracking
 - Categories, filtering, and reporting
+- Financial goals and recurring transactions
+- AI-powered conversations over financial data
 - Multi-user / concurrent usage with no data races
 
 ## Instructions
@@ -42,7 +43,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project Documentation
 
-- AI Service documentation: [ai-service/README.md](ai-service/README.md)
+- AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
 
 ## Resources
 

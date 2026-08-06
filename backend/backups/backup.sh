@@ -6,7 +6,7 @@ BACKUP_FILE="/backups/backup_${TIMESTAMP}.sql"
 
 echo "[$LOGTIME] Starting backup..."
 
-if pg_dump -h db -U ${POSTGRES_USER} ${POSTGRES_DB} > "$BACKUP_FILE" 2>/tmp/pg_dump_err; then
+if pg_dump --no-password --file="$BACKUP_FILE" 2>/tmp/pg_dump_err; then
     # Check if the file is empty
     FILESIZE=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || echo 0)
 

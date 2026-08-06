@@ -26,7 +26,11 @@ services:
   frontend:
     ports:
       - "5173:5173"
+    networks:
+      - backend_net
 
   backend:
     ports:
       - "8000:8000"
+    networks:
+      - backend_net

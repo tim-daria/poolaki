@@ -10,6 +10,27 @@ Currently, this service provides the foundation for future AI features and expos
 
 ---
 
+## AI Service Responsibility
+
+The backend is responsible for retrieving and calculating accurate financial data from the application database.
+
+The AI service doesn't replace backend business logic. Instead, it interprets user questions, determines the required information, and generates natural language responses based on validated data provided by the backend.
+
+Example:
+
+Backend response:
+```
+{
+  "category": "Food",
+  "amount": 850
+}
+```
+AI response:
+```
+"You spent €850 this month, mainly on Food."
+```
+
+
 ## Architecture
 
 The AI Service runs as an independent Docker container and communicates with the Django backend through HTTP APIs.

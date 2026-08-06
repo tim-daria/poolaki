@@ -1,0 +1,12 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: email-contact-point
+    receivers:
+      - uid: email-receiver-1
+        type: email
+        settings:
+          addresses: '$__env{ALERT_RECIPIENT_EMAIL}'
+          singleEmail: true
+        disableResolveMessage: false
