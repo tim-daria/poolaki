@@ -42,7 +42,7 @@
     "file-entry-cache": "^8.0.0"
   },
   "engines": {
-    "npm": ">=11.17.0"
+    "npm": ">=11.0.0"
   },
   "msw": {
     "workerDirectory": [
