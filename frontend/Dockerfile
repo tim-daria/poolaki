@@ -3,7 +3,7 @@ FROM node:20-alpine
 WORKDIR /home/node/app
 
 COPY package.json package-lock.json ./
-RUN npm install && chown -R node:node node_modules
+RUN npm ci && chown -R node:node node_modules
 
 COPY --chown=node:node . .
 

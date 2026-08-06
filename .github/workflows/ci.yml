@@ -111,14 +111,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           # Caches npm dependencies keyed on package-lock.json so subsequent
           # runs skip the full install when deps haven't changed.
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # ── ESLint ─────────────────────────────────────────────────────────────
       # Runs ESLint directly on the host (no Docker needed — ESLint has no
