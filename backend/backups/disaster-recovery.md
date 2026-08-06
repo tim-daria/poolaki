@@ -13,7 +13,6 @@ This document describes the steps to recover a PostgreSQL database from backup i
 Before starting a restore, confirm:
 
 - Docker and Docker Compose are available on the host.
-- You have shell/SSH access to the host where `./backend/backups` lives.
 - The `POSTGRES_USER` and `POSTGRES_DB` environment variables are known (refer to your `.env` or `docker-compose.yml`).
 - The `postgres` service can be stopped/restarted without permanently disrupting dependent services.
 - Sufficient disk space exists for both the backup file and the restored database.
@@ -42,27 +41,6 @@ If `find` returns no output, no successful backup exists within the window. Chec
 ls -lh ./backend/backups/backup_*.sql
 ```
 
-### 3.3 Inspect individual backup files
-
-```bash
-# Check file size (should be non-zero)
-ls -lh ./backend/backups/backup_20260718_193000.sql
-
-# Verify it's a valid SQL file (first few lines)
-head -5 ./backend/backups/backup_20260718_193000.sql
-
-# Count lines — an empty dump is a red flag
-wc -l ./backend/backups/backup_20260718_193000.sql
-```
-
-### 3.4 Check backup container logs
-
-```bash
-docker compose logs db_backup --tail 50
-```
-
-Look for errors, failed `pg_dump` calls, or disk space issues.
-
 ---
 
 ## 4. Full Recovery Procedure
@@ -73,146 +51,78 @@ Look for errors, failed `pg_dump` calls, or disk space issues.
 2. Confirm which backup you are restoring (use the most recent valid one from Section 3).
 3. Decide on a maintenance window.
 
-### Step 2: Stop the postgres service and dependent containers
 
-```bash
-# Stop dependent application containers first (replace 'app' with your actual service name)
-docker compose stop app
-
-# Stop the postgres service
-docker compose stop postgres
-```
-
-### Step 3: Back up the current database state (safety net)
-
-```bash
-# Create a snapshot of the existing data directory before overwriting
-docker compose exec db \
-  pg_dump -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  > "./backend/backups/pre-disaster-recovery_$(date +%Y%m%d_%H%M%S).sql"
-
-echo "Safety backup created."
-```
+### Step 2: Back up the current database state (safety net)
 
 > **Note:** If the current database is already corrupted or inaccessible, skip this step and proceed directly to Step 4.
 
-### Step 4: Remove or reset the existing data directory
+```bash
+# Create a snapshot of the existing data directory before overwriting
+docker compose exec db_backup \
+  pg_dump > "./backend/backups/pre-disaster-recovery_$(date +%Y%m%d_%H%M%S).sql" 2>/tmp/pg_dump_err
+```
+
+### Step 3: Remove or reset the existing data directory
 
 ```bash
-# Option A: Remove the postgres container and its anonymous volumes via docker compose
-docker compose rm -v -f postgres
+# Option A: Remove the postgres container and its volume via docker compose
+docker compose down -v db
 
 # Option B: Manually find and remove the data volume
 # docker volume ls | grep postgres
 # docker volume rm <volume_name>
 ```
 
-> **Warning:** The `-v` flag destroys persistent volumes. Ensure you have the safety backup from Step 3 before proceeding.
+> **Warning:** The `-v` flag destroys persistent volumes. Ensure you have the safety backup from Step 2 before proceeding.
 
-### Step 5: Start a fresh postgres container
+### Step 4: Start a fresh postgres container
 
 ```bash
-docker compose up -d postgres
+docker compose up -d db
 # Wait for postgres to initialize
-sleep 5
 ```
 
-### Step 6: Restore the backup
+### Step 5: Restore the backup
 
 **For a plain SQL dump** (produced by default `pg_dump`):
 
 ```bash
-docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  < ./backend/backups/backup_20260718_193000.sql
+docker compose exec -T db psql -d "$POSTGRES_DB" \
+  < ./backend/backups/<backup-file-name>
 ```
 
 > The `-T` flag disables pseudo-TTY allocation, which is required when piping stdin.
 
-**For a custom-format dump** (produced by `pg_dump -Fc`):
 
-```bash
-docker compose exec -T postgres pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  -c --if-exists ./backend/backups/backup_20260718_193000.dump
-```
-
-### Step 7: Verify the restore
+### Step 6: Verify the restore
 
 ```bash
 # Check that the database is accessible and non-empty
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\dt"
+docker compose exec db psql -d "$POSTGRES_DB" -c "\dt"
 
 # Verify row counts on known tables (replace 'users' with a real table name)
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT count(*) FROM users;"
+docker compose exec db psql -d "$POSTGRES_DB" \
+-c "SELECT id,
+        last_login,
+        username,
+        email,
+        date_joined
+    FROM public.core_user
+    LIMIT 100;"
 ```
 
-### Step 8: Restart dependent services
+### Step 7: Check container status
 
 ```bash
-docker compose up -d app
+# Check that the database container is healthy
+docker inspect --format='{{json .State.Health}}' postgres_db | jq '{Status, FailingStreak}'
 
-# Confirm the application connects successfully
-docker compose logs app --tail 20
+# You can also check the health status for all containers with docker ps
 ```
 
 ---
 
-## 5. Point-in-Time Recovery (PITR) — Limitations and Future Improvement
-
-The current backup setup uses **`pg_dump`**, which produces a **logical full database dump**. This means:
-
-- You can restore to the state of a single successful backup.
-- You **cannot** restore to an arbitrary point in time between backups.
-- You **cannot** replay WAL (Write-Ahead Log) segments to recover up to the last transaction.
-
-**Future improvement — WAL archiving for PITR:**
-
-To enable point-in-time recovery, consider:
-
-1. Switching from `pg_dump` to continuous WAL archiving via `pg_basebackup`.
-2. Configuring `archive_mode = on` and `archive_command` in `postgresql.conf`.
-3. Storing WAL segments in a separate backup location (e.g., S3, a separate volume).
-4. Using `pg_backrest` or `barman` for managed PITR automation.
-
-Until WAL archiving is implemented, the best recovery point available is the timestamp of the last successful backup visible in `.last_success`.
-
----
-
-## 6. Common Troubleshooting
-
-### "could not translate host name 'postgres'"
-
-**Cause:** The `psql` or `pg_restore` command cannot resolve the hostname `postgres`.
-
-**Fix:**
-```bash
-# Verify the postgres service is running
-docker compose ps postgres
-
-# Test name resolution from inside any running container
-docker compose exec db_backup ping -c 1 postgres
-
-# Check the actual service name in docker-compose.yml and use it
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;"
-```
-
-Always use the container service name (e.g., `postgres`), not `localhost` or `127.0.0.1`, from inside a Docker network.
-
-### Permission issues on /backups
-
-**Cause:** The backup volume is owned by a different UID/GID than the postgres container user.
-
-**Fix:**
-```bash
-# Check current ownership
-ls -ln ./backend/backups/
-
-# Fix ownership to match the postgres container user (postgres UID is typically 999)
-sudo chown -R 999:999 ./backend/backups/
-
-# Alternatively, run the restore with the correct user
-docker compose exec -u postgres postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  < ./backend/backups/backup_FILE.sql
-```
+## 5. Common Troubleshooting
 
 ### Empty backup file
 
@@ -228,23 +138,6 @@ grep -c "COPY\|INSERT\|CREATE TABLE" ./backend/backups/backup_20260718_193000.sq
 
 # If empty, fall back to the next most recent backup
 ls -lt ./backend/backups/backup_*.sql | head -5
-```
-
-### Container can't start after data directory reset
-
-**Cause:** Volume mapping issues, missing init scripts, or incorrect environment variables.
-
-**Fix:**
-```bash
-# Check postgres container logs
-docker compose logs postgres
-
-# Verify the postgres data volume is correctly mounted
-docker inspect $(docker compose ps -q postgres) | grep -A 10 "Mounts"
-
-# Re-run an init script if your setup uses one
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  -f /docker-entrypoint-initdb.d/init-db.sql
 ```
 
 ### Disk space full
@@ -265,9 +158,9 @@ mv ./backend/backups/backup_LARGE.sql /tmp/
 
 ---
 
-## 7. Rollback and Safety Notes
+## 6. Rollback and Safety Notes
 
-- **Always create a pre-disaster safety backup** (Step 3) before overwriting existing data. Never restore directly without a rollback path.
+- **Always create a pre-disaster safety backup** (Step 2) before overwriting existing data. Never restore directly without a rollback path.
 - **Test restores periodically** — at minimum quarterly — in a non-production environment. A backup that has never been tested is untrusted.
 - Keep at least **one backup outside the primary volume** (off-site or separate storage) to protect against host-level disk failure.
 - Document the `POSTGRES_USER` and `POSTGRES_DB` values in your runbook — these are required for every restore and may not be trivially recoverable if the original `.env` is lost.
@@ -275,7 +168,7 @@ mv ./backend/backups/backup_LARGE.sql /tmp/
 
 ---
 
-## 8. Quick Reference Cheat Sheet
+## 7. Quick Reference Cheat Sheet
 
 ```bash
 # ---- VERIFY BACKUPS ----
@@ -284,33 +177,32 @@ ls -lh ./backend/backups/backup_*.sql
 head -5 ./backend/backups/backup_YYYYMMDD_HHMMSS.sql
 docker compose logs db_backup --tail 30
 
-# ---- PREPARE FOR RESTORE ----
-docker compose stop app
-docker compose stop postgres
-docker compose rm -v -f postgres
-
 # ---- SAFETY BACKUP (optional but recommended) ----
-docker compose run --rm -v $(pwd)/backend/backups:/backups postgres \
-  pg_dump -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  > ./backend/backups/pre-disaster-recovery_$(date +%Y%m%d_%H%M%S).sql
+docker compose exec db_backup \
+  pg_dump > "./backend/backups/pre-disaster-recovery_$(date +%Y%m%d_%H%M%S).sql" \
+  2>/tmp/pg_dump_err
+
+# ---- DELETE OLD CONTAINER & VOLUME ----
+docker compose down -v db
 
 # ---- START FRESH POSTGRES ----
-docker compose up -d postgres
-sleep 5
+docker compose up db -d
 
 # ---- RESTORE (plain SQL) ----
-docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  < ./backend/backups/backup_YYYYMMDD_HHMMSS.sql
-
-# ---- RESTORE (custom format .dump) ----
-docker compose exec -T postgres pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  -c --if-exists ./backend/backups/backup_YYYYMMDD_HHMMSS.dump
+docker compose exec -T db psql -d "$POSTGRES_DB" \
+  < ./backend/backups/<backup-file-name>
 
 # ---- VERIFY ----
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\dt"
-docker compose exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT count(*) FROM users;"
+docker compose exec db psql -d "$POSTGRES_DB" -c "\dt"
+docker compose exec db psql -d "$POSTGRES_DB" \
+-c "SELECT id,
+        last_login,
+        username,
+        email,
+        date_joined
+    FROM public.core_user
+    LIMIT 100;"
 
-# ---- RESTART SERVICES ----
-docker compose up -d app
-docker compose logs app --tail 20
+# ---- CHECK CONTAINER STATUS ----
+docker inspect --format='{{json .State.Health}}' postgres_db | jq '{Status, FailingStreak}'
 ```
