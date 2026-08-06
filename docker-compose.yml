@@ -40,10 +40,6 @@ services:
       - ./backend/django:/app
     tmpfs:
       - /tmp:exec,mode=777
-    environment:
-      HOME: /tmp
-      UV_CACHE_DIR: /tmp/uv
-      UV_PROJECT_ENVIRONMENT: /tmp/uv-venv
     env_file:
       - .env
     networks:
