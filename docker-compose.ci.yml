@@ -27,10 +27,10 @@ services:
     ports:
       - "5173:5173"
     networks:
-      - CI-test
+      - backend_net
 
   backend:
     ports:
       - "8000:8000"
     networks:
-      - CI-test
+      - backend_net
