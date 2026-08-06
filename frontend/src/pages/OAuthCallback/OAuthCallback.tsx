@@ -1,18 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../../context/useAuth";
-import { getCsrfToken } from "../../lib/csrf";
-import { submitInitialBalance } from "../../lib/initialBalance";
 import styles from "../Register/styles.module.css";
 
-export default function OAuthCallback() {
+export function OAuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isSignupFlow = searchParams.get("flow") === "signup";
   const { setUser } = useAuth();
-  const [balance, setBalance] = useState("");
-  const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -24,56 +19,19 @@ export default function OAuthCallback() {
         const sessionUser = data?.data?.user ?? null;
         if (sessionUser) {
           setUser(sessionUser);
-        }
-
-        if (!isSignupFlow) {
-          setChecking(false);
           navigate("/", { replace: true });
-          return;
+        } else {
+          navigate(
+            isSignupFlow
+              ? "/register?error=oauth-failed"
+              : "/login?error=oauth-failed",
+            { replace: true },
+          );
         }
-
-        if (!sessionUser) {
-          setChecking(false);
-          navigate("/login", { replace: true });
-          return;
-        }
-
-        fetch("/api/organizations/personal/initial-balance/", {
-          credentials: "include",
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (data?.needs_initial_balance) {
-              setReady(true);
-            } else {
-              navigate("/", { replace: true });
-            }
-          })
-          .catch(() => navigate("/", { replace: true }))
-          .finally(() => setChecking(false));
       })
-      .catch(() => {
-        setChecking(false);
-        navigate("/login", { replace: true });
-      });
+      .catch(() => navigate("/login", { replace: true }))
+      .finally(() => setChecking(false));
   }, [isSignupFlow, navigate, setUser]);
-
-  async function handleBalanceSubmit(e: { preventDefault(): void }) {
-    e.preventDefault();
-    setError("");
-
-    const result = await submitInitialBalance(balance, getCsrfToken());
-
-    if (result.ok) {
-      navigate("/", { replace: true });
-    } else {
-      setError(result.error ?? "Failed to create organisation. Please try again.");
-    }
-  }
-
-  if (!isSignupFlow) {
-    return null;
-  }
 
   if (checking) {
     return (
@@ -87,31 +45,8 @@ export default function OAuthCallback() {
     );
   }
 
-  if (!ready) {
-    return null;
-  }
-
-  return (
-    <dialog open className={styles.modal}>
-        <h2>One more step!</h2>
-        <p>Enter your initial balance:</p>
-        <form onSubmit={handleBalanceSubmit}>
-          <label htmlFor="balance">Initial Balance (€)</label>
-          <input
-            id="balance"
-            type="number"
-            min="0"
-            step="0.01"
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
-            required
-            autoFocus
-          />
-          {error && <p className={styles.error}>{error}</p>}
-          <button type="submit" className={styles.submitBtn}>
-            Get Started
-          </button>
-        </form>
-    </dialog>
-  );
+  return null;
 }
+
+// Named alias for react-router's route-level `lazy`
+export { OAuthCallback as Component };

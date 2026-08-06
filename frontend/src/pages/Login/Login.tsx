@@ -1,27 +1,27 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams, Link } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
+import { parseAllauthErrors, type AllauthError } from "../../lib/authErrors";
 import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "../Register/styles.module.css";
+import type { User } from "../../context/AuthContext";
 
-export default function Login() {
+export function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [searchParams] = useSearchParams();
+  const [error, setError] = useState(() =>
+    searchParams.get("error") === "account_not_found"
+      ? "No 42 account is linked to this login. Please sign up first."
+      : "",
+  );
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
   useEffect(() => {
     fetch("/api/csrf/", { credentials: "include" });
   }, []);
-
-  useEffect(() => {
-    if (searchParams.get("error") === "account_not_found") {
-      setError("No 42 account is linked to this login. Please sign up first.");
-    }
-  }, [searchParams]);
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
@@ -41,13 +41,21 @@ export default function Login() {
       ),
     });
 
-    const data = await res.json();
+    let data: { data?: { user: User }; errors?: AllauthError[] } | null = null;
+    try {
+      data = await res.json();
+    } catch {
+      // non-JSON responce
+    }
 
-    if (res.ok) {
+    if (res.ok && data?.data?.user) {
       setUser(data.data.user);
       navigate("/");
     } else {
-      const msg = data.errors?.[0]?.message ?? "Login failed";
+      const msg = parseAllauthErrors(
+        data?.errors,
+        "Login failed. Please check your credentials.",
+      );
       setError(msg);
     }
   }
@@ -56,7 +64,7 @@ export default function Login() {
     <div className={styles.helloPage}>
       <div className={styles.formContainer}>
         <p>
-          Not registered yet? <a href="/register">Sign up</a>
+          Not registered yet? <Link to="/register">Sign up</Link>
         </p>
         <h1>Login</h1>
         <form onSubmit={handleSubmit}>
@@ -101,3 +109,6 @@ export default function Login() {
     </div>
   );
 }
+
+// Named alias for react-router's route-level `lazy`
+export { Login as Component };

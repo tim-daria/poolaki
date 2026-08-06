@@ -1,12 +1,20 @@
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet, Link } from "react-router";
 import { useAuth } from "../context/useAuth";
 
-export default function GuestRoute() {
+export function GuestRoute() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
 
   if (user) return <Navigate to="/" replace />;
 
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <footer>
+        <Link to="about">About Us</Link>
+        <Link to="/terms">Terms of Use</Link>
+      </footer>
+    </>
+  );
 }

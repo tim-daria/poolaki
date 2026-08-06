@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from "react-router";
 import { useAuth } from "../context/useAuth";
 
-export default function ProtectedRoute() {
+export function ProtectedRoute() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
