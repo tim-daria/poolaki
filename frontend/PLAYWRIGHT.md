@@ -114,6 +114,7 @@ docker compose logs -f backend frontend
 **4. Run the E2E suite** against the CI base URL:
 
 ```bash
+cd frontend
 BASE_URL=http://localhost:5173 npx playwright test
 ```
 

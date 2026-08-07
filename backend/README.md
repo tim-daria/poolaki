@@ -135,6 +135,99 @@ Body:
 
 ---
 
+### Organizations
+
+Get all organizations available for the authenticated user:
+
+```
+
+GET /api/organizations/
+
+```
+
+Response:
+
+```json
+{
+  "current_organization_id": 1,
+  "organizations": [
+    {
+      "id": 1,
+      "name": "Personal budget",
+      "is_personal": true,
+      "role": "OWNER"
+    },
+    {
+      "id": 2,
+      "name": "Trip",
+      "is_personal": false,
+      "role": "OWNER"
+    }
+  ]
+}
+```
+
+The response contains:
+
+"organizations" — all organizations where the current user is a member.
+"current_organization_id" — the organization currently selected in the user's session.
+
+Create a new shared organization:
+
+```
+
+POST /api/organizations/
+
+```
+
+Body:
+```json
+{
+  "name": "Trip",
+  "initial_balance": 500
+}
+```
+
+Response:
+```json
+{
+  "id": 2,
+  "name": "Trip",
+  "initial_balance": "500.00",
+  "is_personal": false
+}
+```
+
+After creation, the new organization becomes the current organization in the user's session.
+
+Switch the current organization:
+
+```
+
+POST /api/organizations/{org_id}/select/
+
+```
+
+Response:
+```json
+{
+  "current_organization_id": 2
+}
+```
+
+The selected organization is stored in the user's session and will be used as the default organization after page reloads.
+
+The user must be a member of the organization. Otherwise, the API returns:
+
+```json
+{
+  "error": "You are not a member of this organization"
+}
+```
+with status 403 Forbidden.
+
+---
+
 ### Health
 
 ```
@@ -146,6 +239,7 @@ Used by:
 
 - Docker healthcheck and CI to recieve the current health status
 
+---
 
 ### Metrics
 
