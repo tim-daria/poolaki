@@ -4,4 +4,8 @@ from core.models import Organization
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
-    initial_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    initial_balance = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+    )

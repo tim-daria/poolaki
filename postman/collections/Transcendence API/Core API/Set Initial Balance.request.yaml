@@ -10,5 +10,5 @@ body:
   type: json
   content: |-
     {
-      "initial_balance": "100.00"
+      "initial_balance": "1000.00"
     }
