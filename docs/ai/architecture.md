@@ -30,11 +30,9 @@ Current architecture:
              +----------------+
                      |
                      |
-          Future AI Components
-          - Retrieval Layer
-          - Context Builder
-          - Prompt Management
-          - LLM Client
+             +----------------+
+             |  RAG Pipeline  |
+             +----------------+
 ```
 
 
@@ -50,7 +48,7 @@ Responsible for:
 - Financial data ownership.
 - Business rules.
 - Data access permissions.
-- Providing required context to AI workflows.
+- Exposing endpoints to return validated financial data to the AI Service.
 
 ### AI Service
 
@@ -66,56 +64,43 @@ The AI Service does not directly access the application database.
 
 ---
 
-## Communication Flow
-
-Current flow:
+## End-to-End Communication Flow
 
 ```
-User
-|
-v
 Frontend
-|
-v
-Django Backend
-|
-| HTTP Request
-v
+    |
+    | user message
+    ↓
+Backend (/chat endpoint)
+    |
+    | authentication + user/org permission validation
+    ↓
 AI Service
+    |
+    | understands the request and decides what data is needed(detects intent)
+    ↓
+Backend APIs
+    |
+    | returns validated financial data
+    ↓
+AI Service
+    |
+    | generates the natural language response
+    ↓
+Backend
+    | final response delivery
+    ↓
+Frontend
 ```
 
 
-The AI Service receives validated information from Django and processes AI-related operations.
+The `ai service` receives validated information from `Django` and processes AI-related operations.
 
 ---
 
-## Future RAG Architecture
+## RAG Architecture
 
-```
-             +----------------+
-             |   AI Service   |
-             |    FastAPI     |
-             +----------------+
-                     |
-                     |
-          Future AI Components
-          - Retrieval Layer
-          - Context Builder
-          - Prompt Management
-          - LLM Client
-```
-
-Planned capabilities:
-
-- RAG orchestration pipeline
-- Retrieval layer
-- Context builder
-- Prompt management system
-- Embedding generation
-- Vector database integration (pgvector)
-- NVIDIA LLM integration
-- AI observability and metrics
-
+For detailed information regarding the Retrieval-Augmented Generation pipeline (including `Retriever`, `ContextBuilder`, `PromptBuilder`, and hybrid vector retrieval), please refer to [RAG design documentation](docs/ai/rag-design.md).
 
 ## Internal Structure
 ```
@@ -143,7 +128,7 @@ Current infrastructure:
 
 Future infrastructure:
 
-- Vector database integration (pgvector).
+- Vector database integration (`pgvector`).
 - Embedding generation.
 - LLM provider integration.
 - AI metrics and observability.
