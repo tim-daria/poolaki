@@ -115,7 +115,7 @@ class LLMClient:
 
 **3.2. Django Authorization:**
 
-`Django` authorization process is:
+`Django`:
 
 - Authenticates the user.
 - Verifies organization permissions.
@@ -125,7 +125,7 @@ More details about the communication between `Django` and `AI Service` on [API C
 
 **3.3. AI Service Processing:**
 
-`AI Service` is:
+`AI Service`:
 - Interprets the user query to detect intent and identify required context types.
 - Executes targeted retrieval based on the intent:
    - Queries `Django REST APIs` for structured financial data (when financial facts are required).
