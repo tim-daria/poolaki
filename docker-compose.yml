@@ -1,11 +1,20 @@
 services:
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
+  #   environment:
+  #     TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+  #   networks:
+  #     - tunnel_net
+  
   caddy:
     image: caddy:2.11-alpine
     container_name: caddy
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     environment:
       TZ: Europe/Berlin
     volumes:
@@ -96,7 +105,6 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     expose:
       - "5173"
-    # working_dir: /home/node/app
     environment:
       TZ: Europe/Berlin
       # - NODE_ENV=production
@@ -122,6 +130,8 @@ services:
     restart: unless-stopped
     expose:
       - "9090"
+    # ports:
+      # - "9090:9090"
     environment:
       TZ: Europe/Berlin
     volumes:
@@ -147,6 +157,9 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    # ports:
+      # - "3000"
+      # - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}

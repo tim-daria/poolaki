@@ -23,7 +23,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
-    allowedHosts: ["poolaki.localhost"],
+    allowedHosts: ["poolaki.localhost", "poolaki.de"],
     hmr: process.env.CI
       ? false
       : {
