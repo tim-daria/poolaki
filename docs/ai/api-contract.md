@@ -1,8 +1,6 @@
 # AI Service API Contract
 
-This document defines the communication contract between the `django` backend and the `ai-service`, while while allowing both services to evolve independently.
-
-he purpose of these contracts is to establish how both services will communicate before implementation begins.
+This document defines the communication contract between the `Django` backend and the `AI Service`, while allowing both services to evolve independently.
 
 The contracts define:
 - Request and response schemas.
@@ -14,117 +12,40 @@ For the high-level architecture and communication flow, see: [AI Service Archite
 
 ---
 ## Endpoint Summary
+Summary initial supported endpoints:
 
 | Flow | Method | Endpoint | Purpose |
 |---|---|---|---|
-| Django → AI | GET | /health | Service health check |
-| Django → AI | POST | /api/v1/chat | Send user questions |
-| Django → AI | POST | /api/v1/context | Generate AI context |
-| AI → Django | GET | /api/v1/analytics/monthly-summary | Retrieve financial summary |
-| AI → Django | GET | /api/v1/transactions | Retrieve transaction data |
-| AI → Django | GET | /api/v1/goals/progress | Retrieve goals data |
+| Django → AI | GET | `/health` | Service health check |
+| Django → AI | POST | `/api/v1/{org_id}/chat` | Send user questions |
+| AI → Django | GET | `/api/v1/{org_id}/analytics/monthly-summary` | Retrieve financial summary |
+| AI → Django | GET | `/api/v1/{org_id}/transactions` | Retrieve transaction data |
+| AI → Django | GET | `/api/v1/{org_id}/recurring-transactions` | Retrieve recurring commitments |
+| AI → Django | GET | `/api/v1/{org_id}/goals/progress` | Retrieve goals data |
 
 ---
 ## Communication Flows
+
 The AI integration consists of three main communication flows:
+- User request (`Frontend -> Django -> AI service`).
+- Context retrieval (`Django -> AI Service`).
+- Response generation (`AI Service -> Django -> Frontend`)
 
-**1. User Request:**
-```
-Django → AI Service
-```
+For the end-to-end sequential diagram and detailed RAG pipeline execution, see [AI Service Architecture](architecture.md) and [RAG Design](rag-design.md).
 
-`django` sends user questions to the AI Service for AI processing.
+## Flow 1. User request - API Endpoints
 
-```
-Frontend
-      |
-      v
-Django Backend
-      |
-      | POST /api/v1/chat
-      v
-AI Service
-```
+### 1.1 Health Check
 
-_Examples:_
+`GET /health`
 
-- User chat requests.
-- Context generation requests.
-- AI workflow execution.
+Used to verify that the AI Service container is running correctly. It's used by Docker health monitoring.
 
-**2. Context Retrieval:**
-```
-AI Service → Django
-```
-
-After receiving a question, the `ai-service`determines what financial information is required and requests validated data from `django`.
-
-The `ai-service` uses this information to build the context that will be provided to the `LLM`.
-
-```
-AI Service
-      |
-      | Request financial data
-      |
-      v
-Django Backend
-      |
-      | Return authorized financial data
-      |
-      v
-AI Service
-```
-_Example:_
-
-User question:
->"Why am I spending more?"
-
-Required context:
-
-- Current spending.
-- Previous period comparison.
-- Category breakdown.
-
-**3. AI Response:**
-
-After generating the response, the `ai-service` returns the result to `django`.
-```
-AI Service → Django
-```
-
-After generating the response, `django` delivers the final answer to the user.
-
-```
-AI Service
-    |
-    | Generated response
-    v
-Django Backend
-    |
-    v
-Frontend
-```
-
----
-
-## Flow 1. Django → AI Service Contracts
-
-### API Endpoints
-
-#### Health Check
-
-#### `GET /health`
-
-Used to verify that the AI Service is running correctly.
-
-#### Purpose
-This endpoint is used by Docker health monitoring.
-
-#### Request
+### Request Schema
 
 No request body required.
 
-#### Response
+### Response Schema
 
 ```json
 {
@@ -132,27 +53,20 @@ No request body required.
 }
 
 ```
-#### Chat Endpoint
 
-POST /api/v1/chat
+---
+### 1.2. Chat Endpoint
 
-Purpose:
+`POST /api/v1/{org_id}/chat`
 
-Receives user questions and triggers AI processing.
+Sends user questions and triggers AI processing to provide the final answer to the user.
 
-The AI Service is responsible for:
 
-Intent detection.
-Context generation.
-Prompt construction.
-LLM communication.
-
-Request Schema
+### Request Schema
 
 ```
 {
   "user_id": 123,
-  "organization_id": 456,
   "question": "Why am I spending more this month?"
 }
 ```
@@ -162,11 +76,10 @@ Fields:
 | Field           | Type    | Required | Description                         |
 | --------------- | ------- | -------- | ----------------------------------- |
 | user_id         | integer | yes      | User identifier                     |
-| organization_id | integer | yes      | Organization/shared account context |
 | question        | string  | yes      | User natural language question      |
 
 
-Response Schema
+### Response Schema
 
 ```
 {
@@ -179,33 +92,22 @@ Response Schema
 
 ---
 ## Flow 2: AI Service → Django
-Purpose
+These are endpoints used by the `AI Service` to retrieve information from `Django`.
 
-The AI Service does not access the database directly.
-
-When additional information is required, the AI Service requests validated financial data from Django.
-
-These endpoints are future contracts and will be implemented by the Django Backend.
-
-Monthly Financial Summary
-GET /api/v1/analytics/monthly-summary
-
-Purpose:
+### 2.1. Monthly Financial Summary
+`GET /api/v1/{org_id}/analytics/monthly-summary`
 
 Provides aggregated financial information for financial analysis.
 
-Request
-
-Example:
+#### Request Schema
 
 ```
-GET /api/v1/analytics/monthly-summary
+GET /api/v1/{org_id}/analytics/monthly-summary
     ?user_id=123
-    &organization_id=456
     &period=2026-01
 ```
 
-Response
+#### Response Schema
 
 ```
 {
@@ -222,24 +124,19 @@ Response
 }
 ```
 
-Transactions
-GET /api/v1/transactions
-
-Purpose:
+### 2.2. Transactions
+`GET /api/v1/{org_id}/transactions`
 
 Provides transaction details required for deeper analysis.
 
-Request
-
-Example:
+#### Request Schema
 
 ```
-GET /api/v1/transactions
+GET /api/v1/{org_id}/transactions
     ?user_id=123
-    &organization_id=456
 ```
 
-Response
+#### Response Schema 
 ```
 {
   "transactions":[
@@ -252,24 +149,19 @@ Response
 }
 ```
 
-Goals
-GET /api/v1/goals/progress
-
-Purpose:
+### 2.3. Goals
+`GET /api/v1/{org_id}/goals/progress`
 
 Provides progress information for user financial goals.
 
-Request
-
-Example:
+#### Request Schema
 
 ```
-GET /api/v1/goals/progress
+GET /api/v1/{org_id}/goals/progress
     ?user_id=123
-    &organization_id=456
 ```
 
-Response
+#### Response Schema
 ```
 {
   "goals":[
@@ -282,24 +174,20 @@ Response
   ]
 }
 ```
-Recurring Transactions
-GET /api/v1/recurring-transactions
-
-Purpose:
+### 2.4. Recurring Transactions
+`GET /api/v1/{org_id}/recurring-transactions`
 
 Provides recurring financial commitments.
 
-Request
-
-Example:
+#### Request Schema
 
 ```
-GET /api/v1/recurring-transactions
+GET /api/v1/{org_id}/recurring-transactions
     ?user_id=123
-    &organization_id=456
 ```
 
-Response
+#### Response Schema
+
 ```
 {
   "recurring_transactions":[
@@ -313,40 +201,44 @@ Response
 ```
 
 ---
-Data Requirements
+## Data Requirements
 
-All financial data endpoints must include:
+All financial data endpoints require:
 
-user_id
-organization_id
+`{org_id}` as a Path Parameter to isolate organizational scope.
 
-The organization context is required to guarantee that financial information belongs to the correct account scope.
+`user_id` as a Query Parameter to enforce user-level authorization and auditing.
 
-Error Format
+## Error Format
 
 All API errors should follow a consistent structure.
-
-Example:
 
 ```
 {
   "error":{
     "code":"INVALID_REQUEST",
-    "message":"Missing organization_id"
+    "message":"Missing parameters"
   }
 }
 ```
 
 Error codes:
-| Code            | Description                          |
-| --------------- | ------------------------------------ |
-| INVALID_REQUEST | Invalid request payload              |
-| UNAUTHORIZED    | Authentication failure               |
-| FORBIDDEN       | User does not have access            |
-| DATA_NOT_FOUND  | Requested information does not exist |
-| CONTEXT_ERROR   | Context generation failed            |
-| LLM_ERROR       | LLM provider failure                 |
-| INTERNAL_ERROR  | Unexpected service failure           |
+| Code            | HTTP Status               | Description                          |
+| --------------- | ------------------------- | ------------------------------------ |
+| INVALID_REQUEST | 400 Bad Request           | Invalid request payload              |
+| UNAUTHORIZED    | 401 Unauthorized          | Authentication failure               |
+| FORBIDDEN       | 403 Forbidden             | User does not have access            |
+| DATA_NOT_FOUND  | 404 Not Found             | Requested information does not exist |
+| CONTEXT_ERROR   | 422 Unprocessable Entity  | Context generation failed            |
+| LLM_ERROR       | 502 Bad Gateway           | LLM provider failure                 |
+| INTERNAL_ERROR  | 500 Internal Server Error | Unexpected service failure           |
+
+---
+## Mapping Intents to Endpoints
+
+When the `AI Service` receives a request at `POST /api/v1/{org_id}/chat`, it classifies the user intent to determine which backend APIs to call. 
+
+For the complete list of supported intents, refer to **[Supported AI Questions Documentation](supported-ai-questions.md)**
 
 ---
 ## API Versioning
