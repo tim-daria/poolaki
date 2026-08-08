@@ -26,6 +26,19 @@
   color: var(--accent-deep);
 }
 
+/* Lays the header's right-hand controls out in a row. Without this they stack
+   as blocks and overflow the 56px header row, which .appContainer clips. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Anchors .notif-dropdown to the button rather than the page. */
+.notif-wrapper {
+  position: relative;
+}
+
 .appContainer nav {
   grid-area: nav;
   display: flex;
