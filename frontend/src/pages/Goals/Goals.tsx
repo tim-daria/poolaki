@@ -1,4 +1,4 @@
-import styles from "./styles.module.css";
+import styles from "./Goals.module.css";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 
 export function Goals() {
