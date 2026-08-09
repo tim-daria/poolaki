@@ -24,11 +24,9 @@ def health_check(request: HttpRequest) -> JsonResponse:
 
 class SetInitialBalanceView(APIView):
     """
-    Set or retrieve the initial balance for the authenticated user's personal organization.
-
-    GET:
-        Returns whether the user still needs to set an initial balance.
-
+    # Set or retrieve the initial balance for the authenticated user's personal organization.
+    # GET:
+    #     Returns whether the user still needs to set an initial balance.
     POST:
         Updates the initial balance of the user's personal organization.
 
@@ -43,9 +41,9 @@ class SetInitialBalanceView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request) -> Response:
-        needs_initial_balance = bool(request.session.get("needs_initial_balance", False))
-        return Response({"needs_initial_balance": needs_initial_balance}, status=status.HTTP_200_OK)
+    # def get(self, request: Request) -> Response:
+    #     needs_initial_balance = bool(request.session.get("needs_initial_balance", False))
+    #     return Response({"needs_initial_balance": needs_initial_balance}, status=status.HTTP_200_OK)
 
     def _handle(self, request: Request) -> Response:
         assert isinstance(request.user, User)
@@ -64,8 +62,9 @@ class SetInitialBalanceView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        request.session.pop("needs_initial_balance", None)
-        request.session.modified = True
+        # if we move question about balance to the registration form, we won't need this:
+        # request.session.pop("needs_initial_balance", None)
+        # request.session.modified = True
 
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
 
