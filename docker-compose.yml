@@ -102,7 +102,13 @@ services:
       # - NODE_ENV=production
     volumes:
       - ./frontend:/home/node/app
-      - node_modules:/home/node/app/node_modules
+      - /home/node/app/node_modules
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
     networks:
       - frontend_net
     healthcheck:
