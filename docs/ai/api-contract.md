@@ -16,7 +16,6 @@ Summary initial supported endpoints:
 
 | Flow | Method | Endpoint | Purpose |
 |---|---|---|---|
-| Django → AI | GET | `/health` | Service health check |
 | Django → AI | POST | `/api/v1/{org_id}/chat` | Send user questions |
 | AI → Django | GET | `/api/internal/v1/organizations/{org_id}/analytics/monthly-summary` | Retrieve financial summary |
 | AI → Django | GET | `/api/internal/v1/organizations/{org_id}/transactions` | Retrieve transaction data |
