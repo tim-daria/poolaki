@@ -28,7 +28,7 @@ Summary initial supported endpoints:
 
 The AI integration consists of three main communication flows:
 - User request (`Frontend -> Django -> AI service`).
-- Context retrieval (`Django -> AI Service`).
+- Context retrieval (`Django <- AI Service`).
 - Response generation (`AI Service -> Django -> Frontend`)
 
 For the end-to-end sequential diagram and detailed RAG pipeline execution, see [AI Service Architecture](architecture.md) and [RAG Design](rag-design.md).
