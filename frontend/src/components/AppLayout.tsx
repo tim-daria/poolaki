@@ -1,76 +1,112 @@
-import { Outlet, useNavigate, NavLink, useParams } from "react-router";
-import { useAuth } from "../context/useAuth";
-import { getCsrfToken } from "../lib/csrf";
+import { useEffect, useState } from "react";
+import { Outlet, useParams } from "react-router";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import { useLogout } from "../context/useLogout";
 import { Header } from "./Header/Header";
-import "../App.css";
+import { Sidebar } from "./Sidebar/Sidebar";
 
 interface AppLayoutProps {
   /** True while the backend session is catching up to the URL's workspace. */
   syncing: boolean;
 }
 
+const COLLAPSED_KEY = "sidebar:collapsed";
+
 /**
- * Main application layout housing the persistent Header and Navigation sidebar.
+ * Storage access is guarded: a blocked or full localStorage throws, and the
+ * app shell failing to render over a cosmetic preference is not a trade worth
+ * making.
+ */
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Main application layout housing the persistent Header and Sidebar.
  *
  * Key behaviors:
- * - Relative Routing: NavLinks use relative paths (e.g., `to="transactions"` or `to="."`)
- *   to automatically resolve against `/o/:orgId` without manually passing `orgId`.
- * - Exact Index Matching: The `end` prop on `to="."` ensures "Overview" is highlighted
- *   only when at the root route, avoiding false active states on sub-pages.
+ * - Flex shell: a permanent MUI Drawer renders its paper `position: fixed`, so
+ *   the Drawer root has to reserve the column in normal flow. That is the
+ *   standard MUI app-shell pattern and the reason this is flex, not grid.
+ * - Lifted chrome state: `collapsed` and `mobileOpen` live here because the
+ *   Header's hamburger opens a Drawer the Sidebar owns.
  * - State Reset via `key={orgId}`: Bound to `<main>`, changing `orgId` forces React
  *   to remount only the page content (<Outlet />), automatically clearing old filters,
  *   scroll position, and stale data while keeping the shell UI mounted smoothly.
  */
 export function AppLayout({ syncing }: AppLayoutProps) {
-  const { setUser } = useAuth();
-  const navigate = useNavigate();
+  const logout = useLogout();
   const { orgId } = useParams();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  // Lazy initialiser — reads storage once on mount, not on every render.
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  async function handleLogout() {
-    await fetch("/_allauth/browser/v1/auth/session", {
-      method: "DELETE",
-      headers: { "X-CSRFToken": getCsrfToken() },
-      credentials: "include",
-    });
-    setUser(null);
-    navigate("/login");
-  }
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_KEY, String(collapsed));
+    } catch {
+      // Preference is not worth surfacing an error over.
+    }
+  }, [collapsed]);
 
   return (
-    <div className="appContainer">
-      <Header onLogout={handleLogout} />
-      <nav>
-        {/* <h2>Poolaki</h2> */}
-        <ul>
-          <li></li>
-          {/* Relative links resolve against /o/:orgId, so they follow the
-              current workspace without threading orgId through props. */}
-          <li>
-            {/* `end` — otherwise "." matches every page under /o/:orgId */}
-            <NavLink to="." end>
-              Overview
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="transactions">Transactions</NavLink>
-          </li>
-          <li>
-            <NavLink to="goals">Goals</NavLink>
-          </li>
-          <li>
-            <NavLink to="categories">Categories</NavLink>
-          </li>
-          <li className="spacer"></li>
-          {/* <li>
-            <NavLink to="settings">Settings</NavLink>
-          </li> */}
-        </ul>
-        <div className="nav-footer"></div>
-      </nav>
-      <main key={orgId} style={{ gridArea: "main", overflowY: "auto" }}>
-        {/* waits on the session bridge; see OrgLayout*/}
-        {syncing ? <div>Loading…</div> : <Outlet />}
-      </main>
-    </div>
+    <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
+      <Sidebar
+        isMobile={isMobile}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((c) => !c)}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
+
+      {/* minWidth: 0 — without it a wide child (a table) blows the flex item
+          out past the viewport instead of scrolling inside <main>. */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <Header
+          onLogout={logout}
+          onMenuClick={() => setMobileOpen(true)}
+          showMenuButton={isMobile}
+        />
+
+        <Box component="main" key={orgId} sx={{ flex: 1, overflowY: "auto" }}>
+          {/* waits on the session bridge; see OrgLayout*/}
+          {syncing ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                height: "100%",
+              }}
+            >
+              <CircularProgress size={20} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Box>
+          ) : (
+            <Outlet />
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 }

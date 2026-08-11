@@ -21,11 +21,13 @@ export const router = createBrowserRouter([
         children: [
           { path: "login", lazy: () => import("./pages/Login/Login") },
           { path: "register", lazy: () => import("./pages/Register/Register") },
-          { path: "terms", lazy: () => import("./pages/LegalPages/Terms") },
-          { path: "policy", lazy: () => import("./pages/LegalPages/Policy") },
           // { path: "about", element: <About /> },
         ],
       },
+      // Outside GuestRoute: the Sidebar links here, and GuestRoute would
+      // bounce a signed-in user straight back to their workspace.
+      { path: "terms", lazy: () => import("./pages/LegalPages/Terms") },
+      { path: "policy", lazy: () => import("./pages/LegalPages/Policy") },
       {
         path: "oauth-callback",
         lazy: () => import("./pages/OAuthCallback/OAuthCallback"),
