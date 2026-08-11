@@ -18,10 +18,10 @@ Summary initial supported endpoints:
 |---|---|---|---|
 | Django → AI | GET | `/health` | Service health check |
 | Django → AI | POST | `/api/v1/{org_id}/chat` | Send user questions |
-| AI → Django | GET | `/api/v1/{org_id}/analytics/monthly-summary` | Retrieve financial summary |
-| AI → Django | GET | `/api/v1/{org_id}/transactions` | Retrieve transaction data |
-| AI → Django | GET | `/api/v1/{org_id}/recurring-transactions` | Retrieve recurring commitments |
-| AI → Django | GET | `/api/v1/{org_id}/goals/progress` | Retrieve goals data |
+| AI → Django | GET | `/api/internal/v1/organizations/{org_id}/analytics/monthly-summary` | Retrieve financial summary |
+| AI → Django | GET | `/api/internal/v1/organizations/{org_id}/transactions` | Retrieve transaction data |
+| AI → Django | GET | `/api/internal/v1/organizations/{org_id}/recurring-transactions` | Retrieve recurring commitments |
+| AI → Django | GET | `/api/internal/v1/organizations/{org_id}/goals/progress` | Retrieve goals data |
 
 ---
 ## Communication Flows
