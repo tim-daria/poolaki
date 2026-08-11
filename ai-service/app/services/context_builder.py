@@ -1,4 +1,6 @@
 
+#  How: process data
+
 from models.context import (
     CombinedRetrievalResult,
     FinancialContextItem
