@@ -12,11 +12,8 @@ from core.permissions import IsOrgOwner
 from core.serializers import InitialBalanceSerializer, InvitationCreateSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import (
-    cancel_invitation,
-    create_invitation,
-    create_shared_organization,
-)
+from core.services.invitation import cancel_invitation, create_invitation
+from core.services.organization import create_shared_organization
 
 
 @ensure_csrf_cookie
@@ -95,7 +92,6 @@ class OrganizationListCreateView(APIView):
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
         memberships = Membership.objects.filter(user=request.user).select_related("org")
-        # current_org_id = request.session.get("current_organization_id")
 
         organizations = [
             {
@@ -108,7 +104,6 @@ class OrganizationListCreateView(APIView):
         ]
         return Response(
             {"organizations": organizations},
-            # {"current_organization_id": current_org_id, "organizations": organizations},
             status=status.HTTP_200_OK,
         )
 
@@ -125,8 +120,6 @@ class OrganizationListCreateView(APIView):
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
 
-        # request.session["current_organization_id"] = org.id
-        # request.session.modified = True
         return Response(
             {
                 "id": org.id,
@@ -184,7 +177,7 @@ class InvitationListCreateView(APIView):
 
     Only the organization owner may invite new members. The invited user
     is not added immediately — an Invitation is created with status
-    "pending" and a Notification is sent to them (should be added in the next iteration).
+    "pending" and a Notification is sent to them.
     They must accept or decline it separately.
 
     Request body:

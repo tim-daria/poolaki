@@ -163,7 +163,33 @@ class RecurringTransaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
 
-# ============ Audit ============
+# ============ Audit and Notifications ============
+
+
+class NotificationType(models.TextChoices):
+    INVITATION = "invitation", "Invitation"
+    TRANSACTION_ADDED = "transaction_added", "Transaction added"
+    GOAL_COMPLETED = "goal_completed", "Goal completed"
+    MEMBER_LEFT = "member_left", "Member left"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    type = models.CharField(max_length=30, choices=NotificationType.choices)
+    org = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    payload = models.JSONField(
+        default=dict, blank=True
+    )  # {"invitation_id": 5, "invited_by": "Anna"}
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "is_read", "created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.user} - {self.type}"
 
 
 class AuditAction(models.TextChoices):
