@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -6,11 +7,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Membership, User
-from core.serializers import InitialBalanceSerializer
+from core.models import Membership, Organization, User
+from core.permissions import IsOrgOwner
+from core.serializers import InitialBalanceSerializer, InvitationCreateSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization
+from core.services.organization import (
+    cancel_invitation,
+    create_invitation,
+    create_shared_organization,
+)
 
 
 @ensure_csrf_cookie
@@ -174,3 +180,80 @@ class SwitchOrganizationView(APIView):
         request.session["current_organization_id"] = org_id
         request.session.modified = True
         return Response({"current_organization_id": org_id})
+
+
+class InvitationCreateView(APIView):
+    """
+    Invite an existing user to join an organization.
+
+    Only the organization owner may invite new members. The invited user
+    is not added immediately — an Invitation is created with status
+    "pending" and a Notification is sent to them (should be added in the next iteration).
+    They must accept or decline it separately.
+
+    POST:
+    Create a pending invitation for the given username.
+
+    Request body:
+    - username (string): Username of the user to invite.
+
+    Returns:
+    - 201 Created with the invitation id, invited user and status, on success.
+    - 400 Bad Request if the input is invalid, the user doesn't exist,
+      is already a member, already has a pending invitation, or the
+      organization has reached the maximum of 5 members.
+    - 403 Forbidden if the requesting user is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def post(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        serializer = InvitationCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data["username"]
+        org = Organization.objects.get(id=org_id)
+
+        try:
+            invitation = create_invitation(org, username, request.user)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "id": invitation.id,
+                "invited_user": invitation.invited_user.username,
+                "status": invitation.status,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CancelInvitationView(APIView):
+    """
+    Cancel a pending invitation for an organization.
+    Only the organization owner may cancell invitation.
+    POST:
+    Update invitatation status from pending to cancelled.
+
+    Returns:
+    - 200 Ok with the invitation id and status, on success.
+    - 400 Bad Request if the invitation to this organization doesn't exist or if the
+      invitation was already accepted, declined or cancelled.
+    - 403 Forbidden if the requesting user is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def post(self, request: Request, org_id: int, invitation_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        try:
+            invitation = cancel_invitation(org_id, invitation_id)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"id": invitation.id, "status": invitation.status}, status=status.HTTP_200_OK
+        )

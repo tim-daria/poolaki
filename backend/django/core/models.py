@@ -26,8 +26,8 @@ class Organization(models.Model):
 
 
 class Role(models.TextChoices):
-    OWNER = "OWNER", "Owner"
-    MEMBER = "MEMBER", "Member"
+    OWNER = "owner", "Owner"
+    MEMBER = "member", "Member"
 
 
 class Membership(models.Model):
@@ -44,12 +44,44 @@ class Membership(models.Model):
         return f"{self.user} - {self.org} ({self.role})"
 
 
+class InvitationStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    DECLINED = "declined", "Declined"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+class Invitation(models.Model):
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invitations")
+    invited_user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="received_invitations"
+    )
+    invited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    status = models.CharField(
+        max_length=20, choices=InvitationStatus.choices, default=InvitationStatus.PENDING
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["org", "invited_user"],
+                condition=models.Q(status=InvitationStatus.PENDING),
+                name="unique_pending_invitation_per_user_org",
+            ),
+        ]  # we can't invite same user again to the same organization if he has a pending invitation
+
+    def __str__(self) -> str:
+        return f"{self.invited_user} → {self.org} ({self.status})"
+
+
 # ============ Finance ============
 
 
 class CategoryType(models.TextChoices):
-    INCOME = "INCOME", "Income"
-    EXPENSE = "EXPENSE", "Expense"
+    INCOME = "income", "Income"
+    EXPENSE = "expense", "Expense"
 
 
 class Category(models.Model):
@@ -61,9 +93,9 @@ class Category(models.Model):
 
 
 class GoalStatus(models.TextChoices):
-    ACTIVE = "ACTIVE", "Active"
-    COMPLETED = "COMPLETED", "Completed"
-    ARCHIVED = "ARCHIVED", "Archived"
+    ACTIVE = "active", "Active"
+    COMPLETED = "completed", "Completed"
+    ARCHIVED = "archived", "Archived"
 
 
 class Goal(models.Model):
@@ -82,9 +114,9 @@ class Goal(models.Model):
 
 
 class EntryType(models.TextChoices):
-    INCOME = "INCOME", "Income"
-    EXPENSE = "EXPENSE", "Expense"
-    CONTRIBUTION = "CONTRIBUTION", "Goal contribution"
+    INCOME = "income", "Income"
+    EXPENSE = "expense", "Expense"
+    CONTRIBUTION = "contribution", "Goal contribution"
 
 
 class Transaction(models.Model):
@@ -108,10 +140,10 @@ class Transaction(models.Model):
 
 
 class Frequency(models.TextChoices):
-    DAILY = "DAILY", "Daily"
-    WEEKLY = "WEEKLY", "Weekly"
-    MONTHLY = "MONTHLY", "Monthly"
-    YEARLY = "YEARLY", "Yearly"
+    DAILY = "daily", "Daily"
+    WEEKLY = "weekly", "Weekly"
+    MONTHLY = "monthly", "Monthly"
+    YEARLY = "yearly", "Yearly"
 
 
 class RecurringTransaction(models.Model):
@@ -135,9 +167,9 @@ class RecurringTransaction(models.Model):
 
 
 class AuditAction(models.TextChoices):
-    CREATE = "CREATE", "Create"
-    UPDATE = "UPDATE", "Update"
-    DELETE = "DELETE", "Delete"
+    CREATE = "create", "Create"
+    UPDATE = "update", "Update"
+    DELETE = "delete", "Delete"
 
 
 class ActivityLog(models.Model):
