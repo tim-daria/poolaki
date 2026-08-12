@@ -47,15 +47,6 @@ class SetInitialBalanceView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # def get(self, request: Request) -> Response:
-    #     needs_initial_balance = bool(
-    #         request.session.get("needs_initial_balance", False)
-    #     )
-    #     return Response(
-    #         {"needs_initial_balance": needs_initial_balance},
-    #         status=status.HTTP_200_OK,
-    #     )
-
     def _handle(self, request: Request) -> Response:
         assert isinstance(request.user, User)
 
@@ -72,11 +63,6 @@ class SetInitialBalanceView(APIView):
                 {"error": "Personal organization is missing"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # if we move question about balance to the registration form, we won't need this:
-        # request.session.pop("needs_initial_balance", None)
-        # request.session.modified = True
-
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
 
     def post(self, request: Request) -> Response:
@@ -109,7 +95,7 @@ class OrganizationListCreateView(APIView):
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
         memberships = Membership.objects.filter(user=request.user).select_related("org")
-        current_org_id = request.session.get("current_organization_id")
+        # current_org_id = request.session.get("current_organization_id")
 
         organizations = [
             {
@@ -121,7 +107,8 @@ class OrganizationListCreateView(APIView):
             for m in memberships
         ]
         return Response(
-            {"current_organization_id": current_org_id, "organizations": organizations},
+            {"organizations": organizations},
+            # {"current_organization_id": current_org_id, "organizations": organizations},
             status=status.HTTP_200_OK,
         )
 
@@ -138,8 +125,8 @@ class OrganizationListCreateView(APIView):
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
 
-        request.session["current_organization_id"] = org.id
-        request.session.modified = True
+        # request.session["current_organization_id"] = org.id
+        # request.session.modified = True
         return Response(
             {
                 "id": org.id,
@@ -151,35 +138,35 @@ class OrganizationListCreateView(APIView):
         )
 
 
-class SwitchOrganizationView(APIView):
-    """
-    Switch the current organization for the authenticated user.
+# class SwitchOrganizationView(APIView):
+#     """
+#     Switch the current organization for the authenticated user.
 
-    The selected organization is stored in the user's session and is used
-    as the default organization after page reloads.
+#     The selected organization is stored in the user's session and is used
+#     as the default organization after page reloads.
 
-    Request:
-    - POST /organizations/{org_id}/select/
-    - org_id (int): ID of the organization to select.
+#     Request:
+#     - POST /organizations/{org_id}/select/
+#     - org_id (int): ID of the organization to select.
 
-    Returns:
-    - 200 OK with the selected organization ID.
-    - 403 Forbidden if the user is not a member of the organization.
-    """
+#     Returns:
+#     - 200 OK with the selected organization ID.
+#     - 403 Forbidden if the user is not a member of the organization.
+#     """
 
-    permission_classes = [IsAuthenticated]
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request: Request, org_id: int) -> Response:
-        assert isinstance(request.user, User)
+#     def post(self, request: Request, org_id: int) -> Response:
+#         assert isinstance(request.user, User)
 
-        if not Membership.objects.filter(user=request.user, org_id=org_id).exists():
-            return Response(
-                {"error": "You are not a member of this organization"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        request.session["current_organization_id"] = org_id
-        request.session.modified = True
-        return Response({"current_organization_id": org_id})
+#         if not Membership.objects.filter(user=request.user, org_id=org_id).exists():
+#             return Response(
+#                 {"error": "You are not a member of this organization"},
+#                 status=status.HTTP_403_FORBIDDEN,
+#             )
+#         request.session["current_organization_id"] = org_id
+#         request.session.modified = True
+#         return Response({"current_organization_id": org_id})
 
 
 class InvitationCreateView(APIView):
