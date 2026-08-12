@@ -52,6 +52,8 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
             user is already a member, or a pending invitation for them
             already exists.
     """
+    if org.is_personal:
+        raise ValidationError("Cannot invite users to a personal budget.")
     check_can_add_member(org)
     try:
         invited_user = User.objects.get(username__iexact=invited_username)
@@ -78,11 +80,12 @@ def cancel_invitation(org_id: int, invitation_id: int) -> Invitation:
         ValidationError: If the invitation does not exist for the
             organization or is not pending.
     """
-    invitation = Invitation.objects.filter(id=invitation_id, org_id=org_id).first()
-    if invitation is None:
-        raise ValidationError("Invitation not found for this user in this organization.")
+    try:
+        invitation = Invitation.objects.get(id=invitation_id, org_id=org_id)
+    except Invitation.DoesNotExist:
+        raise ValidationError("Invitation not found for this organization.") from None
     if invitation.status != InvitationStatus.PENDING:
-        raise ValidationError("This invitation can't be cancelled.")
+        raise ValidationError(f"Cannot cancel an invitation that is already {invitation.status}.")
 
     invitation.status = InvitationStatus.CANCELLED
     invitation.save(update_fields=["status"])

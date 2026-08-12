@@ -12,4 +12,4 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
 
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
-    invited_user = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=150)

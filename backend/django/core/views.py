@@ -7,7 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Membership, Organization, User
+from core.models import Invitation, InvitationStatus, Membership, Organization, User
 from core.permissions import IsOrgOwner
 from core.serializers import InitialBalanceSerializer, InvitationCreateSerializer
 from core.services.balance import set_initial_balance
@@ -169,8 +169,17 @@ class OrganizationListCreateView(APIView):
 #         return Response({"current_organization_id": org_id})
 
 
-class InvitationCreateView(APIView):
+class InvitationListCreateView(APIView):
     """
+    Manage invitations for authentificated users.
+
+    GET:
+    Return all pending invitations for the organization.
+    Returns:
+    - 200 OK with a list of pending invitations.
+    - 403 Forbidden if the requesting user is not the organization owner.
+
+    POST:
     Invite an existing user to join an organization.
 
     Only the organization owner may invite new members. The invited user
@@ -178,21 +187,40 @@ class InvitationCreateView(APIView):
     "pending" and a Notification is sent to them (should be added in the next iteration).
     They must accept or decline it separately.
 
-    POST:
-    Create a pending invitation for the given username.
-
     Request body:
     - username (string): Username of the user to invite.
 
     Returns:
     - 201 Created with the invitation id, invited user and status, on success.
-    - 400 Bad Request if the input is invalid, the user doesn't exist,
-      is already a member, already has a pending invitation, or the
-      organization has reached the maximum of 5 members.
+    - 400 Bad Request if the input is invalid, the organization is a personal
+      budget, the user doesn't exist, is already a member, already has a pending
+      invitation, or the organization has reached the maximum of 5 members.
     - 403 Forbidden if the requesting user is not the organization owner.
     """
 
     permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def get(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+        invitations = Invitation.objects.filter(
+            org_id=org_id, status=InvitationStatus.PENDING
+        ).select_related("invited_user", "invited_by")
+        return Response(
+            {
+                "invitations": [
+                    {
+                        "id": invitation.id,
+                        "invited_user": invitation.invited_user.username,
+                        "invited_by": (
+                            invitation.invited_by.username if invitation.invited_by else None
+                        ),
+                        "status": invitation.status,
+                    }
+                    for invitation in invitations
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )
 
     def post(self, request: Request, org_id: int) -> Response:
         assert isinstance(request.user, User)
@@ -221,7 +249,7 @@ class InvitationCreateView(APIView):
 class CancelInvitationView(APIView):
     """
     Cancel a pending invitation for an organization.
-    Only the organization owner may cancell invitation.
+    Only the organization owner may cancel invitation.
     POST:
     Update invitatation status from pending to cancelled.
 

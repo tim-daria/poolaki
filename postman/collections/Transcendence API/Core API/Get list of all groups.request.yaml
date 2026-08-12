@@ -2,6 +2,8 @@ $kind: http-request
 name: Get list of all groups
 url: "{{base_url}}/api/organizations/"
 method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
 queryParams:
   - key: ""
     value: ""
