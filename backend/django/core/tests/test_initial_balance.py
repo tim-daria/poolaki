@@ -6,8 +6,9 @@ from rest_framework.test import APIClient
 
 from core.models import Organization, User
 
+pytestmark = pytest.mark.django_db
 
-@pytest.mark.django_db
+
 def test_set_initial_balance_success(
     api_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
@@ -30,7 +31,6 @@ def test_set_initial_balance_success(
     }
 
 
-@pytest.mark.django_db
 def test_set_initial_balance_rejects_invalid_value(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -48,7 +48,6 @@ def test_set_initial_balance_rejects_invalid_value(
     assert "initial_balance" in response.json()
 
 
-@pytest.mark.django_db
 def test_set_initial_balance_rejects_big_value(
     api_client: APIClient,
     personal_user: tuple[User, Organization],

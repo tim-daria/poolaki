@@ -4,8 +4,9 @@ from rest_framework.test import APIClient
 
 from core.models import Membership, Organization, Role, User
 
+pytestmark = pytest.mark.django_db
 
-@pytest.mark.django_db
+
 def test_get_user_organizations_returns_memberships(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -46,7 +47,6 @@ def test_get_user_organizations_returns_memberships(
     assert shared_org.id in organization_ids
 
 
-@pytest.mark.django_db
 def test_get_user_organizations_does_not_return_foreign_organizations(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -83,7 +83,6 @@ def test_get_user_organizations_does_not_return_foreign_organizations(
     assert foreign_org.id not in organization_ids
 
 
-@pytest.mark.django_db
 def test_create_shared_organization(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -115,7 +114,6 @@ def test_create_shared_organization(
     ).exists()
 
 
-@pytest.mark.django_db
 def test_create_shared_organization_requires_name(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -136,7 +134,6 @@ def test_create_shared_organization_requires_name(
     assert response.json()["error"] == "name is required"
 
 
-@pytest.mark.django_db
 def test_create_shared_organization_rejects_invalid_balance(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -157,7 +154,6 @@ def test_create_shared_organization_rejects_invalid_balance(
     assert response.status_code == 400
 
 
-@pytest.mark.django_db
 def test_create_shared_organization_changes_current_organization(
     api_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
@@ -176,83 +172,3 @@ def test_create_shared_organization_changes_current_organization(
     )
 
     assert response.status_code == 201
-
-    # shared_org_id = response.data["id"]
-    # assert api_client.session["current_organization_id"] == shared_org_id
-
-
-# @pytest.mark.django_db
-# def test_switch_organization_updates_session(
-#     api_client: APIClient,
-#     personal_user: tuple[User, Organization],
-# ) -> None:
-#     user, personal_org = personal_user
-
-#     api_client.force_authenticate(user=user)
-
-#     shared_org = Organization.objects.create(
-#         name="Trip",
-#         is_personal=False,
-#         initial_balance=100,
-#     )
-
-#     Membership.objects.create(
-#         user=user,
-#         org=shared_org,
-#         role=Role.OWNER,
-#     )
-
-#     session = api_client.session
-#     session["current_organization_id"] = shared_org.id
-#     session.save()
-
-#     response = api_client.post(
-#         reverse(
-#             "switch_organization",
-#             kwargs={"org_id": personal_org.id},
-#         ),
-#     )
-
-#     assert response.status_code == 200
-
-#     assert response.json() == {"current_organization_id": personal_org.id}
-
-#     session = api_client.session
-
-#     assert session["current_organization_id"] == personal_org.id
-
-
-# @pytest.mark.django_db
-# def test_switch_organization_denies_non_member(
-#     api_client: APIClient,
-#     personal_user: tuple[User, Organization],
-# ) -> None:
-#     user, _ = personal_user
-
-#     another_user = User.objects.create_user(
-#         email="another@example.com",
-#         username="another",
-#         password="password123",
-#     )
-
-#     foreign_org = Organization.objects.create(
-#         name="Foreign",
-#         is_personal=False,
-#     )
-
-#     Membership.objects.create(
-#         user=another_user,
-#         org=foreign_org,
-#         role=Role.OWNER,
-#     )
-
-#     api_client.force_authenticate(user=user)
-
-#     response = api_client.post(
-#         reverse(
-#             "switch_organization",
-#             kwargs={"org_id": foreign_org.id},
-#         ),
-#     )
-
-#     assert response.status_code == 403
