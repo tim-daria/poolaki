@@ -4,30 +4,31 @@ import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import { parseAllauthErrors, type AllauthError } from "../../lib/authErrors";
 import { startSocialAuth } from "../../lib/socialAuth";
+import { submitInitialBalance } from "../../lib/initialBalance";
 import type { User } from "../../context/AuthContext";
 import styles from "./styles.module.css";
 
-/*
-	1. Register using email, username, password
-	2. Register via 42OAuth
-	3. If successful, ask for starting budget
-	4. Create an Organisation (backend)
-	5. Send user to Homepage
-	6. If not successful, error message / page
-
-	Codes:
-	200 - OK
-	201 - Created, but email verification needed (not required)
-	400 - Validation error (weak password, not unique name/email)
-	500 - Server error
-
+/**
+ * Email/password signup, plus the entry point for 42 OAuth.
+ *
+ * Signing up takes two requests, not one. allauth's headless endpoint accepts
+ * only the fields in ACCOUNT_SIGNUP_FIELDS, so the optional starting balance is
+ * sent afterwards, once a session exists. That ordering is safe because a
+ * backend signal creates the personal workspace during signup with a balance of
+ * €0 — the second request overwrites a working default rather than completing
+ * the account, which is why it's optional and why failing it isn't fatal.
+ *
+ * Note that 42 signups never reach this form; they go through /oauth-callback,
+ * so those users keep the €0 default and currently have no way to change it.
+ *
+ * TODO: Settings page with a possibility to change initial balance.
  */
-
 export function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [balance, setBalance] = useState("");
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
@@ -66,10 +67,19 @@ export function Register() {
     try {
       data = await res.json();
     } catch {
-      // non-JSON responce
+      // Non-JSON body, e.g. an HTML error page from a 500.
     }
 
+    // Requires a user in the body, not merely a 2xx: the balance call below
+    // needs an authenticated session, and the user object is what confirms one.
     if (res.ok && data?.data?.user) {
+      // Best-effort — the workspace already exists at €0.
+      if (balance.trim() !== "") {
+        const balanceRes = await submitInitialBalance(balance, getCsrfToken());
+        if (!balanceRes.ok) {
+          console.warn("Could not set the starting balance:", balanceRes.error);
+        }
+      }
       setUser(data.data.user);
       navigate("/");
     } else {
@@ -121,6 +131,19 @@ export function Register() {
             onChange={(e) => setPassword2(e.target.value)}
             required
           />
+          <label htmlFor="balance">Starting balance (€) — optional</label>
+          <input
+            id="balance"
+            type="number"
+            min="0"
+            step="0.01"
+            value={balance}
+            onChange={(e) => setBalance(e.target.value)}
+            aria-describedby="balance-hint"
+          />
+          <small id="balance-hint">
+            Leave empty to start at €0. You can change this later.
+          </small>
           {error && <p className={styles.error}>{error}</p>}
           <button type="submit" className={styles.submitBtn}>
             Sign Up
