@@ -1,20 +1,20 @@
 services:
-  # cloudflared:
-  #   image: cloudflare/cloudflared:latest
-  #   container_name: cloudflared
-  #   restart: unless-stopped
-  #   command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
-  #   environment:
-  #     TUNNEL_TOKEN: ${TUNNEL_TOKEN}
-  #   networks:
-  #     - tunnel_net
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    networks:
+      - tunnel_net
   
   caddy:
     image: caddy:2.11-alpine
     container_name: caddy
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
     environment:
       TZ: Europe/Berlin
     volumes:
@@ -317,6 +317,13 @@ services:
     # Grafana:
     # - Add AI Service dashboard
     # - Monitor latency, requests, errors, token usage
+
+######################################################
+# Security #
+######################################################
+
+
+
 
 
 volumes:
