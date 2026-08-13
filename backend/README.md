@@ -102,7 +102,8 @@ callback_url=https://poolaki.localhost/oauth/callback
 
 ### Initial balance
 
-Check whether initial balance is required:
+<!-- if we move question about balance to the registration form, we won't need this part: -->
+<!-- Check whether initial balance is required:
 
 ```
 
@@ -115,7 +116,7 @@ Response:
 {
   "needs_initial_balance": true
 }
-```
+``` -->
 
 Set initial balance:
 

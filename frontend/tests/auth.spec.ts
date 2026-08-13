@@ -45,14 +45,10 @@ test.describe.serial("User authentication", () => {
     await page.getByLabel("Password", { exact: true }).fill(testUser.password);
     await page.getByLabel("Confirm Password").fill(testUser.password);
 
-    await page.route(
-      "**/api/organizations/personal/initial-balance/",
-      (route) => route.fulfill({ json: { needs_initial_balance: false } }),
-    );
-
     await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-    // expect(page.locator("#header")).toBeVisible();
-    await page.waitForURL("/");
+
+    // "/" only redirects now — the app settles on /o/:orgId.
+    await page.waitForURL(/\/o\/\d+$/);
     await expect(page.getByRole("banner")).toBeVisible();
   });
 
@@ -61,18 +57,67 @@ test.describe.serial("User authentication", () => {
 
     const logoutBtn = page.getByRole("button", { name: /log\s*out/i });
     await logoutBtn.click();
-    await page.waitForURL("/");
+    await page.waitForURL("/login");
 
-    await expect(page.getByRole("button", { name: "Login", exact: true }));
+    await expect(
+      page.getByRole("button", { name: "Login", exact: true }),
+    ).toBeVisible();
+  });
+
+  // The three below need a logged-out session: /register and /login sit inside
+  // GuestRoute, which bounces authenticated users to their workspace. They also
+  // have to run after registration, since they reuse that account's details.
+
+  test("registration rejects mismatched passwords", async () => {
+    await page.goto("/register");
+
+    await page.getByLabel("Email").fill(`x_${timestamp}@example.com`);
+    await page.getByLabel("Username").fill(`x_${timestamp}`);
+    await page.getByLabel("Password", { exact: true }).fill(testUser.password);
+    await page.getByLabel("Confirm Password").fill("something-else");
+    await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+
+    // Checked client-side, so no request is made and we stay on the form.
+    await expect(page.getByText(/passwords do not match/i)).toBeVisible();
+    await expect(page).toHaveURL("/register");
+  });
+
+  test("registration rejects an email that is already taken", async () => {
+    await page.goto("/register");
+
+    await page.getByLabel("Email").fill(testUser.email);
+    await page.getByLabel("Username").fill(`other_${timestamp}`);
+    await page.getByLabel("Password", { exact: true }).fill(testUser.password);
+    await page.getByLabel("Confirm Password").fill(testUser.password);
+    await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+
+    // Rejected by allauth, surfaced through parseAllauthErrors.
+    await expect(page).toHaveURL("/register");
+    await expect(
+      page.getByRole("button", { name: "Sign Up", exact: true }),
+    ).toBeVisible();
+  });
+
+  test("login rejects a wrong password", async () => {
+    await page.goto("/login");
+
+    await page.getByLabel("Username or Email").fill(testUser.username);
+    await page.getByLabel("Password").fill("definitely-not-the-password");
+    await page.getByRole("button", { name: "Login", exact: true }).click();
+
+    await expect(page).toHaveURL("/login");
+    await expect(
+      page.getByRole("button", { name: "Login", exact: true }),
+    ).toBeVisible();
   });
 
   test("login with username: success", async () => {
-    await page.goto("/");
+    await page.goto("/login");
 
     await page.getByLabel("Username or Email").fill(testUser.username);
     await page.getByLabel("Password").fill(testUser.password);
     await page.getByRole("button", { name: "Login", exact: true }).click();
-    await page.waitForURL("/");
+    await page.waitForURL(/\/o\/\d+$/);
 
     await expect(
       page.getByRole("button", { name: /log\s*out/i }),

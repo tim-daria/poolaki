@@ -281,6 +281,8 @@ services:
       - "8000"
     env_file:
       - ./ai-service/.env
+    environment:
+      - PYTHONPATH=.
     volumes:
       - ./ai-service:/app
     networks:
