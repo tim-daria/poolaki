@@ -1,187 +1,156 @@
-# Backend
+# Backend API Documentation
 
-Backend service code lives here.
+This backend is built with Django and Django REST Framework, and it provides authentication, organization management, invitation flows, health checks, and monitoring endpoints.
 
-## Authentification
-Authentication is implemented using **django-allauth Headless**.
+## Base URL
+
+The API is mounted under:
+
+```text
+/api/
+```
+
+The app also exposes the following project-level routes:
+
+- `/_allauth/...` — headless authentication endpoints from django-allauth
+- `/health/` — backend health check
+- `/metrics` — Prometheus metrics
+
+## Authentication
+
+Authentication is handled via `django-allauth Headless`.
 
 Users can:
 
-- register with email, username and password
+- register with email, username, and password
 - log in with email and password
-- register and sign in using social authentification via intra42 (42 OAuth)
+- authenticate through 42 OAuth (`intra42`)
 
-The callback configured in the 42 Developer Portal should be:
+The callback configured in the 42 Developer Portal is:
 
-```
-
+```text
 http://poolaki.localhost/accounts/intra42/callback/
-
 ```
 
+### CSRF token
 
-## APIs
-### Get CSRF token
-
-```
-
+```http
 GET /api/csrf/
-
 ```
 
----
+Returns a CSRF cookie and a simple JSON response:
 
-### Get current session
-
+```json
+{
+  "detail": "CSRF cookie set"
+}
 ```
 
-GET /\_allauth/browser/v1/auth/session
+### Auth session
 
+```http
+GET /_allauth/browser/v1/auth/session
 ```
 
----
+Returns metadata about the authenticated session.
 
-### Sign in
+### Sign up
 
+```http
+POST /_allauth/browser/v1/auth/signup
 ```
 
-POST /\_allauth/browser/v1/auth/signup
+Request body:
 
+```json
+{
+  "email": "user@example.com",
+  "username": "alice",
+  "password": "strong-password"
+}
 ```
 
-### Login
+### Log in
 
+```http
+POST /_allauth/browser/v1/auth/login
 ```
 
-POST /\_allauth/browser/v1/auth/login
+Request body:
 
+```json
+{
+  "email": "user@example.com",
+  "password": "strong-password"
+}
 ```
 
----
+### Log out
 
-### Logout
-
+```http
+DELETE /_allauth/browser/v1/auth/session
 ```
 
-DELETE /\_allauth/browser/v1/auth/session
+### Social login redirect
 
+```http
+POST /_allauth/browser/v1/auth/provider/redirect
 ```
 
----
+Form parameters:
 
-### Social login
-
-```
-
-POST /\_allauth/browser/v1/auth/provider/redirect
-
-```
-
-Parameters:
-
-```
-
-provider
-process
-callback_url
-
-```
-
-Example:
-
-```
-
+```text
 provider=intra42
 process=login
 callback_url=https://poolaki.localhost/oauth/callback
-
 ```
 
 ---
 
+## Organization endpoints
 
-### Initial balance
+All organization endpoints require authentication.
 
-<!-- if we move question about balance to the registration form, we won't need this part: -->
-<!-- Check whether initial balance is required:
+### 1. List organizations for the current user
 
-```
-
-GET /api/organizations/personal/initial-balance/
-
-```
-Response:
-
-```json
-{
-  "needs_initial_balance": true
-}
-``` -->
-
-Set initial balance:
-
-```
-
-POST /api/organizations/personal/initial-balance/
-
-```
-
-Body:
-
-```json
-{
-  "initial_balance": 1000
-}
-```
-
----
-
-### Organizations
-
-Get all organizations available for the authenticated user:
-
-```
-
+```http
 GET /api/organizations/
-
 ```
 
-Response:
+Response example:
 
 ```json
 {
-  "current_organization_id": 1,
   "organizations": [
     {
       "id": 1,
       "name": "Personal budget",
       "is_personal": true,
-      "role": "OWNER"
+      "role": "owner"
     },
     {
       "id": 2,
       "name": "Trip",
       "is_personal": false,
-      "role": "OWNER"
+      "role": "owner"
     }
   ]
 }
 ```
 
-The response contains:
+Notes:
 
-"organizations" — all organizations where the current user is a member.
-"current_organization_id" — the organization currently selected in the user's session.
+- `role` is returned as the role assigned in the membership (`owner` or `member`)
+- `is_personal` identifies the user's personal budget
 
-Create a new shared organization:
+### 2. Create a new shared organization
 
-```
-
+```http
 POST /api/organizations/
-
 ```
 
-Body:
+Request body:
+
 ```json
 {
   "name": "Trip",
@@ -189,7 +158,8 @@ Body:
 }
 ```
 
-Response:
+Response example:
+
 ```json
 {
   "id": 2,
@@ -199,65 +169,404 @@ Response:
 }
 ```
 
-After creation, the new organization becomes the current organization in the user's session.
+Status:
 
-Switch the current organization:
+- `201 Created` on success
+- `400 Bad Request` when the payload is invalid
 
+### 3. Set the personal organization initial balance
+
+```http
+POST /api/organizations/personal/initial-balance/
 ```
 
-POST /api/organizations/{org_id}/select/
-
-```
-
-Response:
-```json
-{
-  "current_organization_id": 2
-}
-```
-
-The selected organization is stored in the user's session and will be used as the default organization after page reloads.
-
-The user must be a member of the organization. Otherwise, the API returns:
+Request body:
 
 ```json
 {
-  "error": "You are not a member of this organization"
+  "initial_balance": 1000
 }
 ```
-with status 403 Forbidden.
+
+Response example:
+
+```json
+{
+  "initial_balance": "1000.00"
+}
+```
+
+This endpoint initializes the authenticated user's personal organization balance.
 
 ---
 
-### Health
+## Invitation endpoints
 
+These endpoints manage organization invitations and are protected by owner-only permissions.
+
+### 1. List pending invitations for an organization
+
+```http
+GET /api/organizations/{org_id}/invitations/
 ```
 
-GET /health
+Example response:
+
+```json
+{
+  "invitations": [
+    {
+      "id": 7,
+      "invited_user": "alice",
+      "invited_by": "bob",
+      "status": "pending"
+    }
+  ]
+}
 ```
 
-Used by:
+### 2. Invite a user to an organization
 
-- Docker healthcheck and CI to recieve the current health status
+```http
+POST /api/organizations/{org_id}/invitations/
+```
+
+Request body:
+
+```json
+{
+  "username": "alice"
+}
+```
+
+Response example:
+
+```json
+{
+  "id": 7,
+  "invited_user": "alice",
+  "status": "pending"
+}
+```
+
+Validation rules:
+
+- the requester must be the organization owner
+- the target user must exist
+- the target user cannot already be a member
+- the user cannot already have a pending invitation for the same organization
+- the organization must not be a personal budget
+- the organization limit of 5 members must not be exceeded
+
+### 3. Cancel a pending invitation
+
+```http
+POST /api/organizations/{org_id}/invitations/{invitation_id}/cancel/
+```
+
+Response example:
+
+```json
+{
+  "id": 7,
+  "status": "cancelled"
+}
+```
+
+Possible error responses:
+
+```json
+{
+  "error": "Invitation is invalid or already resolved"
+}
+```
+
+Status:
+
+- `200 OK` on successful cancellation
+- `400 Bad Request` for invalid or already-processed invitations
+- `403 Forbidden` when the user is not the organization owner
 
 ---
+
+## Health and monitoring
+
+### Health check
+
+```http
+GET /health/
+```
+
+Returns:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+This endpoint is used by Docker health checks and CI pipelines.
 
 ### Metrics
 
-```
-
+```http
 GET /metrics
 ```
 
-Used by:
+Used by Prometheus to collect runtime and performance metrics.
 
-- Prometheus to collect performance and runtime metrics for monitoring and alerting
+---
 
+## Proposed API structure for future modules
 
-# Monitoring
+The following endpoints are not implemented yet and should be treated as a suggested contract for the next backend iterations. They are meant to guide development for transactions, notifications, goals, and related finance flows.
 
-## Apps
+### Transactions
+
+Transactions are linked to an organization and can represent income, expenses, or goal contributions.
+
+#### List transactions
+
+```http
+GET /api/organizations/{org_id}/transactions/
+```
+
+Query parameters:
+
+- `category_id` (optional)
+- `type` (optional: `income`, `expense`, `contribution`)
+- `from` / `to` (optional date range)
+- `page` / `limit` (optional pagination)
+
+Response example:
+
+```json
+{
+  "transactions": [
+    {
+      "id": 1,
+      "org_id": 2,
+      "goal_id": null,
+      "category_id": 4,
+      "entry_type": "expense",
+      "amount": "125.50",
+      "description": "Groceries",
+      "transaction_date": "2026-08-12",
+      "is_tax_deductible": false,
+      "created_by": "alice",
+      "created_at": "2026-08-12T12:03:00Z"
+    }
+  ]
+}
+```
+
+#### Create transaction
+
+```http
+POST /api/organizations/{org_id}/transactions/
+```
+
+Request body:
+
+```json
+{
+  "category_id": 4,
+  "entry_type": "expense",
+  "amount": "125.50",
+  "description": "Groceries",
+  "transaction_date": "2026-08-12",
+  "is_tax_deductible": false,
+  "goal_id": null
+}
+```
+
+#### Get transaction details
+
+```http
+GET /api/organizations/{org_id}/transactions/{transaction_id}/
+```
+
+### Categories
+
+```http
+GET /api/organizations/{org_id}/categories/
+POST /api/organizations/{org_id}/categories/
+```
+
+Category payload:
+
+```json
+{
+  "name": "Food",
+  "type": "expense"
+}
+```
+
+### Goals
+
+Goals are organization-level targets with a target amount, deadline, and status.
+
+#### List goals
+
+```http
+GET /api/organizations/{org_id}/goals/
+```
+
+Response example:
+
+```json
+{
+  "goals": [
+    {
+      "id": 1,
+      "name": "Trip to Lisbon",
+      "target_amount": "2000.00",
+      "target_date": "2026-10-01",
+      "status": "active",
+      "created_by": "alice"
+    }
+  ]
+}
+```
+
+#### Create goal
+
+```http
+POST /api/organizations/{org_id}/goals/
+```
+
+Request body:
+
+```json
+{
+  "name": "Trip to Lisbon",
+  "target_amount": "2000.00",
+  "target_date": "2026-10-01"
+}
+```
+
+#### Update or archive goal
+
+```http
+PATCH /api/organizations/{org_id}/goals/{goal_id}/
+POST /api/organizations/{org_id}/goals/{goal_id}/archive/
+```
+
+### Notifications
+
+Notifications should be read by the authenticated user and grouped by read/unread state.
+
+#### List notifications
+
+```http
+GET /api/notifications/
+```
+
+Response example:
+
+```json
+{
+  "notifications": [
+    {
+      "id": 12,
+      "type": "invitation",
+      "org_id": 2,
+      "org_name": "Trip",
+      "payload": {
+        "invitation_id": 7,
+        "invited_by": "bob"
+      },
+      "is_read": false,
+      "created_at": "2026-08-12T13:05:00Z"
+    }
+  ]
+}
+```
+
+### Recurring transactions
+
+```http
+GET /api/organizations/{org_id}/recurring-transactions/
+POST /api/organizations/{org_id}/recurring-transactions/
+PATCH /api/organizations/{org_id}/recurring-transactions/{id}/
+DELETE /api/organizations/{org_id}/recurring-transactions/{id}/
+```
+
+Suggested payload:
+
+```json
+{
+  "category_id": 4,
+  "amount": "100.00",
+  "frequency": "monthly",
+  "description": "Rent",
+  "next_execution": "2026-09-01",
+  "is_active": true,
+  "is_tax_deductible": false
+}
+```
+
+### Suggested response conventions
+
+For future finance features, the API should follow a consistent pattern:
+
+- list endpoints return an object with a top-level collection, for example `transactions`, `goals`, or `notifications`
+- permission checks are enforced by organization membership and role
+- when relevant, all endpoints should support filtering and pagination
+
+---
+
+## Error handling conventions
+
+The API generally returns:
+
+- `200 OK` for successful retrieval or update operations
+- `201 Created` for successful creation
+- `400 Bad Request` for invalid input or business-rule violations
+- `403 Forbidden` for permission errors
+- `500 Internal Server Error` for unexpected backend failures
+
+Typical error object:
+
+```json
+{
+  "error": "Some descriptive message"
+}
+```
+
+---
+
+## Notes
+
+### Current implementation status
+
+The following organization switching endpoint exists in the code as a commented-out view and is not active in the current routing configuration:
+
+```http
+POST /api/organizations/{org_id}/select/
+```
+
+It is intentionally left disabled in `core/urls.py` for now.
+
+### Main modules
+
+- `core/views.py` — API view logic
+- `core/models.py` — database models for users, organizations, memberships, invitations, transactions, goals, and notifications
+- `core/serializers.py` — input validation for request payloads
+- `core/urls.py` — API routing
+
+---
+
+## Monitoring dashboard
+
+The project includes Prometheus monitoring infrastructure, and the service is typically available via:
+
+```text
 https://prometheus.localhost
+```
+
+and related local monitoring endpoints defined in the stack configuration.
+
 
 https://grafana.localhost
 
