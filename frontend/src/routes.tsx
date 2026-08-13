@@ -1,9 +1,10 @@
 import { createBrowserRouter } from "react-router";
 import { App } from "./App";
-import { AppLayout } from "./components/AppLayout";
 import { GuestRoute } from "./components/GuestRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { InitialBalanceGate } from "./components/InitialBalanceGate";
+import { OrgListProvider } from "./context/OrgListProvider";
+import { OrgLayout } from "./components/OrgLayout";
+import { OrgRedirect } from "./components/OrgRedirect";
 import { ErrorPage } from "./pages/ErrorPage/ErrorPage";
 
 // Each lazy page is its own code-split chunk, loaded on first navigation.
@@ -33,31 +34,36 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           {
-            element: (
-              <InitialBalanceGate>
-                <AppLayout />
-              </InitialBalanceGate>
-            ),
+            // Pathless layout route: adds the provider to the tree without
+            // adding a URL segment. Sits inside ProtectedRoute so the org list
+            // unmounts on logout. Renders <Outlet/> for its children.
+            element: <OrgListProvider />,
             children: [
+              // "/" resolves the last-used workspace and redirects to it.
+              { index: true, element: <OrgRedirect /> },
               {
-                index: true,
-                lazy: () => import("./pages/Home/Home"),
-                handle: { title: "Overview" },
-              },
-              {
-                path: "transactions",
-                lazy: () => import("./pages/Transactions/Transactions"),
-                handle: { title: "Transactions" },
-              },
-              {
-                path: "goals",
-                lazy: () => import("./pages/Goals/Goals"),
-                handle: { title: "Goals" },
-              },
-              {
-                path: "categories",
-                lazy: () => import("./pages/Categories/Categories"),
-                handle: { title: "Categories" },
+                // The org lives in the URL. Everything below is scoped to it,
+                // and switching workspaces is just navigation.
+                path: "o/:orgId",
+                element: <OrgLayout />,
+                children: [
+                  {
+                    index: true,
+                    lazy: () => import("./pages/Home/Home"),
+                  },
+                  {
+                    path: "transactions",
+                    lazy: () => import("./pages/Transactions/Transactions"),
+                  },
+                  {
+                    path: "goals",
+                    lazy: () => import("./pages/Goals/Goals"),
+                  },
+                  {
+                    path: "categories",
+                    lazy: () => import("./pages/Categories/Categories"),
+                  },
+                ],
               },
             ],
           },

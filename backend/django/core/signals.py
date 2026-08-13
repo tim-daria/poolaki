@@ -12,9 +12,8 @@ def handle_user_signed_up(request: HttpRequest, user: User, **kwargs: object) ->
 
     # if "sociallogin" not in kwargs:
     #     return
-
-    request.session["needs_initial_balance"] = True
-    request.session.modified = True
+    # request.session["needs_initial_balance"] = True
+    # request.session.modified = True
 
 
 @receiver(user_logged_in)

@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { OrgSwitcher } from "./OrgSwitcher";
 
 interface HeaderProps {
-  title: string;
   onLogout: () => void;
 }
 
-export function Header({ title, onLogout }: HeaderProps) {
+export function Header({ onLogout }: HeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
     <header id="header" className="header">
-      <h2>{title}</h2>
       <div className="header-actions">
+        <OrgSwitcher />
+        <button aria-label="Log out" onClick={onLogout}>
+          Logout
+        </button>
         <div className="notif-wrapper">
           <button
             className="notif-btn"
@@ -26,9 +29,9 @@ export function Header({ title, onLogout }: HeaderProps) {
             </div>
           )}
         </div>
-        <button aria-label="Log out" onClick={onLogout}>
+        {/* <button aria-label="Log out" onClick={onLogout}>
           Logout
-        </button>
+        </button> */}
       </div>
     </header>
   );

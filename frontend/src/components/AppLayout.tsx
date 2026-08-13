@@ -1,16 +1,30 @@
-import { Outlet, useNavigate, useMatches, NavLink } from "react-router";
+import { Outlet, useNavigate, NavLink, useParams } from "react-router";
 import { useAuth } from "../context/useAuth";
 import { getCsrfToken } from "../lib/csrf";
 import { Header } from "./Header/Header";
 import "../App.css";
 
-export function AppLayout() {
+interface AppLayoutProps {
+  /** True while the backend session is catching up to the URL's workspace. */
+  syncing: boolean;
+}
+
+/**
+ * Main application layout housing the persistent Header and Navigation sidebar.
+ *
+ * Key behaviors:
+ * - Relative Routing: NavLinks use relative paths (e.g., `to="transactions"` or `to="."`)
+ *   to automatically resolve against `/o/:orgId` without manually passing `orgId`.
+ * - Exact Index Matching: The `end` prop on `to="."` ensures "Overview" is highlighted
+ *   only when at the root route, avoiding false active states on sub-pages.
+ * - State Reset via `key={orgId}`: Bound to `<main>`, changing `orgId` forces React
+ *   to remount only the page content (<Outlet />), automatically clearing old filters,
+ *   scroll position, and stale data while keeping the shell UI mounted smoothly.
+ */
+export function AppLayout({ syncing }: AppLayoutProps) {
   const { setUser } = useAuth();
   const navigate = useNavigate();
-  const matches = useMatches();
-  const pageTitle = matches.findLast(
-    (m) => (m.handle as { title?: string })?.title,
-  )?.handle as { title: string } | undefined;
+  const { orgId } = useParams();
 
   async function handleLogout() {
     await fetch("/_allauth/browser/v1/auth/session", {
@@ -24,33 +38,38 @@ export function AppLayout() {
 
   return (
     <div className="appContainer">
-      <Header title={pageTitle?.title ?? ""} onLogout={handleLogout} />
+      <Header onLogout={handleLogout} />
       <nav>
         {/* <h2>Poolaki</h2> */}
         <ul>
           <li></li>
-          {/* NavLink can be styled when active, too */}
+          {/* Relative links resolve against /o/:orgId, so they follow the
+              current workspace without threading orgId through props. */}
           <li>
-            <NavLink to="/">Overview</NavLink>
+            {/* `end` — otherwise "." matches every page under /o/:orgId */}
+            <NavLink to="." end>
+              Overview
+            </NavLink>
           </li>
           <li>
-            <NavLink to="/transactions">Transactions</NavLink>
+            <NavLink to="transactions">Transactions</NavLink>
           </li>
           <li>
-            <NavLink to="/goals">Goals</NavLink>
+            <NavLink to="goals">Goals</NavLink>
           </li>
           <li>
-            <NavLink to="/categories">Categories</NavLink>
+            <NavLink to="categories">Categories</NavLink>
           </li>
           <li className="spacer"></li>
-          <li>
-            <NavLink to="/settings">Settings</NavLink>
-          </li>
+          {/* <li>
+            <NavLink to="settings">Settings</NavLink>
+          </li> */}
         </ul>
         <div className="nav-footer"></div>
       </nav>
-      <main style={{ gridArea: "main", overflowY: "auto" }}>
-        <Outlet />
+      <main key={orgId} style={{ gridArea: "main", overflowY: "auto" }}>
+        {/* waits on the session bridge; see OrgLayout*/}
+        {syncing ? <div>Loading…</div> : <Outlet />}
       </main>
     </div>
   );
