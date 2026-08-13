@@ -336,7 +336,6 @@ volumes:
   postgres_db:
   caddy_data:
   caddy_config:
-  node_modules:
   grafana_data:
   prom_data:
 
