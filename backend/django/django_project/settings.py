@@ -214,6 +214,7 @@ ACCOUNT_EMAIL_VERIFICATION = "optional"
 
 SOCIALACCOUNT_EMAIL_REQUIRED = False
 SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
+ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
 
 # ======================================================
 # INTERNATIONALIZATION
