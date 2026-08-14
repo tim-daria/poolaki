@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Button, Menu, MenuItem, Divider } from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
+import { Box, Button, Menu, MenuItem, Divider } from "@mui/material";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { CreateOrgModal } from "../CreateOrgModal";
@@ -27,8 +27,49 @@ export function OrgSwitcher() {
         onClick={(e) => setAnchor(e.currentTarget)}
         aria-haspopup="menu"
         aria-expanded={Boolean(anchor)}
+        color="inherit"
+        endIcon={
+          <KeyboardArrowDownIcon
+            sx={{
+              transition: (theme) => theme.transitions.create("transform"),
+              transform: anchor ? "rotate(180deg)" : "none",
+            }}
+          />
+        }
+        // Truncation hides the full name, so keep it reachable on hover.
+        title={currentOrg.name}
+        sx={{
+          // Reads as a distinct control against the white AppBar by borrowing
+          // the page background behind it.
+          bgcolor: "background.default",
+          color: "text.primary",
+          fontSize: "1.05rem",
+          fontWeight: 600,
+          px: 1.5,
+          py: 0.5,
+          "&:hover": { bgcolor: "primary.light" },
+          // Fixed so the header doesn't reflow when switching workspaces, but
+          // in rem so it tracks the root font size.
+          width: "14rem",
+          maxWidth: "100%",
+          justifyContent: "space-between",
+          // Without this the chevron is squeezed instead of the label.
+          "& .MuiButton-endIcon": { flexShrink: 0 },
+        }}
       >
-        {currentOrg.name}
+        <Box
+          component="span"
+          sx={{
+            // minWidth: 0 — a flex item won't shrink below its content width
+            // otherwise, and the ellipsis never appears.
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {currentOrg.name}
+        </Box>
       </Button>
 
       <Menu
@@ -46,14 +87,6 @@ export function OrgSwitcher() {
             }}
           >
             {org.name}
-            {/* is_personal is a capability, not decoration: personal
-                workspaces can never be shared. */}
-            {org.is_personal && (
-              <LockIcon
-                fontSize="small"
-                titleAccess="Personal — can't be shared"
-              />
-            )}
           </MenuItem>
         ))}
 
