@@ -10,9 +10,13 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv export --frozen --no-dev | uv pip install --system --no-cache -r -
+# Production:
+# RUN uv export --frozen --no-dev | uv pip install --system --no-cache -r -
+# Development:
+RUN uv export --frozen | uv pip install --system --no-cache -r -
 
 COPY app/ ./app/
+COPY tests/ ./app/tests/
 
 EXPOSE 8000
 
