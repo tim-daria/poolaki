@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router";
 import { OrgListContext } from "./OrgListContext";
 import { fetchOrganizations } from "../lib/organizations";
@@ -14,28 +14,34 @@ export function OrgListProvider() {
   const [lastUsedId, setLastUsedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
+  /** Using try/catch instead of try/finally because React Compiler cannot process
+   * a try block without a catch. Bailing out would cause the compiler to skip
+   * auto-memoization, making `load` re-create on every render.
+   *
+   * ESLint react-hooks warnings are turned off in eslint.config.js for this entire file.
+   * Using an inline `// eslint-disable` comment would make React Compiler skip optimizing this component.
+   */
+  const load = async (signal?: AbortSignal) => {
     try {
       const list = await fetchOrganizations(signal);
       setOrganizations(list.organizations);
       setLastUsedId(list.current_organization_id);
-    } finally {
       setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      throw err;
     }
-  }, []);
+  };
 
   useEffect(() => {
     const ac = new AbortController();
-    // Cleanup aborts the in-flight request: StrictMode runs effects twice in
-    // dev, and without it the older response can land last.
+    // Abort the request on cleanup. In React StrictMode (dev mode), effects run twice;
+    // this ensures an older request won't overwrite a newer response.
     void load(ac.signal).catch(() => {});
     return () => ac.abort();
   }, [load]);
 
-  const value = useMemo(
-    () => ({ organizations, lastUsedId, loading, refresh: () => load() }),
-    [organizations, lastUsedId, loading, load],
-  );
+  const value = { organizations, lastUsedId, loading, refresh: () => load() };
 
   return (
     <OrgListContext.Provider value={value}>

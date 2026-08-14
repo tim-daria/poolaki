@@ -1,25 +1,12 @@
-// import { defineConfig } from "vite";
-// import react from "@vitejs/plugin-react";
-
-// export default defineConfig({
-//   plugins: [react()],
-//   server: {
-//     host: "0.0.0.0",
-//     port: 5173,
-//     allowedHosts: ["poolaki.localhost"],
-//     hmr: {
-//       host: "poolaki.localhost",
-//       protocol: "wss",
-//       clientPort: 443,
-//     },
-//   },
-// });
-
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 
 export default defineConfig({
-  plugins: [react()],
+  // React Compiler auto-memoizes components and hooks, so manual useMemo /
+  // useCallback are only needed where referential identity is load-bearing.
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
+
   server: {
     host: "0.0.0.0",
     port: 5173,
