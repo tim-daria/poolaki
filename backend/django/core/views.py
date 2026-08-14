@@ -161,6 +161,19 @@ class OrganizationListCreateView(APIView):
 
 
 class OrganizationMembersView(APIView):
+    """
+    GET
+    Provides the list of members belonging to an organization.
+
+    Access is restricted to authenticated users who are members of the
+    requested organization.
+
+    Returns:
+        - 200 OK with a list of organization's members, including their user ID,
+    username, role, and membership creation date.
+
+    """
+
     permission_classes = [IsAuthenticated, IsOrgMember]
 
     def get(self, request: Request, org_id: int) -> Response:
