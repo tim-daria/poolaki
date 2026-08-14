@@ -2,6 +2,10 @@
 # Used via COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml
 
 services:
+
+  cloudflared:
+    profiles: [donotstart]
+
   caddy:
     profiles: [donotstart]
 
