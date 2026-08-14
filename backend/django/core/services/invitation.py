@@ -29,11 +29,11 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
             be verified as the organization's owner by the caller).
 
     Returns:
-        The created (or existing pending) Invitation.
+        The created Invitation.
 
     Raises:
         ValidationError: If the organization already has the maximum
-            number of members, no user with this username exists, the
+            number of members including pending invitations, no user with this username exists, the
             user is already a member, or a pending invitation for them
             already exists.
     """

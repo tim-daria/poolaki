@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from core.models import Membership, Organization, Role, User
+from core.models import Invitation, InvitationStatus, Membership, Organization, Role, User
 
 MAX_MEMBERS_PER_ORG = 5
 
@@ -19,9 +19,18 @@ def create_shared_organization(org_name: str, amount: Decimal, owner: User) -> O
     return org
 
 
+def get_available_slots(org: Organization) -> int:
+    current_members = Membership.objects.filter(org=org).count()
+    pending_invitations = Invitation.objects.filter(
+        org=org, status=InvitationStatus.PENDING
+    ).count()
+    occupied = current_members + pending_invitations
+    return max(MAX_MEMBERS_PER_ORG - occupied, 0)
+
+
 def check_can_add_member(org: Organization) -> None:
-    current_count = Membership.objects.filter(org=org).count()
-    if current_count >= MAX_MEMBERS_PER_ORG:
+    if get_available_slots(org) <= 0:
         raise ValidationError(
-            f"Organization already has the maximum of {MAX_MEMBERS_PER_ORG} members."
+            f"Organization has reached its maximum capacity of {MAX_MEMBERS_PER_ORG} members "
+            f"(including pending invitations)."
         )

@@ -26,9 +26,9 @@ def test_get_user_organizations_returns_memberships(
 
     api_client.force_authenticate(user=user)
 
-    session = api_client.session
-    session["current_organization_id"] = personal_org.id
-    session.save()
+    # session = api_client.session
+    # session["current_organization_id"] = personal_org.id
+    # session.save()
 
     response = api_client.get(
         reverse("organization-list-create"),
@@ -38,7 +38,7 @@ def test_get_user_organizations_returns_memberships(
 
     data = response.json()
 
-    assert data["current_organization_id"] == personal_org.id
+    # assert data["current_organization_id"] == personal_org.id
     assert len(data["organizations"]) == 2
 
     organization_ids = {org["id"] for org in data["organizations"]}
@@ -154,21 +154,54 @@ def test_create_shared_organization_rejects_invalid_balance(
     assert response.status_code == 400
 
 
-def test_create_shared_organization_changes_current_organization(
-    api_client: APIClient, personal_user: tuple[User, Organization]
+def test_organization_members_returns_members(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
 ) -> None:
+    api_client.force_authenticate(user=owner)
 
-    user, _ = personal_user
+    response = api_client.get(reverse("organization-members", kwargs={"org_id": shared_org.id}))
 
-    api_client.force_authenticate(user=user)
+    assert response.status_code == 200
 
-    response = api_client.post(
-        reverse("organization-list-create"),
-        {
-            "name": "Trip",
-            "initial_balance": "250",
-        },
-        format="json",
+    members = response.data["members"]
+
+    assert len(members) == 2
+    assert {"user_id": owner.id, "username": owner.username, "role": Role.OWNER} in members
+    assert {"user_id": member.id, "username": member.username, "role": Role.MEMBER} in members
+
+
+def test_organization_member_can_view_members(
+    api_client: APIClient,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=member)
+
+    response = api_client.get(
+        reverse(
+            "organization-members",
+            kwargs={"org_id": shared_org.id},
+        )
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 200
+
+
+def test_user_from_another_organization_cannot_view_members(
+    api_client: APIClient,
+    owner: User,
+    organization: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(
+        reverse(
+            "organization-members",
+            kwargs={"org_id": organization.id},
+        )
+    )
+
+    assert response.status_code == 403

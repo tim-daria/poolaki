@@ -13,6 +13,15 @@ from core.models import (
 
 pytestmark = pytest.mark.django_db
 
+
+def invitations_url(org_id: int) -> str:
+    return reverse("invitation-list-create", kwargs={"org_id": org_id})
+
+
+def cancel_url(org_id: int, invitation_id: int) -> str:
+    return reverse("invitation-cancel", kwargs={"org_id": org_id, "invitation_id": invitation_id})
+
+
 # ---------------------------------------------------------------------------
 # GET — list pending invitations
 # ---------------------------------------------------------------------------
@@ -36,9 +45,7 @@ class TestListInvitations:
         )
 
         api_client.force_authenticate(user=owner)
-        response = api_client.get(
-            reverse("invitation-list-create", kwargs={"org_id": shared_org.id})
-        )
+        response = api_client.get(invitations_url(shared_org.id))
 
         assert response.status_code == 200
         ids = [inv["id"] for inv in response.data["invitations"]]
@@ -48,9 +55,7 @@ class TestListInvitations:
         self, api_client: APIClient, owner: User, shared_org: Organization
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.get(
-            reverse("invitation-list-create", kwargs={"org_id": shared_org.id})
-        )
+        response = api_client.get(invitations_url(shared_org.id))
 
         assert response.status_code == 200
         assert response.data["invitations"] == []
@@ -59,18 +64,15 @@ class TestListInvitations:
         self, api_client: APIClient, member: User, shared_org: Organization
     ) -> None:
         api_client.force_authenticate(user=member)
-        response = api_client.get(
-            reverse("invitation-list-create", kwargs={"org_id": shared_org.id})
-        )
+        response = api_client.get(invitations_url(shared_org.id))
 
         assert response.status_code == 403
 
     def test_unauthenticated_user_cannot_list_invitations(
         self, api_client: APIClient, shared_org: Organization
     ) -> None:
-        response = api_client.get(
-            reverse("invitation-list-create", kwargs={"org_id": shared_org.id})
-        )
+        response = api_client.get(invitations_url(shared_org.id))
+
         assert response.status_code == 401
 
 
@@ -84,12 +86,7 @@ class TestCreateInvitation:
         self, api_client: APIClient, owner: User, shared_org: Organization, invitee: User
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": invitee.username},
-            )
-        )
+        response = api_client.post(invitations_url(shared_org.id), {"username": invitee.username})
 
         assert response.status_code == 201
         assert response.data["status"] == InvitationStatus.PENDING
@@ -99,12 +96,7 @@ class TestCreateInvitation:
         self, api_client: APIClient, member: User, shared_org: Organization, invitee: User
     ) -> None:
         api_client.force_authenticate(user=member)
-        response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": invitee.username},
-            )
-        )
+        response = api_client.post(invitations_url(shared_org.id), {"username": invitee.username})
 
         assert response.status_code == 403
         assert not Invitation.objects.filter(org=shared_org, invited_user=invitee).exists()
@@ -113,12 +105,7 @@ class TestCreateInvitation:
         self, api_client: APIClient, owner: User, personal_org: Organization, invitee: User
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": personal_org.id, "username": invitee.username},
-            )
-        )
+        response = api_client.post(invitations_url(personal_org.id), {"username": invitee.username})
 
         assert response.status_code == 400
         assert not Invitation.objects.filter(org=personal_org).exists()
@@ -127,12 +114,7 @@ class TestCreateInvitation:
         self, api_client: APIClient, owner: User, shared_org: Organization
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": "does_not_exist"},
-            )
-        )
+        response = api_client.post(invitations_url(shared_org.id), {"username": "does_not_exist"})
 
         assert response.status_code == 400
 
@@ -140,12 +122,7 @@ class TestCreateInvitation:
         self, api_client: APIClient, owner: User, shared_org: Organization, member: User
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": member.username},
-            )
-        )
+        response = api_client.post(invitations_url(shared_org.id), {"username": member.username})
 
         assert response.status_code == 400
 
@@ -153,18 +130,8 @@ class TestCreateInvitation:
         self, api_client: APIClient, owner: User, shared_org: Organization, invitee: User
     ) -> None:
         api_client.force_authenticate(user=owner)
-        first = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": invitee.username},
-            )
-        )
-        second = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": invitee.username},
-            )
-        )
+        first = api_client.post(invitations_url(shared_org.id), {"username": invitee.username})
+        second = api_client.post(invitations_url(shared_org.id), {"username": invitee.username})
 
         assert first.status_code == 201
         assert second.status_code == 400
@@ -186,20 +153,49 @@ class TestCreateInvitation:
 
         api_client.force_authenticate(user=owner)
         response = api_client.post(
-            reverse(
-                "invitation-list-create",
-                kwargs={"org_id": shared_org.id, "username": one_too_many.username},
-            )
+            invitations_url(shared_org.id), {"username": one_too_many.username}
         )
+
+        assert response.status_code == 400
+
+    def test_cannot_invite_when_pending_invitations_fill_member_limit(
+        self, api_client: APIClient, owner: User, shared_org: Organization
+    ) -> None:
+        # shared_org has owner + member = 2. Add one more member -> 3 members total.
+        u = User.objects.create_user(
+            email="extra@example.com", username="extra", password="pass1234"
+        )
+        Membership.objects.create(user=u, org=shared_org, role=Role.MEMBER)
+
+        # Create 2 pending invitations.
+        for i in range(2):
+            invited_user = User.objects.create_user(
+                email=f"invited{i}@example.com", username=f"invited{i}", password="pass1234"
+            )
+            Invitation.objects.create(
+                org=shared_org,
+                invited_user=invited_user,
+                invited_by=owner,
+                status=InvitationStatus.PENDING,
+            )
+
+        # 3 members + 2 pending invitations = 5.
+        one_too_many = User.objects.create_user(
+            email="last@example.com", username="last", password="pass1234"
+        )
+
+        api_client.force_authenticate(user=owner)
+        response = api_client.post(
+            invitations_url(shared_org.id), {"username": one_too_many.username}
+        )
+
         assert response.status_code == 400
 
     def test_missing_username_returns_400(
         self, api_client: APIClient, owner: User, shared_org: Organization
     ) -> None:
         api_client.force_authenticate(user=owner)
-        response = api_client.post(
-            reverse("invitation-list-create", kwargs={"org_id": shared_org.id})
-        )
+        response = api_client.post(invitations_url(shared_org.id))
 
         assert response.status_code == 400
 

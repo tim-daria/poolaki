@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Invitation, InvitationStatus, Membership, Organization, User
-from core.permissions import IsOrgOwner
+from core.permissions import IsOrgMember, IsOrgOwner
 from core.serializers import InitialBalanceSerializer, InvitationCreateSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
@@ -27,9 +27,7 @@ def health_check(request: HttpRequest) -> JsonResponse:
 
 class SetInitialBalanceView(APIView):
     """
-    # Set or retrieve the initial balance for the authenticated user's personal organization.
-    # GET:
-    #     Returns whether the user still needs to set an initial balance.
+    Set the initial balance for the authenticated user's personal organization.
     POST:
         Updates the initial balance of the user's personal organization.
 
@@ -160,6 +158,27 @@ class OrganizationListCreateView(APIView):
 #         request.session["current_organization_id"] = org_id
 #         request.session.modified = True
 #         return Response({"current_organization_id": org_id})
+
+
+class OrganizationMembersView(APIView):
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request: Request, org_id: int) -> Response:
+        memberships = Membership.objects.filter(org_id=org_id).select_related("user")
+        return Response(
+            {
+                "members": [
+                    {
+                        "user_id": m.user.id,
+                        "username": m.user.username,
+                        "role": m.role,
+                        "joined_at": m.joined_at,
+                    }
+                    for m in memberships
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class InvitationListCreateView(APIView):

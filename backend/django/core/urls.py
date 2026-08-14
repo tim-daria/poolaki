@@ -4,6 +4,7 @@ from core.views import (
     CancelInvitationView,
     InvitationListCreateView,
     OrganizationListCreateView,
+    OrganizationMembersView,
     SetInitialBalanceView,
     csrf,
 )
@@ -11,6 +12,11 @@ from core.views import (
 urlpatterns = [
     path("csrf/", csrf),
     path("organizations/", OrganizationListCreateView.as_view(), name="organization-list-create"),
+    path(
+        "organizations/<int:org_id>/members/",
+        OrganizationMembersView.as_view(),
+        name="organization-members",
+    ),
     path(
         "organizations/<int:org_id>/invitations/",
         InvitationListCreateView.as_view(),
