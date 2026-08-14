@@ -5,12 +5,17 @@ export interface AllauthError {
 
 const CODE_MESSAGES: Record<string, string> = {
   invalid_credentials: "Incorrect username/email or password.",
+  user_not_found: "No account exists with that username or email.",
+  username_password_mismatch: "Incorrect password.",
+  email_password_mismatch: "Incorrect password.",
+  invalid_login: "Please enter your username or email and password.",
+  too_many_login_attempts:
+    "Too many failed login attempts. Please try again later.",
   account_inactive: "This account has been disabled.",
   // email_verification_required:
   //   "Please verify your email address before logging in.",
-  email_taken: "Registration failed. Please check your details and try again.",
-  username_taken:
-    "Registration failed. Please check your details and try again.",
+  email_taken: "This email is already in use.",
+  username_taken: "This username is already taken.",
   password_too_short: "Password must be at least 8 characters long.",
   password_too_common: "Password is too common. Please choose a stronger one.",
   password_entirely_numeric: "Password cannot be entirely numeric.",
