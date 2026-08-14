@@ -1,43 +1,59 @@
 {
-	admin 0.0.0.0:2019
-	servers {
-		metrics {
-			per_host
-		}
-	}
+    admin 0.0.0.0:2019
+    auto_https off
+    servers {
+        metrics {
+            per_host
+        }
+    }
 }
 
-poolaki.localhost {
-
+poolaki.de:80 {
     handle /admin/* {
         reverse_proxy backend:8000
     }
-
     handle /_allauth/* {
         reverse_proxy backend:8000
     }
-
     handle /api/* {
         reverse_proxy backend:8000
     }
-
     handle /static/* {
         reverse_proxy backend:8000
     }
-
     handle /accounts/* {
         reverse_proxy backend:8000
     }
-
     handle {
         reverse_proxy frontend:5173
     }
 }
 
-prometheus.localhost {
-        reverse_proxy prometheus:9090
+poolaki.localhost:80 {
+    handle /admin/* {
+        reverse_proxy backend:8000
     }
+    handle /_allauth/* {
+        reverse_proxy backend:8000
+    }
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    handle /static/* {
+        reverse_proxy backend:8000
+    }
+    handle /accounts/* {
+        reverse_proxy backend:8000
+    }
+    handle {
+        reverse_proxy frontend:5173
+    }
+}
 
-grafana.localhost {
-        reverse_proxy grafana:3000
-    }
+grafana.localhost:80 {
+    reverse_proxy grafana:3000
+}
+
+prometheus.localhost:80 {
+    reverse_proxy prometheus:9090
+}
