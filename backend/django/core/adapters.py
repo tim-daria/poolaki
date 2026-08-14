@@ -1,10 +1,37 @@
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.utils import filter_users_by_email, filter_users_by_username
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.core.internal import httpkit
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from django.http import HttpRequest, HttpResponseRedirect
+
+
+class AccountAdapter(DefaultAccountAdapter):  # type: ignore[misc]
+    """Distinguishes "no such account" from "wrong password" on login."""
+
+    error_messages = {
+        **DefaultAccountAdapter.error_messages,
+        "user_not_found": "No account exists with that username or email.",
+    }
+
+    def authentication_failed(self, request: HttpRequest, **credentials: Any) -> None:
+        super().authentication_failed(request, **credentials)
+
+        username = credentials.get("username")
+        email = credentials.get("email")
+        if username:
+            exists = filter_users_by_username(username).exists()
+        elif email:
+            exists = bool(filter_users_by_email(email))
+        else:
+            return
+
+        if not exists:
+            raise self.validation_error("user_not_found")
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):  # type: ignore[misc]
