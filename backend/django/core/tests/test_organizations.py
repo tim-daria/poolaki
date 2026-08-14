@@ -169,8 +169,14 @@ def test_organization_members_returns_members(
     members = response.data["members"]
 
     assert len(members) == 2
-    assert {"user_id": owner.id, "username": owner.username, "role": Role.OWNER} in members
-    assert {"user_id": member.id, "username": member.username, "role": Role.MEMBER} in members
+    owner_data = next(m for m in members if m["user_id"] == owner.id)
+    member_data = next(m for m in members if m["user_id"] == member.id)
+
+    assert owner_data["username"] == owner.username
+    assert owner_data["role"] == Role.OWNER
+
+    assert member_data["username"] == member.username
+    assert member_data["role"] == Role.MEMBER
 
 
 def test_organization_member_can_view_members(
@@ -193,14 +199,15 @@ def test_organization_member_can_view_members(
 def test_user_from_another_organization_cannot_view_members(
     api_client: APIClient,
     owner: User,
-    organization: Organization,
+    personal_user: tuple[User, Organization],
 ) -> None:
+    _, org = personal_user
     api_client.force_authenticate(user=owner)
 
     response = api_client.get(
         reverse(
             "organization-members",
-            kwargs={"org_id": organization.id},
+            kwargs={"org_id": org.id},
         )
     )
 

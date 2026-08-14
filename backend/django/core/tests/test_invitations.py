@@ -73,7 +73,7 @@ class TestListInvitations:
     ) -> None:
         response = api_client.get(invitations_url(shared_org.id))
 
-        assert response.status_code == 401
+        assert response.status_code == 403
 
 
 # ---------------------------------------------------------------------------
