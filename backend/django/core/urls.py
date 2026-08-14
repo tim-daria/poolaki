@@ -6,6 +6,7 @@ from core.views import (
     OrganizationListCreateView,
     OrganizationMembersView,
     SetInitialBalanceView,
+    SwitchOrganizationView,
     csrf,
 )
 
@@ -32,9 +33,9 @@ urlpatterns = [
         SetInitialBalanceView.as_view(),
         name="set_initial_balance",
     ),
-    # path(
-    #     "organizations/<int:org_id>/select/",
-    #     SwitchOrganizationView.as_view(),
-    #     name="switch_organization",
-    # ),
+    path(
+        "organizations/<int:org_id>/select/",
+        SwitchOrganizationView.as_view(),
+        name="switch_organization",
+    ),
 ]
