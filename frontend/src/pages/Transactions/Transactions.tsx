@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { mockTransactions, CATEGORIES } from "../Home/mockData";
 import type { Transaction, TransactionType } from "../Home/mockData";
 import styles from "./Transactions.module.css";
@@ -40,7 +40,7 @@ export function Transactions() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [filterOpen]);
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     const result = mockTransactions.filter((t) => {
       if (
         search &&
@@ -69,16 +69,7 @@ export function Transactions() {
           return a.amount - b.amount;
       }
     });
-  }, [
-    search,
-    fromDate,
-    toDate,
-    category,
-    type,
-    recurring,
-    taxRefundable,
-    sortKey,
-  ]);
+  })();
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
