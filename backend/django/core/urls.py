@@ -1,14 +1,13 @@
 from django.urls import path
 
-from core.views import (
-    CancelInvitationView,
-    InvitationListCreateView,
+from core.views.invitation import CancelInvitationView, InvitationListCreateView
+from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
     SetInitialBalanceView,
     SwitchOrganizationView,
-    csrf,
 )
+from core.views.utils import csrf
 
 urlpatterns = [
     path("csrf/", csrf),
