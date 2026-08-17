@@ -256,7 +256,9 @@ test.describe.serial("Workspaces", () => {
 
   test("logging out clears the workspaces", async () => {
     await page.goto(personalUrl);
-    await page.getByRole("button", { name: /log\s*out/i }).click();
+    // Logout lives behind the header's avatar menu, not on the bar itself.
+    await page.getByRole("button", { name: /account menu/i }).click();
+    await page.getByRole("menuitem", { name: /log\s*out/i }).click();
     await page.waitForURL("/login");
 
     // The workspace URL must not be reachable once logged out.

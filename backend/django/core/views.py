@@ -42,13 +42,8 @@ class SetInitialBalanceView(APIView):
     permission_classes = [IsAuthenticated]
 
     # def get(self, request: Request) -> Response:
-    #     needs_initial_balance = bool(
-    #         request.session.get("needs_initial_balance", False)
-    #     )
-    #     return Response(
-    #         {"needs_initial_balance": needs_initial_balance},
-    #         status=status.HTTP_200_OK,
-    #     )
+    # needs_initial_balance = bool(request.session.get("needs_initial_balance", False))
+    # return Response({"needs_initial_balance": needs_initial_balance}, status=status.HTTP_200_OK)
 
     def _handle(self, request: Request) -> Response:
         assert isinstance(request.user, User)

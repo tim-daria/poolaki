@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
 
 :root {
   --bg-color: #f5f6fa;
@@ -15,9 +15,9 @@
   --accent-light: #edecfd;
   --border: #e0e0e0;
 
-  --sans: Inter, system-ui, Roboto, sans-serif;
-  /* --heading: Inter, system-ui, Roboto, sans-serif; */
-  --mono: "DM Mono", ui-monospace, Consolas, monospace;
+  --sans: "Plus Jakarta Sans", system-ui, Roboto, sans-serif;
+  /* --heading: "Plus Jakarta Sans", system-ui, Roboto, sans-serif; */
+  --mono: "Geist Mono", ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
