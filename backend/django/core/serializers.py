@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import Organization
+from core.models import Invitation, Organization
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
@@ -9,3 +9,7 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
         decimal_places=2,
         min_value=0,
     )
+
+
+class InvitationCreateSerializer(serializers.Serializer[Invitation]):
+    username = serializers.CharField(max_length=150)

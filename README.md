@@ -43,6 +43,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project Documentation
 
+- Backend API documentation: [Backend Readme](backend/README.md) and [other backend documents](docs/backend)
 - AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
 
 ## Resources

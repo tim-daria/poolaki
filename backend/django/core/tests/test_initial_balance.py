@@ -6,8 +6,9 @@ from rest_framework.test import APIClient
 
 from core.models import Organization, User
 
+pytestmark = pytest.mark.django_db
 
-@pytest.mark.django_db
+
 def test_set_initial_balance_success(
     api_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
@@ -30,7 +31,6 @@ def test_set_initial_balance_success(
     }
 
 
-@pytest.mark.django_db
 def test_set_initial_balance_rejects_invalid_value(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -48,7 +48,6 @@ def test_set_initial_balance_rejects_invalid_value(
     assert "initial_balance" in response.json()
 
 
-@pytest.mark.django_db
 def test_set_initial_balance_rejects_big_value(
     api_client: APIClient,
     personal_user: tuple[User, Organization],
@@ -64,68 +63,3 @@ def test_set_initial_balance_rejects_big_value(
 
     assert response.status_code == 400
     assert "initial_balance" in response.json()
-
-
-# The tests below cover the needs_initial_balance session flag and the GET
-# endpoint that reported it. Both went away when the balance question moved to
-# the registration form.
-
-# @pytest.mark.django_db
-# def test_set_initial_balance_clears_session_flag(
-#     api_client: APIClient,
-#     personal_user: tuple[User, Organization],
-# ) -> None:
-#     user, _ = personal_user
-
-#     session = api_client.session
-#     session["needs_initial_balance"] = True
-#     session.save()
-
-#     api_client.force_authenticate(user)
-
-#     response = api_client.post(
-#         reverse("set_initial_balance"),
-#         {"initial_balance": "100"},
-#         format="json",
-#     )
-
-#     assert response.status_code == 200
-
-#     session = api_client.session
-#     assert "needs_initial_balance" not in session
-
-
-# @pytest.mark.django_db
-# def test_get_initial_balance_flag(
-#     api_client: APIClient, personal_user: tuple[User, Organization]
-# ) -> None:
-#     user, _ = personal_user
-
-#     session = api_client.session
-#     session["needs_initial_balance"] = True
-#     session.save()
-
-#     api_client.force_authenticate(user)
-
-#     response = api_client.get(reverse("set_initial_balance"))
-
-#     assert response.status_code == 200
-#     assert response.json() == {
-#         "needs_initial_balance": True,
-#     }
-
-
-# @pytest.mark.django_db
-# def test_get_initial_balance_flag_defaults_to_false(
-#     api_client: APIClient,
-#     personal_user: tuple[User, Organization],
-# ) -> None:
-#     user, _ = personal_user
-#     api_client.force_authenticate(user)
-
-#     response = api_client.get(reverse("set_initial_balance"))
-
-#     assert response.status_code == 200
-#     assert response.json() == {
-#         "needs_initial_balance": False,
-#     }

@@ -1,0 +1,10 @@
+$kind: http-request
+name: Create new invitation
+url: "{{base_url}}/api/organizations/2/invitations/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+body:
+  type: json
+  content: '{"username": "daria"}'
+order: 4372711734114518
