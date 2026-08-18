@@ -1,15 +1,32 @@
 from django.urls import path
 
-from core.views import (
+from core.views.invitation import CancelInvitationView, InvitationListCreateView
+from core.views.organization import (
     OrganizationListCreateView,
+    OrganizationMembersView,
     SetInitialBalanceView,
     SwitchOrganizationView,
-    csrf,
 )
+from core.views.utils import csrf
 
 urlpatterns = [
     path("csrf/", csrf),
     path("organizations/", OrganizationListCreateView.as_view(), name="organization-list-create"),
+    path(
+        "organizations/<int:org_id>/members/",
+        OrganizationMembersView.as_view(),
+        name="organization-members",
+    ),
+    path(
+        "organizations/<int:org_id>/invitations/",
+        InvitationListCreateView.as_view(),
+        name="invitation-list-create",
+    ),
+    path(
+        "organizations/<int:org_id>/invitations/<int:invitation_id>/cancel/",
+        CancelInvitationView.as_view(),
+        name="invitation-cancel",
+    ),
     path(
         "organizations/personal/initial-balance/",
         SetInitialBalanceView.as_view(),

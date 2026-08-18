@@ -1,5 +1,3 @@
-from django.http import HttpRequest, JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -7,26 +5,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Membership, User
+from core.permissions import IsOrgMember
 from core.serializers import InitialBalanceSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import create_shared_organization
 
 
-@ensure_csrf_cookie
-def csrf(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"detail": "CSRF cookie set"})
-
-
-def health_check(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"status": "ok"})
-
-
 class SetInitialBalanceView(APIView):
     """
-    # Set or retrieve the initial balance for the authenticated user's personal organization.
-    # GET:
-    #     Returns whether the user still needs to set an initial balance.
+    Set the initial balance for the authenticated user's personal organization.
     POST:
         Updates the initial balance of the user's personal organization.
 
@@ -40,10 +28,6 @@ class SetInitialBalanceView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
-
-    # def get(self, request: Request) -> Response:
-    # needs_initial_balance = bool(request.session.get("needs_initial_balance", False))
-    # return Response({"needs_initial_balance": needs_initial_balance}, status=status.HTTP_200_OK)
 
     def _handle(self, request: Request) -> Response:
         assert isinstance(request.user, User)
@@ -61,11 +45,6 @@ class SetInitialBalanceView(APIView):
                 {"error": "Personal organization is missing"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # if we move question about balance to the registration form, we won't need this:
-        # request.session.pop("needs_initial_balance", None)
-        # request.session.modified = True
-
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
 
     def post(self, request: Request) -> Response:
@@ -98,7 +77,6 @@ class OrganizationListCreateView(APIView):
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
         memberships = Membership.objects.filter(user=request.user).select_related("org")
-        current_org_id = request.session.get("current_organization_id")
 
         organizations = [
             {
@@ -110,7 +88,7 @@ class OrganizationListCreateView(APIView):
             for m in memberships
         ]
         return Response(
-            {"current_organization_id": current_org_id, "organizations": organizations},
+            {"organizations": organizations},
             status=status.HTTP_200_OK,
         )
 
@@ -127,8 +105,6 @@ class OrganizationListCreateView(APIView):
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
 
-        request.session["current_organization_id"] = org.id
-        request.session.modified = True
         return Response(
             {
                 "id": org.id,
@@ -169,3 +145,37 @@ class SwitchOrganizationView(APIView):
         request.session["current_organization_id"] = org_id
         request.session.modified = True
         return Response({"current_organization_id": org_id})
+
+
+class OrganizationMembersView(APIView):
+    """
+    GET
+    Provides the list of members belonging to an organization.
+
+    Access is restricted to authenticated users who are members of the
+    requested organization.
+
+    Returns:
+        - 200 OK with a list of organization's members, including their user ID,
+    username, role, and membership creation date.
+
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request: Request, org_id: int) -> Response:
+        memberships = Membership.objects.filter(org_id=org_id).select_related("user")
+        return Response(
+            {
+                "members": [
+                    {
+                        "user_id": m.user.id,
+                        "username": m.user.username,
+                        "role": m.role,
+                        "joined_at": m.joined_at,
+                    }
+                    for m in memberships
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )

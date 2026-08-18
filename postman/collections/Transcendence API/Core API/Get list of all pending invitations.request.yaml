@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/organizations/2/invitations/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+order: 4011094124484485
