@@ -17,3 +17,15 @@ export type Notification = {
   is_read: boolean;
   created_at: string;
 };
+
+/** Shape of what NotificationProvider exposes via context. */
+export type NotificationContextType = {
+  notifications: Notification[];
+  unreadCount: number;
+  loading: boolean;
+  markAllAsRead: () => void;
+  clearAll: () => void;
+  refresh: () => Promise<void>;
+};
+
+export const NotificationContext = createContext<NotificationContextType | null>(null);
