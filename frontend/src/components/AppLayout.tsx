@@ -44,7 +44,7 @@ function readCollapsed(): boolean {
  *   to remount only the page content (<Outlet />), automatically clearing old filters,
  *   scroll position, and stale data while keeping the shell UI mounted smoothly.
  */
-export function AppLayout({ syncing }: AppLayoutProps) {
+export function AppLayout() {
   const logout = useLogout();
   const { orgId } = useParams();
   const theme = useTheme();
@@ -70,9 +70,6 @@ export function AppLayout({ syncing }: AppLayoutProps) {
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
-
-      {/* minWidth: 0 — without it a wide child (a table) blows the flex item
-          out past the viewport instead of scrolling inside <main>. */}
       <Box
         sx={{
           display: "flex",
@@ -88,23 +85,13 @@ export function AppLayout({ syncing }: AppLayoutProps) {
         />
 
         <Box component="main" key={orgId} sx={{ flex: 1, overflowY: "auto" }}>
-          {/* waits on the session bridge; see OrgLayout*/}
-          {syncing ? (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 2,
-                height: "100%",
-              }}
-            >
-              <CircularProgress size={20} />
-              <Typography color="text.secondary">Loading…</Typography>
-            </Box>
-          ) : (
-            <Outlet />
-          )}
+          {/* Content column, centred once the viewport outgrows it. Wraps
+               the page header too, so heading and page stay on one edge. */}
+          <Box sx={{ maxWidth: contentMaxWidth, mx: "auto" }}>
+            <PageHeader>
+              <Outlet />
+            </PageHeader>
+          </Box>
         </Box>
       </Box>
     </Box>

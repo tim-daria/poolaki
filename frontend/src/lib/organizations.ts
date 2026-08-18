@@ -10,11 +10,8 @@
  * looks exactly like a permissions bug.
  */
 
-/** Thrown when the backend says the user is not a member of the org. */
-export class OrgForbiddenError extends Error {}
-
 /** Mirrors core.models.Role. */
-export type Role = "OWNER" | "MEMBER";
+export type Role = "owner" | "member";
 
 export type Organization = {
   id: number;
@@ -24,8 +21,6 @@ export type Organization = {
 };
 
 export type OrganizationList = {
-  /** The org stored in the Django session — a hint for "/" only, never authority. */
-  current_organization_id: number | null;
   organizations: Organization[];
 };
 
@@ -42,35 +37,8 @@ export async function fetchOrganizations(
 }
 
 /**
- * POST /api/organizations/{orgId}/select/
- *
- * Writes current_organization_id into the Django session. Today that's the
- * bridge that makes the session follow the URL; after the backend accepts
- * org-scoped paths it degrades to a "last used" hint for "/".
- */
-export async function selectOrganization(
-  orgId: number,
-  csrfToken: string,
-): Promise<{ current_organization_id: number }> {
-  const res = await fetch(`/api/organizations/${orgId}/select/`, {
-    method: "POST",
-    headers: { "X-CSRFToken": csrfToken },
-    credentials: "include",
-  });
-  // A typed error, so callers can `instanceof` instead of string-matching a
-  // message — OrgLayout needs "not a member" (show NoAccessScreen) to be
-  // distinguishable from "server is down" (show a retry).
-  if (res.status === 403) {
-    throw new OrgForbiddenError("You are not a member of this organization");
-  }
-  if (!res.ok) throw new Error(`Failed to switch workspace (${res.status})`);
-  return res.json();
-}
-
-/**
  * POST /api/organizations/
- *
- * The backend auto-selects the new org server-side (views.py:159-160).
+ * the backend only creates the org; the caller navigates to /o/:orgId
  */
 export async function createOrganization(
   name: string,
