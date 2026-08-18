@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
-from pydantic import BaseModel
+
 
 class ContextRequest(BaseModel):
     user_id: int
@@ -11,8 +10,10 @@ class ContextItem(BaseModel):
     type: str
     content: str
 
+
 class ContextResponse(BaseModel):
     context: list[ContextItem]
+
 
 class FinancialContextItem(BaseModel):
     type: str
@@ -27,4 +28,3 @@ class CombinedRetrievalResult(BaseModel):
     financial_data: dict | None = None
 
     semantic_documents: list[str] = []
-
