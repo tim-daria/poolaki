@@ -20,6 +20,14 @@ export type Organization = {
   role: Role;
 };
 
+/** Mirrors members[] in OrganizationMemberView */
+export type Member = {
+  user_id: number;
+  username: string;
+  role: Role;
+  joined_at: string;
+};
+
 export type OrganizationList = {
   organizations: Organization[];
 };
@@ -52,5 +60,20 @@ export async function createOrganization(
     body: JSON.stringify({ name, initial_balance: initialBalance }),
   });
   if (!res.ok) throw new Error(`Failed to create workspace (${res.status})`);
+  return res.json();
+}
+
+/**
+ * GET /api/organizations/${org_id}/members/
+ */
+export async function fetchMembers(
+  org_id: number,
+  signal?: AbortSignal,
+): Promise<{ members: Member[] }> {
+  const res = await fetch(`/api/organizations/${org_id}/members/`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw Error(`Failed to load members of (${res.status})`);
   return res.json();
 }

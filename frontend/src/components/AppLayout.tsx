@@ -1,22 +1,19 @@
 import { useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router";
-import {
-  Box,
-  CircularProgress,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { Header } from "./Header/Header";
+import { PageHeader } from "./PageHeader/PageHeader";
 import { Sidebar } from "./Sidebar/Sidebar";
 
-interface AppLayoutProps {
-  /** True while the backend session is catching up to the URL's workspace. */
-  syncing: boolean;
-}
-
 const COLLAPSED_KEY = "sidebar:collapsed";
+
+/**
+ * Ceiling for the page column. Past this the content centres instead of
+ * stretching: dashboard cards and table rows get unreadably wide on a large
+ * monitor, and the eye loses the line on the way back to the left edge.
+ */
+const contentMaxWidth = 1280;
 
 /**
  * Storage access is guarded: a blocked or full localStorage throws, and the
