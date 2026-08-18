@@ -132,9 +132,15 @@ http://ai-service:8000
 
 ## Health Check
 
-The service exposes a health check endpoint used by Docker health monitoring.
+The service exposes a health check endpoint used by Docker health monitoring. Endpoint: `GET /health`
 
-For endpoint details and response format, see: [docs/api-contract.md](docs/ai/api-contract.md)
+#### Response
+
+```json
+{
+  "status": "healthy"
+}
+```
 
 ## API Documentation
 FastAPI automatically generates interactive API documentation.
