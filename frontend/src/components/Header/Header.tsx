@@ -19,7 +19,9 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
+import { useNotifications } from "../../context/useNotifications";
 import { OrgSwitcher } from "./OrgSwitcher";
+import { NotificationPanel } from "./NotificationPanel";
 
 /** Shell header height. Deliberately taller than the Sidebar's brand row. */
 export const headerHeight = 72;
@@ -54,6 +56,7 @@ export function Header({
   showMenuButton,
 }: HeaderProps) {
   const { user } = useAuth();
+  const { unreadCount, markAllAsRead } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState<HTMLElement | null>(null);
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
@@ -96,27 +99,18 @@ export function Header({
             aria-label="Notifications"
             aria-haspopup="menu"
             aria-expanded={Boolean(notifAnchor)}
-            onClick={(e) => setNotifAnchor(e.currentTarget)}
+            onClick={(e) => { setNotifAnchor(e.currentTarget); markAllAsRead();}}
             sx={{ width: controlSize, height: controlSize }}
           >
-            {/* invisible until there is a count to show */}
-            <Badge color="error" variant="dot" invisible>
+            <Badge color="error" variant="dot" invisible={unreadCount === 0}>
               <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
             </Badge>
           </IconButton>
 
-          <Menu
+          <NotificationPanel
             anchorEl={notifAnchor}
-            open={Boolean(notifAnchor)}
             onClose={() => setNotifAnchor(null)}
-            slotProps={{ paper: { sx: { width: 280 } } }}
-          >
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                No new notifications
-              </Typography>
-            </MenuItem>
-          </Menu>
+          />
 
           {/* Deliberately not "Account: <username>" — the personal workspace
               is named after the user, so that would collide with the
