@@ -9,6 +9,10 @@ interface NotificationPanelProps {
 export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps) {
   const { notifications, clearAll } = useNotifications();
 
+  const sorted = [...notifications].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -16,7 +20,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
       onClose={onClose}
       slotProps={{ paper: { sx: { width: 320 } } }}
     >
-      {notifications.length === 0 && (
+      {sorted.length === 0 && (
         <MenuItem disabled>
           <Typography variant="body2" color="text.secondary">
             No new notifications
@@ -24,15 +28,17 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
         </MenuItem>
       )}
 
-      {notifications.map((n) => (
+      {sorted.map((n) => (
         <MenuItem key={n.id} disabled sx={{ opacity: "1 !important" }}>
           <Typography variant="body2">
-            {n.invited_by ? `${n.invited_by} invited you to ${n.org_name}` : "Notification"}
+            {n.type === "invitation" && "invited_by" in n.payload
+              ? `${n.payload.invited_by} invited you to ${n.org_name}`
+              : "Notification"}
           </Typography>
         </MenuItem>
       ))}
 
-      {notifications.length > 0 && (
+      {sorted.length > 0 && (
         <>
           <Divider />
           <Box sx={{ px: 2, py: 1 }}>
