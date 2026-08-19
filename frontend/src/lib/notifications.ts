@@ -22,7 +22,8 @@ export async function fetchNotificationsReal(
 }
 
 /** TEMPORARY — mock while GET /api/notifications/ isn't implemented yet. */
-async function fetchNotificationsMock(_signal?: AbortSignal): Promise<Notification[]> {
+async function fetchNotificationsMock(signal?: AbortSignal): Promise<Notification[]> {
+  void signal; // keeps the signature matching fetchNotificationsReal
   return Promise.resolve(mockNotifications);
 }
 
