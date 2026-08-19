@@ -1,7 +1,0 @@
-$kind: http-request
-name: Get list of all group members
-url: "{{base_url}}/api/organizations/1/members/"
-method: GET
-headers:
-  X-CSRFToken: "{{csrf_token}}"
-order: 4456051061470123

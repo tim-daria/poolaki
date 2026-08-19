@@ -3,7 +3,16 @@ from decimal import Decimal
 import pytest
 from rest_framework.test import APIClient
 
-from core.models import Membership, Organization, Role, User
+from core.models import (
+    Invitation,
+    InvitationStatus,
+    Membership,
+    Notification,
+    NotificationType,
+    Organization,
+    Role,
+    User,
+)
 
 
 @pytest.fixture
@@ -54,6 +63,14 @@ def invitee() -> User:
 
 
 @pytest.fixture
+def stranger() -> User:
+    """A user unrelated to the invitation being tested."""
+    return User.objects.create_user(
+        email="stranger@example.com", username="stranger", password="pass1234"
+    )
+
+
+@pytest.fixture
 def shared_org(owner: User, member: User) -> Organization:
     org = Organization.objects.create(
         name="Family budget", is_personal=False, initial_balance=Decimal("0")
@@ -70,3 +87,21 @@ def personal_org(owner: User) -> Organization:
     )
     Membership.objects.create(user=owner, org=org, role=Role.OWNER)
     return org
+
+
+@pytest.fixture
+def pending_invitation(shared_org: Organization, owner: User, invitee: User) -> Invitation:
+    invitation = Invitation.objects.create(
+        org=shared_org, invited_user=invitee, invited_by=owner, status=InvitationStatus.PENDING
+    )
+    Notification.objects.create(
+        user=invitee,
+        type=NotificationType.INVITATION,
+        org=shared_org,
+        payload={
+            "invitation_id": invitation.id,
+            "org_name": shared_org.name,
+            "invited_by": owner.username,
+        },
+    )
+    return invitation

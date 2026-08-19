@@ -91,6 +91,40 @@ Response example:
 
 This endpoint initializes the authenticated user's personal organization balance.
 
+### List organization members
+
+```http
+GET /api/organizations/{org_id}/members/
+```
+
+Access is restricted to members of the requested organization.
+
+Response example:
+
+```json
+{
+  "members": [
+    {
+      "user_id": 1,
+      "username": "bob",
+      "role": "owner",
+      "joined_at": "2026-08-01T12:00:00Z"
+    },
+    {
+      "user_id": 2,
+      "username": "alice",
+      "role": "member",
+      "joined_at": "2026-08-10T12:00:00Z"
+    }
+  ]
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `403 Forbidden` when the user is not a member of the organization
+
 ## Invitation endpoints
 
 These endpoints manage organization invitations and are protected by owner-only permissions.
@@ -177,3 +211,82 @@ Status:
 - `200 OK` on successful cancellation
 - `400 Bad Request` for invalid or already-processed invitations
 - `403 Forbidden` when the user is not the organization owner
+
+## Endpoints for the invited user
+
+These endpoints are used by the user who received an invitation (not the
+organization owner).
+
+### List my pending invitations
+
+```http
+GET /api/invitations/my/
+```
+
+Returns all pending invitations addressed to the authenticated user, across
+all organizations.
+
+Response example:
+
+```json
+{
+  "invitations": [
+    {
+      "id": 7,
+      "organization_id": 3,
+      "organization_name": "Trip",
+      "invited_by": "bob",
+      "created_at": "2026-08-10T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Accept an invitation
+
+```http
+POST /api/invitations/{invitation_id}/accept/
+```
+
+Adds the authenticated user to the organization as a `member`. No request
+body is required.
+
+Response example:
+
+```json
+{
+  "organization_id": 3,
+  "organization_name": "Trip"
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` if the invitation is no longer pending, or the organization has since reached its member limit
+- `403 Forbidden` if the invitation was not sent to the current user
+- `404 Not Found` if the invitation does not exist
+
+### Decline an invitation
+
+```http
+POST /api/invitations/{invitation_id}/decline/
+```
+
+Marks the invitation as declined. No request body is required.
+
+Response example:
+
+```json
+{
+  "invitation_id": 7,
+  "status": "declined"
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` if the invitation is no longer pending
+- `403 Forbidden` if the invitation was not sent to the current user
+- `404 Not Found` if the invitation does not exist

@@ -29,8 +29,18 @@ def get_available_slots(org: Organization) -> int:
 
 
 def check_can_add_member(org: Organization) -> None:
+    """Used when creating a new invitation."""
     if get_available_slots(org) <= 0:
         raise ValidationError(
             f"Organization has reached its maximum capacity of {MAX_MEMBERS_PER_ORG} members "
             f"(including pending invitations)."
+        )
+
+
+def check_can_join_org(org: Organization) -> None:
+    """Used when accepting an invitation — only counts actual members."""
+    current_members = Membership.objects.filter(org=org).count()
+    if current_members >= MAX_MEMBERS_PER_ORG:
+        raise ValidationError(
+            f"Organization has reached its maximum capacity of {MAX_MEMBERS_PER_ORG} members."
         )
