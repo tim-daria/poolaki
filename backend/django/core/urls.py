@@ -1,6 +1,12 @@
 from django.urls import path
 
-from core.views.invitation import CancelInvitationView, InvitationListCreateView
+from core.views.invitation import (
+    AcceptInvitationView,
+    CancelInvitationView,
+    DeclineInvitationView,
+    InvitationListCreateView,
+    MyInvitationsView,
+)
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
@@ -36,5 +42,20 @@ urlpatterns = [
         "organizations/<int:org_id>/select/",
         SwitchOrganizationView.as_view(),
         name="switch_organization",
+    ),
+    path(
+        "invitations/<int:invitation_id>/accept/",
+        AcceptInvitationView.as_view(),
+        name="accept_invitation",
+    ),
+    path(
+        "invitations/<int:invitation_id>/decline/",
+        DeclineInvitationView.as_view(),
+        name="decline_invitation",
+    ),
+    path(
+        "invitations/my/",
+        MyInvitationsView.as_view(),
+        name="my_invitations",
     ),
 ]
