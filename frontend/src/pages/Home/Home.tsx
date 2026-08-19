@@ -3,7 +3,12 @@ import { Box, Button, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import styles from "./styles.module.css";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { PageAction, PageTitle } from "../../components/PageHeader/PageHeader";
+import {
+  PageAction,
+  PageHeading,
+  PageTitle,
+} from "../../components/PageHeader/PageHeader";
+import { OrgMembers } from "../../components/OrgMembers/OrgMembers";
 import { UniversalModal as Modal } from "../../components/Modal/Modal";
 
 function greeting(hour: number) {
@@ -19,14 +24,22 @@ export function Home() {
 
   return (
     <Box className={styles.homeContainer}>
-      <PageTitle
-        title={greeting(now.getHours())}
-        subtitle={now.toLocaleDateString(undefined, {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        })}
-      />
+      {/* A shared workspace leads with who is in it; a personal one has no
+          member list to show, so it keeps the greeting. */}
+      {org.is_personal ? (
+        <PageTitle
+          title={greeting(now.getHours())}
+          subtitle={now.toLocaleDateString(undefined, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          })}
+        />
+      ) : (
+        <PageHeading>
+          <OrgMembers />
+        </PageHeading>
+      )}
       <PageAction>
         <Button
           variant="contained"

@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
-import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { OrgMembers } from "../OrgMembers/Orgmembers";
 
 interface PageHeaderProps {
   children: ReactNode;
@@ -32,7 +30,6 @@ interface PageHeaderProps {
 export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
-  const org = useCurrentOrg();
 
   return (
     <PageHeaderContext.Provider value={{ titleSlot, actionSlot }}>
@@ -49,11 +46,7 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
       >
         {/* minWidth: 0 so a long heading wraps instead of pushing the
             buttons off the right edge. */}
-        {org.is_personal ? (
-          <Box ref={setTitleSlot} sx={{ minWidth: 0 }} />
-        ) : (
-          <OrgMembers />
-        )}
+        <Box ref={setTitleSlot} sx={{ minWidth: 0 }} />
 
         <Stack
           direction="row"
@@ -95,13 +88,22 @@ interface PageTitleProps {
   subtitle?: ReactNode;
 }
 
-/** Fills the header's left side. Renders nothing outside the app shell. */
-export function PageTitle({ title, subtitle }: PageTitleProps) {
+/**
+ * Fills the header's left side with arbitrary content, for the pages whose
+ * heading is not a title — Home swaps in the member list on a shared
+ * workspace. Renders nothing outside the app shell.
+ */
+export function PageHeading({ children }: { children: ReactNode }) {
   const slots = usePageHeaderSlots();
   if (!slots?.titleSlot) return null;
 
-  return createPortal(
-    <>
+  return createPortal(children, slots.titleSlot);
+}
+
+/** The usual heading: a title, optionally over a subtitle. */
+export function PageTitle({ title, subtitle }: PageTitleProps) {
+  return (
+    <PageHeading>
       <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
         {title}
       </Typography>
@@ -110,8 +112,7 @@ export function PageTitle({ title, subtitle }: PageTitleProps) {
           {subtitle}
         </Typography>
       )}
-    </>,
-    slots.titleSlot,
+    </PageHeading>
   );
 }
 
