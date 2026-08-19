@@ -15,11 +15,7 @@ def test_set_initial_balance_success(
     user, org = personal_user
     api_client.force_authenticate(user)
 
-    response = api_client.post(
-        reverse("set_initial_balance"),
-        {"initial_balance": "1500.50"},
-        format="json",
-    )
+    response = api_client.post(reverse("set-initial-balance"), {"initial_balance": "1500.50"})
 
     assert response.status_code == 200
 
@@ -38,11 +34,7 @@ def test_set_initial_balance_rejects_invalid_value(
     user, _ = personal_user
     api_client.force_authenticate(user)
 
-    response = api_client.post(
-        reverse("set_initial_balance"),
-        {"initial_balance": "not-a-number"},
-        format="json",
-    )
+    response = api_client.post(reverse("set-initial-balance"), {"initial_balance": "not-a-number"})
 
     assert response.status_code == 400
     assert "initial_balance" in response.json()
@@ -56,9 +48,7 @@ def test_set_initial_balance_rejects_big_value(
     api_client.force_authenticate(user)
 
     response = api_client.post(
-        reverse("set_initial_balance"),
-        {"initial_balance": "1234567891234567"},
-        format="json",
+        reverse("set-initial-balance"), {"initial_balance": "1234567891234567"}
     )
 
     assert response.status_code == 400

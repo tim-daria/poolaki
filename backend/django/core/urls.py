@@ -36,26 +36,26 @@ urlpatterns = [
     path(
         "organizations/personal/initial-balance/",
         SetInitialBalanceView.as_view(),
-        name="set_initial_balance",
+        name="set-initial-balance",
     ),
     path(
         "organizations/<int:org_id>/select/",
         SwitchOrganizationView.as_view(),
-        name="switch_organization",
+        name="switch-organization",
     ),
     path(
         "invitations/<int:invitation_id>/accept/",
         AcceptInvitationView.as_view(),
-        name="accept_invitation",
+        name="invitation-accept",
     ),
     path(
         "invitations/<int:invitation_id>/decline/",
         DeclineInvitationView.as_view(),
-        name="decline_invitation",
+        name="invitation-decline",
     ),
     path(
         "invitations/my/",
         MyInvitationsView.as_view(),
-        name="my_invitations",
+        name="my-invitations",
     ),
 ]

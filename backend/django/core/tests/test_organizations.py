@@ -26,10 +26,6 @@ def test_get_user_organizations_returns_memberships(
 
     api_client.force_authenticate(user=user)
 
-    # session = api_client.session
-    # session["current_organization_id"] = personal_org.id
-    # session.save()
-
     response = api_client.get(
         reverse("organization-list-create"),
     )
@@ -37,8 +33,6 @@ def test_get_user_organizations_returns_memberships(
     assert response.status_code == 200
 
     data = response.json()
-
-    # assert data["current_organization_id"] == personal_org.id
     assert len(data["organizations"]) == 2
 
     organization_ids = {org["id"] for org in data["organizations"]}
