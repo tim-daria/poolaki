@@ -1,5 +1,0 @@
-$kind: collection
-name: 'Transcendence API'
-variables:
-  - key: base_url
-    value: 'https://poolaki.localhost'
