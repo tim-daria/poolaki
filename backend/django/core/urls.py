@@ -1,7 +1,7 @@
 from django.urls import path
 
 from core.views.invitation import CancelInvitationView, InvitationListCreateView
-from core.views.notification import NotificationListView
+from core.views.notification import NotificationListView, UnreadNotificationCountView
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
@@ -39,4 +39,9 @@ urlpatterns = [
         name="switch_organization",
     ),
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path(
+        "notifications/unread-count/",
+        UnreadNotificationCountView.as_view(),
+        name="notification-unread-count",
+    ),
 ]

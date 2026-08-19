@@ -61,6 +61,7 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
         org=org,
         payload={
             "invitation_id": invitation.id,
+            "org_id": org.id,
             "org_name": org.name,
             "invited_by": invited_by.username,
         },
