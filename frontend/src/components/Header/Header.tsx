@@ -11,7 +11,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Typography,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
