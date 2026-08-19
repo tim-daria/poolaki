@@ -36,7 +36,7 @@ Retrieval:
 `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/monthly-summary`
+`POST /api/internal/v1/analytics/monthly-summary`
 
 Expected Response:
 > "You spent €850 this month, mainly on Food and Transport."
@@ -58,7 +58,7 @@ Retrieval:
 `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/monthly-summary?period=previous`
+`POST /api/internal/v1/analytics/monthly-summary`
 
 Expected Response:
 > "You spent €720 last month."
@@ -80,7 +80,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/categories/{category}`
+`POST /api/internal/v1/analytics/categories`
 
 Expected Response:
 > "You spent €230 on Food this month."
@@ -102,7 +102,7 @@ Data Required:
 Retrieval: `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/categories/ranking`
+`POST /api/internal/v1/analytics/analytics/categories/ranking`
 
 Expected Response:
 > "Your biggest expense category is Food (€230)."
@@ -123,7 +123,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/transactions?sort=amount_desc&limit=5`
+`POST /api/internal/v1/transactions`
 
 Expected Response:
 > "A list of your five largest expenses."
@@ -144,7 +144,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/transactions/latest`
+`POST /api/internal/v1/transactions/latest`
 
 Expected Response:
 > "Your last expense was Netflix (€15) on June 15."
@@ -165,7 +165,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/transactions?range=3months&sort=amount_desc`
+`/api/internal/v1/transactions`
 
 Expected Response:
 > "Your largest transaction was €500 on June 2."
@@ -189,7 +189,7 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/income-summary`
+`POST /api/internal/v1/analytics/income-summary`
 
 Expected Response:
 > "You received €2200 this month."
@@ -211,7 +211,7 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/income-average`
+`POST /api/internal/v1/analytics/income-average`
 
 Expected Response:
 > "Your average monthly income is €2100."
@@ -236,7 +236,7 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/balance`
+`POST /api/internal/v1/analytics/balance`
 
 Expected Response:
 > "Your current balance is €3500."
@@ -261,7 +261,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/goals/{id}/progress`
+`POST /api/internal/v1/goals/progress`
 
 Expected Response:
 > "You have completed 60% of your savings goal."
@@ -283,7 +283,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/goals/{id}/progress`
+`POST /api/internal/v1/goals/progress`
 
 Expected Response:
 > "You need €400 more to reach your goal."
@@ -306,11 +306,10 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/goals/{id}/forecast`
+`POST /api/internal/v1/goals/forecast`
 
 Expected Response:
 > "You are expected to reach your goal in 4 months."
-
 
 ---
 
@@ -324,7 +323,7 @@ User Question:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/recurring-transactions`
+`POST /api/internal/v1/recurring-transactions`
 
 Expected Response:
 > "You have Netflix, Spotify and Rent as recurring payments."
@@ -340,7 +339,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/recurring-summary`
+`POST /api/internal/v1/analytics/recurring-summary`
 
 Expected Response:
 > "Your recurring payments total €250 per month."
@@ -356,7 +355,7 @@ User Question:
 Retrieval: `SQL` + Calculation
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/forecast-recurring`
+`POST /api/internal/v1/analytics/forecast-recurring`
 
 Expected Response:
 > "Your expected recurring expenses next month are €300."
@@ -374,7 +373,7 @@ User Question:
 Retrieval: Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/trends`
+`POST /api/internal/v1/analytics/trends`
 
 Expected Response:
 > "You spent 15% more than last month."
@@ -390,7 +389,7 @@ User Question:
 Retrieval: Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/cash-flow`
+`POST /api/internal/v1/analytics/cash-flow`
 
 Expected Response:
 > "Your net cash flow this week is +€350."
@@ -408,7 +407,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/shared-expenses`
+`POST /api/internal/v1/analytics/shared-expenses`
 
 Expected Response:
 > "Your household spent €1200 this month."
@@ -424,7 +423,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/analytics/organization-summary`
+`POST /api/internal/v1/analytics/organization-summary`
 
 Expected Response:
 > "Your organization spent €2500 this month."
@@ -496,7 +495,7 @@ Data Required:
 Retrieval: `Vector` + `SQL`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/categories`
+`POST /api/internal/v1/categories`
 
 Vector Source:
 - Category descriptions
@@ -546,7 +545,7 @@ Data Required:
 Retrieval: `SQL` + `Vector`
 
 Backend Endpoint:
-`GET /organizations/{organization_id}/transactions/{id}`
+`POST /api/internal/v1/transactions/detail`
 
 Vector Source:
 - Category definitions
