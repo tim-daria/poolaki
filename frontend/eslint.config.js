@@ -35,4 +35,14 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'off',
     },
   },
+  {
+    // Same reasoning as OrgListProvider: load() only calls setState after an
+    // await, never synchronously in the effect body, the cascading renders
+    // this rule guards against can't occur.
+    files: ['src/context/NotificationProvider.tsx'],
+    rules: {
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ])

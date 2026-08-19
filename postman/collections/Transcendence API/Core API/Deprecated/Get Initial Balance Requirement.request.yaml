@@ -1,4 +1,0 @@
-$kind: http-request
-method: GET
-url: "{{base_url}}/api/organizations/personal/initial-balance/"
-order: 5000

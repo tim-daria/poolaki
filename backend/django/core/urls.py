@@ -1,6 +1,12 @@
 from django.urls import path
 
-from core.views.invitation import CancelInvitationView, InvitationListCreateView
+from core.views.invitation import (
+    AcceptInvitationView,
+    CancelInvitationView,
+    DeclineInvitationView,
+    InvitationListCreateView,
+    MyInvitationsView,
+)
 from core.views.notification import NotificationListView, UnreadNotificationCountView
 from core.views.organization import (
     OrganizationListCreateView,
@@ -31,12 +37,27 @@ urlpatterns = [
     path(
         "organizations/personal/initial-balance/",
         SetInitialBalanceView.as_view(),
-        name="set_initial_balance",
+        name="set-initial-balance",
     ),
     path(
         "organizations/<int:org_id>/select/",
         SwitchOrganizationView.as_view(),
-        name="switch_organization",
+        name="switch-organization",
+    ),
+    path(
+        "invitations/<int:invitation_id>/accept/",
+        AcceptInvitationView.as_view(),
+        name="invitation-accept",
+    ),
+    path(
+        "invitations/<int:invitation_id>/decline/",
+        DeclineInvitationView.as_view(),
+        name="invitation-decline",
+    ),
+    path(
+        "invitations/my/",
+        MyInvitationsView.as_view(),
+        name="my-invitations",
     ),
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
     path(

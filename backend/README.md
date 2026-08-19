@@ -64,7 +64,8 @@ POST /api/organizations/{org_id}/select/
 
 ### Main modules
 
-- `core/views.py` — API view logic
+- `core/views/` — API view logic
+- `core/services/` — business logic
 - `core/models.py` — database models for users, organizations, memberships, invitations, transactions, goals, and notifications
 - `core/serializers.py` — input validation for request payloads
 - `core/urls.py` — API routing

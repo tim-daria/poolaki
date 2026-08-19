@@ -1,7 +1,0 @@
-$kind: http-request
-name: Cancel invitation
-url: "{{base_url}}/api/organizations/2/invitations/1/cancel/"
-method: POST
-headers:
-  X-CSRFToken: "{{csrf_token}}"
-order: 4409339703402370
