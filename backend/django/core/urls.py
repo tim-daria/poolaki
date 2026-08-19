@@ -1,6 +1,7 @@
 from django.urls import path
 
 from core.views.invitation import CancelInvitationView, InvitationListCreateView
+from core.views.notification import NotificationListView
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
@@ -37,4 +38,5 @@ urlpatterns = [
         SwitchOrganizationView.as_view(),
         name="switch_organization",
     ),
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
 ]
