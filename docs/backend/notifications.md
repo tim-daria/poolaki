@@ -98,15 +98,17 @@ update, so with only non-invitation notifications it will be `0`.
 
 **Invitation notifications are special:** they are **not** marked read by
 opening the inbox, because viewing the inbox does not count as acting on an
-invitation. The intended rule is that an invitation notification should stay
-unread until the invitation is resolved — by
+invitation. An invitation notification stays unread until the invitation is
+resolved — when the invited user accepts or declines it, or when the owner
+cancels it:
 
 - `POST /api/invitations/{invitation_id}/accept/`,
 - `POST /api/invitations/{invitation_id}/decline/`,
-- or the owner cancelling it via
-  `POST /api/organizations/{org_id}/invitations/{invitation_id}/cancel/`.
+- `POST /api/organizations/{org_id}/invitations/{invitation_id}/cancel/`.
 
-(See [organizations.md](organizations.md) for those endpoints.)
+(See [organizations.md](organizations.md) for those endpoints.) Each of
+those requests marks the matching `Notification` row `is_read = true`, so
+after any resolution the badge count drops accordingly.
 
 
 ## Recommended frontend behavior
