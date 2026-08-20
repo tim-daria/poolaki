@@ -266,6 +266,38 @@ jobs:
         working-directory: .
         run: docker compose down
 
+  # ── ai-service — runs ONLY when ai-service/** changed ─────────────────────────
+  ai-service:
+    needs: changes
+    if: ${{ needs.changes.outputs.ai-service == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff check (lint)
+        run: uv run ruff check .
+
+      - name: Ruff check (format)
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy .
+
+      - name: Tests
+        run: uv run pytest
+
   # ── Required status check ─────────────────────────────────────────────────
   # Always runs; fails only if a job that actually ran failed.
   # This is the single check to enable in branch protection settings.
