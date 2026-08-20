@@ -31,5 +31,8 @@ build/
 backup_*.sql
 pre-disaster-recovery_*.sql
 
-# CI
-ci-precheck.sh
+# Certificates
+*.pem
+
+# Vault files
+vault-init.json

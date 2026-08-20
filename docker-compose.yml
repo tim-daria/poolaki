@@ -75,9 +75,11 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
       TZ: Europe/Berlin
+      VAULT_ADDR: "http://vault:8200"
     networks:
       - backend_net
       - backup_net
+      - vault_net
     ports:
       - "5432:5432"
     healthcheck:
@@ -305,6 +307,25 @@ services:
     # - Add AI Service dashboard
     # - Monitor latency, requests, errors, token usage
 
+  vault:
+    build:
+      context: ./vault
+      dockerfile: ./Dockerfile
+    container_name: vault
+    restart: unless-stopped
+    volumes:
+    # - ./vault/config:/vault/config
+    - ./vault/data:/vault/data
+    env_file: 
+    - path: ./vault/vault.env
+      required: true
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    networks:
+    - vault_net
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_db:
@@ -323,3 +344,5 @@ networks:
     name: backup_net
   tunnel_net:
     name: tunnel_net
+  vault_net:
+    name: vault_net
