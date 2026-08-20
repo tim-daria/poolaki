@@ -13,11 +13,16 @@ from core.views.organization import (
     SetInitialBalanceView,
     SwitchOrganizationView,
 )
+from core.views.transaction import TransactionListCreateView
 from core.views.utils import csrf
 
 urlpatterns = [
     path("csrf/", csrf),
-    path("organizations/", OrganizationListCreateView.as_view(), name="organization-list-create"),
+    path(
+        "organizations/",
+        OrganizationListCreateView.as_view(),
+        name="organization-list-create",
+    ),
     path(
         "organizations/<int:org_id>/members/",
         OrganizationMembersView.as_view(),
@@ -57,5 +62,10 @@ urlpatterns = [
         "invitations/my/",
         MyInvitationsView.as_view(),
         name="my-invitations",
+    ),
+    path(
+        "organizations/<int:org_id>/transactions/",
+        TransactionListCreateView.as_view(),
+        name="transaction-list-create",
     ),
 ]
