@@ -7,7 +7,11 @@ from core.views.invitation import (
     InvitationListCreateView,
     MyInvitationsView,
 )
-from core.views.notification import NotificationListView, UnreadNotificationCountView
+from core.views.notification import (
+    MarkAllNotificationsReadView,
+    NotificationListView,
+    UnreadNotificationCountView,
+)
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
@@ -64,5 +68,10 @@ urlpatterns = [
         "notifications/unread-count/",
         UnreadNotificationCountView.as_view(),
         name="notification-unread-count",
+    ),
+    path(
+        "notifications/clear-all/",
+        MarkAllNotificationsReadView.as_view(),
+        name="notification-clear-all",
     ),
 ]

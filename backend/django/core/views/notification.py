@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Notification, NotificationType, User
+from core.serializers import MarkNotificationsReadSerializer
 
 
 class UnreadNotificationCountView(APIView):
@@ -28,10 +29,10 @@ class NotificationListView(APIView):
     """
     List notifications for the current user, newest first.
 
-    Also marks all non-invitation notifications as read as a side effect —
-    invitation notifications keep their own read logic (see accept/decline).
-
     GET:
+    Query params:
+    - is_read (bool, optional): filter by read status ("true"/"false").
+      If omitted, returns all notifications.
     Returns:
     - 200 OK with up to 50 most recent notifications and the unread count.
     """
@@ -40,8 +41,13 @@ class NotificationListView(APIView):
 
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
-        queryset = Notification.objects.filter(user=request.user).order_by("-created_at")[:50]
+        queryset = Notification.objects.filter(user=request.user)
 
+        is_read_param = request.query_params.get("is_read")
+        if is_read_param is not None:
+            queryset = queryset.filter(is_read=is_read_param.lower() == "true")
+
+        queryset = queryset.order_by("-created_at")[:50]
         notifications_data = [
             {
                 "id": n.id,
@@ -53,14 +59,48 @@ class NotificationListView(APIView):
             for n in queryset
         ]
 
-        # Mark everything except invitations as read, since the user just saw them.
-        Notification.objects.filter(user=request.user, is_read=False).exclude(
-            type=NotificationType.INVITATION
-        ).update(is_read=True)
-
         unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
 
         return Response(
             {"notifications": notifications_data, "unread_count": unread_count},
             status=status.HTTP_200_OK,
         )
+
+
+class MarkAllNotificationsReadView(APIView):
+    """
+    Mark the given notifications as read ("Clear all" button).
+
+    The frontend passes the ids of the notifications it actually
+    displayed to the user (from the last GET /notifications/ response),
+    rather than the backend blindly marking everything currently unread —
+    this avoids marking a notification as read if it arrived after the
+    list was fetched but before the user clicked "Clear all".
+
+    Invitation notifications are silently ignored even if included in the
+    request — they can only be resolved by accepting or declining.
+
+    POST:
+    Request body:
+    - notification_ids (list of int): ids to mark as read.
+
+    Returns:
+    - 200 OK with the number of notifications actually marked as read.
+    - 400 Bad Request if notification_ids is missing or empty.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        assert isinstance(request.user, User)
+        serializer = MarkNotificationsReadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        notification_ids = serializer.validated_data["notification_ids"]
+        updated = (
+            Notification.objects.filter(id__in=notification_ids, user=request.user, is_read=False)
+            .exclude(type=NotificationType.INVITATION)
+            .update(is_read=True)
+        )
+        return Response({"marked_read": updated}, status=status.HTTP_200_OK)
