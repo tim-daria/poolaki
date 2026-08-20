@@ -17,6 +17,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      ai-service: ${{ steps.filter.outputs.ai-service }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3.0.2
@@ -27,6 +28,8 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            ai-service:
+              - 'ai-service/**'
 
   # Runs ONLY when backend/** changed.
   backend:
