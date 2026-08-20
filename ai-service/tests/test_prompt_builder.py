@@ -9,8 +9,5 @@ def test_prompt_builder():
         user_question="How much did I spend?", context="January expenses: 200 EUR"
     )
 
-    print(prompt)
-
-
-if __name__ == "__main__":
-    test_prompt_builder()
+    assert user_question in prompt
+    assert contest in prompt
