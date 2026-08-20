@@ -13,14 +13,11 @@ import { NoOrganizationsScreen } from "./NoOrganizationsScreen";
  */
 
 export function OrgRedirect() {
-  const { organizations, lastUsedId, loading } = useOrgList();
+  const { organizations, loading } = useOrgList();
 
   if (loading) return <div>Loading…</div>;
 
-  const target =
-    organizations.find((o) => o.id === lastUsedId) ??
-    organizations.find((o) => o.is_personal) ??
-    organizations[0];
+  const target = organizations.find((o) => o.is_personal) ?? organizations[0];
 
   if (!target) return <NoOrganizationsScreen />;
 

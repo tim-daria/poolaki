@@ -11,8 +11,6 @@ import type { Organization } from "../lib/organizations";
  */
 export type OrgListContextType = {
   organizations: Organization[];
-  /** Session hint from the backend. Only used to pick a target for "/". */
-  lastUsedId: number | null;
   loading: boolean;
   refresh: () => Promise<void>;
 };

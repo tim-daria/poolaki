@@ -7,8 +7,7 @@ interface Props {
 /**
  * The workspace list itself couldn't be fetched. Distinct from
  * NoOrganizationsScreen: we don't know what the user has, so telling them they
- * have nothing would be a lie — and from SyncFailedScreen, which is about one
- * known workspace failing to open rather than the list failing to arrive.
+ * have nothing would be a lie.
  *
  * Holds its own pending flag instead of raising the provider's `loading`: that
  * flag gates the whole subtree, so a retry from here would unmount whatever is

@@ -7,9 +7,10 @@ import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { CreateOrgModal } from "../CreateOrgModal";
 
 /**
- * Switching workspaces is a navigation — OrgLayout handles resolution, session
- * sync, failure and invalidation, because it has to for direct URL visits and
- * reloads anyway. Hence no loading state or error handling here.
+ * Switching workspaces is a navigation — OrgLayout resolves :orgId against the
+ * in-memory list and renders NoAccessScreen when it misses, because it has to
+ * for direct URL visits and reloads anyway. Hence no loading state or error
+ * handling here, and no request on switch.
  *
  * MUI Menu rather than the hand-rolled dropdowns elsewhere in the app: it comes
  * with focus trap, arrow-key navigation, Escape and focus restoration.

@@ -11,8 +11,8 @@ import type { Organization } from "../lib/organizations";
  */
 export function OrgListProvider() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [lastUsedId, setLastUsedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, setError] = useState<Error | null>(null);
 
   /** Using try/catch instead of try/finally because React Compiler cannot process
    * a try block without a catch. Bailing out would cause the compiler to skip
@@ -25,9 +25,11 @@ export function OrgListProvider() {
     try {
       const list = await fetchOrganizations(signal);
       setOrganizations(list.organizations);
-      setLastUsedId(list.current_organization_id);
+      setError(null);
       setLoading(false);
     } catch (err) {
+      if (signal?.aborted) return;
+      setError(err as Error);
       setLoading(false);
       throw err;
     }
@@ -39,9 +41,9 @@ export function OrgListProvider() {
     // this ensures an older request won't overwrite a newer response.
     void load(ac.signal).catch(() => {});
     return () => ac.abort();
-  }, [load]);
+  }, []);
 
-  const value = { organizations, lastUsedId, loading, refresh: () => load() };
+  const value = { organizations, loading, refresh: () => load() };
 
   return (
     <OrgListContext.Provider value={value}>
