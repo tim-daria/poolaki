@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
     "backend",
     "django.localhost",
     "localhost",
+    "poolaki.de",
 ]
 
 # CSRF_TRUSTED_ORIGINS = [
@@ -43,15 +44,17 @@ ALLOWED_HOSTS = [
 # ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "http://poolaki.localhost",
+    "https://poolaki.de",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://poolaki.localhost",
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    "http://poolaki.localhost",
+    "https://poolaki.de",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://poolaki.localhost",
 ]
 
 CSRF_COOKIE_HTTPONLY = False
@@ -200,9 +203,9 @@ HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "https://poolaki.localhost/auth/verify-email/{key}",
     "account_reset_password": "https://poolaki.localhost/auth/reset-password",
     "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
-    "account_signup": "https://poolaki.localhost/register",
-    "socialaccount_login_error": "https://poolaki.localhost/login",
-    "socialaccount_login": "https://poolaki.localhost/oauth-callback",
+    "account_signup": "http://poolaki.localhost:8080/register",
+    "socialaccount_login_error": "http://poolaki.localhost:8080/login",
+    "socialaccount_login": "http://poolaki.localhost:8080/oauth-callback",
 }
 
 ACCOUNT_LOGIN_METHODS = {"username", "email"}

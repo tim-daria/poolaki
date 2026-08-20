@@ -3,6 +3,7 @@ import { App } from "./App";
 import { GuestRoute } from "./components/GuestRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OrgListProvider } from "./context/OrgListProvider";
+import { NotificationProvider } from "./context/NotificationProvider";
 import { OrgLayout } from "./components/OrgLayout";
 import { OrgRedirect } from "./components/OrgRedirect";
 import { ErrorPage } from "./pages/ErrorPage/ErrorPage";
@@ -21,11 +22,13 @@ export const router = createBrowserRouter([
         children: [
           { path: "login", lazy: () => import("./pages/Login/Login") },
           { path: "register", lazy: () => import("./pages/Register/Register") },
-          { path: "terms", lazy: () => import("./pages/LegalPages/Terms") },
-          { path: "policy", lazy: () => import("./pages/LegalPages/Policy") },
           // { path: "about", element: <About /> },
         ],
       },
+      // Outside GuestRoute: the Sidebar links here, and GuestRoute would
+      // bounce a signed-in user straight back to their workspace.
+      { path: "terms", lazy: () => import("./pages/LegalPages/Terms") },
+      { path: "policy", lazy: () => import("./pages/LegalPages/Policy") },
       {
         path: "oauth-callback",
         lazy: () => import("./pages/OAuthCallback/OAuthCallback"),
@@ -39,29 +42,36 @@ export const router = createBrowserRouter([
             // unmounts on logout. Renders <Outlet/> for its children.
             element: <OrgListProvider />,
             children: [
-              // "/" resolves the last-used workspace and redirects to it.
-              { index: true, element: <OrgRedirect /> },
               {
-                // The org lives in the URL. Everything below is scoped to it,
-                // and switching workspaces is just navigation.
-                path: "o/:orgId",
-                element: <OrgLayout />,
+                //same as OrgListProvider: pathless route, it's nested in ProtectedRoute
+                //to unmount on logout and be visible across the app.
+                element: <NotificationProvider />,
                 children: [
+                  // "/" resolves the last-used workspace and redirects to it.
+                  { index: true, element: <OrgRedirect /> },
                   {
-                    index: true,
-                    lazy: () => import("./pages/Home/Home"),
-                  },
-                  {
-                    path: "transactions",
-                    lazy: () => import("./pages/Transactions/Transactions"),
-                  },
-                  {
-                    path: "goals",
-                    lazy: () => import("./pages/Goals/Goals"),
-                  },
-                  {
-                    path: "categories",
-                    lazy: () => import("./pages/Categories/Categories"),
+                    // The org lives in the URL. Everything below is scoped to it,
+                    // and switching workspaces is just navigation.
+                    path: "o/:orgId",
+                    element: <OrgLayout />,
+                    children: [
+                      {
+                        index: true,
+                        lazy: () => import("./pages/Home/Home"),
+                      },
+                      {
+                        path: "transactions",
+                        lazy: () => import("./pages/Transactions/Transactions"),
+                      },
+                      {
+                        path: "goals",
+                        lazy: () => import("./pages/Goals/Goals"),
+                      },
+                      {
+                        path: "categories",
+                        lazy: () => import("./pages/Categories/Categories"),
+                      },
+                    ],
                   },
                 ],
               },

@@ -55,8 +55,9 @@ test.describe.serial("User authentication", () => {
   test("logout success", async () => {
     await page.goto("/");
 
-    const logoutBtn = page.getByRole("button", { name: /log\s*out/i });
-    await logoutBtn.click();
+    // Logout lives behind the header's avatar menu, not on the bar itself.
+    await page.getByRole("button", { name: /account menu/i }).click();
+    await page.getByRole("menuitem", { name: /log\s*out/i }).click();
     await page.waitForURL("/login");
 
     await expect(
@@ -119,8 +120,9 @@ test.describe.serial("User authentication", () => {
     await page.getByRole("button", { name: "Login", exact: true }).click();
     await page.waitForURL(/\/o\/\d+$/);
 
+    // The header's avatar menu is the proof we landed in the app shell.
     await expect(
-      page.getByRole("button", { name: /log\s*out/i }),
+      page.getByRole("button", { name: /account menu/i }),
     ).toBeVisible();
   });
 });

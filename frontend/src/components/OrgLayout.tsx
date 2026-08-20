@@ -58,8 +58,7 @@ export function OrgLayout() {
   // A result for any other workspace means this one is still in flight.
   // Compare `sync` itself, not sync?.orgId: with no match and no result yet
   // both sides are undefined, which would read as "this one is done".
-  const status =
-    sync && sync.orgId === currentOrgId ? sync.status : "syncing";
+  const status = sync && sync.orgId === currentOrgId ? sync.status : "syncing";
 
   if (loading) return <div>Loading…</div>;
   if (!org || status === "denied") return <NoAccessScreen orgId={orgId} />;
