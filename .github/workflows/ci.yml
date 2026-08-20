@@ -302,7 +302,7 @@ jobs:
   # Always runs; fails only if a job that actually ran failed.
   # This is the single check to enable in branch protection settings.
   ci:
-    needs: [backend, frontend, e2e]
+    needs: [backend, frontend, ai-service, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -310,11 +310,12 @@ jobs:
         run: |
           backend='${{ needs.backend.result }}'
           frontend='${{ needs.frontend.result }}'
+          ai_service='${{ needs.ai-service.result }}'
           e2e='${{ needs.e2e.result }}'
 
-          status="backend=$backend, frontend=$frontend, e2e=$e2e"
+          status="backend=$backend, frontend=$frontend, ai-service=$ai_service, e2e=$e2e"
           failed=0
-          for result in "$backend" "$frontend" "$e2e"; do
+          for result in "$backend" "$frontend" "$ai_service" "$e2e"; do
             # "skipped" is expected — jobs only run when their area changed.
             # Anything other than success/skipped (failure, cancelled,
             # timed_out) must fail the gate.
