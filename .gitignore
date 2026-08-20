@@ -35,4 +35,5 @@ pre-disaster-recovery_*.sql
 *.pem
 
 # Vault files
-vault-init.json
+vault/secure/*
+vault/data/*

@@ -1,33 +1,48 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+# marks every variable in the file as shell variables
+set -a
+source ./.env
+set +a
+
+DOCKER_SHELL="docker exec vault"
+VAULT_INIT_FILE="./secure/vault-init.json"
+
+# cleanup before new run --> REMOVE AT THE END
+docker compose down vault db -v
+
+sleep 2
+rm -rf ./vault/data/*
+rm -rf ./vault/secure/*
+sleep 2
+
+# start vault container
+docker compose up vault db -d
+# check if vault container is running
+for i in {1..10}; do
+    $DOCKER_SHELL vault status > /dev/null 2>&1 && break
+    sleep 1
+done
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 
-if [ -f "./secure/vault-init.json" ]; then
+if [ -f "$VAULT_INIT_FILE" ]; then
 	echo "Vault is already running and connected..."
 	exit 0
-fi
-
-# cleanup before new run
-docker compose down vault -v
-DOCKER_SHELL="docker exec -it vault"
-docker compose up vault -d
-
-sleep 2
-
-rm -rf data/*
-rm -rf secure/vault-init.json
-
-# Init vault
-VAULT_INIT_FILE="./secure/vault-init.json"
-if [ -f "./secure/vault-init.json" ]; then
-	echo "Vault is already initialised - skipping init"
 else
-	touch "./secure/vault-init.json"
-	$DOCKER_SHELL vault operator init -format=json > "./secure/vault-init.json"
+	mkdir -p "./secure/django"
+	touch "$VAULT_INIT_FILE"
+	$DOCKER_SHELL vault operator init -format=json > "$VAULT_INIT_FILE"
 fi
-# $DOCKER_SHELL vault status
+
+# DOCKER_SHELL="docker exec -it vault"
+
+# # cleanup before new run
+# docker compose down vault -v
+# rm -rf data/*
+# rm -rf secure/vault-init.json
 
 # unsealing vault to make it usable
 mapfile -t unseal_keys < <(jq -r '.unseal_keys_b64[0:3][]' "$VAULT_INIT_FILE")
@@ -58,8 +73,8 @@ $DOCKER_SHELL vault write database/config/postgres_db \
 	plugin_name=postgresql-database-plugin  \
 	allowed_roles="poolaki_db_role" \
 	connection_url="postgresql://{{username}}:{{password}}@postgres_db:5432/postgres?sslmode=disable" \
-	username="42student" \
-	password="SuperSecurePassword_42"
+	username="$POSTGRES_USER" \
+	password="$POSTGRES_PASSWORD"
 
 # create role for database access
 $DOCKER_SHELL vault write database/roles/poolaki_db_role \
@@ -78,6 +93,52 @@ $DOCKER_SHELL vault lease revoke -prefix database/creds/poolaki_db_role
 
 # store new credentials
 $DOCKER_SHELL vault read database/creds/poolaki_db_role
+
+# enable kv secrets engine for static app secrets
+if ! $DOCKER_SHELL vault secrets list -format=json | jq -e '."secret/"' > /dev/null; then
+	$DOCKER_SHELL vault secrets enable -path=secret kv-v2
+else
+	echo "KV secrets engine already enabled"
+fi
+
+# store django secrets in kv
+$DOCKER_SHELL vault kv put secret/django \
+	superuser_username="$DJANGO_SUPERUSER_USERNAME" \
+	superuser_email="$DJANGO_SUPERUSER_EMAIL" \
+	superuser_password="$DJANGO_SUPERUSER_PASSWORD" \
+	intra42_client_id="$INTRA42_CLIENT_ID" \
+	intra42_client_secret="$INTRA42_CLIENT_SECRET"
+
+# copy policy file into container and apply it
+docker cp ./config/policies/django-policy.hcl vault:/tmp/django-policy.hcl
+$DOCKER_SHELL vault policy write django-policy /tmp/django-policy.hcl
+
+# enable approle auth method
+if ! $DOCKER_SHELL vault auth list -format=json | jq -e '."approle/"' > /dev/null; then
+	$DOCKER_SHELL vault auth enable approle
+else
+	echo "AppRole auth already enabled"
+fi
+
+# create approle for app-level services (shared between django and nodejs for now)
+# secret_id_ttl=0 --> never expires
+# secret_id_num_uses=0 --> unlimited use (set to 1 for single-use)
+$DOCKER_SHELL vault write auth/approle/role/app-role \
+	token_policies="django-policy" \
+	token_ttl=1h \
+	token_max_ttl=4h \
+	secret_id_ttl=0 \
+	secret_id_num_uses=0
+
+# fetch role_id (static, safe-ish identifier)
+$DOCKER_SHELL vault read -format=json auth/approle/role/app-role/role-id \
+	| jq -r '.data.role_id' > ./secure/django/role_id
+
+# generate secret_id (this is the actual secret)
+$DOCKER_SHELL vault write -f -format=json auth/approle/role/app-role/secret-id \
+	| jq -r '.data.secret_id' > ./secure/django/secret_id
+
+chmod 600 ./secure/django/role_id ./secure/django/secret_id
 
 # TODO
 # Vault can connect to the database

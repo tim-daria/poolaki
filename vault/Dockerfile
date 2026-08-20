@@ -24,4 +24,4 @@ USER vault
 # RUN chmod 0640       /vault/config/certs/vault-key.pem
 
 CMD vault server -config=${VAULT_CONFIG}/hcl/vault.hcl
-ENTRYPOINT [ "./vault_worker.sh" ]
+# ENTRYPOINT [ "./vault_worker.sh" ]
