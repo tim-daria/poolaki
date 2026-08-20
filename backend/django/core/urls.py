@@ -68,4 +68,9 @@ urlpatterns = [
         TransactionListCreateView.as_view(),
         name="transaction-list-create",
     ),
+    path(
+        "organizations/<int:org_id>/transactions/<int:transaction_id>/",
+        TransactionListCreateView.as_view(),
+        name="transaction-delete",
+    ),
 ]

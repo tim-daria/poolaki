@@ -66,3 +66,12 @@ class TransactionListCreateView(APIView):
             TransactionResponseSerializer(transaction).data,
             status=status.HTTP_201_CREATED,
         )
+
+    def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
+        transaction = get_object_or_404(
+            Transaction,
+            id=transaction_id,
+            org_id=org_id,
+        )
+        transaction.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
