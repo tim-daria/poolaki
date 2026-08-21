@@ -1,6 +1,6 @@
 /**
  * TEMPORARY — mock data to test the notification UI while
- * GET /api/notifications/ isn't implemented yet in the backend.
+ * GET /api/v1/notifications/ isn't implemented yet in the backend.
  * Delete this whole `mockup/` folder once the real endpoint is ready.
  */
 import type { Notification } from "../../context/NotificationContext";

@@ -8,11 +8,11 @@ type NotificationList = {
   notifications: Notification[];
 };
 
-/** GET /api/notifications/ */
+/** GET /api/v1/notifications/ */
 export async function fetchNotificationsReal(
   signal?: AbortSignal,
 ): Promise<Notification[]> {
-  const res = await fetch("/api/notifications/", {
+  const res = await fetch("/api/v1/notifications/", {
     credentials: "include",
     signal,
   });
@@ -21,7 +21,7 @@ export async function fetchNotificationsReal(
   return data.notifications;
 }
 
-/** TEMPORARY — mock while GET /api/notifications/ isn't implemented yet. */
+/** TEMPORARY — mock while GET /api/v1/notifications/ isn't implemented yet. */
 async function fetchNotificationsMock(signal?: AbortSignal): Promise<Notification[]> {
   void signal; // keeps the signature matching fetchNotificationsReal
   return Promise.resolve(mockNotifications);

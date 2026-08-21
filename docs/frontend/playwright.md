@@ -24,7 +24,7 @@ direct browser protocols.
        │                   Vite Dev Server                      │
        │                   (Frontend UI)                        │
        └───────────┬────────────────────────────────┬───────────┘
-                   │ /api/*                         │ /_allauth/*
+                   │ /api/v1/*                         │ /_allauth/*
                    ▼                                ▼
        ┌────────────────────────────────────────────────────────┐
        │                 Django REST Backend                    │

@@ -6,10 +6,10 @@ invitations, health checks, and monitoring.
 
 ## Base URL
 
-The API is mounted under:
+The API is versioned in the URI and mounted under:
 
 ```text
-/api/
+/api/v1/
 ```
 
 The app also exposes the following project-level routes:
@@ -22,6 +22,7 @@ The app also exposes the following project-level routes:
 
 | Area | Endpoints | Documentation |
 | --- | --- | --- |
+| Versioning | `/api/v1/` (current) | [docs/backend/api-versioning.md](../docs/backend/api-versioning.md) |
 | Authentication | signup / login / logout / session / CSRF / 42 OAuth | [docs/backend/authentication.md](../docs/backend/authentication.md) |
 | Organizations | list / create / personal initial balance | [docs/backend/organizations.md](../docs/backend/organizations.md) |
 | Invitations | list / invite / cancel (owner-only) | [docs/backend/organizations.md](../docs/backend/organizations.md) |
@@ -57,7 +58,7 @@ Typical error object:
 The following organization-switching endpoint is currently kept as a bridge and could be removed once the frontend fully switches to the new implementation:
 
 ```http
-POST /api/organizations/{org_id}/select/
+POST /api/v1/organizations/{org_id}/select/
 ```
 
 
