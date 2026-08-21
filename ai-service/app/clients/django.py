@@ -19,3 +19,12 @@ class RetrievedItem(BaseModel):
 
 class CombinedRetrievalResult(BaseModel):
     items: list[RetrievedItem] = Field(default_factory=list)
+
+class MockDjangoClient:
+    """TESTING ONLY: Cliente temporal para simular Django. 
+    TODO: replace for the real integration
+    """
+    async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict[str, Any]:
+        if endpoint == "/api/internal/v1/analytics/monthly-summary":
+            return {"total_expenses": 850, "currency": "EUR"}
+        return {}
