@@ -99,7 +99,7 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
             aria-expanded={Boolean(notifAnchor)}
             onClick={(e) => {
               setNotifAnchor(e.currentTarget);
-              markAllAsRead();
+              void markAllAsRead();
             }}
             sx={{ width: controlSize, height: controlSize }}
           >
