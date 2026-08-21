@@ -114,9 +114,7 @@ function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void })
       }}
     >
       <Typography variant="body2" sx={{ fontWeight: n.is_read ? 400 : 600 }}>
-        {payload
-          ? `${payload.invited_by} invited you to ${payload.org_name}`
-          : "You have a new invitation"}
+        {typeText(n.type, n.payload)}
         <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
           {timeAgo(n.created_at)}
         </Box>
