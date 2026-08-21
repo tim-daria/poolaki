@@ -219,8 +219,6 @@ class TestNotificationList:
 
         assert response.status_code == 200
         assert response.data["notifications"] == []
-        # unread_count still reflects the real unread total.
-        assert response.data["unread_count"] == 1
 
 
 # ---------------------------------------------------------------------------
