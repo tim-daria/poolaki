@@ -1,8 +1,15 @@
 # Hybrid RAG
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
-from app.models.retrieval import CombinedRetrievalResult
-from app.clients.mock_repository import MockDocumentRepository, MockDjangoClient
+from typing import Optional, Any
+from models.retrieval import CombinedRetrievalResult
+from app.clients.django import MockDjangoClient
+
+
+class MockDocumentRepository:
+    """TESTING ONLY: Mock temporal para simular búsqueda en base de datos vectorial."""
+    async def search_documents(self, query: str, top_k: int = 3) -> list[str]:
+        return [f"doc_{i}" for i in range(top_k)]
+
 
 class BaseRetriever(ABC):
     @abstractmethod
