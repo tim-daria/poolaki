@@ -147,3 +147,4 @@ report with `npx playwright show-report`.
 **Stay proxy-aware.** Any new backend endpoint (e.g. custom OAuth or auth paths under
 `/_allauth`) must be added to `server.proxy` in [vite.config.ts](vite.config.ts), or the
 request won't be routed when running without Caddy.
+

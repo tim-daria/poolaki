@@ -116,35 +116,40 @@ class OrganizationListCreateView(APIView):
         )
 
 
-class SwitchOrganizationView(APIView):
-    """
-    Switch the current organization for the authenticated user.
+"""
+Commented out rather than deleted to keep track of changes.
+Is not used in current implementation.
+"""
 
-    The selected organization is stored in the user's session and is used
-    as the default organization after page reloads.
+# class SwitchOrganizationView(APIView):
+#     """
+#     Switch the current organization for the authenticated user.
 
-    Request:
-    - POST /organizations/{org_id}/select/
-    - org_id (int): ID of the organization to select.
+#     The selected organization is stored in the user's session and is used
+#     as the default organization after page reloads.
 
-    Returns:
-    - 200 OK with the selected organization ID.
-    - 403 Forbidden if the user is not a member of the organization.
-    """
+#     Request:
+#     - POST /organizations/{org_id}/select/
+#     - org_id (int): ID of the organization to select.
 
-    permission_classes = [IsAuthenticated]
+#     Returns:
+#     - 200 OK with the selected organization ID.
+#     - 403 Forbidden if the user is not a member of the organization.
+#     """
 
-    def post(self, request: Request, org_id: int) -> Response:
-        assert isinstance(request.user, User)
+#     permission_classes = [IsAuthenticated]
 
-        if not Membership.objects.filter(user=request.user, org_id=org_id).exists():
-            return Response(
-                {"error": "You are not a member of this organization"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        request.session["current_organization_id"] = org_id
-        request.session.modified = True
-        return Response({"current_organization_id": org_id})
+#     def post(self, request: Request, org_id: int) -> Response:
+#         assert isinstance(request.user, User)
+
+#         if not Membership.objects.filter(user=request.user, org_id=org_id).exists():
+#             return Response(
+#                 {"error": "You are not a member of this organization"},
+#                 status=status.HTTP_403_FORBIDDEN,
+#             )
+#         request.session["current_organization_id"] = org_id
+#         request.session.modified = True
+#         return Response({"current_organization_id": org_id})
 
 
 class OrganizationMembersView(APIView):

@@ -21,7 +21,7 @@
 }
 
 .formContainer p a {
-  color: var(--accent-middle);
+  color: var(--tint-middle);
   text-decoration: none;
   font-weight: 500;
 }
@@ -34,7 +34,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: var(--accent-deep);
+  color: var(--tint-deep);
 }
 
 .formContainer form {
@@ -65,7 +65,7 @@
 
 .formContainer input:focus {
   outline: none;
-  border-color: var(--accent-middle);
+  border-color: var(--tint-middle);
 }
 
 .error {
@@ -77,7 +77,7 @@
 .submitBtn {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: var(--accent-middle);
+  background: var(--tint-middle);
   color: white;
   border: none;
   border-radius: 8px;
@@ -88,7 +88,7 @@
 }
 
 .submitBtn:hover {
-  background: var(--accent-deep);
+  background: var(--tint-deep);
 }
 
 .divider {
@@ -110,9 +110,9 @@
 
 .oauthBtn {
   padding: 0.75rem;
-  background: var(--accent-light);
-  color: var(--accent-deep);
-  border: 1px solid var(--accent-middle);
+  background: var(--tint-light);
+  color: var(--tint-deep);
+  border: 1px solid var(--tint-middle);
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
@@ -121,7 +121,7 @@
 }
 
 .oauthBtn:hover {
-  background: var(--accent-middle);
+  background: var(--tint-middle);
   color: white;
 }
 
@@ -129,8 +129,8 @@
   flex: 1;
   background: linear-gradient(
     135deg,
-    var(--accent-light) 0%,
-    var(--accent-middle) 100%
+    var(--tint-light) 0%,
+    var(--tint-middle) 100%
   );
 }
 
@@ -151,7 +151,7 @@
 .modal h2 {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--accent-deep);
+  color: var(--tint-deep);
   margin-bottom: 0.5rem;
 }
 
@@ -187,5 +187,5 @@
 
 .modal input:focus {
   outline: none;
-  border-color: var(--accent-middle);
+  border-color: var(--tint-middle);
 }

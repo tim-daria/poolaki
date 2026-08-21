@@ -39,8 +39,6 @@ change — it is a **navigation**, like clicking a link.
 | Refresh | stays put | may jump elsewhere |
 | Clearing old data on switch | automatic (new route) | manual, easy to forget |
 
-The two-tabs row describes **the finished design**. Until the bridge is gone, tabs still
-share one server-side workspace — see [The bridge](#the-bridge-temporary).
 
 The payoff is how little the switcher needs. In `OrgSwitcher.tsx`, clicking a
 workspace calls `navigate()` and nothing else — no loading flag, no undo-on-failure,
@@ -55,7 +53,7 @@ for a pasted URL and a refresh. One code path, three entry points.
 /login  /register  /terms  /policy      only when logged OUT
 /oauth-callback                         social login return
 
-/                                       → redirects to /o/<your last workspace>
+/                                       → redirects to /o/<your personal workspace>
 /o/:orgId                               everything below is scoped to this workspace
     /o/:orgId              Overview
     /o/:orgId/transactions Transactions
@@ -116,7 +114,6 @@ One provider cannot be in both places.
    in memory.
 4. Header and sidebar stay mounted. They hold nothing workspace-specific.
 5. The page area is rebuilt, dropping the old filters, search text and page number.
-6. *(Temporary)* the page area waits one request while the backend catches up.
 
 ### Three details that look like accidents
 
@@ -135,48 +132,6 @@ the new workspace without remounting. They are not fixed when the sidebar is cre
 
 ---
 
-## The bridge (temporary)
-
-The one knowingly unfinished part.
-
-**The backend doesn't know about the URL yet.** It keeps the current workspace in the
-Django *session* — one value per logged-in user:
-
-```
-POST /api/organizations/2/select/    → session["current_organization_id"] = 2
-```
-
-So the frontend *pushes* the URL's answer into the session after every switch. That
-push is the bridge; waiting for it is the `Loading…` in the page area.
-
-### Why it becomes a problem
-
-One session value per user, many tabs. Given an endpoint that reads it:
-
-```python
-org_id = request.session["current_organization_id"]   # ← the dangerous line
-```
-
-1. Tab A is at `/o/1`. Session says `1`.
-2. Tab B opens at `/o/2`. Session now says `2` — B overwrote it.
-3. Tab A still shows workspace 1 everywhere: URL, header, dropdown. Nothing tells it.
-4. You add a transaction in tab A. The request doesn't name a workspace, so the backend
-   reads the session, finds `2`, and **saves it into workspace 2.**
-
-Money in the wrong workspace, no error anywhere.
-
-### Why it's safe today
-
-**No endpoint reads that value** — it is written and never read:
-
-- the initial-balance endpoint finds the personal workspace from the **user**;
-- create and select only **write** it.
-
-> **IMPORTANT:** don't use `current_organization_id` to pick which data to return or
-> save — take the workspace from the URL instead. The PR that adds the first such
-> endpoint should delete the bridge too.
----
-
 ## Rules that must not be broken
 
 - **`NoAccessScreen` never redirects.** It links back to `/`. If it redirected,
@@ -185,9 +140,6 @@ Money in the wrong workspace, no error anywhere.
 - **Never build a URL from a workspace that might not exist.** Check `if (!target)`
   *before* writing `` `/o/${target.id}` ``. `target?.id` yields `"/o/undefined"` — a
   real address that leads nowhere.
-- **Check the remembered workspace against the list.** The session outlives membership,
-  so it can still name a workspace you were removed from. `OrgRedirect` looks it up
-  first and falls back to the personal one.
 - **Keep the providers inside `ProtectedRoute`**, so logging out unmounts them and one
   user's list can't survive into the next user's session.
 
@@ -195,39 +147,42 @@ Money in the wrong workspace, no error anywhere.
 
 ## What still needs to be done
 
-### Backend — small, mostly new code
+### Backend — the finance endpoints
 
-Take the workspace from the address instead of the session:
+The finance models exist; none of them have views yet. Every new one names its
+workspace in the address:
 
 ```
 GET /api/organizations/2/transactions/
 ```
 
-Before a view runs, check the user is a member of the workspace named in the URL.
-That is one permission class, one mixin every scoped view inherits, and one line per
-route. No existing endpoint changes.
+The plumbing for this is already in place. `IsOrgMember` (`core/permissions.py`) reads
+`view.kwargs["org_id"]` and checks membership *before* the handler runs, and Django
+passes the same capture to the handler as a kwarg to filter on. So each scoped route
+is: mount it under `organizations/<int:org_id>/`, set
+`permission_classes = [IsAuthenticated, IsOrgMember]`, take `org_id`, filter by it.
 
-### Frontend — once the backend is ready
+> **IMPORTANT:** scope from the URL, never from the session. A view that receives
+> `org_id` but forgets `IsOrgMember` still runs its queries perfectly — and hands any
+> logged-in user any workspace's money. The permission class is the only thing
+> standing between the two.
 
-1. **Remove the bridge.** Delete the sync `useEffect`, the flags (`syncedOrgId`,
-   `deniedOrgId`) and the `syncing` prop — about 15 lines. The `Loading…` on switch
-   goes with them.
-2. **Make `select/` background-only.** Fire it on switch without waiting for it; it
-   only saves the default workspace for the next login.
-3. **Add a central `fetch` helper.** Attach cookies and CSRF automatically, and throw
+### Frontend
+
+1. **Add a central `fetch` helper.** Attach cookies and CSRF automatically, and throw
    typed 403 errors.
-4. **Handle 403s with `errorElement`.** Catch access errors at the `/o/:orgId` route
+2. **Handle 403s with `errorElement`.** Catch access errors at the `/o/:orgId` route
    level to show `NoAccessScreen`.
-5. **Use route `loader`s for page data**, instead of `useEffect`. Loaders read URL
+3. **Use route `loader`s for page data**, instead of `useEffect`. Loaders read URL
    params directly and integrate properly with `errorElement`, which never catches
    `useEffect` errors.
-6. **Connect real data.**
+4. **Connect real data.**
 
 ---
 
-## What the finished version looks like
+## What `OrgLayout` looks like
 
-`OrgLayout` — no effects, no waiting, no network call:
+No effects, no waiting, no network call:
 
 ```tsx
 export function OrgLayout() {
@@ -246,9 +201,8 @@ export function OrgLayout() {
 }
 ```
 
-Switching becomes instant — the workspace is found in a list already in memory.
-Membership is checked per request, so it can't go stale. Two tabs stop interfering,
-because every request names its workspace.
+Switching is instant — the workspace is found in a list already in memory. Membership
+is checked per request, so it can't go stale. Two tabs don't interfere, because nothing
+workspace-shaped lives in the session; `tests/organizations.spec.ts` asserts exactly
+that.
 
-Nothing else changes: routes, providers, dropdown, redirect and `key`-based clearing
-all stay. That is the reason for putting the workspace in the URL now rather than later.

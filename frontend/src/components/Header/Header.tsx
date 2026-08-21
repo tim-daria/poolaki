@@ -11,6 +11,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  useTheme,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -21,6 +22,8 @@ import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
+import { initials } from "../../lib/initials";
+import { avatarColor } from "../../lib/avatarColor";
 
 /** Shell header height. Deliberately taller than the Sidebar's brand row. */
 export const headerHeight = 72;
@@ -49,19 +52,15 @@ interface HeaderProps {
  * The OrgSwitcher sits in the left slot; notifications and the account menu
  * are pushed to the right.
  */
-export function Header({
-  onLogout,
-  onMenuClick,
-  showMenuButton,
-}: HeaderProps) {
+export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
   const { user } = useAuth();
+  const theme = useTheme();
   const { unreadCount, markAllAsRead } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState<HTMLElement | null>(null);
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
   const closeAccount = () => setAccountAnchor(null);
-  // The session can still be loading, so this has to survive a null user.
-  const initial = user?.username?.charAt(0).toUpperCase() ?? "?";
+  const initial = initials(user?.username);
 
   return (
     <AppBar
@@ -98,7 +97,10 @@ export function Header({
             aria-label="Notifications"
             aria-haspopup="menu"
             aria-expanded={Boolean(notifAnchor)}
-            onClick={(e) => { setNotifAnchor(e.currentTarget); markAllAsRead();}}
+            onClick={(e) => {
+              setNotifAnchor(e.currentTarget);
+              markAllAsRead();
+            }}
             sx={{ width: controlSize, height: controlSize }}
           >
             <Badge color="error" variant="dot" invisible={unreadCount === 0}>
@@ -127,7 +129,7 @@ export function Header({
                 height: avatarSize,
                 fontSize: "1.1rem",
                 fontWeight: 600,
-                bgcolor: "primary.main",
+                bgcolor: avatarColor(user?.username, theme.palette.avatar),
               }}
             >
               {initial}
