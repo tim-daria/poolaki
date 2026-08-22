@@ -9,16 +9,10 @@ set +a
 DOCKER_SHELL="docker exec vault"
 VAULT_INIT_FILE="./secure/vault-init.json"
 
-# cleanup before new run --> REMOVE AT THE END
-docker compose down vault db -v
+############################
+##### SETTING UP VAULT #####
+############################
 
-sleep 2
-rm -rf ./vault/data/*
-rm -rf ./vault/secure/*
-sleep 2
-
-# start vault container
-docker compose up vault db -d
 # check if vault container is running
 for i in {1..10}; do
     $DOCKER_SHELL vault status > /dev/null 2>&1 && break
@@ -28,32 +22,27 @@ done
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 
-if [ -f "$VAULT_INIT_FILE" ]; then
-	echo "Vault is already running and connected..."
-	exit 0
+# create init file if there is none
+if [ -s "$VAULT_INIT_FILE" ]; then
+	echo "Vault is already initialised..."
 else
 	mkdir -p "./secure/django"
-	touch "$VAULT_INIT_FILE"
 	$DOCKER_SHELL vault operator init -format=json > "$VAULT_INIT_FILE"
 fi
 
-# DOCKER_SHELL="docker exec -it vault"
+# unseal vault if it is sealed
+vault_status_json=$($DOCKER_SHELL vault status -format=json 2>/dev/null)
 
-# # cleanup before new run
-# docker compose down vault -v
-# rm -rf data/*
-# rm -rf secure/vault-init.json
-
-# unsealing vault to make it usable
-mapfile -t unseal_keys < <(jq -r '.unseal_keys_b64[0:3][]' "$VAULT_INIT_FILE")
-
-for key in "${unseal_keys[@]}"; do
-	$DOCKER_SHELL vault operator unseal "$key"
-done
+if echo "$vault_status_json" | jq -e '.sealed == true' > /dev/null; then
+	mapfile -t unseal_keys < <(jq -r '.unseal_keys_b64[0:3][]' "$VAULT_INIT_FILE")
+	for key in "${unseal_keys[@]}"; do
+		$DOCKER_SHELL vault operator unseal "$key"
+	done
+fi
 
 # saving vault ip address for other services
-VAULT_IP_ADDR=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault)
-export VAULT_ADDR=http://"$VAULT_IP_ADDR":8200
+# VAULT_IP_ADDR=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault)
+# export VAULT_ADDR=http://"$VAULT_IP_ADDR":8200
 
 # saving root_token
 export VAULT_TOKEN=$(jq -r '.root_token' "$VAULT_INIT_FILE")
@@ -68,38 +57,49 @@ else
     echo "Database secrets engine already enabled"
 fi
 
-# connect to database
-$DOCKER_SHELL vault write database/config/postgres_db \
-	plugin_name=postgresql-database-plugin  \
-	allowed_roles="poolaki_db_role" \
-	connection_url="postgresql://{{username}}:{{password}}@postgres_db:5432/postgres?sslmode=disable" \
-	username="$POSTGRES_USER" \
-	password="$POSTGRES_PASSWORD"
+# Only configure the connection and rotate once
+if ! $DOCKER_SHELL vault read database/config/postgres_db > /dev/null 2>&1; then
+	echo "Setting up database secrets engine for the first time..."
 
-# create role for database access
-$DOCKER_SHELL vault write database/roles/poolaki_db_role \
-	db_name=postgres_db \
-	default_ttl="4h" \
-	max_ttl="24h" \
-	creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
-		GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
+	# create access role for database
+	$DOCKER_SHELL vault write database/roles/db_role \
+		db_name=postgres_db \
+		default_ttl="4h" \
+		max_ttl="24h" \
+		creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+			GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
 
-# rotate root credentials
-# hardcoded credentials from the connection are not longer valid from here
-$DOCKER_SHELL vault write -f database/rotate-root/postgres_db
+	# connect to database
+	$DOCKER_SHELL vault write database/config/postgres_db \
+		plugin_name=postgresql-database-plugin \
+		allowed_roles="db_role" \
+		connection_url="postgresql://{{username}}:{{password}}@postgres_db:5432/postgres?sslmode=disable" \
+		username="$POSTGRES_USER" \
+		password="$POSTGRES_PASSWORD"
 
-# remove the role from the database
-$DOCKER_SHELL vault lease revoke -prefix database/creds/poolaki_db_role
+	# rotate root credentials
+	# credentials from the .env file are not longer valid from here
+	$DOCKER_SHELL vault write -f database/rotate-root/postgres_db
 
-# store new credentials
-$DOCKER_SHELL vault read database/creds/poolaki_db_role
+	# remove the role from the database
+	$DOCKER_SHELL vault lease revoke -prefix database/creds/db_role
+else
+	echo "Database secrets engine already configured. Skipping setup."
+fi
+
+# show new credentials
+$DOCKER_SHELL vault read database/creds/db_role
 
 # enable kv secrets engine for static app secrets
 if ! $DOCKER_SHELL vault secrets list -format=json | jq -e '."secret/"' > /dev/null; then
 	$DOCKER_SHELL vault secrets enable -path=secret kv-v2
 else
-	echo "KV secrets engine already enabled"
+	echo "KV secrets engine already enabled..."
 fi
+
+###########################
+##### STORING SECRETS #####
+###########################
 
 # store django secrets in kv
 $DOCKER_SHELL vault kv put secret/django \
@@ -109,9 +109,13 @@ $DOCKER_SHELL vault kv put secret/django \
 	intra42_client_id="$INTRA42_CLIENT_ID" \
 	intra42_client_secret="$INTRA42_CLIENT_SECRET"
 
+#######################################
+###### Setup AppRole for services #####
+#######################################
+
 # copy policy file into container and apply it
-docker cp ./config/policies/django-policy.hcl vault:/tmp/django-policy.hcl
-$DOCKER_SHELL vault policy write django-policy /tmp/django-policy.hcl
+docker cp ./config/policies/django-db-policy.hcl vault:/tmp/django-db-policy.hcl
+$DOCKER_SHELL vault policy write django-db-policy /tmp/django-db-policy.hcl
 
 # enable approle auth method
 if ! $DOCKER_SHELL vault auth list -format=json | jq -e '."approle/"' > /dev/null; then
@@ -124,7 +128,7 @@ fi
 # secret_id_ttl=0 --> never expires
 # secret_id_num_uses=0 --> unlimited use (set to 1 for single-use)
 $DOCKER_SHELL vault write auth/approle/role/app-role \
-	token_policies="django-policy" \
+	token_policies="django-db-policy" \
 	token_ttl=1h \
 	token_max_ttl=4h \
 	secret_id_ttl=0 \
@@ -139,6 +143,25 @@ $DOCKER_SHELL vault write -f -format=json auth/approle/role/app-role/secret-id \
 	| jq -r '.data.secret_id' > ./secure/django/secret_id
 
 chmod 600 ./secure/django/role_id ./secure/django/secret_id
+
+
+
+# TODO
+# Change script to entrypoint script, all docker exec... needs to be removed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # TODO
 # Vault can connect to the database

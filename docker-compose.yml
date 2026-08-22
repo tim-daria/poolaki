@@ -50,14 +50,23 @@ services:
     - "8000"
     environment:
       TZ: Europe/Berlin
+      VAULT_ADDR: http://vault:8200
+      VAULT_ROLE_ID_FILE: /run/secrets/vault_role_id
+      VAULT_SECRET_ID_FILE: /run/secrets/vault_secret_id
+      DB_HOST: db
+      DB_PORT: "5432"
     volumes:
       - ./backend/django:/app
     tmpfs:
       - /tmp:exec,mode=777
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
     networks:
       - backend_net
+      - vault_net
+    secrets:
+      - vault_role_id
+      - vault_secret_id
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -76,13 +85,13 @@ services:
     volumes:
       - postgres_db:/var/lib/postgresql/
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # PG Values are needed for psql to restore the database from backup
+      PGDATABASE: ${POSTGRES_DB}
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
       TZ: Europe/Berlin
       VAULT_ADDR: "http://vault:8200"
     networks:
@@ -327,9 +336,11 @@ services:
       dockerfile: ./Dockerfile
     container_name: vault
     restart: unless-stopped
+    expose:
+      - "8200"
     volumes:
-    # - ./vault/config:/vault/config
-    - ./vault/data:/vault/data
+    - ./vault/config:/vault/config
+    - vault_data:/vault/data
     env_file: 
     - path: ./vault/vault.env
       required: true
@@ -337,9 +348,14 @@ services:
       VAULT_ADDR: "http://vault:8200"
     networks:
     - vault_net
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl -f -s 'http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200' || exit 1"]
+    #   interval: 30s
+    #   retries: 3
+    #   start_period: 30s
+    #   timeout: 5s
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   postgres_db:
@@ -347,6 +363,7 @@ volumes:
   caddy_config:
   grafana_data:
   prom_data:
+  vault_data:
 
 networks:
   backend_net:
@@ -359,3 +376,9 @@ networks:
     name: tunnel_net
   vault_net:
     name: vault_net
+
+secrets:
+  vault_role_id:
+    file: ./vault/secure/django/role_id
+  vault_secret_id:
+    file: ./vault/secure/django/secret_id

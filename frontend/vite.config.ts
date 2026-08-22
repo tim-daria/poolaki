@@ -15,8 +15,8 @@ export default defineConfig({
       ? false
       : {
           host: "poolaki.localhost",
-          protocol: "wss",
-          clientPort: 443,
+          protocol: "ws",
+          clientPort: 8080,
         },
     proxy: {
       "/api": {
