@@ -217,23 +217,30 @@ class TestCreateInvitation:
 
 class TestCancelInvitation:
     def test_owner_can_cancel_pending_invitation(
-        self, api_client: APIClient, owner: User, shared_org: Organization, invitee: User
+        self,
+        api_client: APIClient,
+        owner: User,
+        pending_invitation: Invitation,
+        shared_org: Organization,
     ) -> None:
-        invitation = Invitation.objects.create(
-            org=shared_org, invited_user=invitee, invited_by=owner, status=InvitationStatus.PENDING
-        )
-
         api_client.force_authenticate(user=owner)
         response = api_client.post(
             reverse(
                 "invitation-cancel",
-                kwargs={"org_id": shared_org.id, "invitation_id": invitation.id},
+                kwargs={"org_id": shared_org.id, "invitation_id": pending_invitation.id},
             )
         )
 
         assert response.status_code == 200
-        invitation.refresh_from_db()
-        assert invitation.status == InvitationStatus.CANCELLED
+        pending_invitation.refresh_from_db()
+        assert pending_invitation.status == InvitationStatus.CANCELLED
+
+        notification = Notification.objects.get(
+            user=pending_invitation.invited_user,
+            type=NotificationType.INVITATION,
+            payload__invitation_id=pending_invitation.id,
+        )
+        assert notification.is_read is True
 
     def test_cannot_cancel_already_accepted_invitation(
         self, api_client: APIClient, owner: User, shared_org: Organization, invitee: User
