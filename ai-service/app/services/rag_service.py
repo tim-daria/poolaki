@@ -1,1 +1,0 @@
-# coordina retrieval + contexto
