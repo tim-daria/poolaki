@@ -54,15 +54,6 @@ Typical error object:
 
 ## Notes
 
-### Current implementation status
-
-The following organization-switching endpoint is currently kept as a bridge and could be removed once the frontend fully switches to the new implementation:
-
-```http
-POST /api/v1/organizations/{org_id}/select/
-```
-
-
 ### Main modules
 
 - `core/views/` — API view logic
