@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import Invitation, Organization
+from core.models import Invitation, Notification, Organization
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
@@ -13,3 +13,7 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
+
+
+class MarkNotificationsReadSerializer(serializers.Serializer[Notification]):
+    notification_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
