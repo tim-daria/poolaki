@@ -19,6 +19,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest",
+    "ruff",
+    "mypy",
 ]
 
 [build-system]
