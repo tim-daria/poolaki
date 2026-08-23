@@ -284,7 +284,7 @@ jobs:
         run: uv python install
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --all-groups
 
       - name: Ruff check (lint)
         run: uv run ruff check .
