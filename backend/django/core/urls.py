@@ -7,6 +7,11 @@ from core.views.invitation import (
     InvitationListCreateView,
     MyInvitationsView,
 )
+from core.views.notification import (
+    MarkAllNotificationsReadView,
+    NotificationListView,
+    UnreadNotificationCountView,
+)
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
@@ -57,5 +62,16 @@ urlpatterns = [
         "invitations/my/",
         MyInvitationsView.as_view(),
         name="my-invitations",
+    ),
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path(
+        "notifications/unread-count/",
+        UnreadNotificationCountView.as_view(),
+        name="notification-unread-count",
+    ),
+    path(
+        "notifications/clear-all/",
+        MarkAllNotificationsReadView.as_view(),
+        name="notification-clear-all",
     ),
 ]
