@@ -21,7 +21,7 @@ class CombinedRetrievalResult(BaseModel):
     items: list[RetrievedItem] = Field(default_factory=list)
 
 class MockDjangoClient:
-    """TESTING ONLY: Cliente temporal para simular Django. 
+    """TESTING ONLY: temporal client to simulate Django
     TODO: replace for the real integration
     """
     async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict[str, Any]:
