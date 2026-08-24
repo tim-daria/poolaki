@@ -9,6 +9,7 @@ import {
   Stack,
 } from "@mui/material";
 import { useNotifications } from "../../context/useNotifications";
+import { useOrgList } from "../../context/useOrgList";
 import {
   acceptInvitation,
   declineInvitation,
@@ -67,11 +68,13 @@ function typeText(type: NotificationType, p: Record<string, unknown>): string {
  * flex row inside the Menu's paper with the same look.
  *
  * The backend marks the matching notification read on accept/decline, so on
- * success we refetch the notification list (badge + rows) and the org list
- * (accept unlocks a new workspace for the OrgSwitcher).
+ * success we refetch the notification list (badge + rows). Accepting also
+ * adds a workspace, so we refresh the shared org list — that is what the
+ * OrgSwitcher reads.
  */
 function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void }) {
   const { refresh } = useNotifications();
+  const { refresh: refreshOrgList } = useOrgList();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const payload = isInvitationPayload(n.payload) ? n.payload : null;
@@ -83,19 +86,33 @@ function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void })
     try {
       const fn = kind === "accept" ? acceptInvitation : declineInvitation;
       await fn(payload.invitation_id, getCsrfToken());
-      // The backend drops the resolved row from the next list response, so a
-      // list refresh removes it and updates the badge. Accepting also adds an
-      // org, and the org list is refreshed by the same list refetch below is
-      // NOT enough for the OrgSwitcher — keep it out of this scope.
-      await refresh();
-      onClose();
     } catch (err) {
       // A resolved invitation returns 400 with a message — show it and keep
       // the row visible (the backend still holds it) instead of a generic crash.
       setError(err instanceof InvitationResolveError ? err.message : "Something went wrong");
-    } finally {
       setBusy(false);
+      return;
     }
+    // The backend drops the resolved row from the next list response, so a
+    // list refresh removes it and updates the badge. A failed notification
+    // refetch must not swallow the org list refresh below, so errors there
+    // are best-effort.
+    await refresh().catch(() => {});
+    if (kind === "accept") {
+      // A new workspace just appeared — reload the shared org list so the
+      // OrgSwitcher picks it up without forcing the user to navigate.
+      try {
+        await refreshOrgList();
+        onClose();
+      } catch {
+        // The invitation itself was accepted server-side; only the local
+        // list is stale. Keep the row visible so the user knows.
+        setError("Accepted, but the workspace list could not be updated — reload the page");
+      }
+    } else {
+      onClose();
+    }
+    setBusy(false);
   };
 
   return (

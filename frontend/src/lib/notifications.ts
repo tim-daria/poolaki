@@ -36,7 +36,7 @@ export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
 }
 
 /**
- * POST /api/notifications/clear-all/
+ * POST /api/v1/notifications/clear-all/
  *
  * Marks the given notifications read — the ids of the rows the user
  * actually saw, NOT "everything unread": a notification that arrives between
@@ -50,7 +50,7 @@ export async function markNotificationsRead(
   notificationIds: number[],
   csrfToken: string,
 ): Promise<{ marked_read: number }> {
-  const res = await fetch("/api/notifications/clear-all/", {
+  const res = await fetch("/api/v1/notifications/clear-all/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -71,7 +71,7 @@ export class InvitationResolveError extends Error {
 }
 
 /**
- * POST /api/invitations/{invitationId}/accept/
+ * POST /api/v1/invitations/{invitationId}/accept/
  *
  * Joins the organization as a member and marks the matching invitation
  * notification read. On 400 the backend's `error` message is wrapped in
@@ -81,7 +81,7 @@ export async function acceptInvitation(
   invitationId: number,
   csrfToken: string,
 ): Promise<{ organization_id: number; organization_name: string }> {
-  const res = await fetch(`/api/invitations/${invitationId}/accept/`, {
+  const res = await fetch(`/api/v1/invitations/${invitationId}/accept/`, {
     method: "POST",
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
@@ -94,12 +94,12 @@ export async function acceptInvitation(
   return res.json();
 }
 
-/** POST /api/invitations/{invitationId}/decline/ */
+/** POST /api/v1/invitations/{invitationId}/decline/ */
 export async function declineInvitation(
   invitationId: number,
   csrfToken: string,
 ): Promise<{ invitation_id: number; status: string }> {
-  const res = await fetch(`/api/invitations/${invitationId}/decline/`, {
+  const res = await fetch(`/api/v1/invitations/${invitationId}/decline/`, {
     method: "POST",
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
