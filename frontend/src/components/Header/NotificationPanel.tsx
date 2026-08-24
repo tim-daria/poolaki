@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Menu, Typography, Button, Box, Avatar, Paper, Chip, Stack, useTheme } from "@mui/material";
 import { useNotifications } from "../../context/useNotifications";
-import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
@@ -14,7 +13,6 @@ interface NotificationPanelProps {
 export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps) {
   const theme = useTheme();
   const { notifications, clearAll, loadFullList } = useNotifications();
-  const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "invitations">("all");
 
   useEffect(() => {
@@ -24,17 +22,17 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
   }, [anchorEl, loadFullList]);
 
   const invitationsCount = useMemo(() => {
-    return notifications.filter((n) => n.type === "invitation").length;
+    return notifications.filter((n) => n.type === "invitation" && !n.is_read).length;
   }, [notifications]);
 
   const filteredNotifications = useMemo(() => {
     if (filter === "invitations") {
-      return notifications.filter((n) => n.type === "invitation");
+      return notifications.filter((n) => n.type === "invitation" && !n.is_read);
     }
-    return notifications;
+    return notifications.filter(
+    (n) => !(n.type === "invitation" && n.is_read)
+  );
   }, [notifications, filter]);
-
-  const currentUserDisplayName = user?.username || user?.email || "User";
 
   return (
     <Menu
@@ -48,9 +46,6 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
         <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
           All notifications
         </Typography>
-        <Avatar sx={{ width: 32, height: 32, fontSize: "0.85rem", bgcolor: avatarColor(currentUserDisplayName, theme.palette.avatar), }} >
-          {initials(currentUserDisplayName)}
-        </Avatar>
       </Box>
 
       {/* Controls: Filter Pills & Mark All as Read */}
@@ -131,7 +126,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: isInvitation ? "primary.light" : "transparent",
+                  bgcolor: isInvitation ? "action.hover" : "transparent",
                   borderBottom: isInvitation ? "none" : "1px solid",
                   borderColor: "divider",
                 }}
@@ -151,7 +146,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                   <Box sx={{ flexGrow: 1 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
-                        {currentUserDisplayName}
+                        {userName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
                         {new Date(n.created_at).toLocaleDateString("en-US", {
