@@ -153,7 +153,7 @@ The finance models exist; none of them have views yet. Every new one names its
 workspace in the address:
 
 ```
-GET /api/organizations/2/transactions/
+GET /api/v1/organizations/2/transactions/
 ```
 
 The plumbing for this is already in place. `IsOrgMember` (`core/permissions.py`) reads

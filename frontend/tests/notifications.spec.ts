@@ -2,7 +2,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Notification bell. Covers what doesn't depend on GET /api/notifications/,
+ * Notification bell. Covers what doesn't depend on GET /api/v1/notifications/,
  * which the backend hasn't shipped yet (see PR discussion).
  */
 test.describe.serial("Notifications", () => {
