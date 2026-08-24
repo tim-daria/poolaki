@@ -2,8 +2,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Notification bell. Covers what doesn't depend on GET /api/notifications/,
- * which the backend hasn't shipped yet (see PR discussion).
+ * Notification bell. 
  */
 test.describe.serial("Notifications", () => {
   let page: Page;
@@ -45,6 +44,11 @@ test.describe.serial("Notifications", () => {
     await page.goto(workspaceUrl);
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(page.getByRole("menu")).toBeVisible();
+
+    await expect(page.getByText("All notifications")).toBeVisible();
+    await expect(page.getByText("All", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Invitations/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Mark all as read/i })).toBeVisible();
   });
 
   test("clicking outside closes the panel without deleting notifications", async () => {
@@ -52,6 +56,14 @@ test.describe.serial("Notifications", () => {
     await page.getByRole("button", { name: /notifications/i }).click();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).not.toBeVisible();
+  });
+
+  test("displays invitation tab with current count", async () => {
+    await page.goto(workspaceUrl);
+    await page.getByRole("button", { name: /notifications/i }).click();
+
+    await expect(page.getByText("All", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Invitations \(\d+\)/)).toBeVisible();
   });
 
   test.skip("shows a red dot when there's an unread invitation", async () => {
@@ -63,7 +75,7 @@ test.describe.serial("Notifications", () => {
     // TODO: depends on accept/decline endpoints, not confirmed yet.
   });
 
-  test.skip("clear all empties the notification list", async () => {
+  test.skip("Mark all as read empties the notification list", async () => {
     // TODO: depends on real notification data from the backend.
   });
 });
