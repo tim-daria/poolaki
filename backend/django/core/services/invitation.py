@@ -64,6 +64,7 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
         org=org,
         payload={
             "invitation_id": invitation.id,
+            "org_id": org.id,
             "org_name": org.name,
             "invited_by": invited_by.username,
         },
@@ -88,6 +89,9 @@ def cancel_invitation(org_id: int, invitation_id: int) -> Invitation:
 
     invitation.status = InvitationStatus.CANCELLED
     invitation.save(update_fields=["status"])
+
+    _mark_invitation_notification_read(invitation, invitation.invited_user)
+
     return invitation
 
 
@@ -146,7 +150,7 @@ def _mark_invitation_notification_read(invitation: Invitation, user: User) -> No
 
     Invitation notifications are intentionally NOT marked read just by the
     user opening the notification list — only once they've actually acted
-    on the invitation (accepted or declined), so a pending decision doesn't
+    on the invitation (accepted, declined or cancelled), so a pending decision doesn't
     silently disappear from their unread count.
     """
     Notification.objects.filter(

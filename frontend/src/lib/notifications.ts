@@ -7,11 +7,11 @@
  */
 import type { Notification } from "../context/NotificationContext";
 
-/** GET /api/notifications/ */
+/** GET /api/v1/notifications/ */
 export async function fetchNotifications(
   signal?: AbortSignal,
 ): Promise<{ notifications: Notification[]; unread_count: number }> {
-  const res = await fetch("/api/notifications/?is_read=false", {
+  const res = await fetch("/api/v1/notifications/?is_read=false", {
     credentials: "include",
     signal,
   });
@@ -20,13 +20,13 @@ export async function fetchNotifications(
 }
 
 /**
- * GET /api/notifications/unread-count/
+ * GET /api/v1/notifications/unread-count/
  *
  * Cheap endpoint for the bell badge — the provider polls this instead of the
  * full 50-row list (which has a body the client doesn't need for a dot).
  */
 export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
-  const res = await fetch("/api/notifications/unread-count/", {
+  const res = await fetch("/api/v1/notifications/unread-count/", {
     credentials: "include",
     signal,
   });
