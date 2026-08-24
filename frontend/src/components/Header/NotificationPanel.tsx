@@ -119,7 +119,6 @@ function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void })
     <Box
       component="li"
       role="menuitem"
-      aria-disabled
       tabIndex={-1}
       sx={{
         display: "flex",
