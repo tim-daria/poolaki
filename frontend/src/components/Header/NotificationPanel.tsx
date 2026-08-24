@@ -5,16 +5,9 @@ import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
 import { useOrgList } from "../../context/useOrgList";
-import {
-  acceptInvitation,
-  declineInvitation,
-  InvitationResolveError,
+import { acceptInvitation, declineInvitation, InvitationResolveError,
 } from "../../lib/notifications";
-import { getCsrfToken } from "../../lib/csrf";
-import type {
-  InvitationPayload,
-  Notification,
-  NotificationType,
+import type { InvitationPayload, Notification, NotificationType,
 } from "../../context/NotificationContext";
 
 interface NotificationPanelProps {
@@ -50,8 +43,6 @@ function typeText(type: NotificationType, p: Record<string, unknown>): string {
     case "member_left":
       return "A member left the organization";
     default:
-      // Unknown type from a newer backend — render something neutral instead
-      // of breaking the whole list.
       return "Notification";
   }
 }
@@ -67,92 +58,15 @@ function typeText(type: NotificationType, p: Record<string, unknown>): string {
  * adds a workspace, so we refresh the shared org list — that is what the
  * OrgSwitcher reads.
  */
-function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void }) {
-  const { refresh } = useNotifications();
-  const { refresh: refreshOrgList } = useOrgList();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const payload = isInvitationPayload(n.payload) ? n.payload : null;
-
-  const act = async (kind: "accept" | "decline") => {
-    if (!payload) return;
-    setBusy(true);
-    setError("");
-    try {
-      const fn = kind === "accept" ? acceptInvitation : declineInvitation;
-      await fn(payload.invitation_id, getCsrfToken());
-    } catch (err) {
-      // A resolved invitation returns 400 with a message — show it and keep
-      // the row visible (the backend still holds it) instead of a generic crash.
-      setError(err instanceof InvitationResolveError ? err.message : "Something went wrong");
-      setBusy(false);
-      return;
-    }
-    // The backend drops the resolved row from the next list response, so a
-    // list refresh removes it and updates the badge. A failed notification
-    // refetch must not swallow the org list refresh below, so errors there
-    // are best-effort.
-    await refresh().catch(() => {});
-    if (kind === "accept") {
-      // A new workspace just appeared — reload the shared org list so the
-      // OrgSwitcher picks it up without forcing the user to navigate.
-      try {
-        await refreshOrgList();
-        onClose();
-      } catch {
-        // The invitation itself was accepted server-side; only the local
-        // list is stale. Keep the row visible so the user knows.
-        setError("Accepted, but the workspace list could not be updated — reload the page");
-      }
-    } else {
-      onClose();
-    }
-    setBusy(false);
-  };
-
-  return (
-    <Box
-      component="li"
-      role="menuitem"
-      tabIndex={-1}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 1,
-        px: 2.5,
-        py: 1,
-      }}
-    >
-      <Typography variant="body2" sx={{ fontWeight: n.is_read ? 400 : 600 }}>
-        {typeText(n.type, n.payload)}
-        <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
-          {timeAgo(n.created_at)}
-        </Box>
-        {error && (
-          <Box component="span" sx={{ color: "error.main", display: "block" }}>
-            {error}
-          </Box>
-        )}
-      </Typography>
-      {payload && (
-        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-          <Button size="small" variant="contained" disabled={busy} onClick={() => void act("accept")}>
-            Accept
-          </Button>
-          <Button size="small" disabled={busy} onClick={() => void act("decline")}>
-            Decline
-          </Button>
-        </Stack>
-      )}
-    </Box>
-  );
-}
 
 export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps) {
   const theme = useTheme();
-  const { notifications, clearAll, loadFullList } = useNotifications();
+  const { notifications, clearAll, loadFullList, refresh } = useNotifications();
+  const { refresh: refreshOrgList } = useOrgList();
   const [filter, setFilter] = useState<"all" | "invitations">("all");
+
+  const [busyIds, setBusyIds] = useState<Record<number, boolean>>({});
+  const [errors, setErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (anchorEl) {
@@ -172,6 +86,44 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
     (n) => !(n.type === "invitation" && n.is_read)
   );
   }, [notifications, filter]);
+
+  const handleResolveInvitation = async (n: Notification, kind: "accept" | "decline") => {
+    const payload = isInvitationPayload(n.payload) ? n.payload : null;
+    if (!payload) return;
+
+    setBusyIds((prev) => ({ ...prev, [n.id]: true }));
+    setErrors((prev) => ({ ...prev, [n.id]: "" }));
+
+    try {
+      const fn = kind === "accept" ? acceptInvitation : declineInvitation;
+      await fn(payload.invitation_id, getCsrfToken());
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        [n.id]: err instanceof InvitationResolveError ? err.message : "Something went wrong",
+      }));
+      setBusyIds((prev) => ({ ...prev, [n.id]: false }));
+      return;
+    }
+
+    await refresh().catch(() => {});
+
+    if (kind === "accept") {
+      try {
+        await refreshOrgList();
+        onClose();
+      } catch {
+        setErrors((prev) => ({
+          ...prev,
+          [n.id]: "Accepted, but workspace list failed to update — reload page",
+        }));
+      }
+    } else {
+      onClose();
+    }
+
+    setBusyIds((prev) => ({ ...prev, [n.id]: false }));
+    };
 
   return (
     <Menu
@@ -255,13 +207,16 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
           filteredNotifications.map((n) => {
             const isInvitation = n.type === "invitation";
             const payload = n.payload;
-            const userName = typeof payload.invited_by === "string" ? payload.invited_by : "User";
-            const orgName = "org_name" in payload ? (payload.org_name as string) : "";
+            const userName = isInvitationPayload(payload) ? payload.invited_by : "User";
+
+            const isBusy = Boolean(busyIds[n.id]);
+            const errorMessage = errors[n.id];
 
             return (
               <Paper
                 key={n.id}
                 elevation={0}
+                data-testid="notification-item"
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
@@ -288,18 +243,19 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                         {userName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-                        {new Date(n.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {timeAgo(n.created_at)}
                       </Typography>
                     </Box>
 
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.825rem", mt: 0.2 }}>
-                      {isInvitation
-                        ? `Invited you to ${orgName} workspace`
-                        : "Performed an action"}
+                      {typeText(n.type, payload)}
                     </Typography>
+
+                    {errorMessage && (
+                      <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+                        {errorMessage}
+                      </Typography>
+                    )}
 
                     {/* Inline Invitation Actions */}
                     {isInvitation && (
@@ -307,6 +263,8 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                         <Button
                           variant="outlined"
                           size="small"
+                          disabled={isBusy}
+                          onClick={() => void handleResolveInvitation(n, "decline")}
                           sx={{
                             borderRadius: "16px",
                             borderColor: "divider",
@@ -321,6 +279,8 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                         <Button
                           variant="contained"
                           size="small"
+                          disabled={isBusy}
+                          onClick={() => void handleResolveInvitation(n, "accept")}
                           sx={{
                             borderRadius: "16px",
                             bgcolor: "primary.dark",

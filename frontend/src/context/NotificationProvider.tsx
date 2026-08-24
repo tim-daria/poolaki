@@ -3,11 +3,6 @@ import { Outlet } from "react-router";
 import { NotificationContext } from "./NotificationContext";
 import { fetchUnreadCount, fetchNotifications, clearAllNotifications } from "../lib/notifications";
 import type { Notification } from "./NotificationContext";
-import {
-  fetchNotifications,
-  markNotificationsRead,
-} from "../lib/notifications";
-import { getCsrfToken } from "../lib/csrf";
 
 /**
  * How often we re-check for new notifications. It's not exactly WebSockets/SSE,
@@ -27,18 +22,6 @@ export function NotificationProvider() {
   // the true unread total even when the list is capped at 50 rows.
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const load = async (signal?: AbortSignal) => {
-    try {
-      const data = await fetchNotifications(signal);
-      setNotifications(data.notifications);
-      setUnreadCount(data.unread_count);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-      throw err;
-    }
-  };
 
   useEffect(() => {
     const ac = new AbortController();
@@ -73,6 +56,9 @@ export function NotificationProvider() {
     loading,
     loadFullList,
     clearAll,
+    refresh: async () => {
+      await loadFullList();
+    },
   };
 
   return (

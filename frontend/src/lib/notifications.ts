@@ -8,7 +8,7 @@
 import type { Notification } from "../context/NotificationContext";
 
 export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
-  const res = await fetch("/api/notifications/unread-count/", { credentials: "include", signal });
+  const res = await fetch("/api/v1/notifications/unread-count/", { credentials: "include", signal });
   if (!res.ok) throw new Error(`Failed to load unread count (${res.status})`);
   const data = await res.json();
   return data.unread_count;
@@ -16,7 +16,7 @@ export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
 
 /** GET /api/notifications/ */
 export async function fetchNotifications(isRead?: boolean, signal?: AbortSignal,): Promise<{notifications:Notification[]; unreadCount: number }> {
-  const url = isRead === undefined ? "/api/notifications/" : `/api/notifications/?is_read=${isRead}`;
+  const url = isRead === undefined ? "/api/v1/notifications/" : `/api/v1/notifications/?is_read=${isRead}`;
   const res = await fetch(url, { credentials: "include", signal });
 
   if (!res.ok) throw new Error(`Failed to load notifications (${res.status})`);
@@ -27,7 +27,7 @@ export async function fetchNotifications(isRead?: boolean, signal?: AbortSignal,
 }
 
 export async function clearAllNotifications(ids: number[], csrfToken: string): Promise<number> {
-  const res = await fetch("/api/notifications/clear-all/", {
+  const res = await fetch("/api/v1/notifications/clear-all/", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
     credentials: "include",
@@ -36,22 +36,6 @@ export async function clearAllNotifications(ids: number[], csrfToken: string): P
   if (!res.ok) throw new Error(`Failed to clear notifications (${res.status})`);
   const data = await res.json();
   return data.marked_read;
-}
-
-/**
- * GET /api/v1/notifications/unread-count/
- *
- * Cheap endpoint for the bell badge — the provider polls this instead of the
- * full 50-row list (which has a body the client doesn't need for a dot).
- */
-export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
-  const res = await fetch("/api/v1/notifications/unread-count/", {
-    credentials: "include",
-    signal,
-  });
-  if (!res.ok) throw new Error(`Failed to load unread count (${res.status})`);
-  const data = (await res.json()) as { unread_count: number };
-  return data.unread_count;
 }
 
 export async function markNotificationsRead(

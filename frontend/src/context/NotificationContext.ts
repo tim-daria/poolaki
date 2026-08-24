@@ -1,7 +1,12 @@
 import { createContext } from "react"
 
 /** Mirrors core.models.NotificationType on the backend. */
-export type NotificationType = "invitation"; "transaction_added"; "goal_completed"; "member_left";
+export type NotificationType = 
+  | "invitation"
+  | "transaction_added"
+  | "goal_completed"
+  | "member_left"
+  | (string & {});
 
 /**
  * Matches the invitation payload the backend writes when an invitation is
