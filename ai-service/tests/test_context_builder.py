@@ -1,5 +1,5 @@
-from models.context import CombinedRetrievalResult
 from app.services.context_builder import ContextBuilder
+from models.context import CombinedRetrievalResult
 
 
 # Transform financial data
