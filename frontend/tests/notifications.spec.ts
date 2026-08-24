@@ -6,7 +6,7 @@ import {
   createSharedWorkspace,
   inviteMember,
   toOrgId,
-} from "./helpers";
+} from "./helpers.js";
 
 /**
  * Notification bell and invitation rows.
