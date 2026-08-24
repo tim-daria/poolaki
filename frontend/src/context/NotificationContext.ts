@@ -1,18 +1,31 @@
 import { createContext } from "react"
 
+/** Mirrors core.models.NotificationType on the backend. */
+export type NotificationType =
+  | "invitation"
+  | "transaction_added"
+  | "goal_completed"
+  | "member_left";
+
+/**
+ * Matches the invitation payload the backend writes when an invitation is
+ * created (see core/services/invitation.py). Other types may carry their own
+ * fields — treat `payload` as type-specific.
+ */
 export type InvitationPayload = {
   invitation_id: number;
+  org_id: number;
+  org_name: string;
   invited_by: string;
 };
 
-/** Later we can include also transactions, goals, if a member left */
-export type NotificationType = "invitation";
-
+/**
+ * One row of GET /api/notifications/. Note the backend does NOT put org
+ * info at the top level — it lives inside `payload`.
+ */
 export type Notification = {
   id: number;
   type: NotificationType;
-  org_id: number;
-  org_name: string;
   payload: InvitationPayload | Record<string, unknown>;
   is_read: boolean;
   created_at: string;
@@ -21,9 +34,15 @@ export type Notification = {
 /** Shape of what NotificationProvider exposes via context. */
 export type NotificationContextType = {
   notifications: Notification[];
+  /** From the backend's `unread_count` — accurate even past the 50-row list cap. */
   unreadCount: number;
   loading: boolean;
-  markAllAsRead: () => void;
+  /** Marks all currently-loaded unread rows read via POST /clear-all/. */
+  markAllAsRead: () => Promise<void>;
+  /**
+   * Removes rows from local state only. The backend has no delete endpoint,
+   * so the next poll just brings them back — keep it as "ignore inbox".
+   */
   clearAll: () => void;
   refresh: () => Promise<void>;
 };

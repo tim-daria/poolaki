@@ -10,7 +10,7 @@ All endpoints require authentication.
 
 | `type`               | Meaning                                                                  | Currently created by                                    |
 |----------------------|--------------------------------------------------------------------------|---------------------------------------------------------|
-| `invitation`         | "You have been invited to an organization"                               | `POST /api/organizations/{org_id}/invitations/`         |
+| `invitation`         | "You have been invited to an organization"                               | `POST /api/v1/organizations/{org_id}/invitations/`         |
 | `transaction_added`  | "A new transaction was added"                                            | reserved (will be created when transactions go multi-org) |
 | `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
 | `member_left`        | "A member left the organization"                                         | reserved                                                 |
@@ -37,7 +37,7 @@ Other types may add their own fields later; treat `payload` as type-specific.
 ### Get unread notification count
 
 ```http
-GET /api/notifications/unread-count/
+GET /api/v1/notifications/unread-count/
 ```
 
 Response example:
@@ -54,7 +54,7 @@ Lightweight endpoint for the badge. It counts `Notification` rows with
 ### List my notifications
 
 ```http
-GET /api/notifications/
+GET /api/v1/notifications/
 ```
 
 Returns the **50 most recent** notifications (there is no pagination yet),
@@ -68,7 +68,7 @@ Query params:
 #### Getting only unread notifications
 
 ```http
-GET /api/notifications/?is_read=false
+GET /api/v1/notifications/?is_read=false
 ```
 
 Handy for a "quick actions" widget that only surfaces things the user has
@@ -108,15 +108,15 @@ the current user, regardless of the `is_read` filter on the list itself.
 
 #### Read state: no automatic marking on list fetch
 
-`GET /api/notifications/` is a pure read endpoint — **viewing the inbox
+`GET /api/v1/notifications/` is a pure read endpoint — **viewing the inbox
 does NOT mark anything as read**. Deciding what the user has "seen" is the
 frontend's job: send the ids of the rows you actually rendered to
-`POST /api/notifications/clear-all/` (below). This avoids marking a
+`POST /api/v1/notifications/clear-all/` (below). This avoids marking a
 notification as read if it arrived after the list was fetched but before
 the user clicked "Clear all":
 
 ```http
-POST /api/notifications/clear-all/
+POST /api/v1/notifications/clear-all/
 ```
 
 Request body:
@@ -160,9 +160,9 @@ Invitation notifications are **not** marked read by
 invitation is resolved — when the invited user accepts or declines it, or
 when the owner cancels it:
 
-- `POST /api/invitations/{invitation_id}/accept/`,
-- `POST /api/invitations/{invitation_id}/decline/`,
-- `POST /api/organizations/{org_id}/invitations/{invitation_id}/cancel/`.
+- `POST /api/v1/invitations/{invitation_id}/accept/`,
+- `POST /api/v1/invitations/{invitation_id}/decline/`,
+- `POST /api/v1/organizations/{org_id}/invitations/{invitation_id}/cancel/`.
 
 (See [organizations.md](organizations.md) for those endpoints.) Each of
 those requests marks the matching `Notification` row `is_read = true`, so
@@ -175,28 +175,28 @@ There is no push channel, so the frontend should poll.
 
 ### Badge (bell icon)
 
-- Call `GET /api/notifications/unread-count/` on:
+- Call `GET /api/v1/notifications/unread-count/` on:
   - app mount (after login),
   - every 60 s while the app is open,
 - Show the number on the bell icon; hide it when `unread_count === 0`.
 
 ### Inbox dropdown / page
 
-- Open it → `GET /api/notifications/` — pure read, renders the list. The
+- Open it → `GET /api/v1/notifications/` — pure read, renders the list. The
   response also contains `unread_count` for the badge.
 - Render each row as: icon by `type` (fall back to a generic icon for
   unknown types), short human text, and relative time.
 - `is_read === false` → highlight the row (e.g. bold + dot).
 - When the user closes the inbox or clicks a "Mark all as read" /"Clear all"
   button, send the ids of the rows you actually rendered to
-  `POST /api/notifications/clear-all/`, then refetch
-  `GET /api/notifications/unread-count/` to update the badge.
+  `POST /api/v1/notifications/clear-all/`, then refetch
+  `GET /api/v1/notifications/unread-count/` to update the badge.
 - To show only things the user has not seen yet (e.g. a small "recently"
-  widget), use `GET /api/notifications/?is_read=false`.
+  widget), use `GET /api/v1/notifications/?is_read=false`.
 
 > Frontend contract: it is the **client** that decides which notifications
 > count as "seen" — the backend does not infer it from a list fetch.
-> If you forget the `POST /api/notifications/clear-all/` call, the badge
+> If you forget the `POST /api/v1/notifications/clear-all/` call, the badge
 > will stay non-zero and the same rows will remain highlighted in the
 > inbox forever.
 
@@ -216,11 +216,11 @@ click should go.
 
 1. Invited user opens the bell, sees the invitation notification.
 2. `payload.invitation_id` is the id to use:
-   - Accept → `POST /api/invitations/{invitation_id}/accept/`
-   - Decline → `POST /api/invitations/{invitation_id}/decline/`
+   - Accept → `POST /api/v1/invitations/{invitation_id}/accept/`
+   - Decline → `POST /api/v1/invitations/{invitation_id}/decline/`
 3. On success (200) refetch:
-   - the badge (`GET /api/notifications/unread-count/`), and
-   - the organization list (`GET /api/organizations/`) — after accepting,
+   - the badge (`GET /api/v1/notifications/unread-count/`), and
+   - the organization list (`GET /api/v1/organizations/`) — after accepting,
      the new organization appears there and the user may want to switch to it.
 4. On `400 Bad Request` (invitation no longer pending, e.g. the owner
    already cancelled it, or member limit hit) show the `error` field and hide
