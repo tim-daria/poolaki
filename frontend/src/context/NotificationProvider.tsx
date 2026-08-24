@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { Outlet } from "react-router";
 import { NotificationContext } from "./NotificationContext";
-import { fetchNotifications } from "../lib/notifications";
+import { fetchUnreadCount, fetchNotifications, clearAllNotifications } from "../lib/notifications";
 import type { Notification } from "./NotificationContext";
 
 /**
  * How often we re-check for new notifications. It's not exactly WebSockets/SSE 
  * But it makes closer to a stand-in for real-time
  */
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 60000;
 
 /**
  * Holds the user's notifications. Same reasoning as OrgListProvider:
@@ -17,57 +17,42 @@ const POLL_INTERVAL_MS = 15000;
  */
 export function NotificationProvider() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-  const load = async (signal?: AbortSignal) => {
-    try {
-      const list = await fetchNotifications(signal);
-      setNotifications(list);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-      throw err;
-    }
-  };
 
   useEffect(() => {
     const ac = new AbortController();
-    void load(ac.signal).catch(() => {});
+    const poll = () => fetchUnreadCount(ac.signal).then((count) => { 
+          setUnreadCount(count); setLoading(false); })
+          .catch(() => setLoading(false));
+    poll();
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
 
-    const interval = setInterval(() => {
-      void load().catch(() => {});
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      ac.abort();
-      clearInterval(interval);
-    };
+    return () => { ac.abort(); clearInterval(interval); };
   }, []);
 
-  /**
-   * Opening the panel clears the red dot without deleting notifications —
-   * marks everything currently loaded as read, locally. A real "mark as
-   * read" backend call can replace/augment this once that endpoint exists.
-   */
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-  };
+  const loadFullList = async (isRead?: boolean) => {
+  const { notifications, unreadCount } = await fetchNotifications(isRead);
+  setNotifications(notifications);
+  setUnreadCount(unreadCount);
+};
 
   /** Clears the panel. A real "delete all" backend call belongs here once
    * that endpoint exists — for now this only clears local state. */
-  const clearAll = () => {
-    setNotifications([]);
+  const clearAll = async (csrfToken: string) => { const nonInvitationIds = notifications
+    .filter((n) => n.type !== "invitation" && !n.is_read)
+    .map((n) => n.id);
+    if (nonInvitationIds.length === 0) return;
+    await clearAllNotifications(nonInvitationIds, csrfToken);
+    await loadFullList(); 
   };
 
   const value = {
     notifications,
     unreadCount,
     loading,
-    markAllAsRead,
+    loadFullList,
     clearAll,
-    refresh: () => load(),
   };
 
   return (
