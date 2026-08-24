@@ -55,7 +55,7 @@ interface HeaderProps {
 export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
   const { user } = useAuth();
   const theme = useTheme();
-  const { unreadCount, markAllAsRead } = useNotifications();
+  const { unreadCount } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState<HTMLElement | null>(null);
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
@@ -97,10 +97,7 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
             aria-label="Notifications"
             aria-haspopup="menu"
             aria-expanded={Boolean(notifAnchor)}
-            onClick={(e) => {
-              setNotifAnchor(e.currentTarget);
-              markAllAsRead();
-            }}
+            onClick={(e) => setNotifAnchor(e.currentTarget)}
             sx={{ width: controlSize, height: controlSize }}
           >
             <Badge color="error" variant="dot" invisible={unreadCount === 0}>
