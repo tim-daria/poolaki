@@ -8,7 +8,8 @@ export type InvitationPayload = {
 };
 
 /** Later we can include also transactions, goals, if a member left */
-export type NotificationType = "invitation";
+export type NotificationType = "invitation"; "transaction_added"; "goal_completed"; 
+    "member_left";
 
 export type Notification = {
   id: number;
