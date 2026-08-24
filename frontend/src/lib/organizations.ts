@@ -32,11 +32,11 @@ export type OrganizationList = {
   organizations: Organization[];
 };
 
-/** GET /api/organizations/ */
+/** GET /api/v1/organizations/ */
 export async function fetchOrganizations(
   signal?: AbortSignal,
 ): Promise<OrganizationList> {
-  const res = await fetch("/api/organizations/", {
+  const res = await fetch("/api/v1/organizations/", {
     credentials: "include",
     signal,
   });
@@ -45,7 +45,7 @@ export async function fetchOrganizations(
 }
 
 /**
- * POST /api/organizations/
+ * POST /api/v1/organizations/
  * the backend only creates the org; the caller navigates to /o/:orgId
  */
 export async function createOrganization(
@@ -53,7 +53,7 @@ export async function createOrganization(
   initialBalance: number,
   csrfToken: string,
 ): Promise<Organization & { initial_balance: string }> {
-  const res = await fetch("/api/organizations/", {
+  const res = await fetch("/api/v1/organizations/", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
     credentials: "include",
@@ -64,13 +64,13 @@ export async function createOrganization(
 }
 
 /**
- * GET /api/organizations/${org_id}/members/
+ * GET /api/v1/organizations/${org_id}/members/
  */
 export async function fetchMembers(
   org_id: number,
   signal?: AbortSignal,
 ): Promise<{ members: Member[] }> {
-  const res = await fetch(`/api/organizations/${org_id}/members/`, {
+  const res = await fetch(`/api/v1/organizations/${org_id}/members/`, {
     credentials: "include",
     signal,
   });

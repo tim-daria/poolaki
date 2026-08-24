@@ -3,22 +3,42 @@ import { Outlet } from "react-router";
 import { NotificationContext } from "./NotificationContext";
 import { fetchUnreadCount, fetchNotifications, clearAllNotifications } from "../lib/notifications";
 import type { Notification } from "./NotificationContext";
+import {
+  fetchNotifications,
+  markNotificationsRead,
+} from "../lib/notifications";
+import { getCsrfToken } from "../lib/csrf";
 
 /**
- * How often we re-check for new notifications. It's not exactly WebSockets/SSE 
- * But it makes closer to a stand-in for real-time
+ * How often we re-check for new notifications. It's not exactly WebSockets/SSE,
+ * but it makes closer to a stand-in for real-time. The endpoint is a light
+ * 50-row list of the user's own notifications only.
  */
 const POLL_INTERVAL_MS = 60000;
 
 /**
  * Holds the user's notifications. Same reasoning as OrgListProvider:
- * Mounted as a pathless layout route inside protectedRoute,
+ * mounted as a pathless layout route inside protectedRoute,
  * so it unmounts on logout rather than leaking into the next user's session.
  */
 export function NotificationProvider() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Stored separately (not derived from the list) because the backend knows
+  // the true unread total even when the list is capped at 50 rows.
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const load = async (signal?: AbortSignal) => {
+    try {
+      const data = await fetchNotifications(signal);
+      setNotifications(data.notifications);
+      setUnreadCount(data.unread_count);
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    }
+  };
 
   useEffect(() => {
     const ac = new AbortController();

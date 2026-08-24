@@ -93,7 +93,7 @@ test.describe.serial("Workspaces", () => {
     // what the design buys: no round trip, so no loading state to design for.
     const orgCalls: string[] = [];
     const record = (req: { url: () => string }) => {
-      if (req.url().includes("/api/organizations/")) orgCalls.push(req.url());
+      if (req.url().includes("/api/v1/organizations/")) orgCalls.push(req.url());
     };
     page.on("request", record);
 
@@ -143,7 +143,7 @@ test.describe.serial("Workspaces", () => {
     // No `times` limit: StrictMode runs effects twice in dev, so every fetch
     // goes out two times. Intercepting only the first lets the second succeed
     // and the app quietly recovers.
-    await page.route("**/api/organizations/", (route) =>
+    await page.route("**/api/v1/organizations/", (route) =>
       route.request().method() === "GET"
         ? route.fulfill({ status: 500 })
         : route.continue(),
@@ -181,7 +181,7 @@ test.describe.serial("Workspaces", () => {
 
   test("a failed creation keeps the modal open", async () => {
     // Only the creation POST — the same URL serves the workspace list on GET.
-    await page.route("**/api/organizations/", (route) =>
+    await page.route("**/api/v1/organizations/", (route) =>
       route.request().method() === "POST"
         ? route.fulfill({ status: 500 })
         : route.continue(),
