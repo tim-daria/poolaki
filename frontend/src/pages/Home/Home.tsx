@@ -9,7 +9,7 @@ import {
   PageTitle,
 } from "../../components/PageHeader/PageHeader";
 import { OrgMembers } from "../../components/OrgMembers/OrgMembers";
-import { UniversalModal as Modal } from "../../components/Modal/Modal";
+import { UniversalModal as Modal } from "../../components/Modals/Modal";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -45,7 +45,6 @@ export function Home() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setAddOpen(true)}
-          sx={{ borderRadius: 999, px: 2.5 }}
         >
           Add Transaction
         </Button>
