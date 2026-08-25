@@ -1,6 +1,6 @@
 #  How: process data
 
-from models.context import CombinedRetrievalResult, FinancialContextItem
+from models.context import CombinedRetrievalResult
 
 
 class ContextBuilder:
@@ -8,80 +8,15 @@ class ContextBuilder:
 
     def build_context(
         self, retrieval_result: CombinedRetrievalResult
-    ) -> list[FinancialContextItem]:
-        """Main method to create the context: choose sources & concatenates the contexts"""
+    ) -> str:
 
-        context = []
+        parts: list[str] = []
 
-        if retrieval_result.financial_data:
-            context.extend(
-                self._build_financial_context(retrieval_result.financial_data)
+        for item in retrieval_result.items:
+            parts.append(
+                f"[{item.source}]\n{item.content}"
             )
 
-        if retrieval_result.semantic_documents:
-            context.extend(
-                self._build_semantic_context(retrieval_result.semantic_documents)
-            )
+        context = "\n\n".join(parts)
 
-        return self._limit_context(context)
-
-    def _build_financial_context(self, data: dict):
-
-        items = []
-
-        if "current_month_expenses" in data and "previous_month_expenses" in data:
-            current = data["current_month_expenses"]
-            previous = data["previous_month_expenses"]
-
-            if previous == 0:
-                increase = 0
-            else:
-                increase = (current - previous) / previous * 100
-
-            items.append(
-                FinancialContextItem(
-                    type="financial_summary",
-                    source="django_mock",
-                    content=f"""Expenses increased {increase:.0f}%.
-                Current month: €{current}.Previous month: €{previous}.""",
-                )
-            )
-
-        if "top_category" in data:
-            items.append(
-                FinancialContextItem(
-                    type="category_analysis",
-                    source="django_mock",
-                    content=f"""Highest spending category:{data["top_category"]}""",
-                )
-            )
-
-        return items
-
-    def _build_semantic_context(self, documents: list[str]):
-
-        return [
-            FinancialContextItem(
-                type="semantic_knowledge", source="vector_db", content=document
-            )
-            for document in documents
-        ]
-
-    def _limit_context(self, context):
-        """Adds item to the context while is enough room available.
-        Doesn't validate optimal combination
-        """
-
-        total = 0
-        result = []
-
-        for item in context:
-            size = len(item.content)
-            if total + size > self.MAX_CONTEXT_LENGTH:
-                break
-
-            result.append(item)
-
-            total += size
-
-        return result
+        return context[: self.MAX_CONTEXT_LENGTH]
