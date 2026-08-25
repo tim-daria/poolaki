@@ -183,3 +183,6 @@ Changes are documented in: [CHANGELOG.md](CHANGELOG.md)
 ## Resources
 https://fastapi.tiangolo.com/
 https://docs.docker.com/ai/sandboxes/
+RAG tutorial: https://youtu.be/swvzKSOEluc?si=TQ8qIycFKaRhsjMy
+Hybrid RAG referent: https://github.com/davidvonthenen/2026-wearedevelopers-eu-hybridrag/tree/main
+https://openrouter.ai/models
