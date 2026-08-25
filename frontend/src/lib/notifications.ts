@@ -7,45 +7,52 @@
  */
 import type { Notification } from "../context/NotificationContext";
 
-/** GET /api/v1/notifications/ */
-export async function fetchNotifications(
-  signal?: AbortSignal,
-): Promise<{ notifications: Notification[]; unread_count: number }> {
-  const res = await fetch("/api/v1/notifications/?is_read=false", {
-    credentials: "include",
-    signal,
-  });
-  if (!res.ok) throw new Error(`Failed to load notifications (${res.status})`);
-  return res.json();
-}
-
-/**
- * GET /api/v1/notifications/unread-count/
- *
- * Cheap endpoint for the bell badge — the provider polls this instead of the
- * full 50-row list (which has a body the client doesn't need for a dot).
- */
 export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
   const res = await fetch("/api/v1/notifications/unread-count/", {
     credentials: "include",
     signal,
   });
   if (!res.ok) throw new Error(`Failed to load unread count (${res.status})`);
-  const data = (await res.json()) as { unread_count: number };
+  const data = await res.json();
   return data.unread_count;
 }
 
-/**
- * POST /api/v1/notifications/clear-all/
- *
- * Marks the given notifications read — the ids of the rows the user
- * actually saw, NOT "everything unread": a notification that arrives between
- * the list fetch and this call stays unread. Invitation notifications are
- * skipped by the backend (only accept/decline/cancel resolve them).
- *
- * `marked_read` may be lower than ids.length — already-read, foreign and
- * invitation ids don't count.
- */
+/** GET /api/notifications/ */
+export async function fetchNotifications(
+  isRead?: boolean,
+  signal?: AbortSignal,
+): Promise<{ notifications: Notification[]; unreadCount: number }> {
+  const url =
+    isRead === undefined
+      ? "/api/v1/notifications/"
+      : `/api/v1/notifications/?is_read=${isRead}`;
+  const res = await fetch(url, { credentials: "include", signal });
+
+  if (!res.ok) throw new Error(`Failed to load notifications (${res.status})`);
+  const data = await res.json();
+  // console.log("Data coming from fetchNotifications:", data); //DEBUG
+
+  return {
+    notifications: data.notifications || [],
+    unreadCount: data.unread_count ?? 0,
+  };
+}
+
+export async function clearAllNotifications(
+  ids: number[],
+  csrfToken: string,
+): Promise<number> {
+  const res = await fetch("/api/v1/notifications/clear-all/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify({ notification_ids: ids }),
+  });
+  if (!res.ok) throw new Error(`Failed to clear notifications (${res.status})`);
+  const data = await res.json();
+  return data.marked_read;
+}
+
 export async function markNotificationsRead(
   notificationIds: number[],
   csrfToken: string,
@@ -59,7 +66,8 @@ export async function markNotificationsRead(
     credentials: "include",
     body: JSON.stringify({ notification_ids: notificationIds }),
   });
-  if (!res.ok) throw new Error(`Failed to mark notifications as read (${res.status})`);
+  if (!res.ok)
+    throw new Error(`Failed to mark notifications as read (${res.status})`);
   return res.json();
 }
 
@@ -87,8 +95,12 @@ export async function acceptInvitation(
     credentials: "include",
   });
   if (res.status === 400) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new InvitationResolveError(body?.error ?? "Invitation could not be accepted");
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new InvitationResolveError(
+      body?.error ?? "Invitation could not be accepted",
+    );
   }
   if (!res.ok) throw new Error(`Failed to accept invitation (${res.status})`);
   return res.json();
@@ -105,8 +117,12 @@ export async function declineInvitation(
     credentials: "include",
   });
   if (res.status === 400) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new InvitationResolveError(body?.error ?? "Invitation could not be declined");
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new InvitationResolveError(
+      body?.error ?? "Invitation could not be declined",
+    );
   }
   if (!res.ok) throw new Error(`Failed to decline invitation (${res.status})`);
   return res.json();

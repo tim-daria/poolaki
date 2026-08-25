@@ -1,11 +1,12 @@
-import { createContext } from "react"
+import { createContext } from "react";
 
 /** Mirrors core.models.NotificationType on the backend. */
 export type NotificationType =
   | "invitation"
   | "transaction_added"
   | "goal_completed"
-  | "member_left";
+  | "member_left"
+  | (string & {});
 
 /**
  * Matches the invitation payload the backend writes when an invitation is
@@ -19,10 +20,6 @@ export type InvitationPayload = {
   invited_by: string;
 };
 
-/**
- * One row of GET /api/notifications/. Note the backend does NOT put org
- * info at the top level — it lives inside `payload`.
- */
 export type Notification = {
   id: number;
   type: NotificationType;
@@ -37,14 +34,16 @@ export type NotificationContextType = {
   /** From the backend's `unread_count` — accurate even past the 50-row list cap. */
   unreadCount: number;
   loading: boolean;
-  /** Marks all currently-loaded unread rows read via POST /clear-all/. */
-  markAllAsRead: () => Promise<void>;
   /**
-   * Removes rows from local state only. The backend has no delete endpoint,
-   * so the next poll just brings them back — keep it as "ignore inbox".
+   * Fetches the panel's list. `signal` lets the caller abort when it goes
+   * away; an aborted load resolves without writing state, any other failure
+   * rejects so the caller can tell "failed" from "empty".
    */
-  clearAll: () => void;
+  loadFullList: (isRead?: boolean, signal?: AbortSignal) => Promise<void>;
+  /** Marks all currently-loaded unread rows read via POST /clear-all/. */
+  clearAll: (csrfToken: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
-export const NotificationContext = createContext<NotificationContextType | null>(null);
+export const NotificationContext =
+  createContext<NotificationContextType | null>(null);

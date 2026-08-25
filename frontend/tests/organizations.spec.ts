@@ -93,7 +93,8 @@ test.describe.serial("Workspaces", () => {
     // what the design buys: no round trip, so no loading state to design for.
     const orgCalls: string[] = [];
     const record = (req: { url: () => string }) => {
-      if (req.url().includes("/api/v1/organizations/")) orgCalls.push(req.url());
+      if (req.url().includes("/api/v1/organizations/"))
+        orgCalls.push(req.url());
     };
     page.on("request", record);
 
@@ -193,7 +194,9 @@ test.describe.serial("Workspaces", () => {
     await expect(page.getByText(/failed to create/i)).toBeVisible();
     // The user must keep what they typed and be able to retry.
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Create", exact: true }),
+    ).toBeEnabled();
 
     await page.unrouteAll({ behavior: "ignoreErrors" });
     await page.getByRole("button", { name: "Cancel" }).click();
@@ -243,5 +246,4 @@ test.describe.serial("Workspaces", () => {
     await page.goto(personalUrl);
     await page.waitForURL("/login");
   });
-
 });

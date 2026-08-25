@@ -22,5 +22,8 @@ export async function submitInitialBalance(
     return { ok: true };
   }
 
-  return { ok: false, error: "Failed to create organisation. Please try again." };
+  return {
+    ok: false,
+    error: "Failed to create organisation. Please try again.",
+  };
 }

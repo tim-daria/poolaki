@@ -49,6 +49,13 @@ export const theme = createTheme({
         },
       },
     },
+    MuiButton: {
+      // The shell is flat — the AppBar and the notification rows both render
+      // at elevation 0. MUI's `contained` variant is the only thing left
+      // casting a shadow, which makes a contained button and the outlined one
+      // beside it read as two different kinds of control.
+      defaultProps: { disableElevation: true },
+    },
     MuiDialog: {
       styleOverrides: {
         paper: ({ theme }) => ({
