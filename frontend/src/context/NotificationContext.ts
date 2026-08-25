@@ -1,7 +1,7 @@
-import { createContext } from "react"
+import { createContext } from "react";
 
 /** Mirrors core.models.NotificationType on the backend. */
-export type NotificationType = 
+export type NotificationType =
   | "invitation"
   | "transaction_added"
   | "goal_completed"
@@ -34,11 +34,16 @@ export type NotificationContextType = {
   /** From the backend's `unread_count` — accurate even past the 50-row list cap. */
   unreadCount: number;
   loading: boolean;
+  /**
+   * Fetches the panel's list. `signal` lets the caller abort when it goes
+   * away; an aborted load resolves without writing state, any other failure
+   * rejects so the caller can tell "failed" from "empty".
+   */
+  loadFullList: (isRead?: boolean, signal?: AbortSignal) => Promise<void>;
   /** Marks all currently-loaded unread rows read via POST /clear-all/. */
-  loadFullList: (isRead?: boolean) => Promise<void>;
-
   clearAll: (csrfToken: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
-export const NotificationContext = createContext<NotificationContextType | null>(null);
+export const NotificationContext =
+  createContext<NotificationContextType | null>(null);

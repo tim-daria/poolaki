@@ -59,7 +59,7 @@ test.describe.serial("Notifications", () => {
   test("clicking the bell opens the notification panel", async () => {
     await page.goto(workspaceUrl);
     await page.getByRole("button", { name: /notifications/i }).click();
-    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(page.getByRole("dialog")).toBeVisible();
 
     await expect(page.getByText("All notifications")).toBeVisible();
     await expect(page.getByText("All", { exact: true })).toBeVisible();
@@ -71,7 +71,7 @@ test.describe.serial("Notifications", () => {
     await page.goto(workspaceUrl);
     await page.getByRole("button", { name: /notifications/i }).click();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("menu")).not.toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
   test("displays invitation tab with current count", async () => {
@@ -95,63 +95,70 @@ test.describe.serial("Notifications", () => {
     // Both pending rows are visible before we touch anything.
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(acceptedName) })
+      page.getByRole("listitem").filter({ hasText: new RegExp(acceptedName) })
     ).toBeVisible();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(declinedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(declinedName) }),
     ).toBeVisible();
 
     // Accept one — success closes the panel.
     await page
-      .locator("[data-testid='notification-item']")
+      .getByRole("listitem")
       .filter({ hasText: new RegExp(acceptedName) })
       .getByRole("button", { name: "Accept" })
       .click();
-    await expect(page.getByRole("menu")).not.toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
 
     // It is gone from the list; the other invitation survives.
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(acceptedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(acceptedName) }),
     ).not.toBeVisible();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(declinedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(declinedName) }),
     ).toBeVisible();
 
     // Decline the second one — the backend drops it on the next list.
     await page
-      .locator("[data-testid='notification-item']")
+      .getByRole("listitem")
       .filter({ hasText: new RegExp(declinedName) })
       .getByRole("button", { name: "Decline" })
       .click();
-    await expect(page.getByRole("menu")).not.toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
 
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(declinedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(declinedName) }),
     ).not.toBeVisible();
   });
 
-  test("Mark all as read hides the panel, pending invitations survive", async () => {
+  test("Mark all as read is disabled while only invitations are pending", async () => {
     await page.goto(workspaceUrl);
 
-    // The remaining pending invitation is visible. It stays unread forever:
-    // the backend only resolves invitations via accept/decline/cancel, and there is
-    // no delete endpoint — "Mark all as read" is a local hide (see the panel button
-    // comment in Header.tsx), not a destroy.
+    // The remaining pending invitation is visible. It stays unread forever: the
+    // backend only resolves invitations via accept/decline/cancel, and
+    // clear-all excludes them outright (MarkAllNotificationsReadView). So the
+    // button has nothing to send and renders disabled, rather than closing the
+    // panel on a request that was never made.
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(clearedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(clearedName) }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Mark all as read" }).click();
-    await expect(page.getByRole("menu")).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Mark all as read" }),
+    ).toBeDisabled();
+    // A disabled button does nothing at all — the panel is still open.
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
 
     // Reopening brings the pending invitation back from the backend — the
     // guard against a future "delete" implementation silently dropping it.
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.locator("[data-testid='notification-item']").filter({ hasText: new RegExp(clearedName) }),
+      page.getByRole("listitem").filter({ hasText: new RegExp(clearedName) }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
   });

@@ -77,6 +77,9 @@ export function OrgSwitcher() {
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{ paper: { sx: { mt: 1 } } }}
       >
         {organizations.map((org) => (
           <MenuItem

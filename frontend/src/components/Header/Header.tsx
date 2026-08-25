@@ -95,7 +95,9 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
         >
           <IconButton
             aria-label="Notifications"
-            aria-haspopup="menu"
+            // Not "menu": the panel is an inbox of content with per-row
+            // actions, not a list of commands. See NotificationPanel.
+            aria-haspopup="dialog"
             aria-expanded={Boolean(notifAnchor)}
             onClick={(e) => setNotifAnchor(e.currentTarget)}
             sx={{ width: controlSize, height: controlSize }}
