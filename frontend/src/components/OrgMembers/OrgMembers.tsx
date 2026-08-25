@@ -56,7 +56,7 @@ export function OrgMembers() {
         sx={{
           "& .MuiAvatar-root": {
             width: 36,
-            aspectRatio: 1 / 1,
+            height: 36,
             fontSize: "1rem",
           },
         }}
