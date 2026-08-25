@@ -5,12 +5,9 @@ def test_prompt_builder():
 
     builder = PromptBuilder()
 
-    prompt = builder.build(
-        user_question="How much did I spend?", context="January expenses: 200 EUR"
-    )
+    user_question = "How much did I spend?"
+    context = "January expenses: 200 EUR"
+    prompt = builder.build(user_question, context)
 
-    print(prompt)
-
-
-if __name__ == "__main__":
-    test_prompt_builder()
+    assert user_question in prompt
+    assert context in prompt

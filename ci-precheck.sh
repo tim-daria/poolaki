@@ -48,6 +48,26 @@ uv run pytest .
 printf "\n📂 Changed files:\n"
 git status | grep "modified:"
 
+printf "\n🤖 Running AI Service checks...\n"
+cd ../../ai-service
+
+uv venv --clear
+uv sync
+
+printf "\n🔍 AI Service: Running formatting check...\n"
+uv run ruff format --check .
+
+printf "\n🔍 AI Service: Running linter...\n"
+uv run ruff check .
+
+printf "\n🔍 AI Service: Running type checker...\n"
+uv run mypy .
+
+printf "\n🔍 AI Service: Running pytest...\n"
+uv run pytest .
+
+cd ..
+
 printf "\n🐳 Stopping test database...\n"
 docker stop ci-postgres
 
