@@ -1,14 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { Menu, Typography, Button, Box, Avatar, Paper, Chip, Stack, useTheme } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../../context/useNotifications";
 import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
 import { useOrgList } from "../../context/useOrgList";
-import { acceptInvitation, declineInvitation, InvitationResolveError,
+import { acceptInvitation, declineInvitation, InvitationResolveError, markNotificationsRead
 } from "../../lib/notifications";
 import type { InvitationPayload, Notification, NotificationType,
 } from "../../context/NotificationContext";
+import { getNotificationConfig } from "../../utils/notificationHelpers";
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
@@ -61,6 +63,7 @@ function typeText(type: NotificationType, p: Record<string, unknown>): string {
 
 export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { notifications, clearAll, loadFullList, refresh } = useNotifications();
   const { refresh: refreshOrgList } = useOrgList();
   const [filter, setFilter] = useState<"all" | "invitations">("all");
@@ -86,6 +89,22 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
     (n) => !(n.type === "invitation" && n.is_read)
   );
   }, [notifications, filter]);
+
+  //OnClick handler for other events notification
+  const handleNotificationClick = async (n: Notification) => {
+    if (n.type === "invitation") return;
+
+    try {
+      if (!n.is_read) {
+        await markNotificationsRead([n.id], getCsrfToken());
+        await refresh();
+      }
+    } catch { }
+
+    onClose();
+    const config = getNotificationConfig(n);
+    navigate(config.route);
+  };
 
   const handleResolveInvitation = async (n: Notification, kind: "accept" | "decline") => {
     const payload = isInvitationPayload(n.payload) ? n.payload : null;
@@ -217,12 +236,17 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                 key={n.id}
                 elevation={0}
                 data-testid="notification-item"
+                onClick={() => void handleNotificationClick(n)}
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
+                  cursor: !isInvitation ? "pointer" : "default",
                   bgcolor: isInvitation ? "action.hover" : "transparent",
                   borderBottom: isInvitation ? "none" : "1px solid",
                   borderColor: "divider",
+                  "&:hover": {
+                    bgcolor: !isInvitation ? "action.hover" : undefined,
+                  },
                 }}
               >
                 <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
@@ -248,7 +272,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                     </Box>
 
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.825rem", mt: 0.2 }}>
-                      {typeText(n.type, payload)}
+                      {isInvitation ? typeText(n.type, payload) : getNotificationConfig(n).message}
                     </Typography>
 
                     {errorMessage && (
@@ -264,7 +288,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                           variant="outlined"
                           size="small"
                           disabled={isBusy}
-                          onClick={() => void handleResolveInvitation(n, "decline")}
+                          onClick={(e) => {e.stopPropagation(); void handleResolveInvitation(n, "decline");}}
                           sx={{
                             borderRadius: "16px",
                             borderColor: "divider",
@@ -280,7 +304,7 @@ export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps)
                           variant="contained"
                           size="small"
                           disabled={isBusy}
-                          onClick={() => void handleResolveInvitation(n, "accept")}
+                          onClick={(e) => { e.stopPropagation(); void handleResolveInvitation(n, "accept");}}
                           sx={{
                             borderRadius: "16px",
                             bgcolor: "primary.dark",
