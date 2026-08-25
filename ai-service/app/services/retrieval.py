@@ -50,10 +50,7 @@ class MockRetriever(BaseRetriever):
         top_k: int = 3,
     ) -> CombinedRetrievalResult:
 
-        documents = await self._doc_repo.search_documents(query=query, top_k=top_k)
-
         endpoint = self._resolve_endpoint_from_intent(intent)
-        structured_data = None
 
         if endpoint is not None:
             payload = {"user_id": user_id, "organization_id": organization_id}
@@ -61,15 +58,12 @@ class MockRetriever(BaseRetriever):
                 endpoint, payload
             )
 
-        items = [
-            RetrievedItem(
-                type="unstructured_doc",
-                content=doc,
-                source="vector_db",
-                metadata={},
+        structured_data = (
+            await self._django_client.fetch_backend_data(
+                endpoint,
+                payload,
             )
-            for doc in documents
-        ]
+        )
 
         if structured_data:
             items.append(
