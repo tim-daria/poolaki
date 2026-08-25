@@ -1,15 +1,19 @@
 // @ts-check
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 
 /**
- * Workspace routing and the session bridge.
+ * Workspace routing: the URL owns the workspace.
  *
  * Runs against the real backend, so the user is registered once per run with a
  * timestamped name — same approach as auth.spec.ts.
  */
 test.describe.serial("Workspaces", () => {
+  // An explicit context, not browser.newPage(): the two-tab test needs to open
+  // a second page sharing this one's session cookie.
+  let context: BrowserContext;
   let page: Page;
   let personalUrl: string;
+  let sharedUrl: string;
 
   const timestamp = Date.now();
   const testUser = {
@@ -20,11 +24,12 @@ test.describe.serial("Workspaces", () => {
   const sharedName = `Trip ${timestamp}`;
 
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
+    context = await browser.newContext();
+    page = await context.newPage();
   });
 
   test.afterAll(async () => {
-    await page.close();
+    await context.close();
   });
 
   test("registration lands on a workspace URL, not /", async () => {
@@ -52,42 +57,6 @@ test.describe.serial("Workspaces", () => {
 
     await expect(page).toHaveURL(personalUrl);
     await expect(page.getByRole("banner")).toBeVisible();
-  });
-
-  test("entering a workspace pushes it into the session (the bridge)", async () => {
-    const orgId = personalUrl.split("/").pop();
-
-    const selectCall = page.waitForRequest(
-      (req) =>
-        req.method() === "POST" &&
-        req.url().includes(`/api/organizations/${orgId}/select/`),
-    );
-
-    await page.goto(personalUrl);
-    await selectCall;
-  });
-
-  test("the shell stays visible while the bridge is in flight", async () => {
-    // Hold every select/ response open so the in-between state is observable.
-    // StrictMode fires the request twice, so limiting this to the first one
-    // would let the second resolve immediately and end the wait early.
-    await page.route("**/api/organizations/*/select/", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue();
-    });
-
-    await page.goto(personalUrl);
-
-    // The page area waits, but the header must not disappear with it — that
-    // was the flicker this design fixed.
-    await expect(page.getByText("Loading…")).toBeVisible();
-    await expect(page.getByRole("banner")).toBeVisible();
-
-    await expect(page.getByText("Loading…")).toBeHidden({ timeout: 10000 });
-
-    // ignoreErrors: handlers may still be sleeping, and removing them resolves
-    // the pending route before their own route.continue() runs.
-    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
   test("creating a shared workspace switches to it and closes the modal", async () => {
@@ -118,7 +87,15 @@ test.describe.serial("Workspaces", () => {
   });
 
   test("switching workspaces changes the URL and the page", async () => {
-    const sharedUrl = new URL(page.url()).pathname;
+    sharedUrl = new URL(page.url()).pathname;
+
+    // Switching is a lookup in the already-loaded list, not a request. This is
+    // what the design buys: no round trip, so no loading state to design for.
+    const orgCalls: string[] = [];
+    const record = (req: { url: () => string }) => {
+      if (req.url().includes("/api/v1/organizations/")) orgCalls.push(req.url());
+    };
+    page.on("request", record);
 
     await page.getByRole("button", { name: new RegExp(sharedName) }).click();
     await page
@@ -126,6 +103,9 @@ test.describe.serial("Workspaces", () => {
       .click();
 
     await expect(page).toHaveURL(personalUrl);
+    expect(orgCalls).toEqual([]);
+    page.off("request", record);
+
     await expect(
       page.getByRole("heading", { name: new RegExp(testUser.username) }),
     ).toBeVisible();
@@ -163,7 +143,7 @@ test.describe.serial("Workspaces", () => {
     // No `times` limit: StrictMode runs effects twice in dev, so every fetch
     // goes out two times. Intercepting only the first lets the second succeed
     // and the app quietly recovers.
-    await page.route("**/api/organizations/", (route) =>
+    await page.route("**/api/v1/organizations/", (route) =>
       route.request().method() === "GET"
         ? route.fulfill({ status: 500 })
         : route.continue(),
@@ -175,23 +155,6 @@ test.describe.serial("Workspaces", () => {
     await expect(
       page.getByRole("heading", { name: /no workspaces/i }),
     ).toBeVisible();
-
-    await page.unrouteAll({ behavior: "ignoreErrors" });
-  });
-
-  test("a 403 from select/ shows NoAccessScreen", async () => {
-    // Simulates losing membership between loading the list and opening it.
-    await page.route("**/api/organizations/*/select/", (route) =>
-      route.fulfill({
-        status: 403,
-        json: { error: "You are not a member of this organization" },
-      }),
-    );
-
-    await page.goto(personalUrl);
-
-    await expect(page.getByRole("alert")).toBeVisible();
-    await expect(page.getByText(/don't have access|doesn't exist/i)).toBeVisible();
 
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
@@ -218,7 +181,7 @@ test.describe.serial("Workspaces", () => {
 
   test("a failed creation keeps the modal open", async () => {
     // Only the creation POST — the same URL serves the workspace list on GET.
-    await page.route("**/api/organizations/", (route) =>
+    await page.route("**/api/v1/organizations/", (route) =>
       route.request().method() === "POST"
         ? route.fulfill({ status: 500 })
         : route.continue(),
@@ -236,22 +199,37 @@ test.describe.serial("Workspaces", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
   });
 
-  test("a 500 from select/ surfaces an error and can be retried", async () => {
-    await page.route("**/api/organizations/*/select/", (route) =>
-      route.fulfill({ status: 500 }),
-    );
+  /**
+   * Two tabs in different workspaces must not interfere. This is the test that
+   * proves the design: with the workspace in the URL and nothing workspace-
+   * shaped in the session, neither tab can move the other.
+   *
+   * Runs before the logout test — it borrows the suite's authenticated context,
+   * which logging out empties.
+   */
+  test("two tabs keep separate workspaces", async () => {
+    const tabA = await context.newPage();
+    const tabB = await context.newPage();
 
-    await page.goto(personalUrl);
+    await tabA.goto(personalUrl);
+    await tabB.goto(sharedUrl);
 
-    // Not a permanent "Loading…", and not the wrong message either: nothing is
-    // wrong with the workspace, so this is not NoAccessScreen.
-    await expect(page.getByText("Loading…")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+    // Load order is the trap: whichever loaded last used to win for both.
+    await tabA.reload();
+    await tabB.reload();
 
-    // Let the retry reach the real endpoint so it actually recovers.
-    await page.unrouteAll({ behavior: "ignoreErrors" });
-    await page.getByRole("button", { name: "Retry" }).click();
-    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(tabA).toHaveURL(personalUrl);
+    await expect(
+      tabA.getByRole("heading", { name: new RegExp(testUser.username) }),
+    ).toBeVisible();
+
+    await expect(tabB).toHaveURL(sharedUrl);
+    await expect(
+      tabB.getByRole("heading", { name: new RegExp(sharedName) }),
+    ).toBeVisible();
+
+    await tabA.close();
+    await tabB.close();
   });
 
   test("logging out clears the workspaces", async () => {
@@ -266,26 +244,4 @@ test.describe.serial("Workspaces", () => {
     await page.waitForURL("/login");
   });
 
-  /**
-   * Two tabs in different workspaces must not share data.
-   *
-   * This cannot pass while the bridge exists: the backend keeps one
-   * current_organization_id per session, so whichever tab loaded last wins.
-   * It won't run for now.
-   * Enable this once endpoints take the workspace from the URL — it is the test
-   * that proves the design actually works.
-   */
-  test.fixme("two tabs keep separate workspaces", async ({ browser }) => {
-    const context = await browser.newContext();
-    const tabA = await context.newPage();
-    const tabB = await context.newPage();
-
-    await tabA.goto(personalUrl);
-    await tabB.goto("/o/2");
-
-    await tabA.reload();
-    await expect(tabA).toHaveURL(personalUrl);
-
-    await context.close();
-  });
 });

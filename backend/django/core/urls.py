@@ -7,11 +7,15 @@ from core.views.invitation import (
     InvitationListCreateView,
     MyInvitationsView,
 )
+from core.views.notification import (
+    MarkAllNotificationsReadView,
+    NotificationListView,
+    UnreadNotificationCountView,
+)
 from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMembersView,
     SetInitialBalanceView,
-    SwitchOrganizationView,
 )
 from core.views.utils import csrf
 
@@ -39,11 +43,6 @@ urlpatterns = [
         name="set-initial-balance",
     ),
     path(
-        "organizations/<int:org_id>/select/",
-        SwitchOrganizationView.as_view(),
-        name="switch-organization",
-    ),
-    path(
         "invitations/<int:invitation_id>/accept/",
         AcceptInvitationView.as_view(),
         name="invitation-accept",
@@ -57,5 +56,16 @@ urlpatterns = [
         "invitations/my/",
         MyInvitationsView.as_view(),
         name="my-invitations",
+    ),
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path(
+        "notifications/unread-count/",
+        UnreadNotificationCountView.as_view(),
+        name="notification-unread-count",
+    ),
+    path(
+        "notifications/clear-all/",
+        MarkAllNotificationsReadView.as_view(),
+        name="notification-clear-all",
     ),
 ]

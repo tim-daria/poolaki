@@ -7,7 +7,7 @@ All endpoints in this document require authentication.
 ### List organizations for the current user
 
 ```http
-GET /api/organizations/
+GET /api/v1/organizations/
 ```
 
 Response example:
@@ -39,7 +39,7 @@ Notes:
 ### Create a new shared organization
 
 ```http
-POST /api/organizations/
+POST /api/v1/organizations/
 ```
 
 Request body:
@@ -70,7 +70,7 @@ Status:
 ### Set the personal organization initial balance
 
 ```http
-POST /api/organizations/personal/initial-balance/
+POST /api/v1/organizations/personal/initial-balance/
 ```
 
 Request body:
@@ -94,7 +94,7 @@ This endpoint initializes the authenticated user's personal organization balance
 ### List organization members
 
 ```http
-GET /api/organizations/{org_id}/members/
+GET /api/v1/organizations/{org_id}/members/
 ```
 
 Access is restricted to members of the requested organization.
@@ -132,7 +132,7 @@ These endpoints manage organization invitations and are protected by owner-only 
 ### List pending invitations for an organization
 
 ```http
-GET /api/organizations/{org_id}/invitations/
+GET /api/v1/organizations/{org_id}/invitations/
 ```
 
 Example response:
@@ -153,7 +153,7 @@ Example response:
 ### Invite a user to an organization
 
 ```http
-POST /api/organizations/{org_id}/invitations/
+POST /api/v1/organizations/{org_id}/invitations/
 ```
 
 Request body:
@@ -186,7 +186,7 @@ Validation rules:
 ### Cancel a pending invitation
 
 ```http
-POST /api/organizations/{org_id}/invitations/{invitation_id}/cancel/
+POST /api/v1/organizations/{org_id}/invitations/{invitation_id}/cancel/
 ```
 
 Response example:
@@ -220,7 +220,7 @@ organization owner).
 ### List my pending invitations
 
 ```http
-GET /api/invitations/my/
+GET /api/v1/invitations/my/
 ```
 
 Returns all pending invitations addressed to the authenticated user, across
@@ -245,7 +245,7 @@ Response example:
 ### Accept an invitation
 
 ```http
-POST /api/invitations/{invitation_id}/accept/
+POST /api/v1/invitations/{invitation_id}/accept/
 ```
 
 Adds the authenticated user to the organization as a `member`. No request
@@ -270,7 +270,7 @@ Status:
 ### Decline an invitation
 
 ```http
-POST /api/invitations/{invitation_id}/decline/
+POST /api/v1/invitations/{invitation_id}/decline/
 ```
 
 Marks the invitation as declined. No request body is required.

@@ -13,7 +13,7 @@ COPY pyproject.toml uv.lock ./
 # Production:
 # RUN uv export --frozen --no-dev | uv pip install --system --no-cache -r -
 # Development:
-RUN uv export --frozen | uv pip install --system --no-cache -r -
+RUN uv export --frozen --group dev | uv pip install --system --no-cache -r -
 
 COPY app/ ./app/
 COPY tests/ ./app/tests/

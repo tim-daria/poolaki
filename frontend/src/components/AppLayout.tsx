@@ -1,22 +1,19 @@
 import { useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router";
-import {
-  Box,
-  CircularProgress,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { Header } from "./Header/Header";
+import { PageHeader } from "./PageHeader/PageHeader";
 import { Sidebar } from "./Sidebar/Sidebar";
 
-interface AppLayoutProps {
-  /** True while the backend session is catching up to the URL's workspace. */
-  syncing: boolean;
-}
-
 const COLLAPSED_KEY = "sidebar:collapsed";
+
+/**
+ * Ceiling for the page column. Past this the content centres instead of
+ * stretching: dashboard cards and table rows get unreadably wide on a large
+ * monitor, and the eye loses the line on the way back to the left edge.
+ */
+const contentMaxWidth = 1280;
 
 /**
  * Storage access is guarded: a blocked or full localStorage throws, and the
@@ -44,7 +41,7 @@ function readCollapsed(): boolean {
  *   to remount only the page content (<Outlet />), automatically clearing old filters,
  *   scroll position, and stale data while keeping the shell UI mounted smoothly.
  */
-export function AppLayout({ syncing }: AppLayoutProps) {
+export function AppLayout() {
   const logout = useLogout();
   const { orgId } = useParams();
   const theme = useTheme();
@@ -70,9 +67,6 @@ export function AppLayout({ syncing }: AppLayoutProps) {
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
-
-      {/* minWidth: 0 — without it a wide child (a table) blows the flex item
-          out past the viewport instead of scrolling inside <main>. */}
       <Box
         sx={{
           display: "flex",
@@ -88,23 +82,13 @@ export function AppLayout({ syncing }: AppLayoutProps) {
         />
 
         <Box component="main" key={orgId} sx={{ flex: 1, overflowY: "auto" }}>
-          {/* waits on the session bridge; see OrgLayout*/}
-          {syncing ? (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 2,
-                height: "100%",
-              }}
-            >
-              <CircularProgress size={20} />
-              <Typography color="text.secondary">Loading…</Typography>
-            </Box>
-          ) : (
-            <Outlet />
-          )}
+          {/* Content column, centred once the viewport outgrows it. Wraps
+               the page header too, so heading and page stay on one edge. */}
+          <Box sx={{ maxWidth: contentMaxWidth, mx: "auto" }}>
+            <PageHeader>
+              <Outlet />
+            </PageHeader>
+          </Box>
         </Box>
       </Box>
     </Box>

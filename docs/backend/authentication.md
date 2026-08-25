@@ -17,7 +17,7 @@ http://poolaki.localhost/accounts/intra42/callback/
 ## CSRF token
 
 ```http
-GET /api/csrf/
+GET /api/v1/csrf/
 ```
 
 Returns a CSRF cookie and a simple JSON response:

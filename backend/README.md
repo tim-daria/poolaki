@@ -6,10 +6,10 @@ invitations, health checks, and monitoring.
 
 ## Base URL
 
-The API is mounted under:
+The API is versioned in the URI and mounted under:
 
 ```text
-/api/
+/api/v1/
 ```
 
 The app also exposes the following project-level routes:
@@ -22,15 +22,17 @@ The app also exposes the following project-level routes:
 
 | Area | Endpoints | Documentation |
 | --- | --- | --- |
+| Versioning | `/api/v1/` (current) | [docs/backend/api-versioning.md](../docs/backend/api-versioning.md) |
 | Authentication | signup / login / logout / session / CSRF / 42 OAuth | [docs/backend/authentication.md](../docs/backend/authentication.md) |
-| Organizations | list / create / personal initial balance | [docs/backend/organizations.md](../docs/backend/organizations.md) |
-| Invitations | list / invite / cancel (owner-only) | [docs/backend/organizations.md](../docs/backend/organizations.md) |
+| Organization | list / create / personal initial balance / members | [docs/backend/organizations.md](../docs/backend/organizations.md) |
+| Invitations | list / invite / cancel (owner-only) + accept / decline / my-invitations (invited user) | [docs/backend/organizations.md](../docs/backend/organizations.md) |
+| Notifications | list my notifications / unread badge count / clear-all (mark shown notifications as read) | [docs/backend/notifications.md](../docs/backend/notifications.md) |
 | Health | `GET /health/` returns `{"status": "ok"}` (used by Docker healthchecks and CI) | — |
 | Metrics | `GET /metrics` for Prometheus | [docs/backend/monitoring.md](../docs/backend/monitoring.md) |
 
 Proposed (not yet implemented) endpoints for transactions, categories, goals,
-notifications, and recurring transactions are documented as a suggested
-contract in [docs/backend/proposed-api.md](../docs/backend/proposed-api.md).
+and recurring transactions are documented as a suggested contract in
+[docs/backend/proposed-api.md](../docs/backend/proposed-api.md).
 
 ## Error handling conventions
 
@@ -51,15 +53,6 @@ Typical error object:
 ```
 
 ## Notes
-
-### Current implementation status
-
-The following organization-switching endpoint is currently kept as a bridge and could be removed once the frontend fully switches to the new implementation:
-
-```http
-POST /api/organizations/{org_id}/select/
-```
-
 
 ### Main modules
 

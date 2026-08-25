@@ -17,6 +17,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      ai-service: ${{ steps.filter.outputs.ai-service }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3.0.2
@@ -27,6 +28,8 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            ai-service:
+              - 'ai-service/**'
 
   # Runs ONLY when backend/** changed.
   backend:
@@ -263,11 +266,43 @@ jobs:
         working-directory: .
         run: docker compose down
 
+  # ── ai-service — runs ONLY when ai-service/** changed ─────────────────────────
+  ai-service:
+    needs: changes
+    if: ${{ needs.changes.outputs.ai-service == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-extras --all-groups
+
+      - name: Ruff check (lint)
+        run: uv run ruff check .
+
+      - name: Ruff check (format)
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy .
+
+      - name: Tests
+        run: uv run pytest
+
   # ── Required status check ─────────────────────────────────────────────────
   # Always runs; fails only if a job that actually ran failed.
   # This is the single check to enable in branch protection settings.
   ci:
-    needs: [backend, frontend, e2e]
+    needs: [backend, frontend, ai-service, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -275,11 +310,12 @@ jobs:
         run: |
           backend='${{ needs.backend.result }}'
           frontend='${{ needs.frontend.result }}'
+          ai_service='${{ needs.ai-service.result }}'
           e2e='${{ needs.e2e.result }}'
 
-          status="backend=$backend, frontend=$frontend, e2e=$e2e"
+          status="backend=$backend, frontend=$frontend, ai-service=$ai_service, e2e=$e2e"
           failed=0
-          for result in "$backend" "$frontend" "$e2e"; do
+          for result in "$backend" "$frontend" "$ai_service" "$e2e"; do
             # "skipped" is expected — jobs only run when their area changed.
             # Anything other than success/skipped (failure, cancelled,
             # timed_out) must fail the gate.

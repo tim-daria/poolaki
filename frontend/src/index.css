@@ -1,59 +1,64 @@
 @import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
 
+/*
+ * theme.ts owns values; this file owns what MUI can't express — loading the
+ * fonts, the #root shell geometry, and bare-element defaults for the parts of
+ * the app still written in plain HTML.
+ *
+ * The legacy --* names are aliases, not definitions: `cssVariables: true` in
+ * theme.ts makes MUI emit --mui-palette-* on :root, so the CSS modules that
+ * have not been ported read the same palette the components do, and a colour
+ * edited in theme.ts moves both. The literal after each comma is the fallback
+ * for the first paint, before MUI's stylesheet is injected.
+ *
+ * These aliases can go when the last *.module.css does.
+ */
 :root {
-  --bg-color: #f5f6fa;
-  --bg-card: #ffffff;
+  --text: var(--mui-palette-text-primary, #1c1a20);
+  --sub-text: var(--mui-palette-text-secondary, #959698);
+  --bg-card: var(--mui-palette-background-paper, #ffffff);
+  --bg-color: var(--mui-palette-background-default, #f5f6fa);
+  --tint-deep: var(--mui-palette-primary-dark, #494564);
+  --tint-middle: var(--mui-palette-primary-main, #5b5477);
+  --tint-light: var(--mui-palette-primary-light, #edecfd);
+  --accent-deep: var(--mui-palette-accent-main, #826abc);
+  --accent-light: var(--mui-palette-accent-light, #9d84d7);
+  --border: var(--mui-palette-divider, #e0e0e0);
+  --expense-color: var(--mui-palette-error-main, #ff7070);
+  --bg-expense: var(--mui-palette-error-light, #fae3e3);
+  --income-color: var(--mui-palette-success-main, #5b9778);
+  --bg-income: var(--mui-palette-success-light, #d8f8e8);
+  /* No palette counterpart — read only by the CSS modules. */
   --shadow-color: #a9a9a9;
-  --text: #000;
-  --sub-text: #959698;
-  --income-color: #5b9778;
-  --bg-income: #d8f8e8;
-  --expense-color: #ff7070;
-  --bg-expense: #fae3e3;
-  --accent-deep: #494564;
-  --accent-middle: #5b5477;
-  --accent-light: #edecfd;
-  --border: #e0e0e0;
 
+  /* Input to theme.ts's font stack, not derived from it. */
   --sans: "Plus Jakarta Sans", system-ui, Roboto, sans-serif;
-  /* --heading: "Plus Jakarta Sans", system-ui, Roboto, sans-serif; */
+  --heading: "Plus Jakarta Sans", system-ui, Roboto, sans-serif;
   --mono: "Geist Mono", ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light;
-  color: var(--text);
-  background: var(--bg-color);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
+/*
+ * The app shell. AppLayout fills this, so the column and the height belong
+ * here — CssBaseline stops at <body>.
+ */
 #root {
   width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-}
-
+/*
+ * Bare-element defaults. MUI's .MuiTypography-* classes out-specify these, so
+ * they only reach the raw markup left in Modal, CategoryModal and the pages
+ * still on CSS modules.
+ */
 h1,
 h2 {
   font-family: var(--heading);
   font-weight: 500;
-  color: var(--text-h);
+  color: var(--text);
 }
 
 h1 {
@@ -77,27 +82,3 @@ h2 {
 p {
   margin: 0;
 }
-
-/* .helloPage {
-  height: 100dvh;
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.formContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.formContainer form {
-  display: flex;
-  flex-direction: column;
-  width: 80%;
-}
-
-.decorContainer {
-  background-color: var(--accent-deep);
-} */

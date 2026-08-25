@@ -21,20 +21,13 @@ class PromptBuilder:
         user_question: str,
         context: str = "",
     ) -> str:
-
         if not context.strip():
             formatted_context = "Not relevant data found for your question"
         else:
             formatted_context = context
 
-        prompt = "\n\n".join(
-            [
-                self.base_system,
-                self.financial_assistant,
-                # self.out_of_scope,
-            ]
-        )
+        prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
         return prompt.replace("{{user_question}}", user_question).replace(
-            "{{context}}", context
+            "{{context}}", formatted_context
         )

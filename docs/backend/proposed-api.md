@@ -11,7 +11,7 @@ Transactions are linked to an organization and can represent income, expenses, o
 ### List transactions
 
 ```http
-GET /api/organizations/{org_id}/transactions/
+GET /api/v1/organizations/{org_id}/transactions/
 ```
 
 Query parameters:
@@ -46,7 +46,7 @@ Response example:
 ### Create transaction
 
 ```http
-POST /api/organizations/{org_id}/transactions/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
 Request body:
@@ -66,14 +66,14 @@ Request body:
 ### Get transaction details
 
 ```http
-GET /api/organizations/{org_id}/transactions/{transaction_id}/
+GET /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 ```
 
 ## Categories
 
 ```http
-GET /api/organizations/{org_id}/categories/
-POST /api/organizations/{org_id}/categories/
+GET /api/v1/organizations/{org_id}/categories/
+POST /api/v1/organizations/{org_id}/categories/
 ```
 
 Category payload:
@@ -92,7 +92,7 @@ Goals are organization-level targets with a target amount, deadline, and status.
 ### List goals
 
 ```http
-GET /api/organizations/{org_id}/goals/
+GET /api/v1/organizations/{org_id}/goals/
 ```
 
 Response example:
@@ -115,7 +115,7 @@ Response example:
 ### Create goal
 
 ```http
-POST /api/organizations/{org_id}/goals/
+POST /api/v1/organizations/{org_id}/goals/
 ```
 
 Request body:
@@ -131,8 +131,8 @@ Request body:
 ### Update or archive goal
 
 ```http
-PATCH /api/organizations/{org_id}/goals/{goal_id}/
-POST /api/organizations/{org_id}/goals/{goal_id}/archive/
+PATCH /api/v1/organizations/{org_id}/goals/{goal_id}/
+POST /api/v1/organizations/{org_id}/goals/{goal_id}/archive/
 ```
 
 ## Notifications
@@ -142,7 +142,7 @@ Notifications should be read by the authenticated user and grouped by read/unrea
 ### List notifications
 
 ```http
-GET /api/notifications/
+GET /api/v1/notifications/
 ```
 
 Response example:
@@ -169,10 +169,10 @@ Response example:
 ## Recurring transactions
 
 ```http
-GET /api/organizations/{org_id}/recurring-transactions/
-POST /api/organizations/{org_id}/recurring-transactions/
-PATCH /api/organizations/{org_id}/recurring-transactions/{id}/
-DELETE /api/organizations/{org_id}/recurring-transactions/{id}/
+GET /api/v1/organizations/{org_id}/recurring-transactions/
+POST /api/v1/organizations/{org_id}/recurring-transactions/
+PATCH /api/v1/organizations/{org_id}/recurring-transactions/{id}/
+DELETE /api/v1/organizations/{org_id}/recurring-transactions/{id}/
 ```
 
 Suggested payload:
