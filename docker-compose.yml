@@ -51,12 +51,17 @@ services:
     environment:
       TZ: Europe/Berlin
       VAULT_ADDR: http://vault:8200
-      VAULT_ROLE_ID_FILE: /run/secrets/vault_role_id
-      VAULT_SECRET_ID_FILE: /run/secrets/vault_secret_id
+      VAULT_ROLE_ID: /vault/secure/django/vault_role_id
+      VAULT_SECRET_ID: /vault/secure/django/vault_secret_id
       DB_HOST: db
       DB_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+    # secrets:
+    #   - vault_role_id
+    #   - vault_secret_id
     volumes:
       - ./backend/django:/app
+      - vault_django_secrets:/vault/secure/django:ro
     tmpfs:
       - /tmp:exec,mode=777
     # env_file:
@@ -64,9 +69,6 @@ services:
     networks:
       - backend_net
       - vault_net
-    secrets:
-      - vault_role_id
-      - vault_secret_id
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -76,6 +78,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        restart: true
+      vault:
+        condition: service_started
         restart: true
 
   db:
@@ -340,20 +345,21 @@ services:
       - "8200"
     volumes:
     - ./vault/config:/vault/config
+    - vault_django_secrets:/vault/secure/django
     - vault_data:/vault/data
     env_file: 
-    - path: ./vault/vault.env
-      required: true
+    - .env
     environment:
+      POSTGRES_DB: ${POSTGRES_DB}
       VAULT_ADDR: "http://vault:8200"
+      VAULT_CONFIG: "/vault/config"
     networks:
     - vault_net
-    # healthcheck:
-    #   test: ["CMD-SHELL", "curl -f -s 'http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200' || exit 1"]
-    #   interval: 30s
-    #   retries: 3
-    #   start_period: 30s
-    #   timeout: 5s
+    healthcheck:
+      test: ["CMD", "sh", "-c", "vault status | grep -q 'Sealed.*false'"]
+      retries: 3
+      start_period: 30s
+      timeout: 5s
     depends_on:
       - db
 
@@ -364,6 +370,7 @@ volumes:
   grafana_data:
   prom_data:
   vault_data:
+  vault_django_secrets:
 
 networks:
   backend_net:
