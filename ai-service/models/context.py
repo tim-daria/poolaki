@@ -20,11 +20,3 @@ class FinancialContextItem(BaseModel):
     content: str
     source: str
 
-
-class CombinedRetrievalResult(BaseModel):
-    user_id: int
-    question: str
-
-    financial_data: dict | None = None
-
-    semantic_documents: list[str] = []
