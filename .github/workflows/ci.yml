@@ -123,6 +123,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ── Prettier ───────────────────────────────────────────────────────────
+      # The counterpart to the backend's `ruff format --check`. Without it,
+      # formatting depends on whether each contributor's editor happens to
+      # have the extension configured.
+      - name: Prettier
+        run: npm run format:check
+
       # ── ESLint ─────────────────────────────────────────────────────────────
       # Runs ESLint directly on the host (no Docker needed — ESLint has no
       # runtime dependency on backend or database).

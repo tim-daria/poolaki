@@ -193,11 +193,16 @@ export function NotificationPanel({
       anchorEl={anchorEl}
       open={Boolean(anchorEl)}
       onClose={onClose}
-      aria-labelledby="notification-panel-title"
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       transformOrigin={{ vertical: "top", horizontal: "right" }}
       slotProps={{
+        // On the paper, not the root: Popover's root is role="presentation",
+        // so a role or label there is dropped. The paper is the thing that
+        // traps focus and closes on Escape, which is what "dialog" describes
+        // — and what the bell's aria-haspopup promises.
         paper: {
+          role: "dialog",
+          "aria-labelledby": "notification-panel-title",
           sx: { width: 380, p: 2, boxShadow: 8, mt: 1 },
         },
       }}

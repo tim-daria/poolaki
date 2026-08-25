@@ -34,7 +34,11 @@ test.describe.serial("Notifications", () => {
 
     // The switcher's accessible name is the *current* workspace, so each
     // creation is named after the workspace it is clicked from.
-    const urlA = await createSharedWorkspace(owner, ownerUser.username, acceptedName);
+    const urlA = await createSharedWorkspace(
+      owner,
+      ownerUser.username,
+      acceptedName,
+    );
     const urlB = await createSharedWorkspace(owner, acceptedName, declinedName);
     const urlC = await createSharedWorkspace(owner, declinedName, clearedName);
 
@@ -64,7 +68,9 @@ test.describe.serial("Notifications", () => {
     await expect(page.getByText("All notifications")).toBeVisible();
     await expect(page.getByText("All", { exact: true })).toBeVisible();
     await expect(page.getByText(/Invitations/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Mark all as read/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Mark all as read/i }),
+    ).toBeVisible();
   });
 
   test("clicking outside closes the panel without deleting notifications", async () => {
@@ -85,7 +91,9 @@ test.describe.serial("Notifications", () => {
   test("shows a red dot when there's an unread invitation", async () => {
     await page.goto(workspaceUrl);
     await expect(
-      page.getByRole("button", { name: /notifications/i }).locator(".MuiBadge-badge"),
+      page
+        .getByRole("button", { name: /notifications/i })
+        .locator(".MuiBadge-badge"),
     ).toBeVisible();
   });
 
@@ -95,7 +103,7 @@ test.describe.serial("Notifications", () => {
     // Both pending rows are visible before we touch anything.
     await page.getByRole("button", { name: /notifications/i }).click();
     await expect(
-      page.getByRole("listitem").filter({ hasText: new RegExp(acceptedName) })
+      page.getByRole("listitem").filter({ hasText: new RegExp(acceptedName) }),
     ).toBeVisible();
     await expect(
       page.getByRole("listitem").filter({ hasText: new RegExp(declinedName) }),
