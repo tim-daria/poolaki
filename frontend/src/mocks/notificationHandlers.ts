@@ -1,3 +1,7 @@
+
+/* Routes simulation. Remove the routs once they are implemented in the backend
+*/
+
 import { http, HttpResponse } from 'msw';
 
 export const notificationHandlers = [
