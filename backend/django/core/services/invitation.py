@@ -12,7 +12,11 @@ from core.models import (
     Role,
     User,
 )
-from core.services.organization import check_can_add_member, check_can_join_org
+from core.services.organization import (
+    check_can_add_member,
+    check_can_join_more_orgs,
+    check_can_join_org,
+)
 
 
 def create_invitation(org: Organization, invited_username: str, invited_by: User) -> Invitation:
@@ -49,6 +53,7 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
         raise ValidationError("No user found with this username.") from None
     if Membership.objects.filter(user=invited_user, org=org).exists():
         raise ValidationError("This user is already a member.")
+    check_can_join_more_orgs(invited_user)
     pending_invitation = Invitation.objects.filter(
         org=org, invited_user=invited_user, status=InvitationStatus.PENDING
     ).first()

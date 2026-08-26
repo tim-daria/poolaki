@@ -6,10 +6,12 @@ from django.db import transaction
 from core.models import Invitation, InvitationStatus, Membership, Organization, Role, User
 
 MAX_MEMBERS_PER_ORG = 5
+MAX_ORGS_PER_USER = 10
 
 
 @transaction.atomic
 def create_shared_organization(org_name: str, amount: Decimal, owner: User) -> Organization:
+    check_can_join_more_orgs(owner)
     org = Organization.objects.create(
         name=org_name,
         initial_balance=amount,
@@ -43,4 +45,13 @@ def check_can_join_org(org: Organization) -> None:
     if current_members >= MAX_MEMBERS_PER_ORG:
         raise ValidationError(
             f"Organization has reached its maximum capacity of {MAX_MEMBERS_PER_ORG} members."
+        )
+
+
+def check_can_join_more_orgs(user: User) -> None:
+    """Used when creating new organization and accepting an invitation."""
+    current_count = Membership.objects.filter(user=user).count()
+    if current_count >= MAX_ORGS_PER_USER:
+        raise ValidationError(
+            f"You cannot belong to more than {MAX_MEMBERS_PER_ORG} organizations."
         )
