@@ -14,7 +14,8 @@ import {
 } from "../../lib/organizations";
 import { getCsrfToken } from "../../lib/csrf";
 import { ModalShell } from "./ModalShell";
-import { DiscardChangesDialog, useCloseGuard } from "./CloseGuard";
+import { DiscardChangesDialog } from "./CloseGuard";
+import { useCloseGuard } from "./useCloseGuard";
 
 interface Props {
   open: boolean;
