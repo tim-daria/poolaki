@@ -8,9 +8,17 @@ repos:
 
   - repo: local
     hooks:
-    - id: mypy
-      name: mypy (uv)
-      entry: bash -c 'cd backend/django && uv run mypy .'
-      language: system
-      types: [python]
-      pass_filenames: false
+      - id: mypy
+        name: mypy (uv)
+        entry: bash -c 'cd backend/django && uv run mypy .'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (npm)
+        entry: bash -c 'cd frontend && npx prettier --write "$@"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|css|json|md)$

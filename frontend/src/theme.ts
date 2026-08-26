@@ -9,9 +9,13 @@ declare module "@mui/material/styles" {
   }
   interface Palette {
     shadow: { main: string };
+    accent: { main: string; light: string };
+    avatar: string[];
   }
   interface PaletteOptions {
     shadow?: { main: string };
+    accent?: { main: string; light: string };
+    avatar?: string[];
   }
 }
 
@@ -31,12 +35,26 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          fontSize: "1rem",
+          // 18px base, inherited from index.css's old `:root { font: 18px/145% }`.
+          // That rule out-specified this one (`:root` beats `html`), so it was
+          // the value actually in force; keeping it here avoids shrinking the
+          // whole app on the way to a single source of truth.
+          fontSize: "1.125rem",
           textRendering: "optimizeLegibility",
           fontSynthesis: "none",
+          letterSpacing: "0.18px",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
           "@media (max-width: 1024px)": { fontSize: 16 },
         },
       },
+    },
+    MuiButton: {
+      // The shell is flat — the AppBar and the notification rows both render
+      // at elevation 0. MUI's `contained` variant is the only thing left
+      // casting a shadow, which makes a contained button and the outlined one
+      // beside it read as two different kinds of control.
+      defaultProps: { disableElevation: true },
     },
     MuiDialog: {
       styleOverrides: {
@@ -81,9 +99,9 @@ export const theme = createTheme({
    ============================== */
   palette: {
     primary: {
-      dark: "#494564", // --accent-deep  (sidebar bg)
-      main: "#5b5477", // --accent-middle (hover/active)
-      light: "#edecfd", // --accent-light  (subtle tint)
+      dark: "#494564", // --tint-deep  (sidebar bg)
+      main: "#5b5477", // --tint-middle (hover/active)
+      light: "#edecfd", // --tint-light  (subtle tint)
       contrastText: "#fff",
     },
     secondary: {
@@ -104,10 +122,31 @@ export const theme = createTheme({
       paper: "#ffffff", // --bg-card
     },
     text: {
-      primary: "#000", // --text
+      // Near-black with a warm cast, from the design mockups. Pure #000 reads
+      // harsher than the rest of the palette and is not what the designs use.
+      primary: "#1c1a20", // --text
       secondary: "#959698", // --sub-text
     },
     divider: "#e0e0e0", // --border
+    // Its own key rather than more primary/secondary slots: MUI's PaletteColor
+    // is limited to dark/main/light/contrastText, and both are already full.
+    accent: {
+      main: "#826ABC", // deep lavender
+      light: "#9D84D7", // soft lavender
+    },
+    // Avatar backgrounds, picked per user by `avatarColor`. One per slot in the
+    // AvatarGroup (max 5).
+    //
+    // These are palette *paths*, not hex — `sx` resolves them against the theme,
+    // so the colors stay defined once above and follow any future theme change.
+    // All five are dark enough that the white initial on top stays legible.
+    avatar: [
+      "primary.dark",
+      "primary.main",
+      "secondary.main",
+      "accent.main",
+      "accent.light",
+    ],
   },
   /* ==============================
    Fonts

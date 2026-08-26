@@ -36,7 +36,7 @@ export function Register() {
 
   useEffect(() => {
     // Ensure the CSRF cookie is set for unauthenticated users
-    void fetch("/api/csrf/", { credentials: "include" });
+    void fetch("/api/v1/csrf/", { credentials: "include" });
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {

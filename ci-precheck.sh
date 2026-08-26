@@ -48,6 +48,44 @@ uv run pytest .
 printf "\n📂 Changed files:\n"
 git status | grep "modified:"
 
+printf "\n🤖 Running AI Service checks...\n"
+cd ../../ai-service
+
+uv venv --clear
+uv sync
+
+printf "\n🔍 AI Service: Running formatting check...\n"
+uv run ruff format --check .
+
+printf "\n🔍 AI Service: Running linter...\n"
+uv run ruff check .
+
+printf "\n🔍 AI Service: Running type checker...\n"
+uv run mypy .
+
+printf "\n🔍 AI Service: Running pytest...\n"
+uv run pytest .
+
+cd ..
+
+printf "\n⚛️  Running Frontend checks...\n"
+cd frontend
+
+# Mirrors the `uv venv --clear && uv sync` above: a clean install from the
+# lockfile, so the checks below run against what CI would resolve.
+npm ci
+
+printf "\n🔍 Frontend: Running formatting check...\n"
+npm run format:check
+
+printf "\n🔍 Frontend: Running linter...\n"
+npm run lint
+
+printf "\n🔍 Frontend: Running type checker...\n"
+npx tsc -b
+
+cd ..
+
 printf "\n🐳 Stopping test database...\n"
 docker stop ci-postgres
 

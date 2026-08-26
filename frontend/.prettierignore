@@ -1,0 +1,9 @@
+# Generated / vendored — not ours to format.
+package-lock.json
+dist
+dist-ssr
+
+# Playwright output
+test-results
+playwright-report
+blob-report

@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
-from core.models import Category, EntryType, Goal, Invitation, Organization, Transaction
+from core.models import (
+    Category,
+    EntryType,
+    Goal,
+    Invitation,
+    Notification,
+    Organization,
+    Transaction,
+)
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
@@ -13,6 +21,10 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
+
+
+class MarkNotificationsReadSerializer(serializers.Serializer[Notification]):
+    notification_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
 
 
 class TransactionCreateSerializer(serializers.Serializer[Transaction]):

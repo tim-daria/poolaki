@@ -20,7 +20,7 @@ export function Login() {
   const { setUser } = useAuth();
 
   useEffect(() => {
-    fetch("/api/csrf/", { credentials: "include" });
+    fetch("/api/v1/csrf/", { credentials: "include" });
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {

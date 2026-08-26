@@ -156,7 +156,9 @@
   gap: 0.4rem;
   color: var(--sub-text, #aaa);
   font-size: 0.9rem;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
   min-height: 110px;
 }
 

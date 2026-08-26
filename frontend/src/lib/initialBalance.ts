@@ -8,7 +8,7 @@ export async function submitInitialBalance(
     return { ok: false, error: "Please enter a valid amount" };
   }
 
-  const res = await fetch("/api/organizations/personal/initial-balance/", {
+  const res = await fetch("/api/v1/organizations/personal/initial-balance/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -22,5 +22,8 @@ export async function submitInitialBalance(
     return { ok: true };
   }
 
-  return { ok: false, error: "Failed to create organisation. Please try again." };
+  return {
+    ok: false,
+    error: "Failed to create organisation. Please try again.",
+  };
 }
