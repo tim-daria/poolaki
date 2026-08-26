@@ -16,17 +16,24 @@ class TransactionListCreateView(APIView):
     Manage transactions for the authenticated user.
 
     GET /api/organizations/{org_id}/transactions/:
-    Returns a list of transactions for current organisation where the current user is a member.
+    Returns a list of transactions for current organization where the current user is a member.
 
     Returns:
     - 200 OK with a list of transactions for GET requests.
 
     POST /api/organizations/{org_id}/transactions/:
-    Create a new transaction for the authenticated user in current organisation.
+    Create a new transaction for the authenticated user in current organization.
 
-    Request body:
-    - name (string): Organization name.
-    - initial_balance (decimal): Initial balance for the organization.
+    Request body required:
+    - amount (decimal): Transaction amount.
+    - entry_type (string): Transaction type, such as income or expense.
+    - transaction_date (date): Date when the transaction occurred.
+
+        Request body optional:
+    - category_id (integer): ID of the category associated with the transaction.
+    - description (string): Optional details or notes about the transaction.
+    - goal_id (integer): ID of the financial goal associated with the transaction.
+    - is_tax_deductible (boolean): Indicates whether the transaction is tax-deductible.
 
     Returns:
     - 201 Created with the created transaction.
@@ -65,6 +72,32 @@ class TransactionListCreateView(APIView):
         return Response(
             TransactionResponseSerializer(transaction).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class TransactionGetDeleteView(APIView):
+    """
+    Delete a transaction from the specified organization.
+
+    DELETE organizations/<int:org_id>/transactions/<int:transaction_id>/:
+    Create a new transaction for the authenticated user in current organization.
+
+    Returns:
+    - 204 No content.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request: Request, org_id: int, transaction_id: int) -> Response:
+        assert isinstance(request.user, User)
+        transaction = get_object_or_404(
+            Transaction,
+            id=transaction_id,
+            org_id=org_id,
+        )
+        return Response(
+            {"transaction": TransactionResponseSerializer(transaction, many=False).data},
+            status=status.HTTP_200_OK,
         )
 
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:

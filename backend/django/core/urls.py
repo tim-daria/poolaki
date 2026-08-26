@@ -13,7 +13,10 @@ from core.views.organization import (
     SetInitialBalanceView,
     SwitchOrganizationView,
 )
-from core.views.transaction import TransactionListCreateView
+from core.views.transaction import (
+    TransactionGetDeleteView,
+    TransactionListCreateView,
+)
 from core.views.utils import csrf
 
 urlpatterns = [
@@ -70,7 +73,7 @@ urlpatterns = [
     ),
     path(
         "organizations/<int:org_id>/transactions/<int:transaction_id>/",
-        TransactionListCreateView.as_view(),
-        name="transaction-delete",
+        TransactionGetDeleteView.as_view(),
+        name="transaction-get-delete",
     ),
 ]
