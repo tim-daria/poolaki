@@ -28,9 +28,9 @@ class LLMService:
         user_id: int,
         organization_id: int,
         question: str,
-        intent: str,
     ) -> str:
 
+        intent = await self._intention_service.classify(question)
         retrieval_result = await self._retriever.get_context(
             user_id=user_id,
             organization_id=organization_id,

@@ -29,5 +29,15 @@ class MockDjangoClient:
 
     async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict[str, Any]:
         if endpoint == "/api/internal/v1/analytics/monthly-summary":
-            return {"total_expenses": 850, "currency": "EUR"}
+            return {
+                "period": "2026-01",
+                "total_income": 2500,
+                "total_expenses": 850,
+                "categories": [
+                    {
+                        "name": "Food",
+                        "amount": 300,
+                    }
+                ],
+            }
         return {}

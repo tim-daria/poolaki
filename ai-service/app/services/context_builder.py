@@ -1,10 +1,10 @@
 #  How: process data
 
-from models.context import CombinedRetrievalResult
+from models.retrieval import CombinedRetrievalResult
 
 
 class ContextBuilder:
-    MAX_CONTEXT_LENGTH = 4000  # set for now, might change when LLM is implemented
+    MAX_CONTEXT_LENGTH = 4000
 
     def build_context(
         self, retrieval_result: CombinedRetrievalResult

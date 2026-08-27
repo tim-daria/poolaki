@@ -32,6 +32,6 @@ Return only the intent name.
         result = await self._llm_client.generate_response(prompt)
 
         try:
-            return Intent(result.strip.lower())
+            return Intent(result.strip().lower())
         except ValueError:
             raise ValueError("LLM returned an unsupported intent")
