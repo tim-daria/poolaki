@@ -1,13 +1,16 @@
+from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Organization, Transaction, User
+from core.models import EntryType, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import TransactionCreateSerializer, TransactionResponseSerializer
+from core.services.balance import calculate_org_balance
 from core.services.transaction import create_transaction_entry
 
 
@@ -15,13 +18,13 @@ class TransactionListCreateView(APIView):
     """
     Manage transactions for the authenticated user.
 
-    GET /api/organizations/{org_id}/transactions/:
+    GET
     Returns a list of transactions for current organization where the current user is a member.
 
     Returns:
     - 200 OK with a list of transactions for GET requests.
 
-    POST /api/organizations/{org_id}/transactions/:
+    POST
     Create a new transaction for the authenticated user in current organization.
 
     Request body required:
@@ -29,7 +32,7 @@ class TransactionListCreateView(APIView):
     - entry_type (string): Transaction type, such as income or expense.
     - transaction_date (date): Date when the transaction occurred.
 
-        Request body optional:
+    Request body optional:
     - category_id (integer): ID of the category associated with the transaction.
     - description (string): Optional details or notes about the transaction.
     - goal_id (integer): ID of the financial goal associated with the transaction.
@@ -77,13 +80,21 @@ class TransactionListCreateView(APIView):
 
 class TransactionGetDeleteView(APIView):
     """
-    Delete a transaction from the specified organization.
+        Retrieve or delete a transaction from the specified organization.
 
-    DELETE organizations/<int:org_id>/transactions/<int:transaction_id>/:
-    Create a new transaction for the authenticated user in current organization.
+        GET
 
     Returns:
-    - 204 No content.
+        - 200 OK with the transaction for GET requests.
+
+        DELETE
+        Deletes the requested transaction. Income transactions can be deleted only
+        when the organization's current balance is sufficient to cancel the income.
+
+    Returns:
+        - 204 No content for successful DELETE requests.
+        - 400 Bad Request when an income transaction cannot be cancelled because
+                the organization's balance is insufficient.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -101,10 +112,21 @@ class TransactionGetDeleteView(APIView):
         )
 
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
-        transaction = get_object_or_404(
-            Transaction,
-            id=transaction_id,
-            org_id=org_id,
-        )
-        transaction.delete()
+        with db_transaction.atomic():
+            org = get_object_or_404(
+                Organization.objects.select_for_update(),
+                id=org_id,
+            )
+            transaction = get_object_or_404(
+                Transaction,
+                id=transaction_id,
+                org_id=org_id,
+            )
+            if (
+                transaction.entry_type == EntryType.INCOME
+                and calculate_org_balance(org) < transaction.amount
+            ):
+                raise ValidationError("Insufficient balance to cancel this income transaction.")
+
+            transaction.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

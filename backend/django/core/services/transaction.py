@@ -19,6 +19,7 @@ def create_transaction_entry(
     transaction_date: date,
     is_tax_deductible: bool,
 ) -> Transaction:
+    org = Organization.objects.select_for_update().get(pk=org.pk)
     return Transaction.objects.create(
         org=org,
         created_by=created_by,
