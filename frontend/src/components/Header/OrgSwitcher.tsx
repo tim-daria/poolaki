@@ -4,7 +4,7 @@ import { Box, Button, Menu, MenuItem, Divider } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { CreateOrgModal } from "../CreateOrgModal";
+import { CreateOrgForm } from "../Modals/CreateOrgForm";
 
 /**
  * Switching workspaces is a navigation — OrgLayout resolves :orgId against the
@@ -106,7 +106,10 @@ export function OrgSwitcher() {
         </MenuItem>
       </Menu>
 
-      {createOpen && <CreateOrgModal onClose={() => setCreateOpen(false)} />}
+      {/* Deliberately not keyed off createOpen: staying mounted is what lets
+          the dialog play its closing fade. The form clears itself once that
+          has finished, so reopening still starts blank. */}
+      <CreateOrgForm open={createOpen} onClose={() => setCreateOpen(false)} />
     </>
   );
 }
