@@ -77,3 +77,66 @@ export async function fetchMembers(
   if (!res.ok) throw Error(`Failed to load members of (${res.status})`);
   return res.json();
 }
+
+export type Invitation = {
+  id: number;
+  invited_user: string;
+  status: string;
+};
+
+/** Mirrors invitations[] in InvitationListCreateView.get */
+export type PendingInvitation = Invitation & {
+  invited_by: string | null;
+};
+
+/**
+ * GET /api/v1/organizations/${org_id}/invitations/
+ *
+ * Owner-only: a plain member gets a 403. Callers that show this alongside the
+ * member list should skip it unless `org.role === "owner"`, rather than treat
+ * the 403 as a failure.
+ */
+export async function fetchPendingInvitations(
+  org_id: number,
+  signal?: AbortSignal,
+): Promise<{ invitations: PendingInvitation[] }> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/invitations/`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load invitations (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Backend's 400 message, e.g. "No user found with this username."
+ *
+ * Separate from a plain Error because these are the user's own input —
+ * unknown username, already a member, org full — and belong in the form,
+ * not in a generic "something went wrong".
+ */
+export class InvitationCreateError extends Error {}
+
+/** POST /api/v1/organizations/${org_id}/invitations/ */
+export async function createInvitation(
+  org_id: number,
+  username: string,
+  csrfToken: string,
+): Promise<Invitation> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/invitations/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify({ username }),
+  });
+  if (res.status === 400) {
+    const body = await res.json().catch(() => null);
+    throw new InvitationCreateError(
+      // Two shapes: the serializer rejects the field as {username: [...]},
+      // the service rejects the request as {error: "..."}.
+      body?.error ?? body?.username?.[0] ?? "Could not send the invitation",
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
+  return res.json();
+}

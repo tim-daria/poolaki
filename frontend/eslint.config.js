@@ -48,4 +48,16 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    // loadMembers is also handed to InvitationForm's onSent, so it has to live
+    // in the component body rather than inside the effect. The compiler caches
+    // it on org.id/is_personal/role, so listing it as a dependency does not
+    // re-run the effect every render — but exhaustive-deps predates the
+    // compiler and cannot see that. set-state-in-effect stays ON here: it
+    // caught a real synchronous setPending, which is fixed rather than muted.
+    files: ["src/components/OrgMembers/OrgMembers.tsx"],
+    rules: {
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
 ]);

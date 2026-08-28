@@ -19,6 +19,9 @@ repos:
     hooks:
       - id: prettier
         name: prettier (npm)
-        entry: bash -c 'cd frontend && npx prettier --write "$@"' --
+        # Run from the repo root, not `cd frontend`: pre-commit passes paths
+        # relative to the root, and .prettierrc/.prettierignore live there too
+        # — prettier resolves the ignore file against its working directory.
+        entry: bash -c 'frontend/node_modules/.bin/prettier --write "$@"' --
         language: system
         files: ^frontend/.*\.(ts|tsx|css|json|md)$
