@@ -125,6 +125,28 @@ Status:
 - `200 OK` on success
 - `403 Forbidden` when the user is not a member of the organization
 
+### Get current balance
+
+```http
+GET /api/v1/organizations/{org_id}/balance/
+```
+
+Returns current balance of the organization.
+
+Response example:
+
+```json
+{
+  "org_id": 1,
+  "balance": 342.0
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `403 Forbidden` if the invitation was not sent to the current user
+
 ## Invitation endpoints
 
 These endpoints manage organization invitations and are protected by owner-only permissions.
