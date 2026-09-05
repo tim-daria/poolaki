@@ -40,7 +40,9 @@
   cursor: pointer;
 }
 
-.addBtn:hover { opacity: 0.9; }
+.addBtn:hover {
+  opacity: 0.9;
+}
 
 /* ── Category cards ── */
 .catGrid {
@@ -53,7 +55,7 @@
   background: var(--bg-card, #fff);
   border-radius: 12px;
   padding: 0.85rem 1rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -89,7 +91,10 @@
   border-radius: 4px;
 }
 
-.catEdit:hover { opacity: 1; background: var(--accent-light, #f0eeff); }
+.catEdit:hover {
+  opacity: 1;
+  background: var(--accent-light, #f0eeff);
+}
 
 .showMoreBtn {
   align-self: flex-start;
@@ -102,7 +107,9 @@
   color: var(--accent-middle, #6c63ff);
 }
 
-.showMoreBtn:hover { background: var(--accent-light, #f0eeff); }
+.showMoreBtn:hover {
+  background: var(--accent-light, #f0eeff);
+}
 
 /* ── Toggle pill ── */
 .togglePill {
@@ -122,7 +129,9 @@
   cursor: pointer;
   color: var(--sub-text, #888);
   font-weight: 500;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .pillActive {
@@ -145,7 +154,9 @@
   color: inherit;
 }
 
-.periodBtn:hover { background: var(--accent-light, #f0eeff); }
+.periodBtn:hover {
+  background: var(--accent-light, #f0eeff);
+}
 
 .periodDropdown {
   position: absolute;
@@ -156,7 +167,7 @@
   border: 1px solid var(--border, #e0e0e0);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   min-width: 150px;
 }
 
@@ -172,7 +183,9 @@
   color: inherit;
 }
 
-.periodDropdown button:hover { background: var(--accent-light, #f8f8ff); }
+.periodDropdown button:hover {
+  background: var(--accent-light, #f8f8ff);
+}
 
 .periodActive {
   background: var(--accent-light, #f0eeff) !important;
@@ -188,12 +201,14 @@
   background: var(--bg-card, #fff);
   border-radius: 14px;
   padding: 1.5rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
   align-items: start;
 }
 
 @media (max-width: 600px) {
-  .statsPanel { grid-template-columns: 1fr; }
+  .statsPanel {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Pie */
@@ -204,7 +219,9 @@
   gap: 0.5rem;
 }
 
-.pie { display: block; }
+.pie {
+  display: block;
+}
 
 .pieEmpty {
   width: 220px;
@@ -246,7 +263,9 @@
   flex-shrink: 0;
 }
 
-.legendIcon { font-size: 0.95rem; }
+.legendIcon {
+  font-size: 0.95rem;
+}
 
 .legendName {
   flex: 1;

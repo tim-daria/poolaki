@@ -1,13 +1,14 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Membership, User
+from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember
 from core.serializers import InitialBalanceSerializer
-from core.services.balance import set_initial_balance
+from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import create_shared_organization
 
@@ -145,6 +146,32 @@ class OrganizationMembersView(APIView):
                     }
                     for m in memberships
                 ]
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class OrganizationBalanceView(APIView):
+    """
+    GET
+        Provides the current balance for the organization.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        org = get_object_or_404(
+            Organization,
+            id=org_id,
+        )
+        balance = calculate_org_balance(org)
+
+        return Response(
+            {
+                "org_id": org_id,
+                "balance": balance,
             },
             status=status.HTTP_200_OK,
         )

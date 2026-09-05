@@ -31,6 +31,11 @@ build/
 backup_*.sql
 pre-disaster-recovery_*.sql
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # Certificates
 *.pem
 

@@ -49,6 +49,18 @@ export const theme = createTheme({
         },
       },
     },
+    MuiButton: {
+      // The shell is flat — the AppBar and the notification rows both render
+      // at elevation 0. MUI's `contained` variant is the only thing left
+      // casting a shadow, which makes a contained button and the outlined one
+      // beside it read as two different kinds of control.
+      defaultProps: { disableElevation: true },
+      // Pill shape for every action button — page actions, dialog actions,
+      // Cancel/Save alike. IconButton is a separate component and stays round.
+      styleOverrides: {
+        root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
+      },
+    },
     MuiDialog: {
       styleOverrides: {
         paper: ({ theme }) => ({
@@ -61,6 +73,12 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           padding: 16,
+          // Title left, close button right. Without this the IconButton sits
+          // inline right after the text.
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
         },
       },
     },
