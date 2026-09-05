@@ -30,7 +30,6 @@ if [ "$INITIALIZED" = "false" ]; then
 	done
 
 	# saving root_token
-	# export VAULT_TOKEN=$(jq -r '.root_token' "$VAULT_INIT_FILE")
 	VAULT_TOKEN=$(jq -r '.root_token' "$VAULT_INIT_FILE")
 
 	# login to vault
@@ -130,14 +129,6 @@ else
 	else
 		echo "Vault already unsealed."
 	fi
-
-	# # saving root_token
-	# export VAULT_TOKEN=$(jq -r '.root_token' "$VAULT_INIT_FILE")
-	# # login to vault
-	# vault login "$VAULT_TOKEN"
-
-	# # rotate root credentials
-	# vault write -f database/rotate-root/$POSTGRES_DB
 fi
 
 # Bring the vault server process to the foreground that container stays alive
