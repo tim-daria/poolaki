@@ -55,8 +55,8 @@ jobs:
           --health-retries=5
     env:
       POSTGRES_DB: test_db
-      POSTGRES_USER: test_user
-      POSTGRES_PASSWORD: test_password
+      DATABASE_USER: test_user
+      DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
