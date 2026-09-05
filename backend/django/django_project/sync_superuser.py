@@ -5,12 +5,14 @@ ADMIN_SECRETS_FILE = "/vault/agent/secrets/admin-creds.env"
 
 creds = dotenv_values(ADMIN_SECRETS_FILE)
 
-username = creds["DJANGO_SUPERUSER_USERNAME"]
-password = creds["DJANGO_SUPERUSER_PASSWORD"]
-email = creds.get("DJANGO_SUPERUSER_EMAIL", "")
+username = creds.get("DJANGO_SUPERUSER_USERNAME")
+password = creds.get("DJANGO_SUPERUSER_PASSWORD")
+email = creds.get("DJANGO_SUPERUSER_EMAIL") or ""
 
 if not username or not password:
-    raise ValueError("DJANGO_SUPERUSER_USERNAME or DJANGO_SUPERUSER_PASSWORD missing/empty in secrets file")
+    raise ValueError(
+        "DJANGO_SUPERUSER_USERNAME or DJANGO_SUPERUSER_PASSWORD missing/empty in secrets file"
+    )
 
 User = get_user_model()
 
