@@ -52,16 +52,16 @@ if [ "$INITIALIZED" = "false" ]; then
         DROP ROLE IF EXISTS \"{{name}}\";"
 
 	# connect to database
-	vault write database/config/$POSTGRES_DB \
+	vault write database/config/"$POSTGRES_DB" \
 		plugin_name=postgresql-database-plugin \
 		allowed_roles="db_role" \
-		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:5432/$POSTGRES_DB?sslmode=disable" \
-		username=$POSTGRES_USER \
-		password=$POSTGRES_PASSWORD
+		connection_url="postgresql://{{username}}:{{password}}@"$DB_HOST":5432/"$POSTGRES_DB"?sslmode=disable" \
+		username="$POSTGRES_USER" \
+		password="$POSTGRES_PASSWORD"
 
 	# rotate root credentials
 	# password from the .env file is not longer valid from here
-	vault write -f database/rotate-root/$POSTGRES_DB
+	vault write -f database/rotate-root/"$POSTGRES_DB"
 
 	# show new db credentials
 	vault read database/creds/db_role

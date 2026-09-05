@@ -365,7 +365,8 @@ services:
       start_period: 30s
       timeout: 5s
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   vault-agent-django:
     image: hashicorp/vault:2.0
@@ -382,7 +383,10 @@ services:
     networks:
       - vault_net
     depends_on:
-      - vault
+      vault:
+        condition: service_started
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_db:
