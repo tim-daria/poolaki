@@ -237,7 +237,7 @@ jobs:
           # already exposes those ports.
           COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: |
-          docker compose up -d --build frontend backend
+          docker compose up -d --build frontend backend vault vault-agent-django
           # Wait until the frontend dev server is actually responding.
           # Vite can take a few seconds to finish its initial build.
           echo "Waiting for frontend..."
