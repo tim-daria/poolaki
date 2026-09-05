@@ -211,8 +211,6 @@ jobs:
           GF_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASSWORD }}
           TZ=Europe/Berlin
           VAULT_ADDR=http://vault:8200
-          DATABASE_USER=${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
           EOF
 
       - name: Create optional AI service env for CI
