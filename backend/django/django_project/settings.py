@@ -149,32 +149,19 @@ TEMPLATES: list[dict[str, Any]] = [
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.environ.get("POSTGRES_DB"),
-#         "USER": os.environ.get("POSTGRES_USER"),
-#         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-#         "HOST": os.environ.get("DB_HOST"),
-#         "PORT": os.environ.get("DB_PORT"),
-#     }
-# }
-
-VAULT_URL = "http://vault:8200"
-from .vault import get_db_credentials
-DB_USER, DB_PASSWORD = get_db_credentials()
-
-# Version with vault
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("POSTGRES_DB"),
-        "USER": DB_USER,
-        "PASSWORD": DB_PASSWORD,
+        "USER": os.environ.get("DATABASE_USER"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD"),
         "HOST": os.environ.get("DB_HOST"),
         "PORT": os.environ.get("DB_PORT"),
+		"CONN_MAX_AGE": 0,
     }
 }
+
+##################################################
 
 # ======================================================
 # AUTH

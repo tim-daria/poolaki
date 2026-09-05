@@ -10,7 +10,7 @@ RUN apk add --no-cache jq bash
 COPY --chown=vault:vault entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh && \
-    mkdir -p ./data ./plugins/tmp ./secure/django && \
+    mkdir -p ./data ./plugins/tmp ./secure/id ./agent/secrets ./agent/templates && \
     chown -R vault:vault /vault
 
 USER vault

@@ -19,6 +19,9 @@ COPY ./django .
 
 RUN chmod +x entrypoint.sh
 
+RUN useradd -u 1000 -m django
+USER django
+
 EXPOSE 8000
 
 CMD ["./entrypoint.sh"]

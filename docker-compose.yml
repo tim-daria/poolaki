@@ -51,21 +51,14 @@ services:
     environment:
       TZ: Europe/Berlin
       VAULT_ADDR: http://vault:8200
-      VAULT_ROLE_ID: /vault/secure/django/vault_role_id
-      VAULT_SECRET_ID: /vault/secure/django/vault_secret_id
-      DB_HOST: db
-      DB_PORT: "5432"
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
-    # secrets:
-    #   - vault_role_id
-    #   - vault_secret_id
     volumes:
       - ./backend/django:/app
-      - vault_django_secrets:/vault/secure/django:ro
+      - vault_agent:/vault/agent/secrets:ro
     tmpfs:
       - /tmp:exec,mode=777
-    # env_file:
-    #   - .env
     networks:
       - backend_net
       - vault_net
@@ -80,7 +73,7 @@ services:
         condition: service_healthy
         restart: true
       vault:
-        condition: service_started
+        condition: service_healthy
         restart: true
 
   db:
@@ -89,6 +82,7 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
+      - ./backend/postgres:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -180,7 +174,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
-      GF_SERVER_ROOT_URL: "https://grafana.localhost"
+      GF_SERVER_ROOT_URL: "http://grafana.localhost"
       GF_USERS_ALLOW_SIGN_UP: false
       GF_AUTH_ANONYMOUS_ENABLED: false
       GF_AUTH_DISABLE_LOGIN_FORM: false
@@ -335,23 +329,33 @@ services:
     # - Add AI Service dashboard
     # - Monitor latency, requests, errors, token usage
 
+######################################################
+# HashiCorp Vault #
+######################################################
+
   vault:
     build:
       context: ./vault
       dockerfile: ./Dockerfile
     container_name: vault
     restart: unless-stopped
-    expose:
-      - "8200"
+    cap_add:
+      - IPC_LOCK
+    # expose:
+    #   - "8200"
+    ports:
+    - "8200:8200"
     volumes:
     - ./vault/config:/vault/config
-    - vault_django_secrets:/vault/secure/django
     - vault_data:/vault/data
+    - vault_init:/vault/secure/
+    - vault_id:/vault/secure/id
+    - vault_agent:/vault/agent/secrets
     env_file: 
     - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      VAULT_ADDR: "http://vault:8200"
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
       VAULT_CONFIG: "/vault/config"
     networks:
     - vault_net
@@ -363,6 +367,23 @@ services:
     depends_on:
       - db
 
+  vault-agent-django:
+    image: hashicorp/vault:2.0
+    container_name: vault-agent-django
+    entrypoint: ["vault", "agent", "-config=/vault/config/hcl/agent.hcl"]
+    volumes:
+      - ./vault/config/hcl/agent.hcl:/vault/config/hcl/agent.hcl
+      - ./vault/agent/templates:/vault/agent/templates
+      - vault_agent:/vault/agent/secrets
+      - vault_id:/vault/secure/id
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
+    networks:
+      - vault_net
+    depends_on:
+      - vault
+
 volumes:
   postgres_db:
   caddy_data:
@@ -370,7 +391,9 @@ volumes:
   grafana_data:
   prom_data:
   vault_data:
-  vault_django_secrets:
+  vault_init:
+  vault_id:
+  vault_agent:
 
 networks:
   backend_net:
