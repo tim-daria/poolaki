@@ -241,9 +241,16 @@ jobs:
           # Wait until the frontend dev server is actually responding.
           # Vite can take a few seconds to finish its initial build.
           echo "Waiting for frontend..."
-          timeout 60 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
           echo "Waiting for backend..."
-          timeout 60 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
+
+      - name: Debug on failure
+        if: always()
+        run: |
+          docker compose ps
+          docker compose logs vault
+          docker compose logs backend
 
           docker compose exec -T backend python manage.py migrate
 
