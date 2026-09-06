@@ -1,16 +1,18 @@
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+
+# from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Organization, Transaction, User
+from core.models import Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import TransactionCreateSerializer, TransactionResponseSerializer
-from core.services.balance import calculate_org_balance
+
+# from core.services.balance import calculate_org_balance
 from core.services.transaction import create_transaction_entry
 
 
@@ -113,20 +115,21 @@ class TransactionGetDeleteView(APIView):
 
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
         with db_transaction.atomic():
-            org = get_object_or_404(
-                Organization.objects.select_for_update(),
-                id=org_id,
-            )
             transaction = get_object_or_404(
                 Transaction,
                 id=transaction_id,
                 org_id=org_id,
             )
-            if (
-                transaction.entry_type == EntryType.INCOME
-                and calculate_org_balance(org) < transaction.amount
-            ):
-                raise ValidationError("Insufficient balance to cancel this income transaction.")
+            # Check for negative organization balance after deleting transaction entry
+            # org = get_object_or_404(
+            #     Organization.objects.select_for_update(),
+            #     id=org_id,
+            # )
+            # if (
+            #     transaction.entry_type == EntryType.INCOME
+            #     and calculate_org_balance(org) < transaction.amount
+            # ):
+            #     raise ValidationError("Insufficient balance to cancel this income transaction.")
 
             transaction.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
