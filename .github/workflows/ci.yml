@@ -229,13 +229,10 @@ jobs:
       # In playwright.config.ts, set:
       #   baseURL: process.env.BASE_URL ?? 'https://poolaki.localhost'
       # so local dev still uses Caddy while CI uses the direct ports.
-      - name: Start services via docker compose
-        working-directory: .
-        env:
-          # Tells docker compose which profile/override to use in CI.
-          # Create a docker-compose.ci.yml that exposes ports 3000 and 5173
-          # directly without Caddy, or just ensure your base compose file
-          # already exposes those ports.
+      # The backend entrypoint sources DB credentials from Vault agent files
+      # and applies migrations itself before /health/ responds, so no extra
+      # `docker compose exec ... migrate` is needed (and it would fail: an
+      # exec'd process does not inherit the sourced credentials).
       - name: Start services via docker compose
         working-directory: .
         env:
@@ -247,7 +244,10 @@ jobs:
           echo "Waiting for backend..."
           timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
 
-          docker compose exec -T backend python manage.py migrate
+      - name: Playwright e2e tests
+        env:
+          BASE_URL: http://localhost:5173
+        run: npm run test:e2e
 
       - name: Debug on failure
         if: failure()
@@ -269,14 +269,11 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
-      - name: Show docker logs
-        if: failure()
-        working-directory: .
-        run: docker compose logs backend
-
       - name: Stop services
         if: always()
         working-directory: .
+        env:
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: docker compose down
 
   # ── ai-service — runs ONLY when ai-service/** changed ─────────────────────────

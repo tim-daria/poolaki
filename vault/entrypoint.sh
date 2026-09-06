@@ -32,8 +32,8 @@ if [ "$INITIALIZED" = "false" ]; then
 	# saving root_token
 	VAULT_TOKEN=$(jq -r '.root_token' "$VAULT_INIT_FILE")
 
-	# login to vault
-	vault login "$VAULT_TOKEN"
+	# login to vault (output suppressed: it would print the root token)
+	vault login "$VAULT_TOKEN" > /dev/null
 
 	# enable database secret engine
 	vault secrets enable database
@@ -63,8 +63,9 @@ if [ "$INITIALIZED" = "false" ]; then
 	# password from the .env file is not longer valid from here
 	vault write -f database/rotate-root/"$POSTGRES_DB"
 
-	# show new db credentials
-	vault read database/creds/db_role
+	# verify dynamic credentials can be issued (output suppressed: it would
+	# print a live database password)
+	vault read database/creds/db_role > /dev/null && echo "Dynamic DB credentials OK"
 
 	# enable kv secrets engine for static app secrets
 	vault secrets enable -path=secret kv-v2
