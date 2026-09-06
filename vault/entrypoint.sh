@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ueo pipefail
+set -uo pipefail
 
 # Start vault server in the background
 vault server -config="${VAULT_CONFIG}/hcl/vault.hcl" & VAULT_PID=$!
@@ -40,24 +40,24 @@ if [ "$INITIALIZED" = "false" ]; then
 
 	# create access role for database
 	vault write database/roles/db_role \
-		db_name="$POSTGRES_DB" \
+		db_name=$POSTGRES_DB \
 		default_ttl="4h" \
 		max_ttl="12h" \
 		creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
 			GRANT ALL PRIVILEGES ON SCHEMA public TO \"{{name}}\"; \
 			GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\"; \
 			GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";" \
-		revocation_statements="REASSIGN OWNED BY \"{{name}}\" TO "$POSTGRES_USER"; \
+		revocation_statements="REASSIGN OWNED BY \"{{name}}\" TO $POSTGRES_USER; \
         DROP OWNED BY \"{{name}}\"; \
         DROP ROLE IF EXISTS \"{{name}}\";"
 
 	# connect to database
-	vault write database/config/"$POSTGRES_DB" \
+	vault write database/config/$POSTGRES_DB \
 		plugin_name=postgresql-database-plugin \
 		allowed_roles="db_role" \
-		connection_url="postgresql://{{username}}:{{password}}@"$DB_HOST":5432/"$POSTGRES_DB"?sslmode=disable" \
-		username="$POSTGRES_USER" \
-		password="$POSTGRES_PASSWORD"
+		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:5432/$POSTGRES_DB?sslmode=disable" \
+		username=$POSTGRES_USER \
+		password=$POSTGRES_PASSWORD
 
 	# rotate root credentials
 	# password from the .env file is not longer valid from here
