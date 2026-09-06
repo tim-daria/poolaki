@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from core.models import (
     Category,
+    CategoryType,
     EntryType,
     Goal,
     Invitation,
@@ -71,4 +72,38 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
             "is_tax_deductible",
             "created_by",
             "created_at",
+        )
+
+
+class CategoryCreateSerializer(serializers.Serializer[Category]):
+    org = serializers.PrimaryKeyRelatedField(
+        queryset=Organization.objects.all(), allow_null=False, required=True
+    )
+    name = serializers.CharField(max_length=50, allow_blank=False, allow_null=False, required=True)
+    type = serializers.ChoiceField(
+        choices=CategoryType.choices,
+        allow_blank=False,
+        allow_null=False,
+        required=True,
+        error_messages={
+            "invalid_choice": "Invalid category type.",
+            "blank": "Category type may not be blank.",
+            "null": "Category type may not be null.",
+            "required": "Category type is required.",
+        },
+    )
+
+
+class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
+    org = serializers.IntegerField(source="org_id", read_only=True)
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Category
+        fields = (
+            "id",
+            "org",
+            "name",
+            "type",
         )
