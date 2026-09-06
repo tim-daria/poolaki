@@ -10,13 +10,19 @@ until vault status > /dev/null 2>&1 || [ $? -eq 2 ]; do
     sleep 1
 done
 
+vault_status_json() {
+		# exit 2 means "sealed or uninitialized", which is not an error here
+		vault status -format=json || [ $? -eq 2 ]
+}
+
 ############################
 ##### SETTING UP VAULT #####
 ############################
 
 VAULT_INIT_FILE="/vault/secure/vault-init.json"
 
-INITIALIZED=$(vault status -format=json | jq -r '.initialized')
+# INITIALIZED=$(vault status -format=json | jq -r '.initialized')
+INITIALIZED=$(vault_status_json | jq -r '.initialized')
 
 if [ "$INITIALIZED" = "false" ]; then
 	echo "Vault not initialized, initializing now..."
@@ -117,7 +123,8 @@ if [ "$INITIALIZED" = "false" ]; then
 else
 	# unseal vault if initialized
 	echo "Vault already initialized, checking seal status..."
-	SEALED=$(vault status -format=json | jq -r '.sealed')
+	# SEALED=$(vault status -format=json | jq -r '.sealed')
+	SEALED=$(vault_status_json | jq -r '.sealed')
 
 	if [ "$SEALED" = "true" ]; then
 		echo "Vault is sealed, unsealing..."
