@@ -1,3 +1,5 @@
+from typing import Any
+
 from rest_framework import serializers
 
 from core.models import (
@@ -76,9 +78,6 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
 
 
 class CategoryCreateSerializer(serializers.Serializer[Category]):
-    org = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(), allow_null=False, required=True
-    )
     name = serializers.CharField(max_length=50, allow_blank=False, allow_null=False, required=True)
     type = serializers.ChoiceField(
         choices=CategoryType.choices,
@@ -92,6 +91,20 @@ class CategoryCreateSerializer(serializers.Serializer[Category]):
             "required": "Category type is required.",
         },
     )
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        org = self.context["org"]
+
+        if Category.objects.filter(
+            org=org,
+            name=attrs["name"],
+            type=attrs["type"],
+        ).exists():
+            raise serializers.ValidationError(
+                {"name": "This category already exists in this organization."}
+            )
+
+        return attrs
 
 
 class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
