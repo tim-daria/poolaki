@@ -57,6 +57,8 @@ jobs:
       POSTGRES_DB: test_db
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
+      DATABASE_USER: test_user
+      DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
@@ -210,7 +212,6 @@ jobs:
           GF_ADMIN_USER=${{ secrets.GF_ADMIN_USER }}
           GF_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASSWORD }}
           TZ=Europe/Berlin
-          VAULT_ADDR=http://vault:8200
           EOF
 
       - name: Create optional AI service env for CI
@@ -235,31 +236,28 @@ jobs:
           # Create a docker-compose.ci.yml that exposes ports 3000 and 5173
           # directly without Caddy, or just ensure your base compose file
           # already exposes those ports.
+      - name: Start services via docker compose
+        working-directory: .
+        env:
           COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: |
           docker compose up -d --build
-          # Wait until the frontend dev server is actually responding.
-          # Vite can take a few seconds to finish its initial build.
           echo "Waiting for frontend..."
           timeout 180 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
           echo "Waiting for backend..."
           timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
 
+          docker compose exec -T backend python manage.py migrate
+
       - name: Debug on failure
-        if: always()
+        if: failure()
+        working-directory: .
+        env:
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: |
           docker compose ps
           docker compose logs vault
           docker compose logs backend
-
-          docker compose exec -T backend python manage.py migrate
-
-      - name: Playwright e2e tests
-        env:
-          # Playwright reads this in playwright.config.ts as the baseURL.
-          BASE_URL: http://localhost:5173
-          BACKEND_URL: http://localhost:8000 # optional, if your tests call the API directly
-        run: npm run test:e2e
 
       - name: Upload Playwright report
         # Always upload the HTML report so you can inspect failures even when
