@@ -1,5 +1,5 @@
 #!/bin/bash
-set -uo pipefail
+set -ueo pipefail
 
 # Start vault server in the background
 vault server -config="${VAULT_CONFIG}/hcl/vault.hcl" & VAULT_PID=$!
