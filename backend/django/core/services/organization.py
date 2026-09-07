@@ -27,6 +27,7 @@ def create_shared_organization(org_name: str, amount: Decimal, owner: User) -> O
         is_personal=False,
     )
     Membership.objects.create(user=owner, org=org, role=Role.OWNER)
+    create_default_categories(org)
     return org
 
 
