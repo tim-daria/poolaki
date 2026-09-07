@@ -26,6 +26,7 @@ def test_build_context_with_multiple_items():
     assert "€850" in context
     assert "Food includes groceries and restaurants." in context
 
+
 # Test limit
 def test_context_size_limit():
 
@@ -44,6 +45,7 @@ def test_context_size_limit():
 
     assert len(context) == ContextBuilder.MAX_CONTEXT_LENGTH
 
+
 # Empty context
 def test_empty_context():
 
@@ -52,6 +54,7 @@ def test_empty_context():
     context = ContextBuilder().build_context(result)
 
     assert context == ""
+
 
 #  MAX Content Length
 def test_context_size_limit_does_not_exceed_max_length():
