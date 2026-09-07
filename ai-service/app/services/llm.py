@@ -28,14 +28,14 @@ class LLMService:
         user_id: int,
         organization_id: int,
         question: str,
-    ) -> str:
+    ) -> tuple[str, str]:
 
         intent = await self._intention_service.classify(question)
         retrieval_result = await self._retriever.get_context(
             user_id=user_id,
             organization_id=organization_id,
             query=question,
-            intent=intent,
+            intent=intent.value,
         )
 
         context = self._context_builder.build_context(retrieval_result)
@@ -45,4 +45,6 @@ class LLMService:
             context=context,
         )
 
-        return await self._llm_client.generate_response(prompt)
+        answer = await self._llm_client.generate_response(prompt)
+
+        return answer, intent.value

@@ -32,11 +32,18 @@ class LLMClient:
             json=payload,
         )
 
+        if response.is_error:
+            print("LLM ERROR STATUS:", response.status_code)
+            print("LLM ERROR BODY:", response.text)
+
         response.raise_for_status()
 
         data = response.json()
 
+        #print("LLM RESPONSE:", data) # Debbug
+
         return data["choices"][0]["message"]["content"]
+
 
     async def close(self) -> None:
         await self._client.aclose()
