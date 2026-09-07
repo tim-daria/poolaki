@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from models.chat import ChatMetadata, ChatRequest, ChatResponse
-
 from app.services.llm import LLMService
+from models.chat import ChatMetadata, ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
