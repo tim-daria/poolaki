@@ -1,3 +1,4 @@
+from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -7,7 +8,11 @@ from rest_framework.views import APIView
 
 from core.models import Category, Organization, User
 from core.permissions import IsOrgMember
-from core.serializers import CategoryCreateSerializer, CategoryResponseSerializer
+from core.serializers import (
+    CategoryCreateSerializer,
+    CategoryResponseSerializer,
+    CategoryUpdateSerializer,
+)
 
 
 class CategoryListCreateView(APIView):
@@ -19,16 +24,23 @@ class CategoryListCreateView(APIView):
 
     Returns:
     - 200 OK with a list of categories for GET requests.
+    - 401 Unauthorized when the user is not authenticated.
+    - 403 Forbidden when the user is not a member of the organization.
+    - 404 Not Found when the category does not belong to the organization.
 
     POST
     Create a new category for the authenticated user in current organization.
 
     Request body required:
-    - name (string): Transaction type, such as income or expense.
-    - type (string): Transaction type, such as income or expense.
+    - name (string): Category name.
+    - type (string): Category type, such as "income", "expense" or "contribution".
 
     Returns:
     - 201 Created with the created category.
+    - 400 Bad Request when validation fails.
+    - 401 Unauthorized when the user is not authenticated.
+    - 403 Forbidden when the user is not a member of the organization.
+    - 404 Not Found when the category does not belong to the organization.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -70,57 +82,92 @@ class CategoryListCreateView(APIView):
         )
 
 
-# class TransactionGetDeleteView(APIView):
-
-"""
-        Retrieve or delete a transaction from the specified organization.
-
-        GET
-
-    Returns:
-        - 200 OK with the transaction for GET requests.
-
-        DELETE
-        Deletes the requested transaction. Income transactions can be deleted only
-        when the organization's current balance is sufficient to cancel the income.
-
-    Returns:
-        - 204 No content for successful DELETE requests.
-        - 400 Bad Request when an income transaction cannot be cancelled because
-                the organization's balance is insufficient.
+class CategoryReadUpdateDeleteView(APIView):
     """
-"""
+    Retrieve, update, or delete a category from the specified organization.
+
+    GET
+    Returns the requested category.
+
+    Returns:
+    - 200 OK with the category.
+    - 401 Unauthorized when the user is not authenticated.
+    - 403 Forbidden when the user is not a member of the organization.
+    - 404 Not Found when the category does not belong to the organization.
+
+    PATCH
+    Updates one or more category fields.
+
+        Request body required aat least one of the fields:
+    - name (string): Category name.
+    - type (string): Category type, such as "income", "expense" or "contribution".
+
+    Returns:
+    - 200 OK with the updated category.
+    - 400 Bad Request when validation fails.
+    - 401 Unauthorized when the user is not authenticated.
+    - 403 Forbidden when the user is not a member of the organization.
+    - 404 Not Found when the category does not belong to the organization.
+
+    DELETE
+    Deletes the requested category. Transactions linked to the category are preserved,
+    but their category reference is cleared.
+
+    Returns:
+    - 204 No Content for a successful DELETE request.
+    - 401 Unauthorized when the user is not authenticated.
+    - 403 Forbidden when the user is not a member of the organization.
+    - 404 Not Found when the category does not belong to the organization.
+    """
+
     permission_classes = [IsAuthenticated, IsOrgMember]
 
-    def get(self, request: Request, org_id: int, transaction_id: int) -> Response:
+    def get(self, request: Request, org_id: int, category_id: int) -> Response:
         assert isinstance(request.user, User)
-        transaction = get_object_or_404(
-            Transaction,
-            id=transaction_id,
+        category = get_object_or_404(
+            Category,
+            id=category_id,
             org_id=org_id,
         )
         return Response(
-            {"transaction": TransactionResponseSerializer(transaction, many=False).data},
+            {"category": CategoryResponseSerializer(category, many=False).data},
             status=status.HTTP_200_OK,
         )
 
-    def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
+    def patch(self, request: Request, org_id: int, category_id: int) -> Response:
+        assert isinstance(request.user, User)
+        category = get_object_or_404(
+            Category,
+            id=category_id,
+            org_id=org_id,
+        )
+        serializer = CategoryUpdateSerializer(
+            category,
+            data=request.data,
+            context={"category": category},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        for field, value in serializer.validated_data.items():
+            setattr(category, field, value)
+        category.save(update_fields=serializer.validated_data.keys())
+
+        return Response(
+            {"category": CategoryResponseSerializer(category).data},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request: Request, org_id: int, category_id: int) -> Response:
         with db_transaction.atomic():
-            org = get_object_or_404(
+            get_object_or_404(
                 Organization.objects.select_for_update(),
                 id=org_id,
             )
-            transaction = get_object_or_404(
-                Transaction,
-                id=transaction_id,
+            category = get_object_or_404(
+                Category,
+                id=category_id,
                 org_id=org_id,
             )
-            if (
-                transaction.entry_type == EntryType.INCOME
-                and calculate_org_balance(org) < transaction.amount
-            ):
-                raise ValidationError("Insufficient balance to cancel this income transaction.")
 
-            transaction.delete()
+            category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-"""

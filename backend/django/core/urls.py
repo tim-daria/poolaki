@@ -2,6 +2,7 @@ from django.urls import path
 
 from core.views.category import (
     CategoryListCreateView,
+    CategoryReadUpdateDeleteView,
 )
 from core.views.invitation import (
     AcceptInvitationView,
@@ -71,11 +72,11 @@ urlpatterns = [
         CategoryListCreateView.as_view(),
         name="category-list-create",
     ),
-    # path(
-    # 	"organizations/<int:org_id>/categories/<int:category_id>/",
-    # 	CategoryGetDeleteView.as_view(),
-    # 	name="category-get-delete",
-    # ),
+    path(
+        "organizations/<int:org_id>/categories/<int:category_id>/",
+        CategoryReadUpdateDeleteView.as_view(),
+        name="category-get-delete",
+    ),
     path(
         "organizations/<int:org_id>/balance/",
         OrganizationBalanceView.as_view(),
