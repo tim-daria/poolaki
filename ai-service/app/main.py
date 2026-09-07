@@ -5,10 +5,10 @@ from app.api.health import router as health_router
 from app.clients.llm import LLMClient
 from app.services.context_builder import ContextBuilder
 from app.services.intention import IntentionService
+from app.clients.django import MockDjangoClient
 from app.services.llm import LLMService
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import MockDocumentRepository, MockRetriever
-from app.clients.django import MockDjangoClient
 
 llm_client = LLMClient()
 

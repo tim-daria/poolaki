@@ -46,5 +46,4 @@ class LLMService:
         )
 
         answer = await self._llm_client.generate_response(prompt)
-
         return answer, intent.value

@@ -30,9 +30,10 @@ Return only the intent name.
 """
 
         result = await self._llm_client.generate_response(prompt)
+        normalized_result = result.strip().lower()
 
         try:
-            return Intent(result.strip.lower())
+            return Intent(normalized_result)
         except ValueError as exc:
             raise ValueError(
                 f"LLM returned unsupported intent: {normalized_result}"
