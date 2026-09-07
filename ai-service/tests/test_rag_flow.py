@@ -1,5 +1,6 @@
 import os
 from unittest.mock import patch
+from models.retrieval import CombinedRetrievalResult
 
 from fastapi.testclient import TestClient
 
@@ -14,28 +15,26 @@ client = TestClient(app)
 
 
 def test_chat_endpoint_with_mock_rag():
-    # Simulates Django response/retriever
-    mock_items = [
-        {
-            "type": "financial_summary",
-            "content": "You spent €850 this month.",
-            "source": "django_analytics",
-            "metadata": {},
-        }
-    ]
-
     with patch(
-        "app.services.retrieval.MockRetriever.get_context", return_value=mock_items
-    ):
-        response = client.post(
-            "/api/v1/chat",
-            json={
-                "user_id": "123",
-                "organization_id": "org_1",
-                "question": "How much did I spend this month?",
-                "intent": "monthly_expenses",
-            },
-        )
+        "app.services.retrieval.MockRetriever.get_context"
+    ) as mock_get_context:
+        mock_get_context.return_value = CombinedRetrievalResult(items=[])
+        with patch(
+            "app.clients.llm.LLMClient.generate_response"
+        ) as mock_llm:
+            mock_llm.side_effect = [
+                "monthly_summary",  # Intent classification
+                "You spent €850 this month.",  # Final answer
+            ]
 
-        assert response.status_code == 200
-        assert "€850" in response.json()["answer"]
+            response = client.post(
+                "/api/v1/chat",
+                json={
+                    "user_id": 123,
+                    "organization_id": 1,
+                    "question": "How much did I spend this month?",
+                },
+            )
+
+            assert response.status_code == 200
+            assert "€850" in response.json()["answer"]
