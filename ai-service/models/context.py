@@ -19,4 +19,3 @@ class FinancialContextItem(BaseModel):
     type: str
     content: str
     source: str
-

@@ -41,16 +41,16 @@ class MockDjangoClient:
                 ],
             }
 
-        #if endpoint == "/api/internal/v1/transactions":
-        #return {
+        # if endpoint == "/api/internal/v1/transactions":
+        # return {
         #    "transactions": [
         #        {"date": "2026-01-20", "description": "Groceries", "amount": 120},
         #        {"date": "2026-01-19", "description": "Restaurant", "amount": 45},
         #        {"date": "2026-01-18", "description": "Transport", "amount": 30},
         #    ]
-        #}
+        # }
 
-        #if endpoint == "/api/internal/v1/goals/progress":
+        # if endpoint == "/api/internal/v1/goals/progress":
         #    return {
         #        "goal": "Emergency Fund",
         #        "target": 5000,

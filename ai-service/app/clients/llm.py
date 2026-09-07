@@ -40,10 +40,9 @@ class LLMClient:
 
         data = response.json()
 
-        #print("LLM RESPONSE:", data) # Debbug
+        # print("LLM RESPONSE:", data) # Debbug
 
         return data["choices"][0]["message"]["content"]
-
 
     async def close(self) -> None:
         await self._client.aclose()
