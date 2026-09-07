@@ -1,12 +1,7 @@
-import os
 from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 from models.retrieval import CombinedRetrievalResult
-
-os.environ.setdefault("LLM_BASE_URL", "http://test")
-os.environ.setdefault("LLM_MODEL", "test")
-os.environ.setdefault("LLM_API_KEY", "test")
-os.environ.setdefault("DJANGO_BASE_URL", "http://test")
 
 from app.main import app
 
