@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { mockTransactions, CATEGORIES } from "../Home/mockData";
 import type { Transaction, TransactionType } from "../Home/mockData";
 import styles from "./Transactions.module.css";
-import { UniversalModal as Modal } from "../../components/Modal/Modal";
+// import { UniversalModal as Modal } from "../../components/Modal/Modal";
 const PAGE_SIZE = 10;
 
 function formatDate(iso: string) {
@@ -27,7 +27,7 @@ export function Transactions() {
   const [taxRefundable, setTaxRefundable] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   const [page, setPage] = useState(1);
-  const [addOpen, setAddOpen] = useState(false);
+  // const [addOpen, setAddOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -213,7 +213,7 @@ export function Transactions() {
             </div>
           )}
         </div>
-        <button className={styles.addBtn} onClick={() => setAddOpen(true)}>
+        <button className={styles.addBtn} onClick={() => {}}>
           + Add Transaction
         </button>
       </div>
@@ -294,9 +294,9 @@ export function Transactions() {
           </button>
         </div>
       </div>
-      {addOpen && (
+      {/* {addOpen && (
         <Modal mode="transaction" onClose={() => setAddOpen(false)} />
-      )}
+      )} */}
     </div>
   );
 }

@@ -8,9 +8,20 @@ repos:
 
   - repo: local
     hooks:
-    - id: mypy
-      name: mypy (uv)
-      entry: bash -c 'cd backend/django && uv run mypy .'
-      language: system
-      types: [python]
-      pass_filenames: false
+      - id: mypy
+        name: mypy (uv)
+        entry: bash -c 'cd backend/django && uv run mypy .'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (npm)
+        # Run from the repo root, not `cd frontend`: pre-commit passes paths
+        # relative to the root, and .prettierrc/.prettierignore live there too
+        # — prettier resolves the ignore file against its working directory.
+        entry: bash -c 'frontend/node_modules/.bin/prettier --write "$@"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|css|json|md)$

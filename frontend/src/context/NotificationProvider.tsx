@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { Outlet } from "react-router";
 import { NotificationContext } from "./NotificationContext";
-import type { Notification } from "./NotificationContext";
 import {
+  fetchUnreadCount,
   fetchNotifications,
-  markNotificationsRead,
+  clearAllNotifications,
 } from "../lib/notifications";
-import { getCsrfToken } from "../lib/csrf";
+import type { Notification } from "./NotificationContext";
 
 /**
  * How often we re-check for new notifications. It's not exactly WebSockets/SSE,
  * but it makes closer to a stand-in for real-time. The endpoint is a light
  * 50-row list of the user's own notifications only.
  */
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 60000;
 
 /**
  * Holds the user's notifications. Same reasoning as OrgListProvider:
@@ -27,25 +27,17 @@ export function NotificationProvider() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const load = async (signal?: AbortSignal) => {
-    try {
-      const data = await fetchNotifications(signal);
-      setNotifications(data.notifications);
-      setUnreadCount(data.unread_count);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-      throw err;
-    }
-  };
-
   useEffect(() => {
     const ac = new AbortController();
-    void load(ac.signal).catch(() => {});
-
-    const interval = setInterval(() => {
-      void load().catch(() => {});
-    }, POLL_INTERVAL_MS);
+    const poll = () =>
+      fetchUnreadCount(ac.signal)
+        .then((count) => {
+          setUnreadCount(count);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    poll();
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       ac.abort();
@@ -54,45 +46,48 @@ export function NotificationProvider() {
   }, []);
 
   /**
-   * "The user has seen this": POST /api/notifications/clear-all/ with the ids of
-   * the rows that are still unread (the client is the one that decides what
-   * counts as "seen"). Pending invitations are included: marking them read
-   * clears the badge while leaving the row visible — it stays until it is
-   * accepted or declined (resolved ones drop out of the list on their own).
+   * Loads the panel's list. Same shape as OrgListProvider.load: try/catch
+   * because React Compiler cannot process a try
+   * without a catch — and rethrowing rather than swallowing, because "the
+   * list failed" and "the list is empty" render differently.
    */
-  const markAllAsRead = async () => {
-    const ids = notifications.filter((n) => !n.is_read).map((n) => n.id);
-
-    if (ids.length > 0) {
-      try {
-        await markNotificationsRead(ids, getCsrfToken());
-      } catch (err) {
-        // Non-fatal: the badge and row state are refetched below, and the
-        // next poll will self-correct if this request lost the race.
-        console.error("Failed to mark notifications as read: %s", err);
-      }
+  const loadFullList = async (isRead?: boolean, signal?: AbortSignal) => {
+    try {
+      const data = await fetchNotifications(isRead, signal);
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+    } catch (err) {
+      // An abort is not a failure: the panel that asked for this has closed,
+      // and a late write would clobber whatever replaced it.
+      if (signal?.aborted) return;
+      throw err;
     }
-    // Reload to sync with the backend (it may have dropped resolved
-    // invitations from the list and recomputed the unread count).
-    await load().catch(() => {});
   };
 
   /**
-   * Clears the panel locally. The backend has no delete endpoint, so the
-   * next poll brings the rows back — this is "hide from the panel", not
-   * "destroy notifications".
+   * Marks the loaded unread rows read via POST /clear-all/.
+   *
+   * Invitations are excluded because the backend ignores them anyway — only
+   * accept/decline/cancel resolve an invitation (MarkAllNotificationsReadView).
    */
-  const clearAll = () => {
-    setNotifications([]);
+  const clearAll = async (csrfToken: string) => {
+    const nonInvitationIds = notifications
+      .filter((n) => n.type !== "invitation" && !n.is_read)
+      .map((n) => n.id);
+    if (nonInvitationIds.length === 0) return;
+    await clearAllNotifications(nonInvitationIds, csrfToken);
+    await loadFullList().catch(() => {});
   };
 
   const value = {
     notifications,
     unreadCount,
     loading,
-    markAllAsRead,
+    loadFullList,
     clearAll,
-    refresh: () => load(),
+    refresh: async () => {
+      await loadFullList();
+    },
   };
 
   return (

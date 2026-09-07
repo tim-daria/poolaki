@@ -30,3 +30,8 @@ build/
 .last_success
 backup_*.sql
 pre-disaster-recovery_*.sql
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/

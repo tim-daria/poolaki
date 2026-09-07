@@ -1,21 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Menu,
-  MenuItem,
+  Popover,
   Typography,
   Button,
-  Divider,
   Box,
+  Avatar,
+  Paper,
+  ToggleButton,
+  ToggleButtonGroup,
   Stack,
+  useTheme,
 } from "@mui/material";
 import { useNotifications } from "../../context/useNotifications";
+import { getCsrfToken } from "../../lib/csrf";
+import { initials } from "../../lib/initials";
+import { avatarColor } from "../../lib/avatarColor";
 import { useOrgList } from "../../context/useOrgList";
 import {
   acceptInvitation,
   declineInvitation,
   InvitationResolveError,
 } from "../../lib/notifications";
-import { getCsrfToken } from "../../lib/csrf";
 import type {
   InvitationPayload,
   Notification,
@@ -38,8 +43,12 @@ function timeAgo(iso: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-function isInvitationPayload(p: Record<string, unknown>): p is InvitationPayload {
-  return typeof p.invitation_id === "number" && typeof p.invited_by === "string";
+function isInvitationPayload(
+  p: Record<string, unknown>,
+): p is InvitationPayload {
+  return (
+    typeof p.invitation_id === "number" && typeof p.invited_by === "string"
+  );
 }
 
 function typeText(type: NotificationType, p: Record<string, unknown>): string {
@@ -55,165 +64,415 @@ function typeText(type: NotificationType, p: Record<string, unknown>): string {
     case "member_left":
       return "A member left the organization";
     default:
-      // Unknown type from a newer backend — render something neutral instead
-      // of breaking the whole list.
       return "Notification";
   }
 }
 
 /**
- * One invitation row with working Accept / Decline buttons.
+ * The notification inbox, anchored to the header bell.
  *
- * Not a MenuItem: MUI v7 dropped `secondaryAction`, so this is a plain
- * flex row inside the Menu's paper with the same look.
+ * A Popover rather than a Menu: `Menu` renders role="menu", whose children
+ * must be menu items, and a menuitem may not contain focusable descendants —
+ * which every invitation row does (Accept / Decline). Popover is what Menu is
+ * built on, so focus trap, focus restore and Escape-to-close are unchanged;
+ * only the MenuList keyboard model, which never applied here, is gone.
  *
  * The backend marks the matching notification read on accept/decline, so on
  * success we refetch the notification list (badge + rows). Accepting also
  * adds a workspace, so we refresh the shared org list — that is what the
  * OrgSwitcher reads.
  */
-function InvitationRow({ n, onClose }: { n: Notification; onClose: () => void }) {
-  const { refresh } = useNotifications();
-  const { refresh: refreshOrgList } = useOrgList();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const payload = isInvitationPayload(n.payload) ? n.payload : null;
 
-  const act = async (kind: "accept" | "decline") => {
+export function NotificationPanel({
+  anchorEl,
+  onClose,
+}: NotificationPanelProps) {
+  const theme = useTheme();
+  const { notifications, clearAll, loadFullList, refresh } = useNotifications();
+  const { refresh: refreshOrgList } = useOrgList();
+  const [filter, setFilter] = useState<"all" | "invitations">("all");
+
+  const [busyIds, setBusyIds] = useState<Record<number, boolean>>({});
+  const [errors, setErrors] = useState<Record<number, string>>({});
+
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState("");
+  const [listError, setListError] = useState("");
+
+  useEffect(() => {
+    if (!anchorEl) return;
+    const ac = new AbortController();
+
+    loadFullList(undefined, ac.signal)
+      .then(() => setListError(""))
+      .catch(() =>
+        setListError("Couldn't load notifications - please try again"),
+      );
+    return () => ac.abort();
+  }, [anchorEl, loadFullList]);
+
+  /**
+   * No useMemo, because React Compiler is used here
+   * and it takes care of memoisation
+   */
+  const invitationsCount = notifications.filter(
+    (n) => n.type === "invitation" && !n.is_read,
+  ).length;
+
+  const filteredNotifications =
+    filter === "invitations"
+      ? notifications.filter((n) => n.type === "invitation" && !n.is_read)
+      : notifications.filter((n) => !(n.type === "invitation" && n.is_read));
+
+  // Matches provider logic: invitations can only be accepted/declined, not marked as read.
+  const markableCount = notifications.filter(
+    (n) => n.type !== "invitation" && !n.is_read,
+  ).length;
+
+  const handleResolveInvitation = async (
+    n: Notification,
+    kind: "accept" | "decline",
+  ) => {
+    const payload = isInvitationPayload(n.payload) ? n.payload : null;
     if (!payload) return;
-    setBusy(true);
-    setError("");
+
+    setBusyIds((prev) => ({ ...prev, [n.id]: true }));
+    setErrors((prev) => ({ ...prev, [n.id]: "" }));
+
     try {
       const fn = kind === "accept" ? acceptInvitation : declineInvitation;
       await fn(payload.invitation_id, getCsrfToken());
     } catch (err) {
-      // A resolved invitation returns 400 with a message — show it and keep
-      // the row visible (the backend still holds it) instead of a generic crash.
-      setError(err instanceof InvitationResolveError ? err.message : "Something went wrong");
-      setBusy(false);
+      setErrors((prev) => ({
+        ...prev,
+        [n.id]:
+          err instanceof InvitationResolveError
+            ? err.message
+            : "Something went wrong",
+      }));
+      setBusyIds((prev) => ({ ...prev, [n.id]: false }));
       return;
     }
-    // The backend drops the resolved row from the next list response, so a
-    // list refresh removes it and updates the badge. A failed notification
-    // refetch must not swallow the org list refresh below, so errors there
-    // are best-effort.
+
     await refresh().catch(() => {});
+
     if (kind === "accept") {
-      // A new workspace just appeared — reload the shared org list so the
-      // OrgSwitcher picks it up without forcing the user to navigate.
       try {
         await refreshOrgList();
         onClose();
       } catch {
-        // The invitation itself was accepted server-side; only the local
-        // list is stale. Keep the row visible so the user knows.
-        setError("Accepted, but the workspace list could not be updated — reload the page");
+        setErrors((prev) => ({
+          ...prev,
+          [n.id]: "Accepted, but workspace list failed to update — reload page",
+        }));
       }
     } else {
       onClose();
     }
-    setBusy(false);
+
+    setBusyIds((prev) => ({ ...prev, [n.id]: false }));
+  };
+
+  const handleMarkAllRead = async () => {
+    setClearing(true);
+    setClearError("");
+    try {
+      await clearAll(getCsrfToken());
+      onClose();
+    } catch {
+      // Stay open: the rows are still unread, and closing would present the
+      // failure as a success.
+      setClearError("Couldn't mark notifications as read — please try again");
+    } finally {
+      setClearing(false);
+    }
   };
 
   return (
-    <Box
-      component="li"
-      role="menuitem"
-      tabIndex={-1}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 1,
-        px: 2.5,
-        py: 1,
-      }}
-    >
-      <Typography variant="body2" sx={{ fontWeight: n.is_read ? 400 : 600 }}>
-        {typeText(n.type, n.payload)}
-        <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
-          {timeAgo(n.created_at)}
-        </Box>
-        {error && (
-          <Box component="span" sx={{ color: "error.main", display: "block" }}>
-            {error}
-          </Box>
-        )}
-      </Typography>
-      {payload && (
-        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-          <Button size="small" variant="contained" disabled={busy} onClick={() => void act("accept")}>
-            Accept
-          </Button>
-          <Button size="small" disabled={busy} onClick={() => void act("decline")}>
-            Decline
-          </Button>
-        </Stack>
-      )}
-    </Box>
-  );
-}
-
-export function NotificationPanel({ anchorEl, onClose }: NotificationPanelProps) {
-  const { notifications, clearAll, markAllAsRead } = useNotifications();
-
-  const sorted = [...notifications].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
-
-  return (
-    <Menu
+    <Popover
       anchorEl={anchorEl}
       open={Boolean(anchorEl)}
       onClose={onClose}
-      slotProps={{ paper: { sx: { width: 320 } } }}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      slotProps={{
+        // On the paper, not the root: Popover's root is role="presentation",
+        // so a role or label there is dropped. The paper is the thing that
+        // traps focus and closes on Escape, which is what "dialog" describes
+        // — and what the bell's aria-haspopup promises.
+        paper: {
+          role: "dialog",
+          "aria-labelledby": "notification-panel-title",
+          sx: { width: 380, p: 2, boxShadow: 8, mt: 1 },
+        },
+      }}
     >
-      {sorted.length === 0 && (
-        <MenuItem disabled>
-          <Typography variant="body2" color="text.secondary">
-            No new notifications
-          </Typography>
-        </MenuItem>
-      )}
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        {/* Popover has no implicit accessible name, so this heading supplies
+            one via the root's aria-labelledby. */}
+        <Typography
+          id="notification-panel-title"
+          variant="h6"
+          component="h2"
+          sx={{ fontWeight: 700, fontSize: "1.1rem" }}
+        >
+          All notifications
+        </Typography>
+      </Box>
 
-      {sorted.map((n) =>
-        n.type === "invitation" ? (
-          <InvitationRow key={n.id} n={n} onClose={onClose} />
-        ) : (
-          <MenuItem key={n.id} disabled sx={{ opacity: "1 !important" }}>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: n.is_read ? 400 : 600 }}
-            >
-              {typeText(n.type, n.payload)}
-              <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
-                {timeAgo(n.created_at)}
-              </Box>
+      {/* Controls: Filter Pills & Mark All as Read */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        {/* Selection state lives in the Mui-selected class rather than a
+            ternary per property, and the group supplies role="group" plus
+            aria-pressed on each button. */}
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={filter}
+          // With `exclusive`, clicking the already-selected button fires with
+          // null. Ignoring that keeps a filter applied at all times.
+          onChange={(_, next: "all" | "invitations" | null) => {
+            if (next) setFilter(next);
+          }}
+          aria-label="Filter notifications"
+          sx={{
+            bgcolor: "background.default",
+            borderRadius: 999,
+            p: "3px",
+            gap: 0.5,
+            // The group's own `grouped` rules square off the inner edges and
+            // pull the children together with a negative margin, so the pill
+            // shape has to be restated for both ends to out-specify them.
+            "& .MuiToggleButtonGroup-grouped": {
+              border: 0,
+              px: 1.5,
+              py: 0.25,
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              color: "text.secondary",
+              "&:first-of-type": { borderRadius: 999 },
+              "&:not(:first-of-type)": { borderRadius: 999, ml: 0 },
+              "&.Mui-selected": {
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": { bgcolor: "primary.main" },
+              },
+            },
+          }}
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="invitations">
+            Invitations ({invitationsCount})
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+          }}
+        >
+          <Button
+            variant="text"
+            size="small"
+            disabled={clearing || markableCount === 0}
+            onClick={() => void handleMarkAllRead()}
+            sx={{
+              color: "primary.dark",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              "&:hover": {
+                bgcolor: "transparent",
+                textDecoration: "underline",
+              },
+            }}
+          >
+            {clearing ? "Marking…" : "Mark all as read"}
+          </Button>
+          {clearError && (
+            <Typography variant="caption" color="error">
+              {clearError}
             </Typography>
-          </MenuItem>
-        ),
-      )}
+          )}
+        </Box>
+      </Box>
 
-      {sorted.length > 0 && (
-        <>
-          <Divider />
-          <Box sx={{ px: 2, py: 1 }}>
-            <Button
-              size="small"
-              onClick={() => {
-                // Mark everything read (badge → 0), then empty the panel.
-                // The API keeps pending invitations listed until resolved,
-                // so the local clear is a visual "hide" until the next poll.
-                void markAllAsRead();
-                clearAll();
-                onClose();
-              }}
-            >
-              Clear all
-            </Button>
-          </Box>
-        </>
+      {/* Notification List */}
+      {listError && (
+        <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+          {listError}
+        </Typography>
       )}
-    </Menu>
+      {filteredNotifications.length === 0 ? (
+        // Outside the list below: a <ul> may only contain <li>, so the empty
+        // message cannot live inside it.
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          align="center"
+          sx={{ py: 3 }}
+        >
+          No notifications to display
+        </Typography>
+      ) : (
+        /* A real list, so the row count is announced and each row is reachable
+           as a listitem — semantics role="menu" could not carry, since a
+           menuitem may not contain focusable children (Accept / Decline). */
+        <Stack
+          component="ul"
+          spacing={1}
+          sx={{ listStyle: "none", m: 0, p: 0 }}
+        >
+          {filteredNotifications.map((n) => {
+            const isInvitation = n.type === "invitation";
+            const payload = n.payload;
+            const userName = isInvitationPayload(payload)
+              ? payload.invited_by
+              : "User";
+
+            const isBusy = Boolean(busyIds[n.id]);
+            const errorMessage = errors[n.id];
+
+            return (
+              <Paper
+                key={n.id}
+                component="li"
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  // The palette's "subtle tint", used app-wide for gentle
+                  // emphasis. Not action.hover: that is translucent black
+                  // meaning "under the cursor", so a row wearing it
+                  // permanently reads as stuck in a hover state.
+                  // bgcolor: isInvitation ? "background.default" : "transparent",
+                  // borderBottom: isInvitation ? "none" : "1px solid",
+                  // borderColor: "divider",
+                }}
+              >
+                <Box
+                  sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      fontSize: "0.85rem",
+                      bgcolor: avatarColor(userName, theme.palette.avatar),
+                    }}
+                  >
+                    {initials(userName)}
+                  </Avatar>
+
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "baseline",
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                      >
+                        {userName}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontSize: "0.75rem" }}
+                      >
+                        {timeAgo(n.created_at)}
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.825rem", mt: 0.2 }}
+                    >
+                      {typeText(n.type, payload)}
+                    </Typography>
+
+                    {errorMessage && (
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        sx={{ display: "block", mt: 0.5 }}
+                      >
+                        {errorMessage}
+                      </Typography>
+                    )}
+
+                    {/* Inline Invitation Actions */}
+                    {isInvitation && (
+                      <Box sx={{ display: "flex", gap: 1, mt: 1.5 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          disabled={isBusy}
+                          onClick={() =>
+                            void handleResolveInvitation(n, "decline")
+                          }
+                          sx={{
+                            bgcolor: "background.paper",
+                            borderColor: "primary.main",
+                            borderRadius: 999,
+                            color: "text.primary",
+                            px: 2,
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            "&:hover": {
+                              bgcolor: "primary.light",
+                              borderColor: "divider",
+                            },
+                          }}
+                        >
+                          Decline
+                        </Button>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          disabled={isBusy}
+                          onClick={() =>
+                            void handleResolveInvitation(n, "accept")
+                          }
+                          sx={{
+                            bgcolor: "primary.main",
+                            borderRadius: 999,
+                            px: 2,
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            "&:hover": { bgcolor: "primary.dark" },
+                          }}
+                        >
+                          Accept
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Paper>
+            );
+          })}
+        </Stack>
+      )}
+    </Popover>
   );
 }

@@ -13,7 +13,10 @@ export type TestUser = {
 };
 
 /** Timestamped user pair for specs that need two people. */
-export function makeUsers(prefixA: string, prefixB: string): [TestUser, TestUser] {
+export function makeUsers(
+  prefixA: string,
+  prefixB: string,
+): [TestUser, TestUser] {
   const timestamp = Date.now();
   return [
     {
@@ -33,7 +36,10 @@ export function makeUsers(prefixA: string, prefixB: string): [TestUser, TestUser
  * Registers a fresh user through the real /register page.
  * @returns the personal workspace URL ("/o/:id") the signup signal lands on.
  */
-export async function registerUser(page: Page, user: TestUser): Promise<string> {
+export async function registerUser(
+  page: Page,
+  user: TestUser,
+): Promise<string> {
   await page.goto("/register");
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Username").fill(user.username);
@@ -62,7 +68,9 @@ export async function createSharedWorkspace(
   const before = new URL(page.url());
 
   await page.getByRole("button", { name: switcherButtonName }).click();
-  await page.getByRole("menuitem", { name: /create shared workspace/i }).click();
+  await page
+    .getByRole("menuitem", { name: /create shared workspace/i })
+    .click();
   await page.getByLabel("Name").fill(name);
   await page.getByLabel(/initial balance/i).fill(initialBalance);
   await page.getByRole("button", { name: "Create", exact: true }).click();
@@ -89,17 +97,24 @@ export function toOrgId(workspacePathname: string): number {
  * group only, with a "TODO: add pending members"). Swap this for a UI flow
  * once that exists.
  */
-export async function inviteMember(page: Page, orgId: number, username: string) {
+export async function inviteMember(
+  page: Page,
+  orgId: number,
+  username: string,
+) {
   // Session cookie comes from the context; Django needs the CSRF token too,
   // exactly like lib/csrf.ts does in the app.
-  const csrftoken = (await page.context().cookies()).find(
-    (c) => c.name === "csrftoken",
-  )?.value ?? "";
+  const csrftoken =
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? "";
 
-  const res = await page.request.post(`/api/v1/organizations/${orgId}/invitations/`, {
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
-    data: { username },
-  });
+  const res = await page.request.post(
+    `/api/v1/organizations/${orgId}/invitations/`,
+    {
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+      data: { username },
+    },
+  );
 
   if (res.status() !== 201) {
     throw new Error(

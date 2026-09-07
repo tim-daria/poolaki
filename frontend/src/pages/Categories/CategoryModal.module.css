@@ -29,7 +29,9 @@
   gap: 0.6rem;
 }
 
-.headerIcon { font-size: 1.2rem; }
+.headerIcon {
+  font-size: 1.2rem;
+}
 
 .header h2 {
   flex: 1;
@@ -48,7 +50,9 @@
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
 }
-.closeBtn:hover { background: var(--accent-light, #f0eeff); }
+.closeBtn:hover {
+  background: var(--accent-light, #f0eeff);
+}
 
 /* Form */
 .form {
@@ -79,7 +83,9 @@
   outline: 2px solid var(--accent-middle, #6c63ff);
 }
 
-.req { color: #ef4444; }
+.req {
+  color: #ef4444;
+}
 
 /* Fieldset */
 .fieldset {
@@ -117,7 +123,9 @@
   border-radius: 10px;
   cursor: pointer;
   padding: 0.45rem;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .iconBtn svg {
@@ -148,10 +156,14 @@
   border-radius: 50%;
   border: 3px solid transparent;
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
 }
 
-.colorDot:hover { transform: scale(1.15); }
+.colorDot:hover {
+  transform: scale(1.15);
+}
 
 .colorDotActive {
   border-color: #fff;
@@ -180,7 +192,9 @@
   letter-spacing: 0.02em;
 }
 
-.submitBtn:hover { opacity: 0.9; }
+.submitBtn:hover {
+  opacity: 0.9;
+}
 
 .deleteBtn {
   width: 100%;
@@ -191,7 +205,10 @@
   font-size: 0.88rem;
   color: var(--sub-text, #999);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .deleteBtn:hover {
