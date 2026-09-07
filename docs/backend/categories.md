@@ -156,3 +156,23 @@ Status:
 - `204 No Content` on successful deletion
 - `403 Forbidden` when the user is not a member of the organization
 - `404 Not Found` when the category does not exist in the organization
+
+## Default categories
+
+When we call functions `create_shared_organization()` and `create_personal_organization` default categories are creating.
+
+``` python
+DEFAULT_CATEGORIES = (
+    ("Food", CategoryType.EXPENSE),
+    ("Transport", CategoryType.EXPENSE),
+    ("Housing", CategoryType.EXPENSE),
+    ("Entertainment", CategoryType.EXPENSE),
+    ("Shopping", CategoryType.EXPENSE),
+    ("Health", CategoryType.EXPENSE),
+    ("Utilities", CategoryType.EXPENSE),
+    ("Salary", CategoryType.INCOME),
+    ("Freelance", CategoryType.INCOME),
+    ("Contribution", CategoryType.CONTRIBUTION),
+)
+```
+We can change default categories list in the file `backend/django/core/services/category.py`
