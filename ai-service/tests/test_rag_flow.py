@@ -1,8 +1,7 @@
+import os
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-
-import os
 
 os.environ.setdefault("LLM_BASE_URL", "http://test")
 os.environ.setdefault("LLM_MODEL", "test")
