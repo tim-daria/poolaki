@@ -1,8 +1,7 @@
 import os
 from unittest.mock import patch
-from models.retrieval import CombinedRetrievalResult
-
 from fastapi.testclient import TestClient
+from models.retrieval import CombinedRetrievalResult
 
 os.environ.setdefault("LLM_BASE_URL", "http://test")
 os.environ.setdefault("LLM_MODEL", "test")
