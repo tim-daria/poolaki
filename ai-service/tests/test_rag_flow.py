@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from models.retrieval import CombinedRetrievalResult
 
 from app.main import app
+from models.retrieval import CombinedRetrievalResult
 
 client = TestClient(app)
 
