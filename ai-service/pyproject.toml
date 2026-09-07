@@ -34,3 +34,6 @@ packages = ["app"]
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated.*"
 ]
+
+[tool.ruff.lint]
+ignore = ["B008"]
