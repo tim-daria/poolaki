@@ -67,10 +67,6 @@ export const router = createBrowserRouter([
                         path: "goals",
                         lazy: () => import("./pages/Goals/Goals"),
                       },
-                      {
-                        path: "categories",
-                        lazy: () => import("./pages/Categories/Categories"),
-                      },
                     ],
                   },
                 ],

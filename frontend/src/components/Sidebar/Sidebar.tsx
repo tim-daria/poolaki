@@ -13,7 +13,6 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import SyncAltOutlinedIcon from "@mui/icons-material/SyncAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import DiscountOutlinedIcon from "@mui/icons-material/DiscountOutlined";
 import { headerHeight } from "../Header/Header";
 import { NavItem } from "./NavItem";
 
@@ -31,7 +30,6 @@ const navItems = [
   { label: "Overview", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
   { label: "Transactions", to: "transactions", icon: <SyncAltOutlinedIcon /> },
   { label: "Goals", to: "goals", icon: <FavoriteBorderIcon /> },
-  { label: "Categories", to: "categories", icon: <DiscountOutlinedIcon /> },
 ];
 
 /** Absolute — these sit at the app root, not under /o/:orgId. */
