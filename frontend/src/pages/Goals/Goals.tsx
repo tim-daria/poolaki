@@ -1,12 +1,16 @@
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { Box, Typography } from "@mui/material";
 
 export function Goals() {
   const org = useCurrentOrg();
 
   return (
-    <div>
-      <h1>{org.name}'s Goals Page</h1>
-    </div>
+    <Box
+      sx={{ px: 3, pb: 5, display: "flex", flexDirection: "column", gap: 3 }}
+    >
+      <Typography>{org.name}'s Goals Page</Typography>
+      Page is under construction
+    </Box>
   );
 }
 
