@@ -14,8 +14,9 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
+import { useRouteMeta } from "../../routeMeta";
 
-/** Shared by both header buttons so they stay visually consistent. */
+/** Shared by both header buttons to keep them visually consistent. */
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
 interface PageHeaderProps {
@@ -25,10 +26,10 @@ interface PageHeaderProps {
 }
 
 /**
- * Header that stays mounted across navigation; pages fill it via `PageTitle`
- * and `PageAction`. Slots are exposed as portal targets rather than context
- * state because the page action holds handlers over page state, and lifting
- * a React node through setState would re-render in a loop or go stale.
+ * Header that stays mounted across navigation; pages fill it via `PageTitle`,
+ * `PageHeading` and `PageActionButton`. Slots are portal targets, not context
+ * state: the action button closes over page state, so passing it up through
+ * setState would go stale or re-render in a loop.
  */
 export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
@@ -82,7 +83,9 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
 }
 
 interface PageTitleProps {
-  title: ReactNode;
+  /** Defaults to the route's `handle` title. */
+  title?: ReactNode;
+  /** Defaults to the route's `handle` subtitle. */
   subtitle?: ReactNode;
 }
 
@@ -99,14 +102,18 @@ export function PageHeading({ children }: { children: ReactNode }) {
 
 /** Standard heading: a title with an optional subtitle. */
 export function PageTitle({ title, subtitle }: PageTitleProps) {
+  const meta = useRouteMeta();
+  const heading = title ?? meta?.title;
+  const sub = subtitle ?? meta?.subtitle;
+
   return (
     <PageHeading>
       <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
-        {title}
+        {heading}
       </Typography>
-      {subtitle && (
+      {sub && (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {subtitle}
+          {sub}
         </Typography>
       )}
     </PageHeading>
@@ -114,9 +121,9 @@ export function PageTitle({ title, subtitle }: PageTitleProps) {
 }
 
 /**
- * The page's primary action with header-owned variant, icon and padding so
- * pages cannot drift apart. All props remain overridable, e.g.
- * `startIcon={null}` removes the plus icon.
+ * The page's primary action. Variant, icon and padding are header-owned so
+ * pages stay consistent; all props remain overridable (`startIcon={null}`
+ * removes the plus icon).
  */
 export function PageActionButton({ sx, ...props }: ButtonProps) {
   const slots = usePageHeaderSlots();

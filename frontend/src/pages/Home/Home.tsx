@@ -1,3 +1,5 @@
+/** @file Workspace landing page: greeting or member list, plus the overview. */
+
 import { useState } from "react";
 import styles from "./styles.module.css";
 import { Box, Button, Stack, Typography } from "@mui/material";
@@ -42,8 +44,7 @@ export function Home() {
 
   return (
     <Box className={styles.homeContainer}>
-      {/* A shared workspace leads with who is in it; a personal one has no
-          member list to show, so it keeps the greeting. */}
+      {/* Personal workspaces have no members, so they show a greeting instead. */}
       {org.is_personal ? (
         <PageTitle
           title={greeting(now.getHours())}
@@ -121,5 +122,5 @@ export function Home() {
   );
 }
 
-// Named alias for react-router's route-level `lazy`
+// Named export required by react-router's route-level `lazy`.
 export { Home as Component };
