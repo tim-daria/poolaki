@@ -1,15 +1,30 @@
-// import { useState } from "react";
-import { Box, Button, Typography } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import { useState } from "react";
 import styles from "./styles.module.css";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import {
-  PageAction,
   PageHeading,
   PageTitle,
+  PageActionButton,
 } from "../../components/PageHeader/PageHeader";
 import { OrgMembers } from "../../components/OrgMembers/OrgMembers";
-// import { UniversalModal as Modal } from "../../components/Modals/Modal";
+import { Money } from "../../components/Money";
+import { MoneyField } from "../../components/Form/MoneyField/MoneyField";
+import { displayAmount, parsePastedAmount } from "../../lib/money";
+
+// TEMP: paste samples for the MoneyField smoke test. Remove before merging.
+const PASTE_SAMPLES = [
+  "1.234,56",
+  "1,234.56",
+  "1.234",
+  "1,234",
+  "1.234.567",
+  "€ 12,5",
+  "$ 0.999",
+  "-5",
+  "abc",
+  "1234567890123",
+];
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -19,8 +34,11 @@ function greeting(hour: number) {
 
 export function Home() {
   const org = useCurrentOrg();
-  // const [addOpen, setAddOpen] = useState(false);
   const now = new Date();
+
+  // TEMP: MoneyField / Money smoke test. Remove before merging.
+  const [amountDe, setAmountDe] = useState("1234.5");
+  const [amountUs, setAmountUs] = useState("");
 
   return (
     <Box className={styles.homeContainer}>
@@ -40,17 +58,65 @@ export function Home() {
           <OrgMembers />
         </PageHeading>
       )}
-      <PageAction>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => {}}>
-          Add Transaction
-        </Button>
-      </PageAction>
+      <PageActionButton onClick={() => {}}>Add transaction</PageActionButton>
 
       <Typography variant="h1">{org.name}'s Overview</Typography>
 
-      {/* {addOpen && (
-        <Modal mode="transaction" onClose={() => setAddOpen(false)} />
-      )} */}
+      {/* TEMP: MoneyField / Money smoke test. Remove before merging. */}
+      <Stack spacing={2} sx={{ maxWidth: 360, mt: 3 }}>
+        <MoneyField
+          label="Amount (de)"
+          value={amountDe}
+          onChange={setAmountDe}
+        />
+        <MoneyField
+          label="Amount (us)"
+          locale="us"
+          value={amountUs}
+          onChange={setAmountUs}
+        />
+        <Typography>
+          Input got in de field: <Money>{amountDe || "—"}</Money>
+        </Typography>
+        <Typography>
+          Input got in us field: <Money>{amountUs || "—"}</Money>
+        </Typography>
+        <Typography variant="subtitle2">
+          Paste samples (click to copy, then paste into a field above):
+        </Typography>
+        {PASTE_SAMPLES.map((sample) => (
+          <Stack
+            key={sample}
+            direction="row"
+            spacing={2}
+            sx={{ alignItems: "center" }}
+          >
+            <Button
+              size="small"
+              variant="outlined"
+              sx={{ minWidth: 140, justifyContent: "flex-start" }}
+              onClick={() => navigator.clipboard.writeText(sample)}
+            >
+              <Money>{sample}</Money>
+            </Button>
+            <Typography variant="body2">
+              de → <Money>{parsePastedAmount(sample, "de") ?? "null"}</Money>
+              {" · "}
+              us → <Money>{parsePastedAmount(sample, "us") ?? "null"}</Money>
+            </Typography>
+          </Stack>
+        ))}
+        <Typography variant="h3">
+          Balance:{" "}
+          <Money sx={{ color: "success.main" }}>
+            {displayAmount(1234567.89)} €
+          </Money>
+        </Typography>
+        <Typography variant="body2">
+          Expense:{" "}
+          <Money sx={{ color: "error.main" }}>-{displayAmount(42.5)} €</Money>
+        </Typography>
+      </Stack>
     </Box>
   );
 }
