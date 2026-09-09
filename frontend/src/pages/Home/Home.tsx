@@ -13,6 +13,7 @@ import { OrgMembers } from "../../components/OrgMembers/OrgMembers";
 import { Money } from "../../components/Money";
 import { MoneyField } from "../../components/Form/MoneyField/MoneyField";
 import { displayAmount, parsePastedAmount } from "../../lib/money";
+import { TransactionForm } from "../../components/Modals/TransactionForm";
 
 // TEMP: paste samples for the MoneyField smoke test. Remove before merging.
 const PASTE_SAMPLES = [
@@ -41,6 +42,7 @@ function Home() {
   // TEMP: MoneyField / Money smoke test. Remove before merging.
   const [amountDe, setAmountDe] = useState("1234.5");
   const [amountUs, setAmountUs] = useState("");
+  const [adding, setAdding] = useState(false);
 
   return (
     <Box className={styles.homeContainer}>
@@ -59,7 +61,10 @@ function Home() {
           <OrgMembers />
         </PageHeading>
       )}
-      <PageActionButton onClick={() => {}}>Add transaction</PageActionButton>
+      <PageActionButton onClick={() => setAdding(true)}>
+        Add transaction
+      </PageActionButton>
+      <TransactionForm open={adding} onClose={() => setAdding(false)} />
 
       <Typography variant="h1">{org.name}'s Overview</Typography>
 
