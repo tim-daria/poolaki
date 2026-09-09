@@ -7,7 +7,9 @@ import { createPortal } from "react-dom";
 import {
   Box,
   Button,
+  IconButton,
   Stack,
+  Tooltip,
   Typography,
   type ButtonProps,
 } from "@mui/material";
@@ -16,8 +18,10 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
 
-/** Shared by both header buttons to keep them visually consistent. */
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
+
+/** Matches the height of `PageActionButton` so the two sit on one line. */
+const assistantButtonSize = 36.5;
 
 interface PageHeaderProps {
   children: ReactNode;
@@ -58,22 +62,23 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
         >
           <Box ref={setActionSlot} sx={{ display: "contents" }} />
 
-          <Button
-            variant="outlined"
-            startIcon={<AutoAwesomeOutlinedIcon />}
-            // disabled={!onAssistantClick}
-            onClick={onAssistantClick}
-            sx={{
-              ...actionButtonSx,
-              color: "primary.dark",
-              bgcolor: "primary.contrastText",
-              border: "1px solid",
-              borderColor: "primary.main",
-              "&:hover": { bgcolor: "primary.light" },
-            }}
-          >
-            AI Assistant
-          </Button>
+          <Tooltip title="Ask AI">
+            <IconButton
+              aria-label="AI Assistant"
+              onClick={onAssistantClick}
+              sx={{
+                width: assistantButtonSize,
+                height: assistantButtonSize,
+                color: "primary.dark",
+                bgcolor: "primary.contrastText",
+                border: "1px solid",
+                borderColor: "primary.main",
+                "&:hover": { bgcolor: "primary.light" },
+              }}
+            >
+              <AutoAwesomeOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Box>
 
