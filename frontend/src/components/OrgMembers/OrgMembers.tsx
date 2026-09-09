@@ -1,3 +1,5 @@
+/** @file Member avatars for the current workspace, with the owner's invite control. */
+
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useEffect, useState } from "react";
 import {
@@ -28,6 +30,12 @@ import { avatarColor } from "../../lib/avatarColor";
 const MAX_MEMBERS = 5;
 
 /**
+ * A response tagged with the workspace it was fetched for, so a result that
+ * arrives after a switch can be told apart from the current one.
+ */
+type LoadedFor<T> = { orgId: number; data: T };
+
+/**
  * Owners first, then by join date.
  *
  * The endpoint returns memberships in no particular order, and AvatarGroup
@@ -42,8 +50,12 @@ function byRoleThenJoined(a: Member, b: Member): number {
 export function OrgMembers() {
   const org = useCurrentOrg();
   const theme = useTheme();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [pending, setPending] = useState<PendingInvitation[]>([]);
+  const [loadedMembers, setLoadedMembers] = useState<LoadedFor<
+    Member[]
+  > | null>(null);
+  const [loadedPending, setLoadedPending] = useState<LoadedFor<
+    PendingInvitation[]
+  > | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   /**
@@ -54,34 +66,43 @@ export function OrgMembers() {
   const canInvite = !org.is_personal && org.role === "owner";
 
   /**
-   * Pending invitations are only ever fetched for an owner of a shared
-   * workspace. Deriving the empty case rather than clearing `pending` on a
-   * workspace switch keeps the last owner-workspace's list from showing
-   * through, without a setState the effect would have to make synchronously.
+   * A result for a previous workspace reads as "nothing loaded", so a switch
+   * needs no reset: clearing state in the effect would mean a setState the
+   * effect has to make synchronously, which cascades renders.
    */
-  const visiblePending = canInvite ? pending : [];
+  const members = loadedMembers?.orgId === org.id ? loadedMembers.data : [];
+  const pending =
+    canInvite && loadedPending?.orgId === org.id ? loadedPending.data : [];
 
   /**
    * Mirrors the backend's own capacity rule: pending invitations occupy a slot
    * too, otherwise a sixth invite is sent only to be rejected on accept.
    */
-  const isFull = members.length + visiblePending.length >= MAX_MEMBERS;
+  const isFull = members.length + pending.length >= MAX_MEMBERS;
 
   const loadMembers = (signal?: AbortSignal) => {
-    fetchMembers(org.id, signal)
-      .then((res) => setMembers([...res.members].sort(byRoleThenJoined)))
+    // Read once, so a response is filed under the workspace it was asked for
+    // even if `org` has moved on by the time it resolves.
+    const orgId = org.id;
+
+    fetchMembers(orgId, signal)
+      .then((res) =>
+        setLoadedMembers({
+          orgId,
+          data: [...res.members].sort(byRoleThenJoined),
+        }),
+      )
       .catch((e) => {
-        if (e.name !== "AbortError") setMembers([]);
+        if (e.name !== "AbortError") setLoadedMembers({ orgId, data: [] });
       });
 
     // Owner-only endpoint. Asking as a member is a guaranteed 403, and the
     // count is only needed to decide whether to offer an invite anyway.
-    // Nothing to clear on the way out: visiblePending derives the empty case.
     if (!canInvite) return;
-    fetchPendingInvitations(org.id, signal)
-      .then((res) => setPending(res.invitations))
+    fetchPendingInvitations(orgId, signal)
+      .then((res) => setLoadedPending({ orgId, data: res.invitations }))
       .catch((e) => {
-        if (e.name !== "AbortError") setPending([]);
+        if (e.name !== "AbortError") setLoadedPending({ orgId, data: [] });
       });
   };
 
@@ -119,10 +140,9 @@ export function OrgMembers() {
             </Avatar>
           </Tooltip>
         ))}
-        {/* Pending invitees sit after the members, dimmed and outlined: they
-            are expected in the workspace but have not accepted yet, so they
-            should not read as people who are already in it. */}
-        {visiblePending.map((p) => (
+        {/* Dimmed and outlined: an invitee has not accepted yet, so they must
+            not read as someone already in the workspace. */}
+        {pending.map((p) => (
           <Tooltip
             key={`pending-${p.id}`}
             title={`${p.invited_user} (invited)`}
