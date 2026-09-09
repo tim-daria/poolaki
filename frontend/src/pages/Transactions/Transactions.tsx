@@ -1,305 +1,396 @@
-import { useState, useRef, useEffect } from "react";
-import { mockTransactions, CATEGORIES } from "../Home/mockData";
-import type { Transaction, TransactionType } from "../Home/mockData";
-import styles from "./Transactions.module.css";
-// import { UniversalModal as Modal } from "../../components/Modal/Modal";
-const PAGE_SIZE = 10;
+/**
+ * @file Transactions page: a card with type tabs, search/sort/filter toolbar,
+ * active-filter chips, the table and pagination.
+ */
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  InputAdornment,
+  MenuItem,
+  Pagination,
+  Stack,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Tabs,
+  TextField,
+  Typography,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import TuneIcon from "@mui/icons-material/Tune";
+import { useCurrentOrg } from "../../context/useCurrentOrg";
+import {
+  PageActionButton,
+  PageTitle,
+} from "../../components/PageHeader/PageHeader";
+import { fetchTransactions, type Transaction } from "../../lib/transactions";
+import { categoryById } from "../../lib/categories";
+import { shortDate } from "../../lib/date";
+import {
+  PAGE_SIZE,
+  applyFilters,
+  type Sort,
+  type Tab as TabValue,
+} from "../../lib/transactionFilters";
+import { useTransactionFilters } from "./useTransactionFilters";
+import { FilterPanel } from "./FilterPanel";
+import { TransactionRow } from "./TransactionRow";
+import { MOCK_TRANSACTIONS, USE_MOCK_TRANSACTIONS } from "./mockTransactions";
+
+const SORTS: { value: Sort; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+];
+
+/** "Transfers" is the user-facing name for a contribution. */
+const TABS: { value: TabValue; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "expense", label: "Expenses" },
+  { value: "income", label: "Income" },
+  { value: "contribution", label: "Transfers" },
+];
+
+/** Chip label for an open or closed date range. */
+function rangeLabel(from: string, to: string): string {
+  if (from && to) return `${shortDate(from)} – ${shortDate(to)}`;
+  if (from) return `From ${shortDate(from)}`;
+  return `Until ${shortDate(to)}`;
 }
 
-type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+const pillInputSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 999,
+    bgcolor: "background.default",
+    "& fieldset": { borderColor: "divider" },
+  },
+} as const;
 
-export function Transactions() {
-  const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [category, setCategory] = useState("All");
-  const [type, setType] = useState<"All" | TransactionType>("All");
-  const [recurring, setRecurring] = useState(false);
-  const [taxRefundable, setTaxRefundable] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("date-desc");
-  const [page, setPage] = useState(1);
-  // const [addOpen, setAddOpen] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+const headCellSx = {
+  color: "text.secondary",
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  borderBottomColor: "divider",
+  py: 1.5,
+} as const;
 
+function Transactions() {
+  const org = useCurrentOrg();
+  const [rows, setRows] = useState<Transaction[] | null>(
+    USE_MOCK_TRANSACTIONS ? MOCK_TRANSACTIONS : null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const filtersApi = useTransactionFilters();
+  const { filters, update, toggleCategory, clear, activeCount } = filtersApi;
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+
+  /**
+   * No reset on a workspace switch: AppLayout keys <main> by orgId, so this
+   * page is remounted with empty state rather than re-fetching into the
+   * previous workspace's.
+   */
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    }
-    if (filterOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [filterOpen]);
+    if (USE_MOCK_TRANSACTIONS) return;
+    const controller = new AbortController();
+    fetchTransactions(org.id, controller.signal)
+      .then(setRows)
+      .catch((e: unknown) => {
+        // Aborts come from unmount or org switch, not from a failed request.
+        if (controller.signal.aborted) return;
+        setError(
+          e instanceof Error ? e.message : "Failed to load transactions",
+        );
+      });
+    return () => controller.abort();
+  }, [org.id]);
 
-  const filtered = (() => {
-    const result = mockTransactions.filter((t) => {
-      if (
-        search &&
-        !t.name.toLowerCase().includes(search.toLowerCase()) &&
-        !t.category.toLowerCase().includes(search.toLowerCase())
-      )
-        return false;
-      if (fromDate && t.date < fromDate) return false;
-      if (toDate && t.date > toDate) return false;
-      if (category !== "All" && t.category !== category) return false;
-      if (type !== "All" && t.type !== type) return false;
-      if (recurring && !t.recurring) return false;
-      if (taxRefundable && !t.taxRefundable) return false;
-      return true;
-    });
+  // Filtering runs over every row on the client: the endpoint returns the
+  // workspace's full history and takes no query params yet.
+  const label = (id: number | null) => categoryById(id)?.label ?? "";
+  const result = rows ? applyFilters(rows, filters, label) : null;
 
-    return result.sort((a, b) => {
-      switch (sortKey) {
-        case "date-desc":
-          return b.date.localeCompare(a.date);
-        case "date-asc":
-          return a.date.localeCompare(b.date);
-        case "amount-desc":
-          return b.amount - a.amount;
-        case "amount-asc":
-          return a.amount - b.amount;
-      }
-    });
-  })();
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  function clearFilters() {
-    setFromDate("");
-    setToDate("");
-    setCategory("All");
-    setType("All");
-    setRecurring(false);
-    setTaxRefundable(false);
-    setPage(1);
-  }
-
-  function handleSearch(val: string) {
-    setSearch(val);
-    setPage(1);
-  }
-
-  const activeFilterCount = [
-    fromDate,
-    toDate,
-    category !== "All" ? category : "",
-    type !== "All" ? type : "",
-    recurring ? "recurring" : "",
-    taxRefundable ? "tax" : "",
-  ].filter(Boolean).length;
+  /**
+   * The page number is clamped when rows drop below it, so the control has to
+   * follow `result`, not `filters.page`, or it would point past the last page.
+   */
+  const currentPage = result ? Math.min(filters.page, result.pageCount) : 1;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
-          type="text"
-          placeholder="Search by name, category..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
-        <select
-          className={styles.sortSelect}
-          value={sortKey}
-          onChange={(e) => {
-            setSortKey(e.target.value as SortKey);
-            setPage(1);
+    <Box sx={{ px: 3, pb: 5 }}>
+      <PageTitle />
+      <PageActionButton onClick={() => {}}>Add transaction</PageActionButton>
+
+      {error && <Alert severity="error">{error}</Alert>}
+      {!rows && !error && <CircularProgress />}
+
+      {result && (
+        <Box
+          sx={{
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "divider",
+            overflow: "hidden",
           }}
         >
-          <option value="date-desc">Date: newest first</option>
-          <option value="date-asc">Date: oldest first</option>
-          <option value="amount-desc">Amount: high to low</option>
-          <option value="amount-asc">Amount: low to high</option>
-        </select>
-        <div className={styles.filterWrapper} ref={filterRef}>
-          <button
-            className={styles.filterBtn}
-            onClick={() => setFilterOpen((o) => !o)}
+          {/* -------- Type tabs -------- */}
+          <Tabs
+            value={filters.tab}
+            onChange={(_, tab: TabValue) => update({ tab })}
+            variant="scrollable"
+            allowScrollButtonsMobile
+            sx={{
+              px: 3,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              "& .MuiTabs-indicator": {
+                height: 3,
+                bgcolor: "primary.dark",
+              },
+            }}
           >
-            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-          </button>
-          {filterOpen && (
-            <div className={styles.filterDropdown}>
-              <label>
-                From
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </label>
-              <label>
-                To
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => {
-                    setToDate(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </label>
-              <label>
-                Category
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="All">All Categories</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Type
-                <select
-                  value={type}
-                  onChange={(e) => {
-                    setType(e.target.value as "All" | TransactionType);
-                    setPage(1);
-                  }}
-                >
-                  <option value="All">All Types</option>
-                  <option value="income">Income</option>
-                  <option value="expense">Expense</option>
-                </select>
-              </label>
-              <div className={styles.toggleRow}>
-                <span>Recurring</span>
-                <button
-                  className={`${styles.toggle} ${recurring ? styles.toggleOn : ""}`}
-                  onClick={() => {
-                    setRecurring((v) => !v);
-                    setPage(1);
-                  }}
-                  aria-pressed={recurring}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-              </div>
-              <div className={styles.toggleRow}>
-                <span>Tax Refundable</span>
-                <button
-                  className={`${styles.toggle} ${taxRefundable ? styles.toggleOn : ""}`}
-                  onClick={() => {
-                    setTaxRefundable((v) => !v);
-                    setPage(1);
-                  }}
-                  aria-pressed={taxRefundable}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-              </div>
-              <button className={styles.clearBtn} onClick={clearFilters}>
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
-        <button className={styles.addBtn} onClick={() => {}}>
-          + Add Transaction
-        </button>
-      </div>
-
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginated.length === 0 ? (
-            <tr>
-              <td colSpan={6} className={styles.empty}>
-                No transactions found
-              </td>
-            </tr>
-          ) : (
-            paginated.map((t: Transaction) => (
-              <tr key={t.id}>
-                <td>{formatDate(t.date)}</td>
-                <td>{t.name}</td>
-                <td>
-                  <span className={styles.categoryBadge}>{t.category}</span>
-                </td>
-                <td>
-                  <span
-                    className={
-                      t.type === "income" ? styles.incomeTag : styles.expenseTag
-                    }
+            {TABS.map((t) => (
+              <Tab
+                key={t.value}
+                value={t.value}
+                sx={{
+                  px: 0,
+                  mr: 3.5,
+                  minWidth: 0,
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                  color: "text.secondary",
+                  "&.Mui-selected": {
+                    color: "text.primary",
+                    fontWeight: 700,
+                  },
+                }}
+                label={
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center" }}
                   >
-                    {t.type === "income" ? "↗ Income" : "↘ Expense"}
-                  </span>
-                </td>
-                <td
-                  className={
-                    t.type === "income" ? styles.incomeAmt : styles.expenseAmt
-                  }
-                >
-                  {t.type === "income" ? "+" : "-"}€{t.amount.toFixed(2)}
-                </td>
-                <td>
-                  <button className={styles.moreBtn}>···</button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+                    <span>{t.label}</span>
+                    {/* Muted pill: the count is secondary to the label and
+                        must not read as the selected state. */}
+                    <Chip
+                      label={result.counts[t.value]}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        bgcolor: "action.selected",
+                        color: "inherit",
+                        "& .MuiChip-label": { px: 1 },
+                      }}
+                    />
+                  </Stack>
+                }
+              />
+            ))}
+          </Tabs>
 
-      <div className={styles.footer}>
-        <span>
-          Showing {paginated.length} of {filtered.length} transactions
-        </span>
-        <div className={styles.pagination}>
-          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            ‹ Prev
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              className={p === page ? styles.activePage : ""}
-              onClick={() => setPage(p)}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage(page + 1)}
-          >
-            Next ›
-          </button>
-        </div>
-      </div>
-      {/* {addOpen && (
-        <Modal mode="transaction" onClose={() => setAddOpen(false)} />
-      )} */}
-    </div>
+          <Stack spacing={2} sx={{ px: 3, pt: 2.5, pb: 1 }}>
+            {/* -------- Toolbar -------- */}
+            <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap" }}>
+              <TextField
+                value={filters.q}
+                onChange={(e) => update({ q: e.target.value })}
+                placeholder="Search name or category"
+                size="small"
+                sx={[{ flex: 1, minWidth: 220 }, pillInputSx]}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <TextField
+                select
+                value={filters.sort}
+                // MUI types a select's value as string; SORTS is the only
+                // source of options, so the cast cannot widen past Sort.
+                onChange={(e) => update({ sort: e.target.value as Sort })}
+                size="small"
+                sx={[{ minWidth: 170 }, pillInputSx]}
+              >
+                {SORTS.map((s) => (
+                  <MenuItem key={s.value} value={s.value}>
+                    {s.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button
+                variant="outlined"
+                startIcon={<TuneIcon />}
+                onClick={(e) => setFilterAnchor(e.currentTarget)}
+                sx={{
+                  color: "text.primary",
+                  borderColor: activeCount ? "primary.main" : "divider",
+                  bgcolor: activeCount ? "primary.light" : "transparent",
+                  fontWeight: 600,
+                }}
+              >
+                Filters
+                {activeCount > 0 && (
+                  <Box
+                    component="span"
+                    sx={{
+                      ml: 1,
+                      minWidth: 22,
+                      height: 22,
+                      px: 0.75,
+                      borderRadius: 999,
+                      bgcolor: "primary.dark",
+                      color: "primary.contrastText",
+                      fontSize: "0.8rem",
+                      lineHeight: "22px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {activeCount}
+                  </Box>
+                )}
+              </Button>
+            </Stack>
+
+            {/* -------- Active filters -------- */}
+            {activeCount > 0 && (
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ flexWrap: "wrap", alignItems: "center", rowGap: 1 }}
+              >
+                {(filters.from || filters.to) && (
+                  <Chip
+                    label={rangeLabel(filters.from, filters.to)}
+                    onDelete={() => update({ from: "", to: "" })}
+                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                  />
+                )}
+                {filters.categories.map((id) => (
+                  <Chip
+                    key={id}
+                    label={categoryById(id)?.label ?? `Category ${id}`}
+                    onDelete={() => toggleCategory(id)}
+                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                  />
+                ))}
+                <Button
+                  onClick={clear}
+                  sx={{ color: "text.primary", fontWeight: 600, px: 1 }}
+                >
+                  Clear all
+                </Button>
+              </Stack>
+            )}
+
+            <FilterPanel
+              anchor={filterAnchor}
+              onClose={() => setFilterAnchor(null)}
+              {...filtersApi}
+            />
+
+            {/* -------- Table -------- */}
+            <Box sx={{ overflowX: "auto" }}>
+              <Table sx={{ minWidth: 560 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={[headCellSx, { width: 120 }]}>
+                      Date
+                    </TableCell>
+                    <TableCell sx={headCellSx}>Name</TableCell>
+                    <TableCell sx={[headCellSx, { width: 200 }]}>
+                      Category
+                    </TableCell>
+                    <TableCell sx={[headCellSx, { width: 160 }]} align="right">
+                      Amount
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {result.page.map((t) => (
+                    <TransactionRow key={t.id} transaction={t} />
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+
+            {/* Distinguishes an empty workspace from filters that match
+                nothing: the second is the user's own doing and is undone by
+                clearing. */}
+            {result.total === 0 && (
+              <Typography
+                color="text.secondary"
+                sx={{ textAlign: "center", py: 4 }}
+              >
+                {rows?.length
+                  ? "No transactions match these filters."
+                  : "No transactions yet."}
+              </Typography>
+            )}
+
+            {/* -------- Footer -------- */}
+            {result.total > 0 && (
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  py: 1,
+                }}
+              >
+                <Typography color="text.secondary">
+                  Showing {result.page.length} of {result.total}
+                </Typography>
+                {result.total > PAGE_SIZE && (
+                  <Pagination
+                    count={result.pageCount}
+                    page={currentPage}
+                    onChange={(_, page) => update({ page })}
+                    shape="rounded"
+                    sx={{
+                      "& .MuiPaginationItem-root": {
+                        fontSize: "0.95rem",
+                        color: "text.secondary",
+                      },
+                      "& .MuiPaginationItem-page.Mui-selected": {
+                        bgcolor: "primary.light",
+                        color: "text.primary",
+                        fontWeight: 600,
+                      },
+                      "& .MuiPaginationItem-previousNext": {
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 999,
+                      },
+                    }}
+                  />
+                )}
+              </Stack>
+            )}
+          </Stack>
+        </Box>
+      )}
+    </Box>
   );
 }
 
-// Named alias for react-router's route-level `lazy`
 export { Transactions as Component };

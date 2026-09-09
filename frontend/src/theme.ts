@@ -7,9 +7,11 @@ import { createTheme } from "@mui/material";
 declare module "@mui/material/styles" {
   interface TypographyVariants {
     mono: React.CSSProperties;
+    label: React.CSSProperties;
   }
   interface TypographyVariantsOptions {
     mono?: React.CSSProperties;
+    label: React.CSSProperties;
   }
   interface Palette {
     shadow: { main: string };
@@ -26,6 +28,7 @@ declare module "@mui/material/styles" {
 declare module "@mui/material/Typography" {
   interface TypographyPropsVariantOverrides {
     mono: true;
+    label: true;
   }
 }
 
@@ -184,6 +187,12 @@ export const theme = createTheme({
     h3: {
       fontSize: "1.5rem",
       fontWeight: 600,
+    },
+    label: {
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
     },
   },
 });
