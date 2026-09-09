@@ -3,7 +3,7 @@
  *
  * `fromDTO` and `toPayload` convert foreign key IDs (category_id, goal_id)
  * and string amounts to internal client models.
- * `updateTransaction` is stubbed locally until the backend adds a PATCH route.
+ * `updateTransaction` waits on a backend PATCH route; see CAN_EDIT_TRANSACTIONS.
  */
 
 import { TODAY } from "./date";
@@ -299,44 +299,16 @@ export async function createTransaction(
 }
 
 /**
- * Flip to true once core/views/transaction.py grows a `patch`, then delete this
- * constant and the branch guarded by it.
- *
- * Annotated rather than inferred: as a `false` literal it would narrow the code
- * below to unreachable.
+ * Flip once core/views/transaction.py grows a `patch`. Until then the form
+ * opens existing rows read-only with Save disabled, so nothing pretends to
+ * persist an edit.
  */
-const PATCH_AVAILABLE: boolean = false;
-
-/**
- * The edited row as the server would echo it back, without a request.
- *
- * Round-trips through toPayload rather than reading the draft directly, so the
- * stub cannot drift from the shape the real endpoint returns.
- */
-function mockUpdated(
-  id: number,
-  draft: TransactionDraft,
-  fallbackDescription?: string,
-): Transaction {
-  const payload = toPayload(draft, fallbackDescription);
-  return {
-    id,
-    entry_type: payload.entry_type,
-    category: payload.category_id,
-    goal: payload.goal_id,
-    description: payload.description,
-    amount: parseMoney(payload.amount),
-    transaction_date: payload.transaction_date,
-    is_tax_deductible: payload.is_tax_deductible,
-  };
-}
+export const CAN_EDIT_TRANSACTIONS = false;
 
 /**
  * PATCH /api/v1/organizations/${org_id}/transactions/${id}/
  *
- * TODO: that route has no PATCH yet — TransactionGetDeleteView is get + delete.
- * Until it lands the edit is local to the session and lost on reload, the same
- * way SEED_GOALS stands in for the missing goals API (see lib/goals.ts).
+ * Not routed yet: only called once CAN_EDIT_TRANSACTIONS is true.
  */
 export async function updateTransaction(
   org_id: number,
@@ -345,8 +317,6 @@ export async function updateTransaction(
   csrfToken: string,
   fallbackDescription?: string,
 ): Promise<Transaction> {
-  if (!PATCH_AVAILABLE) return mockUpdated(id, draft, fallbackDescription);
-
   const res = await fetch(
     `/api/v1/organizations/${org_id}/transactions/${id}/`,
     {

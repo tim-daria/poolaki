@@ -1,15 +1,85 @@
 // @ts-check
+/**
+ * @file Transactions page e2e: tabs, search, sort, filters, pagination and the
+ * add/edit modal, against rows posted through the real API.
+ */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { makeUsers, registerUser } from "./helpers";
+import { makeUsers, registerUser, toOrgId } from "./helpers";
 
 /**
- * Transactions page: tabs, search, sort, filters and pagination.
- *
- * The page currently renders the seeded rows in mockTransactions.ts
- * (USE_MOCK_TRANSACTIONS), so every count below is fixed by that file: 24 rows,
- * 17 expenses, 4 incomes, 3 transfers, 3 tax refundable, 15 per page. Update
- * both together.
+ * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
+ * 3 transfers, 3 tax refundable, 15 per page. Category IDs follow
+ * SEED_CATEGORIES in lib/categories.ts and must exist in the database:
+ * `manage.py seed_transaction_fixtures <org_id>` once.
  */
+type Fixture = [
+  date: string,
+  type: "expense" | "income" | "contribution",
+  category: number | null,
+  name: string,
+  amount: number,
+  tax?: boolean,
+];
+
+// Posted in this order, so ids ascend down the list; same-date rows sort by
+// id, which the pagination test relies on.
+const FIXTURES: Fixture[] = [
+  ["2026-08-05", "expense", 1, "REWE", 255],
+  ["2026-08-03", "expense", 2, "Ristorante Baldi", 52],
+  ["2026-08-01", "income", 8, "Salary", 3240],
+  ["2026-08-01", "contribution", null, "To savings", 300],
+  ["2026-07-29", "expense", 1, "Edeka", 61.2],
+  ["2026-07-24", "expense", 2, "Pizzeria Nona", 27.9],
+  ["2026-07-19", "expense", 3, "Clothes", 78],
+  ["2026-07-18", "expense", 1, "REWE", 48.3],
+  ["2026-07-17", "contribution", null, "To savings", 300],
+  ["2026-07-12", "expense", 4, "BVG monthly ticket", 49, true],
+  ["2026-07-08", "expense", 6, "Pharmacy", 18.75, true],
+  ["2026-07-05", "expense", 2, "Café Central", 9.4],
+  ["2026-07-01", "income", 8, "Salary", 3240],
+  ["2026-07-01", "expense", 5, "Rent", 1150],
+  ["2026-06-27", "expense", 1, "Lidl", 33.15],
+  ["2026-06-22", "income", 9, "Birthday gift", 100],
+  ["2026-06-20", "expense", 3, "Bookshop", 24.99, true],
+  ["2026-06-17", "contribution", null, "To savings", 300],
+  ["2026-06-14", "expense", 2, "Sushi Yama", 41.5],
+  ["2026-06-10", "expense", 4, "Taxi", 22],
+  ["2026-06-06", "expense", 7, "Haircut", 35],
+  ["2026-06-03", "expense", 1, "REWE", 57.8],
+  ["2026-06-01", "income", 8, "Salary", 3240],
+  ["2026-06-01", "expense", 5, "Rent", 1150],
+];
+
+/** POSTs one fixture row as the logged-in user, the way lib/transactions.ts does. */
+async function postTransaction(page: Page, orgId: number, row: Fixture) {
+  const [transaction_date, entry_type, category_id, description, amount, tax] =
+    row;
+  const csrftoken =
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? "";
+  const res = await page.request.post(
+    `/api/v1/organizations/${orgId}/transactions/`,
+    {
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+      data: {
+        entry_type,
+        category_id,
+        goal_id: null,
+        description,
+        amount: amount.toFixed(2),
+        transaction_date,
+        is_tax_deductible: tax ?? false,
+      },
+    },
+  );
+  if (res.status() !== 201) {
+    throw new Error(
+      `transaction POST failed: ${res.status()} ${await res.text()} — ` +
+        "if it names category_id, seed the categories first (see the file header).",
+    );
+  }
+}
+
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
@@ -20,6 +90,10 @@ test.describe.serial("Transactions", () => {
     page = await browser.newPage();
     const workspace = await registerUser(page, user);
     transactionsUrl = `${workspace}/transactions`;
+    // Sequential on purpose: ids must ascend in list order.
+    for (const row of FIXTURES) {
+      await postTransaction(page, toOrgId(workspace), row);
+    }
   });
 
   test.afterAll(async () => {
@@ -137,8 +211,18 @@ test.describe.serial("Transactions", () => {
     const panel = page
       .getByRole("presentation")
       .filter({ hasText: "Categories" });
-    await panel.getByLabel("From").fill("2026-07-01");
-    await panel.getByLabel("To").fill("2026-08-31");
+    // MUI's date field is a group of spinbutton sections: focus the first
+    // section, then type the digits and they flow through DD-MM-YYYY.
+    const typeDate = async (label: string, digits: string) => {
+      await panel
+        .getByRole("group", { name: label })
+        .getByRole("spinbutton")
+        .first()
+        .click();
+      await page.keyboard.type(digits);
+    };
+    await typeDate("From", "01072026");
+    await typeDate("To", "31082026");
     await panel.getByText("Groceries", { exact: true }).click();
     await panel.getByText("Eating out", { exact: true }).click();
     await page.keyboard.press("Escape");
@@ -198,6 +282,96 @@ test.describe.serial("Transactions", () => {
     await expect(chip).toHaveCount(0);
     await expect(page).not.toHaveURL(/tax=/);
     await expect(showing("15 of 24")).toBeVisible();
+  });
+
+  test("Add transaction opens a blank form and guards unsaved input", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+
+    await expect(
+      dialog.getByRole("heading", { name: "Add transaction" }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Expense" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(dialog.getByLabel("Description")).toHaveValue("");
+    await expect(dialog.getByRole("button", { name: "Delete" })).toHaveCount(0);
+
+    // Closing with unsaved input asks first; keeping edits leaves the form up.
+    await dialog.getByLabel("Description").fill("Half typed");
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Discard changes?")).toBeVisible();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await expect(dialog.getByLabel("Description")).toHaveValue("Half typed");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("clicking a row opens it read-only, prefilled, with Delete", async () => {
+    await rows().filter({ hasText: "Ristorante Baldi" }).click();
+    const dialog = page.getByRole("dialog");
+
+    await expect(
+      dialog.getByRole("heading", { name: "Edit transaction" }),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Description")).toHaveValue(
+      "Ristorante Baldi",
+    );
+    await expect(dialog.getByLabel("Amount")).toHaveValue("52,00");
+    await expect(dialog.getByLabel("Category")).toHaveText("Eating out");
+    await expect(dialog.getByRole("button", { name: "Delete" })).toBeVisible();
+
+    // No PATCH route yet: fields are locked and Save stays off.
+    await expect(
+      dialog.getByText("Editing is not available yet"),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Description")).toBeDisabled();
+    await expect(
+      dialog.getByRole("button", { name: "Save changes" }),
+    ).toBeDisabled();
+
+    // Untouched, so Cancel closes without asking.
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("rows open from the keyboard", async () => {
+    await rows().first().focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("Description")).toHaveValue("REWE");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("the modal creates and deletes a transaction for real", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+
+    await dialog.getByLabel("Category").click();
+    await page.getByRole("option", { name: "Transport" }).click();
+    await dialog.getByLabel("Amount").fill("12,50");
+    await dialog.getByLabel("Description").fill("Tram ticket");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(dialog).toBeHidden();
+
+    // Dated today, so it sorts above every fixture row.
+    await expect(rows().first()).toContainText("Tram ticket");
+    await expect(rows().first()).toContainText("Transport");
+    await expect(rows().first()).toContainText("-€12,50");
+    await expect(tab("All")).toContainText("25");
+
+    await rows().first().click();
+    await dialog.getByRole("button", { name: "Delete" }).click();
+    await page
+      .getByRole("dialog", { name: "Delete this transaction?" })
+      .getByRole("button", { name: "Delete" })
+      .click();
+    await expect(dialog).toBeHidden();
+
+    await expect(rows().filter({ hasText: "Tram ticket" })).toHaveCount(0);
+    await expect(tab("All")).toContainText("24");
   });
 
   test("a filtered view survives reload", async () => {

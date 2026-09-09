@@ -30,16 +30,41 @@ function categoryLabel(t: Transaction): string | null {
   return categoryById(t.category)?.label ?? null;
 }
 
+interface TransactionRowProps {
+  transaction: Transaction;
+  /** Opens the row for editing. */
+  onClick?: (t: Transaction) => void;
+}
+
 export function TransactionRow({
   transaction: t,
-}: {
-  transaction: Transaction;
-}) {
+  onClick,
+}: TransactionRowProps) {
   const style = ROW_STYLE[t.entry_type];
   const category = categoryLabel(t);
 
   return (
-    <TableRow hover>
+    <TableRow
+      hover
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick && (() => onClick(t))}
+      // Enter and Space, the two keys that activate a button.
+      onKeyDown={
+        onClick &&
+        ((e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          onClick(t);
+        })
+      }
+      sx={{
+        cursor: onClick ? "pointer" : undefined,
+        "&:focus-visible": {
+          outline: "2px solid",
+          outlineColor: "primary.main",
+        },
+      }}
+    >
       <TableCell sx={{ color: "text.secondary", py: 2 }}>
         {shortDate(t.transaction_date)}
       </TableCell>

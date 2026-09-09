@@ -42,8 +42,9 @@ import {
 } from "../../lib/transactionFilters";
 import { useTransactionFilters } from "./useTransactionFilters";
 import { FilterPanel } from "./FilterPanel";
+import { tintedWhenActive } from "./styles";
 import { TransactionRow } from "./TransactionRow";
-import { MOCK_TRANSACTIONS, USE_MOCK_TRANSACTIONS } from "./mockTransactions";
+import { TransactionForm } from "../../components/Modals/TransactionForm";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -74,24 +75,24 @@ const pillInputSx = {
 } as const;
 
 const headCellSx = {
+  typography: "label",
   color: "text.secondary",
-  fontSize: "0.72rem",
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
   borderBottomColor: "divider",
   py: 1.5,
 } as const;
 
+/** Chips in the active-filters row. */
+const activeChipSx = { bgcolor: "primary.light", fontWeight: 500 } as const;
+
 function Transactions() {
   const org = useCurrentOrg();
-  const [rows, setRows] = useState<Transaction[] | null>(
-    USE_MOCK_TRANSACTIONS ? MOCK_TRANSACTIONS : null,
-  );
+  const [rows, setRows] = useState<Transaction[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const filtersApi = useTransactionFilters();
   const { filters, update, toggleCategory, clear, activeCount } = filtersApi;
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   /**
    * No reset on a workspace switch: AppLayout keys <main> by orgId, so this
@@ -99,7 +100,6 @@ function Transactions() {
    * previous workspace's.
    */
   useEffect(() => {
-    if (USE_MOCK_TRANSACTIONS) return;
     const controller = new AbortController();
     fetchTransactions(org.id, controller.signal)
       .then(setRows)
@@ -115,8 +115,7 @@ function Transactions() {
 
   // Filtering runs over every row on the client: the endpoint returns the
   // workspace's full history and takes no query params yet.
-  const label = (id: number | null) => categoryById(id)?.label ?? "";
-  const result = rows ? applyFilters(rows, filters, label) : null;
+  const result = rows ? applyFilters(rows, filters) : null;
 
   /**
    * The page number is clamped when rows drop below it, so the control has to
@@ -124,10 +123,38 @@ function Transactions() {
    */
   const currentPage = result ? Math.min(filters.page, result.pageCount) : 1;
 
+  /** A new row goes on top; an edited one is swapped in place. */
+  function handleSaved(t: Transaction) {
+    setRows((rs) => {
+      // Unreachable while loading: the form only opens once rows exist.
+      if (!rs) return rs;
+      return rs.some((r) => r.id === t.id)
+        ? rs.map((r) => (r.id === t.id ? t : r))
+        : [t, ...rs];
+    });
+  }
+
+  function handleDeleted(id: number) {
+    setRows((rs) => rs?.filter((r) => r.id !== id) ?? rs);
+  }
+
   return (
     <Box sx={{ px: 3, pb: 5 }}>
       <PageTitle />
-      <PageActionButton onClick={() => {}}>Add transaction</PageActionButton>
+      <PageActionButton onClick={() => setAdding(true)}>
+        Add transaction
+      </PageActionButton>
+
+      <TransactionForm
+        open={adding || editing !== null}
+        transaction={editing ?? undefined}
+        onClose={() => {
+          setAdding(false);
+          setEditing(null);
+        }}
+        onSaved={handleSaved}
+        onDeleted={handleDeleted}
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
       {!rows && !error && <CircularProgress />}
@@ -239,12 +266,7 @@ function Transactions() {
                 variant="outlined"
                 startIcon={<TuneIcon />}
                 onClick={(e) => setFilterAnchor(e.currentTarget)}
-                sx={{
-                  color: "text.primary",
-                  borderColor: activeCount ? "primary.main" : "divider",
-                  bgcolor: activeCount ? "primary.light" : "transparent",
-                  fontWeight: 600,
-                }}
+                sx={tintedWhenActive(activeCount > 0)}
               >
                 Filters
                 {activeCount > 0 && (
@@ -280,7 +302,7 @@ function Transactions() {
                   <Chip
                     label={rangeLabel(filters.from, filters.to)}
                     onDelete={() => update({ from: "", to: "" })}
-                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                    sx={activeChipSx}
                   />
                 )}
                 {filters.categories.map((id) => (
@@ -288,14 +310,14 @@ function Transactions() {
                     key={id}
                     label={categoryById(id)?.label ?? `Category ${id}`}
                     onDelete={() => toggleCategory(id)}
-                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                    sx={activeChipSx}
                   />
                 ))}
                 {filters.taxDeductible && (
                   <Chip
                     label="Tax refundable"
                     onDelete={() => update({ taxDeductible: false })}
-                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                    sx={activeChipSx}
                   />
                 )}
                 <Button
@@ -310,6 +332,7 @@ function Transactions() {
             <FilterPanel
               anchor={filterAnchor}
               onClose={() => setFilterAnchor(null)}
+              matchCount={result.total}
               {...filtersApi}
             />
 
@@ -332,7 +355,11 @@ function Transactions() {
                 </TableHead>
                 <TableBody>
                   {result.page.map((t) => (
-                    <TransactionRow key={t.id} transaction={t} />
+                    <TransactionRow
+                      key={t.id}
+                      transaction={t}
+                      onClick={setEditing}
+                    />
                   ))}
                 </TableBody>
               </Table>

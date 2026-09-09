@@ -1,5 +1,6 @@
 /** @file Client-side filtering, sorting and paging of transactions. Pure functions so the UI and future server params share one contract. */
 
+import { categoryById } from "./categories";
 import type { EntryType, Transaction } from "./transactions";
 
 /**
@@ -40,11 +41,7 @@ export const DEFAULT_FILTERS: TransactionFilters = {
 };
 
 /** Everything except the tab and page, so tab counts reflect the other active filters. */
-export function matchesFilters(
-  t: Transaction,
-  f: TransactionFilters,
-  categoryLabel: (id: number | null) => string,
-): boolean {
+export function matchesFilters(t: Transaction, f: TransactionFilters): boolean {
   if (f.from && t.transaction_date < f.from) return false;
   if (f.to && t.transaction_date > f.to) return false;
   if (
@@ -55,7 +52,8 @@ export function matchesFilters(
   if (f.taxDeductible && !t.is_tax_deductible) return false;
   if (f.q) {
     const needle = f.q.toLowerCase();
-    const hay = `${t.description} ${categoryLabel(t.category)}`.toLowerCase();
+    const hay =
+      `${t.description} ${categoryById(t.category)?.label ?? ""}`.toLowerCase();
     if (!hay.includes(needle)) return false;
   }
   return true;
@@ -100,9 +98,8 @@ export type FilteredResult = {
 export function applyFilters(
   rows: Transaction[],
   f: TransactionFilters,
-  categoryLabel: (id: number | null) => string,
 ): FilteredResult {
-  const base = rows.filter((t) => matchesFilters(t, f, categoryLabel));
+  const base = rows.filter((t) => matchesFilters(t, f));
   const counts = countByTab(base);
   const inTab =
     f.tab === "all" ? base : base.filter((t) => t.entry_type === f.tab);
