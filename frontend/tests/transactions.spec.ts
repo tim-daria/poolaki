@@ -374,6 +374,215 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
   });
 
+  test("date presets set and clear a range, with a live match count", async () => {
+    await filtersButton().click();
+    const panel = page
+      .getByRole("presentation")
+      .filter({ hasText: "Categories" });
+
+    // Today is in September 2026; the fixtures end in August.
+    await panel.getByRole("button", { name: "Last month" }).click();
+    await expect(page).toHaveURL(/from=2026-08-01/);
+    await expect(page).toHaveURL(/to=2026-08-31/);
+    await expect(
+      panel.getByRole("button", { name: "Last month" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(panel.getByText("4 transactions match")).toBeVisible();
+
+    await panel.getByRole("button", { name: "This month" }).click();
+    await expect(panel.getByText("0 transactions match")).toBeVisible();
+
+    // Pressing the active preset again clears the range.
+    await panel.getByRole("button", { name: "This month" }).click();
+    await expect(page).not.toHaveURL(/from=/);
+    await expect(panel.getByText("24 transactions match")).toBeVisible();
+
+    // To before From is flagged on the field, not silently accepted.
+    await panel
+      .getByRole("group", { name: "From" })
+      .getByRole("spinbutton")
+      .first()
+      .click();
+    await page.keyboard.type("31082026");
+    await panel
+      .getByRole("group", { name: "To" })
+      .getByRole("spinbutton")
+      .first()
+      .click();
+    await page.keyboard.type("01072026");
+    await expect(panel.getByRole("group", { name: "To" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+  });
+
+  test("the panel's Clear buttons scope to categories or to everything", async () => {
+    await filtersButton().click();
+    const panel = page
+      .getByRole("presentation")
+      .filter({ hasText: "Categories" });
+    const clearCategories = panel.getByRole("button", {
+      name: "Clear",
+      exact: true,
+    });
+    const clearAll = panel.getByRole("button", { name: "Clear all" });
+    await expect(clearCategories).toBeDisabled();
+    await expect(clearAll).toBeDisabled();
+
+    await panel.getByRole("button", { name: "This year" }).click();
+    // click, not check: the popover re-anchors when the Filters badge grows,
+    // and check() would treat that movement as a failed toggle and retry.
+    for (const name of ["Groceries", "Salary"]) {
+      const box = panel.getByRole("checkbox", { name });
+      await box.click();
+      await expect(box).toBeChecked();
+    }
+    await expect(panel.getByText("8 transactions match")).toBeVisible();
+    await expect(page).toHaveURL(/cat=1%2C8/);
+
+    // Categories only: the date range survives.
+    await clearCategories.click();
+    await expect(page).not.toHaveURL(/cat=/);
+    await expect(page).toHaveURL(/from=2026-01-01/);
+    await expect(clearCategories).toBeDisabled();
+    await expect(panel.getByText("24 transactions match")).toBeVisible();
+
+    await clearAll.click();
+    await expect(page).toHaveURL(new RegExp(`${transactionsUrl}$`));
+    await expect(clearAll).toBeDisabled();
+  });
+
+  test("the form validates beyond the browser's required check", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Category").click();
+    await page.getByRole("option", { name: "Groceries" }).click();
+    await dialog.getByLabel("Description").fill("Zero");
+    await dialog.getByLabel("Amount").fill("0");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+
+    await expect(dialog.getByRole("alert")).toContainText(
+      "Amount must be at least 0,01",
+    );
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+  });
+
+  test("description is normalised on blur", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    const description = dialog.getByLabel("Description");
+    await description.fill("  grocery   run  ");
+    await description.press("Tab");
+    await expect(description).toHaveValue("grocery run");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+  });
+
+  test("the type switch changes the field set", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    const tax = dialog.getByRole("checkbox", { name: "Tax refundable" });
+    await expect(tax).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Income" }).click();
+    await expect(tax).toHaveCount(0);
+    await dialog.getByLabel("Category").click();
+    await expect(page.getByRole("option", { name: "Salary" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Groceries" })).toHaveCount(
+      0,
+    );
+    await page.keyboard.press("Escape");
+
+    await dialog.getByRole("button", { name: "Saving" }).click();
+    await expect(dialog.getByLabel("Category")).toHaveCount(0);
+    await expect(dialog.getByText("(optional)")).toBeVisible();
+    await dialog.getByLabel("Goal").click();
+    await page.getByRole("option", { name: /New laptop/ }).click();
+    await expect(
+      dialog.getByText("€1.790,00 of €2.000,00 saved"),
+    ).toBeVisible();
+
+    // Seeded goals belong to another workspace, so the backend refuses the
+    // transfer and the form shows the reason instead of closing.
+    await dialog.getByLabel("Amount").fill("10");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("Goal");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+  });
+
+  test("a tax-refundable expense from the form is found by the filter", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Category").click();
+    await page.getByRole("option", { name: "Health" }).click();
+    await dialog.getByLabel("Amount").fill("5");
+    await dialog.getByLabel("Description").fill("Plasters");
+    await dialog.getByRole("checkbox", { name: "Tax refundable" }).check();
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.goto(`${transactionsUrl}?tax=1`);
+    await expect(rows()).toHaveCount(4);
+    await expect(rows().first()).toContainText("Plasters");
+
+    // Backing out of the delete confirmation keeps the row.
+    await rows().first().click();
+    await dialog.getByRole("button", { name: "Delete" }).click();
+    const confirm = page.getByRole("dialog", {
+      name: "Delete this transaction?",
+    });
+    await confirm.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirm).toBeHidden();
+    await expect(dialog.getByLabel("Description")).toHaveValue("Plasters");
+
+    await dialog.getByRole("button", { name: "Delete" }).click();
+    await confirm.getByRole("button", { name: "Delete" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(rows()).toHaveCount(3);
+  });
+
+  test("dialogs never hide the focused element and hand focus back", async () => {
+    // Synchronous hook: fires at the instant MUI writes aria-hidden, before
+    // React moves focus. Console capture and frame sampling both miss it.
+    await page.evaluate(() => {
+      const w = window as unknown as { __hidden: string[] };
+      w.__hidden = [];
+      const original = Element.prototype.setAttribute;
+      Element.prototype.setAttribute = function (name: string, value: string) {
+        if (
+          name === "aria-hidden" &&
+          value === "true" &&
+          this.contains(document.activeElement)
+        ) {
+          w.__hidden.push(document.activeElement?.tagName ?? "?");
+        }
+        return original.call(this, name, value);
+      };
+    });
+    const hidden = () =>
+      page.evaluate(
+        () => (window as unknown as { __hidden: string[] }).__hidden,
+      );
+
+    const opener = page.getByRole("button", { name: "Add transaction" });
+    await opener.click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Description").fill("x");
+    await dialog.getByRole("button", { name: "close" }).click();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
+
+    expect(await hidden()).toEqual([]);
+    // Restored after the fade-out, to the button that opened the dialog.
+    await expect(opener).toBeFocused();
+  });
+
   test("a filtered view survives reload", async () => {
     await tab("Expenses").click();
     await page.getByPlaceholder("Search name or category").fill("rent");
