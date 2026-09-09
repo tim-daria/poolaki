@@ -71,9 +71,7 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
               borderColor: "primary.main",
               "&:hover": { bgcolor: "primary.light" },
             }}
-          >
-            AI Assistant
-          </Button>
+          />
         </Stack>
       </Box>
 
