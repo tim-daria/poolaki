@@ -25,6 +25,7 @@ function parseFilters(params: URLSearchParams): TransactionFilters {
       .split(",")
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0),
+    taxDeductible: params.get("tax") === "1",
     page: Number.isInteger(page) && page > 0 ? page : 1,
   };
 }
@@ -38,6 +39,7 @@ function serializeFilters(f: TransactionFilters): URLSearchParams {
   if (f.from) p.set("from", f.from);
   if (f.to) p.set("to", f.to);
   if (f.categories.length) p.set("cat", f.categories.join(","));
+  if (f.taxDeductible) p.set("tax", "1");
   if (f.page > 1) p.set("page", String(f.page));
   return p;
 }
@@ -79,10 +81,13 @@ export function useTransactionFilters() {
     }));
 
   /** Clears the filter panel's fields. Search, tab and sort survive. */
-  const clear = () => update({ from: "", to: "", categories: [] });
+  const clear = () =>
+    update({ from: "", to: "", categories: [], taxDeductible: false });
 
   const activeCount =
-    Number(Boolean(filters.from || filters.to)) + filters.categories.length;
+    Number(Boolean(filters.from || filters.to)) +
+    filters.categories.length +
+    Number(filters.taxDeductible);
 
   return { filters, update, toggleCategory, clear, activeCount };
 }

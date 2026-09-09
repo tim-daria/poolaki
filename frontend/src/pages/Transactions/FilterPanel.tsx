@@ -3,7 +3,9 @@
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
+  FormControlLabel,
   Popover,
   Stack,
   TextField,
@@ -81,6 +83,17 @@ export function FilterPanel({
             ))}
           </Stack>
         </Box>
+
+        <FormControlLabel
+          label="Tax refundable"
+          control={
+            <Checkbox
+              checked={filters.taxDeductible}
+              onChange={(e) => update({ taxDeductible: e.target.checked })}
+              size="small"
+            />
+          }
+        />
 
         <Button onClick={clear} disabled={activeCount === 0}>
           Clear filters

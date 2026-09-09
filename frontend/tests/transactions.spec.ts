@@ -7,7 +7,8 @@ import { makeUsers, registerUser } from "./helpers";
  *
  * The page currently renders the seeded rows in mockTransactions.ts
  * (USE_MOCK_TRANSACTIONS), so every count below is fixed by that file: 24 rows,
- * 17 expenses, 4 incomes, 3 transfers, 15 per page. Update both together.
+ * 17 expenses, 4 incomes, 3 transfers, 3 tax refundable, 15 per page. Update
+ * both together.
  */
 test.describe.serial("Transactions", () => {
   let page: Page;
@@ -171,6 +172,31 @@ test.describe.serial("Transactions", () => {
     await page.getByRole("button", { name: "Clear all" }).click();
     await expect(chips).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`${transactionsUrl}$`));
+    await expect(showing("15 of 24")).toBeVisible();
+  });
+
+  test("tax refundable is a checkbox filter with its own chip", async () => {
+    await filtersButton().click();
+    const checkbox = page.getByRole("checkbox", { name: "Tax refundable" });
+    // click, not check: the popover re-anchors once the Filters badge appears,
+    // and check() would treat that movement as a failed toggle and retry.
+    await checkbox.click();
+    await expect(checkbox).toBeChecked();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/[?&]tax=1/);
+    await expect(filtersButton()).toContainText("1");
+    await expect(rows()).toHaveCount(3);
+    await expect(showing("3 of 3")).toBeVisible();
+    await expect(tab("Expenses")).toContainText("3");
+    await expect(tab("Income")).toContainText("0");
+
+    const chip = page.locator(".MuiChip-deletable", {
+      hasText: "Tax refundable",
+    });
+    await chip.getByTestId("CancelIcon").click();
+    await expect(chip).toHaveCount(0);
+    await expect(page).not.toHaveURL(/tax=/);
     await expect(showing("15 of 24")).toBeVisible();
   });
 

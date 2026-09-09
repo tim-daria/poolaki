@@ -291,6 +291,13 @@ function Transactions() {
                     sx={{ bgcolor: "primary.light", fontWeight: 500 }}
                   />
                 ))}
+                {filters.taxDeductible && (
+                  <Chip
+                    label="Tax refundable"
+                    onDelete={() => update({ taxDeductible: false })}
+                    sx={{ bgcolor: "primary.light", fontWeight: 500 }}
+                  />
+                )}
                 <Button
                   onClick={clear}
                   sx={{ color: "text.primary", fontWeight: 600, px: 1 }}

@@ -20,6 +20,8 @@ export type TransactionFilters = {
   to: string;
   /** Category IDs; empty means all. */
   categories: number[];
+  /** True keeps only tax-deductible rows; false is "no filter", not "non-deductible". */
+  taxDeductible: boolean;
   /** 1-based. */
   page: number;
 };
@@ -33,6 +35,7 @@ export const DEFAULT_FILTERS: TransactionFilters = {
   from: "",
   to: "",
   categories: [],
+  taxDeductible: false,
   page: 1,
 };
 
@@ -49,6 +52,7 @@ export function matchesFilters(
     (t.category === null || !f.categories.includes(t.category))
   )
     return false;
+  if (f.taxDeductible && !t.is_tax_deductible) return false;
   if (f.q) {
     const needle = f.q.toLowerCase();
     const hay = `${t.description} ${categoryLabel(t.category)}`.toLowerCase();
