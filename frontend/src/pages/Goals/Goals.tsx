@@ -1,7 +1,7 @@
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { Box, Typography } from "@mui/material";
 
-export function Goals() {
+function Goals() {
   const org = useCurrentOrg();
 
   return (

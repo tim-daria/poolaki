@@ -7,7 +7,7 @@ import { startSocialAuth } from "../../lib/socialAuth";
 import styles from "../Register/styles.module.css";
 import type { User } from "../../context/AuthContext";
 
-export function Login() {
+function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [searchParams] = useSearchParams();
