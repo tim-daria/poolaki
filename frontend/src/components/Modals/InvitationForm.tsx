@@ -13,6 +13,7 @@ import {
   createInvitation,
 } from "../../lib/organizations";
 import { getCsrfToken } from "../../lib/csrf";
+import { useToast } from "../../context/useToast";
 import { ModalShell } from "./ModalShell";
 import { DiscardChangesDialog } from "./CloseGuard";
 import { useCloseGuard } from "./useCloseGuard";
@@ -41,6 +42,7 @@ interface Props {
  */
 export function InvitationForm({ open, onClose, onSent }: Props) {
   const org = useCurrentOrg();
+  const { showToast } = useToast();
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -87,6 +89,7 @@ export function InvitationForm({ open, onClose, onSent }: Props) {
       // time the dialog is gone.
       onSent();
       onClose();
+      showToast(`Invitation sent to ${trimmed}`);
     } catch (err) {
       // A 400 is the user's input, not a failure: show what the backend said
       // and stay open so the username can be corrected in place.

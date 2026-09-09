@@ -26,6 +26,7 @@ import { IsoDatePicker } from "../Form/IsoDatePicker";
 import { MoneyField } from "../Form/MoneyField/MoneyField";
 import { TextInput } from "../Form/TextInput";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { useToast } from "../../context/useToast";
 import { getCsrfToken } from "../../lib/csrf";
 import { selectableCategories } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
@@ -85,6 +86,7 @@ export function TransactionForm({
   onDeleted,
 }: Props) {
   const org = useCurrentOrg();
+  const { showToast } = useToast();
 
   /**
    * The row being edited, captured on open; null in the Add flow. State, not
@@ -175,6 +177,7 @@ export function TransactionForm({
           );
       onSaved?.(saved);
       onClose();
+      showToast(editRow ? "Transaction updated" : "Transaction added");
     } catch (err) {
       // A 400 describes what was typed and is shown as-is; anything else is not
       // actionable and gets the generic line.
@@ -197,6 +200,7 @@ export function TransactionForm({
       await deleteTransaction(org.id, editRow.id, getCsrfToken());
       onDeleted?.(editRow.id);
       onClose();
+      showToast("Transaction deleted");
     } catch (err) {
       // A 400 is shown as written. The confirmation closes first, or the
       // message lands behind it.
@@ -397,8 +401,13 @@ export function TransactionForm({
               />
             </FieldLabel>
 
-            <FieldLabel label="Date" htmlFor="transaction-date">
+            <FieldLabel
+              label="Date"
+              htmlFor="transaction-date"
+              id="transaction-date-label"
+            >
               <IsoDatePicker
+                labelId="transaction-date-label"
                 disabled={locked}
                 value={draft.transaction_date}
                 onChange={(iso) => set("transaction_date", iso)}
