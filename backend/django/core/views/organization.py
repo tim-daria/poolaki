@@ -1,15 +1,17 @@
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Membership, User
-from core.permissions import IsOrgMember
+from core.models import Membership, Organization, User
+from core.permissions import IsOrgMember, IsOrgOwner
 from core.serializers import InitialBalanceSerializer
 from core.services.balance import set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization
+from core.services.organization import create_shared_organization, remove_member
 
 
 class SetInitialBalanceView(APIView):
@@ -148,3 +150,32 @@ class OrganizationMembersView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class OrganizationMemberRemoveView(APIView):
+    """
+    Remove a member from the organization.
+
+    Only the organization owner may remove members. The owner cannot
+    remove themselves through this endpoint.
+
+    POST:
+    Returns:
+    - 200 OK on success.
+    - 400 Bad Request if the target is not a member, or is the requesting
+      owner themselves.
+    - 403 Forbidden if the requesting user is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def post(self, request: Request, org_id: int, member_id: int) -> Response:
+        assert isinstance(request.user, User)
+        org = get_object_or_404(Organization, id=org_id)
+        target_user = get_object_or_404(User, id=member_id)
+
+        try:
+            remove_member(org, target_user, request.user)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "removed"}, status=status.HTTP_200_OK)

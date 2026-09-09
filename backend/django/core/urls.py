@@ -14,6 +14,7 @@ from core.views.notification import (
 )
 from core.views.organization import (
     OrganizationListCreateView,
+    OrganizationMemberRemoveView,
     OrganizationMembersView,
     SetInitialBalanceView,
 )
@@ -26,6 +27,11 @@ urlpatterns = [
         "organizations/<int:org_id>/members/",
         OrganizationMembersView.as_view(),
         name="organization-members",
+    ),
+    path(
+        "organizations/<int:org_id>/members/<int:user_id>/remove/",
+        OrganizationMemberRemoveView.as_view(),
+        name="organization-remove-member",
     ),
     path(
         "organizations/<int:org_id>/invitations/",

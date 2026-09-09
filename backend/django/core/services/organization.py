@@ -3,7 +3,14 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from core.models import Invitation, InvitationStatus, Membership, Organization, Role, User
+from core.models import (
+    Invitation,
+    InvitationStatus,
+    Membership,
+    Organization,
+    Role,
+    User,
+)
 
 MAX_MEMBERS_PER_ORG = 5
 MAX_ORGS_PER_USER = 10
@@ -55,3 +62,23 @@ def check_can_join_more_orgs(user: User) -> None:
         raise ValidationError(
             f"You cannot belong to more than {MAX_MEMBERS_PER_ORG} organizations."
         )
+
+
+def remove_member(org: Organization, target_user: User, owner: User) -> None:
+    """
+    Remove a member from an organization. Only the owner can do this, and
+    the owner cannot remove themselves this way.
+    """
+    if target_user.id == owner.id:
+        raise ValidationError("Use remove organization to remove yourself.")
+    membership = Membership.objects.filter(user=target_user).first()
+    if membership is None:
+        raise ValidationError("This user is not a member of the organization.")
+    membership.delete()
+
+    # Notification.objects.create(
+    #     user=target_user,
+    #     type=NotificationType.REMOVED_FROM_ORG,
+    #     org=org,
+    #     payload={"org_name": org.name, "removed_by": removed_by.username},
+    # )
