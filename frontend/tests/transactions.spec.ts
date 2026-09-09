@@ -357,6 +357,7 @@ test.describe.serial("Transactions", () => {
     await dialog.getByLabel("Description").fill("Tram ticket");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
     await expect(dialog).toBeHidden();
+    await expect(page.getByText("Transaction added")).toBeVisible();
 
     // Dated today, so it sorts above every fixture row.
     await expect(rows().first()).toContainText("Tram ticket");
@@ -371,6 +372,7 @@ test.describe.serial("Transactions", () => {
       .getByRole("button", { name: "Delete" })
       .click();
     await expect(dialog).toBeHidden();
+    await expect(page.getByText("Transaction deleted")).toBeVisible();
 
     await expect(rows().filter({ hasText: "Tram ticket" })).toHaveCount(0);
     await expect(tab("All")).toContainText("24");
