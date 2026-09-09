@@ -34,7 +34,7 @@ function greeting(hour: number) {
   return "Good Evening!";
 }
 
-export function Home() {
+function Home() {
   const org = useCurrentOrg();
   const now = new Date();
 
