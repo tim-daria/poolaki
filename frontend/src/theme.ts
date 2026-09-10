@@ -1,3 +1,7 @@
+/**
+ * @file MUI theme: component overrides, palette and typography, plus the
+ * module augmentations that register the custom `mono` variant and palette keys.
+ */
 import { createTheme } from "@mui/material";
 
 declare module "@mui/material/styles" {
@@ -26,19 +30,17 @@ declare module "@mui/material/Typography" {
 }
 
 export const theme = createTheme({
-  /* ==============================
-   Components' styles override
-   ============================== */
-  // base unit; use `borderRadius: 1` in sx for 1x, 2 for 2x, etc.
+  /* ---------------------------------- */
+  /*         Component overrides        */
+  /* ---------------------------------- */
+  // Base unit: `borderRadius: n` in sx is n times this value.
   shape: { borderRadius: 8 },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          // 18px base, inherited from index.css's old `:root { font: 18px/145% }`.
-          // That rule out-specified this one (`:root` beats `html`), so it was
-          // the value actually in force; keeping it here avoids shrinking the
-          // whole app on the way to a single source of truth.
+          // 18px base, carried over from the original index.css so existing
+          // layouts keep their size.
           fontSize: "1.125rem",
           textRendering: "optimizeLegibility",
           fontSynthesis: "none",
@@ -50,13 +52,10 @@ export const theme = createTheme({
       },
     },
     MuiButton: {
-      // The shell is flat — the AppBar and the notification rows both render
-      // at elevation 0. MUI's `contained` variant is the only thing left
-      // casting a shadow, which makes a contained button and the outlined one
-      // beside it read as two different kinds of control.
+      // The app shell is flat (elevation 0); a shadowed contained button would
+      // look like a different kind of control next to an outlined one.
       defaultProps: { disableElevation: true },
-      // Pill shape for every action button — page actions, dialog actions,
-      // Cancel/Save alike. IconButton is a separate component and stays round.
+      // Pill shape for every Button; IconButton is separate and stays round.
       styleOverrides: {
         root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
       },
@@ -105,9 +104,9 @@ export const theme = createTheme({
     },
   },
   cssVariables: true,
-  /* ==============================
-   Colors
-   ============================== */
+  /* ---------------------------------- */
+  /*               Palette              */
+  /* ---------------------------------- */
   palette: {
     primary: {
       dark: "#494564", // --tint-deep  (sidebar bg)
@@ -133,24 +132,19 @@ export const theme = createTheme({
       paper: "#ffffff", // --bg-card
     },
     text: {
-      // Near-black with a warm cast, from the design mockups. Pure #000 reads
-      // harsher than the rest of the palette and is not what the designs use.
+      // Warm near-black from the design mockups; pure #000 is intentionally avoided.
       primary: "#1c1a20", // --text
       secondary: "#959698", // --sub-text
     },
     divider: "#e0e0e0", // --border
-    // Its own key rather than more primary/secondary slots: MUI's PaletteColor
-    // is limited to dark/main/light/contrastText, and both are already full.
+    // Separate key because primary and secondary have no free PaletteColor slots.
     accent: {
       main: "#826ABC", // deep lavender
       light: "#9D84D7", // soft lavender
     },
-    // Avatar backgrounds, picked per user by `avatarColor`. One per slot in the
-    // AvatarGroup (max 5).
-    //
-    // These are palette *paths*, not hex — `sx` resolves them against the theme,
-    // so the colors stay defined once above and follow any future theme change.
-    // All five are dark enough that the white initial on top stays legible.
+    // Avatar backgrounds, one per AvatarGroup slot (max 5), chosen by `avatarColor`.
+    // Palette paths rather than hex so `sx` resolves them against the theme.
+    // All must stay dark enough for a white initial to remain legible.
     avatar: [
       "primary.dark",
       "primary.main",
@@ -159,9 +153,9 @@ export const theme = createTheme({
       "accent.light",
     ],
   },
-  /* ==============================
-   Fonts
-   ============================== */
+  /* ---------------------------------- */
+  /*             Typography             */
+  /* ---------------------------------- */
   typography: {
     fontFamily: [
       '"Plus Jakarta Sans"',
