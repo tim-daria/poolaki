@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -ueo pipefail
 
 printf "\n🐳 Stopping database container...(ignore this if it wasn't running)\n"
 docker stop postgres_db
