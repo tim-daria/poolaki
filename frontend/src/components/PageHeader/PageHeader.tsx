@@ -1,31 +1,39 @@
+/**
+ * @file Persistent page header with portal slots for the title and the page's
+ * primary action, plus the helpers pages use to fill those slots.
+ */
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  type ButtonProps,
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
+import { useRouteMeta } from "../../routeMeta";
+
+const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
+
+/** Matches the height of `PageActionButton` so the two sit on one line. */
+const assistantButtonSize = 36.5;
 
 interface PageHeaderProps {
   children: ReactNode;
-  /**
-   * Omitted until the assistant exists. The button then renders disabled
-   * rather than dead-clickable, so the bar doesn't lie about what works.
-   */
+  /** Optional until the assistant feature ships. */
   onAssistantClick?: () => void;
 }
 
 /**
- * Persistent header for the page area: heading on the left, page action and
- * the AI Assistant button on the right.
- *
- * It renders once, above the routed page, and stays mounted across
- * navigation — pages fill it in rather than rebuilding it. That keeps the
- * Assistant button identical everywhere and keeps the left button next to the
- * state it drives: pages hand over content through `PageTitle` and
- * `PageAction`, which portal into the slots below.
- *
- * Portals, not context state, because the page action is a live element (it
- * opens the page's own modal). Pushing a node up through a setState would
- * either loop on every render or freeze a stale closure.
+ * Header that stays mounted across navigation; pages fill it via `PageTitle`,
+ * `PageHeading` and `PageActionButton`. Slots are portal targets, not context
+ * state: the action button closes over page state, so passing it up through
+ * setState would go stale or re-render in a loop.
  */
 export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
@@ -44,8 +52,7 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
           p: 3,
         }}
       >
-        {/* minWidth: 0 so a long heading wraps instead of pushing the
-            buttons off the right edge. */}
+        {/* minWidth: 0 lets a long heading wrap instead of overflowing. */}
         <Box ref={setTitleSlot} sx={{ minWidth: 0 }} />
 
         <Stack
@@ -55,26 +62,23 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
         >
           <Box ref={setActionSlot} sx={{ display: "contents" }} />
 
-          <Button
-            variant="outlined"
-            // color="inherit"
-            startIcon={<AutoAwesomeOutlinedIcon />}
-            // disabled={!onAssistantClick}
-            onClick={onAssistantClick}
-            sx={{
-              color: "primary.dark",
-              bgcolor: "primary.light",
-              borderColor: "transparent",
-              borderRadius: 999,
-              px: 2.5,
-              "&:hover": {
-                bgcolor: "primary.light",
-                borderColor: "primary.light",
-              },
-            }}
-          >
-            AI Assistant
-          </Button>
+          <Tooltip title="Ask AI">
+            <IconButton
+              aria-label="AI Assistant"
+              onClick={onAssistantClick}
+              sx={{
+                width: assistantButtonSize,
+                height: assistantButtonSize,
+                color: "primary.dark",
+                bgcolor: "primary.contrastText",
+                border: "1px solid",
+                borderColor: "primary.main",
+                "&:hover": { bgcolor: "primary.light" },
+              }}
+            >
+              <AutoAwesomeOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Box>
 
@@ -84,14 +88,15 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
 }
 
 interface PageTitleProps {
-  title: ReactNode;
+  /** Defaults to the route's `handle` title. */
+  title?: ReactNode;
+  /** Defaults to the route's `handle` subtitle. */
   subtitle?: ReactNode;
 }
 
 /**
- * Fills the header's left side with arbitrary content, for the pages whose
- * heading is not a title — Home swaps in the member list on a shared
- * workspace. Renders nothing outside the app shell.
+ * Portals arbitrary content into the header's title slot. Renders nothing
+ * when mounted outside `PageHeader`.
  */
 export function PageHeading({ children }: { children: ReactNode }) {
   const slots = usePageHeaderSlots();
@@ -100,16 +105,20 @@ export function PageHeading({ children }: { children: ReactNode }) {
   return createPortal(children, slots.titleSlot);
 }
 
-/** The usual heading: a title, optionally over a subtitle. */
+/** Standard heading: a title with an optional subtitle. */
 export function PageTitle({ title, subtitle }: PageTitleProps) {
+  const meta = useRouteMeta();
+  const heading = title ?? meta?.title;
+  const sub = subtitle ?? meta?.subtitle;
+
   return (
     <PageHeading>
       <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
-        {title}
+        {heading}
       </Typography>
-      {subtitle && (
+      {sub && (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {subtitle}
+          {sub}
         </Typography>
       )}
     </PageHeading>
@@ -117,12 +126,21 @@ export function PageTitle({ title, subtitle }: PageTitleProps) {
 }
 
 /**
- * Fills the header's page-specific button slot, left of the AI Assistant.
- * Children stay owned by the page, so their handlers reach page state.
+ * The page's primary action. Variant, icon and padding are header-owned so
+ * pages stay consistent; all props remain overridable (`startIcon={null}`
+ * removes the plus icon).
  */
-export function PageAction({ children }: { children: ReactNode }) {
+export function PageActionButton({ sx, ...props }: ButtonProps) {
   const slots = usePageHeaderSlots();
   if (!slots?.actionSlot) return null;
 
-  return createPortal(children, slots.actionSlot);
+  return createPortal(
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      {...props}
+      sx={[actionButtonSx, ...(Array.isArray(sx) ? sx : [sx])]}
+    />,
+    slots.actionSlot,
+  );
 }
