@@ -1,4 +1,8 @@
-/** @file Goals as the transaction form needs them; seeded until a goals API exists. */
+/** @file Goal types, form draft, and API calls. Reads are seeded until a goals API exists. */
+
+import { TODAY } from "./date";
+import { toMoneyString, validateAmount } from "./money";
+import { formatName } from "./text";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
@@ -38,4 +42,104 @@ export const SEED_GOALS: Goal[] = [
 
 export function goalById(goals: Goal[], id: number | null): Goal | undefined {
   return id === null ? undefined : goals.find((g) => g.id === id);
+}
+
+/* ---------------------------------- */
+/*             Form state             */
+/* ---------------------------------- */
+
+/** What the "Add goal" form collects. Progress is not the user's to set. */
+export type GoalDraft = {
+  name: string;
+  /** Canonical amount ("480.00") while it is being typed — see lib/money.ts. */
+  target_amount: string;
+  /** "YYYY-MM-DD", or "" when cleared. */
+  target_date: string;
+};
+
+/** Seeded with today, like the transaction date. */
+export function emptyGoalDraft(): GoalDraft {
+  return { name: "", target_amount: "", target_date: TODAY };
+}
+
+/**
+ * Validates the draft before submission. Returns an error message or null.
+ * The date is required because core.models.Goal.target_date is NOT NULL.
+ */
+export function validateGoalDraft(draft: GoalDraft): string | null {
+  if (!draft.name.trim()) return "Name is required.";
+  const amountProblem = validateAmount(draft.target_amount);
+  if (amountProblem) return amountProblem;
+  if (!draft.target_date) return "Pick a target date.";
+  return null;
+}
+
+/* ---------------------------------- */
+/*                HTTP                */
+/* ---------------------------------- */
+
+/**
+ * Flip once core/urls.py routes goals. Until then the form shows a notice and
+ * keeps Create disabled, so nothing pretends to persist a goal.
+ */
+export const CAN_CREATE_GOALS = false;
+
+/** A 400 whose message belongs in the form, as opposed to a network failure. */
+export class GoalError extends Error {}
+
+/** Raw API shape the endpoint is expected to return; mirrors the model. */
+type GoalDTO = {
+  id: number;
+  name: string;
+  /** String to preserve decimal precision. */
+  target_amount: string;
+  saved_amount: string;
+  target_date: string | null;
+};
+
+function fromDTO(d: GoalDTO): Goal {
+  return {
+    id: d.id,
+    name: d.name,
+    target_amount: Number(d.target_amount),
+    saved_amount: Number(d.saved_amount),
+    target_date: d.target_date,
+  };
+}
+
+/** POST /api/v1/organizations/${org_id}/goals/ — written against the route as it will be. */
+export async function createGoal(
+  org_id: number,
+  draft: GoalDraft,
+  csrfToken: string,
+): Promise<Goal> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/goals/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify({
+      name: formatName(draft.name),
+      target_amount: toMoneyString(Number(draft.target_amount)),
+      target_date: draft.target_date,
+    }),
+  });
+  if (res.status === 400) {
+    const body: unknown = await res.json().catch(() => null);
+    throw new GoalError(firstMessage(body) ?? "Could not save the goal");
+  }
+  if (!res.ok) throw new Error(`Failed to create goal (${res.status})`);
+  return fromDTO(await res.json());
+}
+
+/** First string found in a DRF error body: {field: [msg]}, {detail: msg} or [msg]. */
+function firstMessage(body: unknown): string | null {
+  if (typeof body === "string") return body;
+  if (Array.isArray(body)) return body.length ? firstMessage(body[0]) : null;
+  if (body && typeof body === "object") {
+    for (const value of Object.values(body)) {
+      const found = firstMessage(value);
+      if (found) return found;
+    }
+  }
+  return null;
 }
