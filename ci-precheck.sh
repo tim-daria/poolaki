@@ -20,8 +20,8 @@ docker run --rm -d \
   postgres:18
 
 export POSTGRES_DB=test_db
-export POSTGRES_USER=test_user
-export POSTGRES_PASSWORD=test_password
+export DATABASE_USER=test_user
+export DATABASE_PASSWORD=test_password
 export DB_HOST=localhost
 export DB_PORT=5432
 
@@ -39,10 +39,10 @@ uv run mypy .
 printf "\n🔍 Running manage.py check...\n"
 uv run python manage.py check
 
-printf "\n🔍 Running migrations..."
+printf "\n🔍 Running migrations...\n"
 uv run python manage.py migrate
 
-printf "\n🔍 Running pytest..."
+printf "\n🔍 Running pytest...\n"
 uv run pytest .
 
 printf "\n📂 Changed files:\n"
