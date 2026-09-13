@@ -1,47 +1,59 @@
+/** @file Sign-up page: email/username/password form and the 42 OAuth entry point. */
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, useSearchParams, Link as RouterLink } from "react-router";
+import { Alert, Button, Divider, Link, Stack, Typography } from "@mui/material";
 import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
-import { parseAllauthErrors, type AllauthError } from "../../lib/authErrors";
-import { startSocialAuth } from "../../lib/socialAuth";
-import { submitInitialBalance } from "../../lib/initialBalance";
+import {
+  ALREADY_AUTHENTICATED,
+  parseAllauthErrors,
+  redirectErrorMessage,
+  type AllauthError,
+} from "../../lib/authErrors";
+import { AuthLayout } from "../../components/Auth/AuthLayout";
+import { AuthField } from "../../components/Auth/AuthField";
+import { Intra42Button } from "../../components/Auth/Intra42Button";
+import { LegalNotice } from "../../components/Auth/LegalNotice";
 import type { User } from "../../context/AuthContext";
-import styles from "./styles.module.css";
 
-/**
- * Email/password signup, plus the entry point for 42 OAuth.
- *
- * Signing up takes two requests, not one. allauth's headless endpoint accepts
- * only the fields in ACCOUNT_SIGNUP_FIELDS, so the optional starting balance is
- * sent afterwards, once a session exists. That ordering is safe because a
- * backend signal creates the personal workspace during signup with a balance of
- * €0 — the second request overwrites a working default rather than completing
- * the account, which is why it's optional and why failing it isn't fatal.
- *
- * Note that 42 signups never reach this form; they go through /oauth-callback,
- * so those users keep the €0 default and currently have no way to change it.
- *
- * TODO: Settings page with a possibility to change initial balance.
- */
+/** 42 sign-ups bypass this form entirely; they complete via `/oauth-callback`. */
 function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-  const [balance, setBalance] = useState("");
+
+  /** Failure message for client-side validation or the signup request. */
   const [error, setError] = useState("");
+
+  /**
+   * Separate from `error`: an existing session is rendered as guidance, not as
+   * a form failure.
+   */
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
+
+  /**
+   * OAuth failure passed back via `?error=` (OAuthCallback routes the signup
+   * flow here). Read once from the URL and kept separate from `error` so form
+   * submissions do not clear it.
+   */
+  const [searchParams] = useSearchParams();
+  const [oauthError] = useState(() =>
+    redirectErrorMessage(searchParams.get("error")),
+  );
 
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
   useEffect(() => {
-    // Ensure the CSRF cookie is set for unauthenticated users
+    // Ensure the CSRF cookie exists before the first POST.
     void fetch("/api/v1/csrf/", { credentials: "include" });
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     setError("");
+    setAlreadySignedIn(false);
 
     if (password !== password2) {
       setError("Passwords do not match");
@@ -67,112 +79,119 @@ function Register() {
     try {
       data = await res.json();
     } catch {
-      // Non-JSON body, e.g. an HTML error page from a 500.
+      // Non-JSON body (e.g. HTML error page); handled by the fallback message below.
     }
 
-    // Requires a user in the body, not merely a 2xx: the balance call below
-    // needs an authenticated session, and the user object is what confirms one.
+    // A 2xx alone is not enough: only a user object in the body confirms a session.
     if (res.ok && data?.data?.user) {
-      // Best-effort — the workspace already exists at €0.
-      if (balance.trim() !== "") {
-        const balanceRes = await submitInitialBalance(balance, getCsrfToken());
-        if (!balanceRes.ok) {
-          console.warn("Could not set the starting balance:", balanceRes.error);
-        }
-      }
       setUser(data.data.user);
       navigate("/");
+    } else if (res.status === ALREADY_AUTHENTICATED) {
+      setAlreadySignedIn(true);
     } else {
       const msg = parseAllauthErrors(
         data?.errors,
-        "Login failed. Please check your credentials.",
+        "Sign-up failed. Please check the details above.",
       );
       setError(msg);
     }
   }
 
   return (
-    <div className={styles.helloPage}>
-      <div className={styles.formContainer}>
-        <p>
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-        <h1>Sign Up</h1>
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          ></input>
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          ></input>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <label htmlFor="password2">Confirm Password</label>
-          <input
-            id="password2"
-            type="password"
-            value={password2}
-            onChange={(e) => setPassword2(e.target.value)}
-            required
-          />
-          <label htmlFor="balance">Starting balance (€) — optional</label>
-          <input
-            id="balance"
-            type="number"
-            min="0"
-            step="0.01"
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
-            aria-describedby="balance-hint"
-          />
-          <small id="balance-hint">
-            Leave empty to start at €0. You can change this later.
-          </small>
-          {error && <p className={styles.error}>{error}</p>}
-          <button type="submit" className={styles.submitBtn}>
-            Sign Up
-          </button>
-        </form>
-        <div className={styles.divider}>or</div>
-        <button
-          type="button"
-          className={styles.oauthBtn}
-          onClick={() =>
-            startSocialAuth(
-              "intra42",
-              "login",
-              "/oauth-callback?flow=signup",
-              getCsrfToken(),
-            )
-          }
+    <AuthLayout footer={<LegalNotice />}>
+      <Typography
+        sx={{
+          textAlign: "right",
+          fontSize: "0.85rem",
+          color: "text.secondary",
+        }}
+      >
+        Already have an account?{" "}
+        <Link
+          component={RouterLink}
+          to="/login"
+          underline="hover"
+          sx={{ fontWeight: 700, color: "text.primary" }}
         >
-          Sign Up with 42
-        </button>
-        <p>
-          By creating an account, you accept our{" "}
-          <Link to="/policy">Privacy Policy</Link> and{" "}
-          <Link to="/terms">Terms of Use</Link>
-        </p>
-      </div>
-      <div className={styles.decorContainer}></div>
-    </div>
+          Login
+        </Link>
+      </Typography>
+
+      <Typography variant="h2" component="h1" sx={{ fontWeight: 800, my: 2 }}>
+        Sign up
+      </Typography>
+
+      <Stack component="form" onSubmit={handleSubmit} spacing={2}>
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          casing="username"
+          value={email}
+          onChange={setEmail}
+          autoComplete="email"
+          placeholder="username@example.com"
+          autoFocus
+          required
+        />
+        <AuthField
+          id="username"
+          label="Username"
+          casing="username"
+          value={username}
+          onChange={setUsername}
+          autoComplete="username"
+          required
+        />
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          required
+        />
+        <AuthField
+          id="password2"
+          label="Confirm password"
+          type="password"
+          value={password2}
+          onChange={setPassword2}
+          autoComplete="new-password"
+          required
+        />
+
+        {error && <Alert severity="error">{error}</Alert>}
+
+        {alreadySignedIn && (
+          <Alert severity="info">
+            You are already signed in.{" "}
+            <Link component={RouterLink} to="/" underline="hover">
+              Continue to the app
+            </Link>
+            , or sign out there first to create another account.
+          </Alert>
+        )}
+
+        <Button type="submit" variant="contained" sx={{ py: 1.25, mt: 1 }}>
+          Sign up
+        </Button>
+      </Stack>
+
+      <Divider sx={{ my: 3, color: "text.secondary", fontSize: "0.85rem" }}>
+        or
+      </Divider>
+
+      {oauthError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {oauthError}
+        </Alert>
+      )}
+      <Intra42Button label="Sign up with 42" flow="signup" />
+    </AuthLayout>
   );
 }
-// Named alias for react-router's route-level `lazy`
+
+// `Component` is the export name react-router's route-level `lazy` expects.
 export { Register as Component };
