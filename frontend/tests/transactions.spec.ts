@@ -1,10 +1,11 @@
 // @ts-check
+/// <reference lib="dom" />
 /**
  * @file Transactions page e2e: tabs, search, sort, filters, pagination and the
  * add/edit modal, against rows posted through the real API.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { makeUsers, registerUser, toOrgId } from "./helpers";
+import { makeUsers, registerUser, toOrgId } from "./helpers.js";
 
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,

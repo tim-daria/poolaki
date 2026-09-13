@@ -1,6 +1,7 @@
 /** @file One table row of the transactions list, coloured by entry type. */
 
 import { Chip, TableCell, TableRow, Typography } from "@mui/material";
+import type { KeyboardEvent } from "react";
 import { Money } from "../../components/Money";
 import { categoryById } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
@@ -51,7 +52,7 @@ export function TransactionRow({
       // Enter and Space, the two keys that activate a button.
       onKeyDown={
         onClick &&
-        ((e) => {
+        ((e: KeyboardEvent<HTMLTableRowElement>) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           e.preventDefault();
           onClick(t);
