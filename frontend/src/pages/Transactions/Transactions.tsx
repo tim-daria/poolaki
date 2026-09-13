@@ -348,7 +348,7 @@ function Transactions() {
                     <TableCell sx={[headCellSx, { width: 200 }]}>
                       Category
                     </TableCell>
-                    <TableCell sx={[headCellSx, { width: 160 }]} align="right">
+                    <TableCell sx={[headCellSx, { width: 200 }]} align="right">
                       Amount
                     </TableCell>
                   </TableRow>

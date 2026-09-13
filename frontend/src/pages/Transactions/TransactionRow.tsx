@@ -82,7 +82,9 @@ export function TransactionRow({
           </Typography>
         )}
       </TableCell>
-      <TableCell align="right" sx={{ py: 2 }}>
+      {/* nowrap: browsers may break a line after "-", which would put the
+          sign and the amount on separate lines in a narrow cell. */}
+      <TableCell align="right" sx={{ py: 2, whiteSpace: "nowrap" }}>
         <Money sx={{ fontSize: "1rem", color: style.color }}>
           {style.sign}€{displayAmount(t.amount)}
         </Money>
