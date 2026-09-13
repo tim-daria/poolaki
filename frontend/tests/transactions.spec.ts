@@ -82,6 +82,66 @@ async function postTransaction(page: Page, orgId: number, row: Fixture) {
   }
 }
 
+/**
+ * Records every moment focus and `aria-hidden` overlap — the state Chrome
+ * reports as "Blocked aria-hidden on an element because its descendant
+ * retained focus". Chrome files it as a DevTools issue, not a console message,
+ * so Playwright's console capture never sees it.
+ *
+ * Both orders are violations: MUI writing `aria-hidden` onto an ancestor of
+ * the focused element, and focus landing inside a subtree that is already
+ * hidden (the date picker refocuses its button after the panel closed).
+ * Patching setAttribute is the only way to see the first: the write and
+ * React's focus move happen in one synchronous commit.
+ */
+async function installAriaHiddenSpy(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __hidden: string[]; __spied?: boolean };
+    w.__hidden = [];
+    if (w.__spied) return;
+    w.__spied = true;
+    // `className` is an object on SVG, and MUI icons carry aria-hidden.
+    const label = (el: Element) =>
+      typeof el.className === "string" && el.className
+        ? el.className.split(" ")[0]
+        : el.tagName;
+    const original = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name: string, value: string) {
+      if (
+        name === "aria-hidden" &&
+        value === "true" &&
+        this.contains(document.activeElement)
+      ) {
+        const active = document.activeElement as HTMLElement;
+        w.__hidden.push(`${label(this)} <- ${active.tagName}`);
+      }
+      return original.call(this, name, value);
+    };
+    // Checked once the event has finished dispatching, as Chrome does when it
+    // next updates the accessibility tree: a focus that is blurred again by a
+    // later listener in the same dispatch never reaches it.
+    document.addEventListener(
+      "focusin",
+      () => {
+        queueMicrotask(() => {
+          const active = document.activeElement;
+          const hidden = active?.closest('[aria-hidden="true"]');
+          if (active && hidden) {
+            w.__hidden.push(`${label(hidden)} <- focus ${label(active)}`);
+          }
+        });
+      },
+      true,
+    );
+  });
+}
+
+function ariaHiddenHits(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as { __hidden: string[] }).__hidden,
+  );
+}
+
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
@@ -549,28 +609,51 @@ test.describe.serial("Transactions", () => {
     await expect(rows()).toHaveCount(3);
   });
 
+  test("the filter panel and its calendar never hide the focused element", async () => {
+    await installAriaHiddenSpy(page);
+
+    const filters = filtersButton();
+    await filters.click();
+    const panel = page
+      .getByRole("presentation")
+      .filter({ hasText: "Categories" });
+
+    // Opening the calendar and closing it again leaves focus on the button
+    // that opened it, inside the popover. Closing the popover then removes a
+    // subtree that still holds focus unless the panel blurs first.
+    await panel
+      .getByRole("button", { name: /choose date/i })
+      .first()
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(
+      panel.getByRole("button", { name: /choose date/i }).first(),
+    ).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+
+    expect(await ariaHiddenHits(page)).toEqual([]);
+    // Restored after the fade-out, to the button that opened the panel.
+    await expect(filters).toBeFocused();
+
+    // Clicking away closes the calendar and the panel together, which is the
+    // same removal with no keyboard event to move focus first.
+    await filters.click();
+    await panel
+      .getByRole("button", { name: /choose date/i })
+      .first()
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.mouse.click(0, 0);
+    await expect(panel).toBeHidden();
+
+    expect(await ariaHiddenHits(page)).toEqual([]);
+  });
+
   test("dialogs never hide the focused element and hand focus back", async () => {
-    // Synchronous hook: fires at the instant MUI writes aria-hidden, before
-    // React moves focus. Console capture and frame sampling both miss it.
-    await page.evaluate(() => {
-      const w = window as unknown as { __hidden: string[] };
-      w.__hidden = [];
-      const original = Element.prototype.setAttribute;
-      Element.prototype.setAttribute = function (name: string, value: string) {
-        if (
-          name === "aria-hidden" &&
-          value === "true" &&
-          this.contains(document.activeElement)
-        ) {
-          w.__hidden.push(document.activeElement?.tagName ?? "?");
-        }
-        return original.call(this, name, value);
-      };
-    });
-    const hidden = () =>
-      page.evaluate(
-        () => (window as unknown as { __hidden: string[] }).__hidden,
-      );
+    await installAriaHiddenSpy(page);
 
     const opener = page.getByRole("button", { name: "Add transaction" });
     await opener.click();
@@ -582,7 +665,7 @@ test.describe.serial("Transactions", () => {
     await page.getByRole("button", { name: "Discard" }).click();
     await expect(dialog).toBeHidden();
 
-    expect(await hidden()).toEqual([]);
+    expect(await ariaHiddenHits(page)).toEqual([]);
     // Restored after the fade-out, to the button that opened the dialog.
     await expect(opener).toBeFocused();
   });

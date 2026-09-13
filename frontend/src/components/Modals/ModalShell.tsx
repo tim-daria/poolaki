@@ -5,7 +5,7 @@
 
 import { Dialog, DialogTitle, IconButton } from "@mui/material";
 import Close from "@mui/icons-material/Close";
-import { useRestoreFocus } from "./useRestoreFocus";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 
 interface Props {
   open: boolean;

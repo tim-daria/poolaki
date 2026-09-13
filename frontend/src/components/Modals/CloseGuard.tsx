@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 
 import type { CloseGuard } from "./useCloseGuard";
-import { useRestoreFocus } from "./useRestoreFocus";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 
 interface DialogProps<T> {
   guard: CloseGuard<T>;

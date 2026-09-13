@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import dayjs, { type Dayjs } from "dayjs";
 import { IsoDatePicker } from "../../components/Form/IsoDatePicker";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 import { SEED_CATEGORIES, type CategoryKind } from "../../lib/categories";
 import { tintedWhenActive } from "./styles";
 import type { TransactionFiltersApi } from "./useTransactionFilters";
@@ -73,6 +74,9 @@ export function FilterPanel({
   activeCount,
   matchCount,
 }: FilterPanelProps) {
+  /** The Filters button must not keep focus while the panel hides it — see the hook. */
+  const restoreFocus = useRestoreFocus(Boolean(anchor));
+
   return (
     <Popover
       open={Boolean(anchor)}
@@ -80,7 +84,12 @@ export function FilterPanel({
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       transformOrigin={{ vertical: "top", horizontal: "right" }}
-      slotProps={{ paper: { sx: { borderRadius: 3, mt: 1 } } }}
+      // Disabled so it does not happen too early; restoreFocus does it instead.
+      disableRestoreFocus
+      slotProps={{
+        paper: { sx: { borderRadius: 3, mt: 1 } },
+        transition: { onExited: restoreFocus },
+      }}
     >
       <Stack spacing={2} sx={{ p: 2.5, width: 400 }}>
         <Typography sx={headingSx}>Date range</Typography>
