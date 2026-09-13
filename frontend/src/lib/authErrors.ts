@@ -1,8 +1,17 @@
+/** @file Maps allauth error codes and OAuth redirect `?error=` codes to user-facing messages. */
+
 export interface AllauthError {
   message: string;
   code?: string;
 }
 
+/**
+ * allauth status for login/signup while a session already exists. The body
+ * carries no `errors` array, so callers must branch on the status alone.
+ */
+export const ALREADY_AUTHENTICATED = 409;
+
+/** Overrides for codes returned in an allauth response body. */
 const CODE_MESSAGES: Record<string, string> = {
   invalid_credentials: "Incorrect username/email or password.",
   user_not_found: "No account exists with that username or email.",
@@ -23,6 +32,34 @@ const CODE_MESSAGES: Record<string, string> = {
   required: "This field is required.",
 };
 
+/**
+ * Messages for `?error=` codes arriving via URL on /login and /register.
+ * Sources: the backend SocialAccountAdapter (`account_not_found`), OAuthCallback
+ * (`oauth-failed`), and codes forwarded verbatim from the OAuth provider.
+ */
+const REDIRECT_MESSAGES: Record<string, string> = {
+  account_not_found:
+    "No 42 account is linked to this login. Please sign up first.",
+  "oauth-failed": "Signing in with 42 did not complete. Please try again.",
+  // Standard OAuth2 code: user declined at the provider's consent prompt.
+  access_denied: "The 42 authorization was cancelled.",
+};
+
+/**
+ * Returns "" for a missing code. Unknown codes still yield a generic message,
+ * since providers may emit codes not listed above.
+ */
+export function redirectErrorMessage(code: string | null): string {
+  if (!code) return "";
+  return (
+    REDIRECT_MESSAGES[code] ?? "Signing in with 42 failed. Please try again."
+  );
+}
+
+/**
+ * Only the first error is surfaced. A mapped message takes precedence over the
+ * server's own text; `fallback` is used when no errors are present.
+ */
 export function parseAllauthErrors(
   errors: AllauthError[] | undefined,
   fallback: string,
