@@ -92,10 +92,23 @@ endpoint for either. A `POST /transactions/` references a category id
 that has to exist in the database, and a fresh database has none — the API
 answers 400 and the suite fails in `beforeAll`.
 
+`manage.py` needs the database credentials, which the entrypoint sources from
+the Vault agent's files at start-up. An exec'd shell starts *without* them, so
+a bare `docker compose exec -T backend python manage.py ...` fails with
+`fe_sendauth: no password supplied`. Source the same file first; a small shell
+function keeps that out of the way:
+
+```bash
+manage() {
+  docker compose exec -T backend sh -c \
+    "set -a; . /vault/agent/secrets/db-creds.env; set +a; python manage.py $*"
+}
+```
+
 Seed them once per database:
 
 ```bash
-docker compose exec -T backend python manage.py seed_transaction_fixtures
+manage seed_transaction_fixtures
 ```
 
 Categories are not scoped to a workspace, so every test user the suite registers
@@ -107,10 +120,10 @@ contribution is rejected unless the goal belongs to the workspace you are in:
 
 ```bash
 # The number is the workspace id from the URL, /o/<id>
-docker compose exec -T backend python manage.py seed_transaction_fixtures 1
+manage seed_transaction_fixtures 1
 
 # Print what it would write and roll back
-docker compose exec -T backend python manage.py seed_transaction_fixtures 1 --dry-run
+manage seed_transaction_fixtures 1 --dry-run
 ```
 
 The command is idempotent: it updates the rows in place, so running it twice is
@@ -138,16 +151,15 @@ To reproduce the CI setup locally when a test fails on GitHub Actions:
 COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml docker compose up -d --build frontend backend
 ```
 
-**2. Run database migrations** inside the backend container:
-
-```bash
-docker compose exec backend python manage.py migrate
-```
+**2. Migrations** run in the backend entrypoint before `/health/` answers, so
+there is nothing to do here. If you ever need `manage.py` by hand, use the
+`manage` function from the section above; a bare `docker compose exec` has no
+database credentials.
 
 **3. Seed the fixtures the transaction specs need** (see the section above):
 
 ```bash
-docker compose exec -T backend python manage.py seed_transaction_fixtures
+manage seed_transaction_fixtures
 ```
 
 **4. Stream container logs** (recommended) in a second terminal, to watch server

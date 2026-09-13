@@ -11,7 +11,8 @@ import { makeUsers, registerUser, toOrgId } from "./helpers.js";
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
  * 3 transfers, 3 tax refundable, 15 per page. Category IDs follow
  * SEED_CATEGORIES in lib/categories.ts and must exist in the database:
- * `manage.py seed_transaction_fixtures <org_id>` once.
+ * `manage.py seed_transaction_fixtures` once, no workspace needed (see
+ * docs/frontend/playwright.md for how to run it with credentials).
  */
 type Fixture = [
   date: string,
