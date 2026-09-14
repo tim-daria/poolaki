@@ -7,6 +7,8 @@ from core.models import (
     Invitation,
     InvitationStatus,
     Membership,
+    Notification,
+    NotificationType,
     Organization,
     Role,
     User,
@@ -70,15 +72,31 @@ def remove_member(org: Organization, target_user: User, owner: User) -> None:
     the owner cannot remove themselves this way.
     """
     if target_user.id == owner.id:
-        raise ValidationError("Use remove organization to remove yourself.")
-    membership = Membership.objects.filter(user=target_user).first()
+        raise ValidationError("Use delete organization to remove yourself.")
+    membership = Membership.objects.filter(user=target_user, org=org).first()
     if membership is None:
         raise ValidationError("This user is not a member of the organization.")
     membership.delete()
 
-    # Notification.objects.create(
-    #     user=target_user,
-    #     type=NotificationType.REMOVED_FROM_ORG,
-    #     org=org,
-    #     payload={"org_name": org.name, "removed_by": removed_by.username},
-    # )
+    Notification.objects.create(
+        user=target_user,
+        type=NotificationType.REMOVED_FROM_ORG,
+        org=org,
+        payload={"org_name": org.name, "removed_by": owner.username},
+    )
+
+    remaining_members = Membership.objects.filter(org=org)
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                user=m.user,
+                type=NotificationType.MEMBER_REMOVED,
+                payload={
+                    "org_name": org.name,
+                    "removed_user": target_user.username,
+                    "removed_by": owner.username,
+                },
+            )
+            for m in remaining_members
+        ]
+    )

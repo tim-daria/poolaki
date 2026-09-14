@@ -169,10 +169,10 @@ class OrganizationMemberRemoveView(APIView):
 
     permission_classes = [IsAuthenticated, IsOrgOwner]
 
-    def post(self, request: Request, org_id: int, member_id: int) -> Response:
+    def post(self, request: Request, org_id: int, user_id: int) -> Response:
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, id=org_id)
-        target_user = get_object_or_404(User, id=member_id)
+        target_user = get_object_or_404(User, id=user_id)
 
         try:
             remove_member(org, target_user, request.user)
