@@ -65,7 +65,8 @@ Response example:
 Status:
 
 - `201 Created` on success
-- `400 Bad Request` when the payload is invalid
+- `400 Bad Request` when the payload is invalid, or the creator already
+  belongs to the maximum of 10 organizations
 
 ### Set the personal organization initial balance
 
@@ -124,6 +125,34 @@ Status:
 
 - `200 OK` on success
 - `403 Forbidden` when the user is not a member of the organization
+
+### Remove a member
+
+```http
+POST /api/v1/organizations/{org_id}/members/{user_id}/remove/
+```
+
+Only the organization owner can remove members. No request body is required.
+
+Response example:
+
+```json
+{ "status": "removed" }
+```
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` when the target is not a member of the organization,
+  or when the owner tries to remove themselves (use organization deletion
+  to remove yourself)
+- `403 Forbidden` when the requester is not the organization owner
+
+Side effects:
+
+- the removed user receives a `removed_from_org` notification
+- every remaining member receives a `member_removed` notification
+  (see [notifications.md](notifications.md))
 
 ### Get current balance
 
@@ -204,6 +233,7 @@ Validation rules:
 - the user cannot already have a pending invitation for the same organization
 - the organization must not be a personal budget
 - the organization limit of 5 members must not be exceeded
+- the invited user cannot already belong to the maximum of 10 organizations
 
 ### Cancel a pending invitation
 
