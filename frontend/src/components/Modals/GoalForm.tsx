@@ -122,7 +122,7 @@ export function GoalForm({ open, onClose, onSaved }: Props) {
                 casing="name"
                 value={draft.name}
                 onChange={(name) => set("name", name)}
-                placeholder="e.g. Winter tyres"
+                placeholder="e.g. Future cat mansion"
                 required
                 autoFocus
               />

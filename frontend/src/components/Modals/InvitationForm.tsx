@@ -116,7 +116,7 @@ export function InvitationForm({ open, onClose, onSent }: Props) {
               label="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. jdoe"
+              placeholder="e.g. cutiepatootie"
               required
               autoFocus
               fullWidth

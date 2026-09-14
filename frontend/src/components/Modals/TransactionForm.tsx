@@ -111,6 +111,7 @@ export function TransactionForm({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const isTransfer = draft.entry_type === "contribution";
+  const isExpense = draft.entry_type === "expense";
   const selectedGoal = goalById(SEED_GOALS, draft.goal);
 
   /** Tracks the open/closed edge, so the block below runs once per opening. */
@@ -395,7 +396,11 @@ export function TransactionForm({
                 value={draft.description}
                 onChange={(description) => set("description", description)}
                 placeholder={
-                  isTransfer ? (selectedGoal?.name ?? "") : "e.g. Grocery run"
+                  isTransfer
+                    ? (selectedGoal?.name ?? "")
+                    : isExpense
+                      ? "e.g. Accidentally bought a boat"
+                      : "e.g. Found coins in winter coat"
                 }
                 required={!isTransfer}
               />
