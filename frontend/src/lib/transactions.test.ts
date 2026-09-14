@@ -33,6 +33,7 @@ describe("toDraft", () => {
       transaction_date: "2026-02-01",
       is_tax_deductible: false,
       goal: null,
+      created_by: null,
     };
     expect(toDraft(row)).toEqual({
       entry_type: "income",

@@ -1,6 +1,7 @@
 /** @file Filtering, sorting, counting and paging over an in-memory transaction list. */
 
 import { describe, expect, it } from "vitest";
+import type { Category } from "./categories";
 import {
   applyFilters,
   countByTab,
@@ -12,16 +13,22 @@ import {
 } from "./transactionFilters";
 import type { Transaction } from "./transactions";
 
+const CATEGORIES: Category[] = [
+  { id: 1, name: "Groceries", type: "expense" },
+  { id: 2, name: "Rent", type: "expense" },
+];
+
 function tx(overrides: Partial<Transaction> = {}): Transaction {
   return {
     id: 1,
     entry_type: "expense",
-    category: 1, // Groceries in SEED_CATEGORIES
+    category: 1, // Groceries
     description: "Weekly shop",
     amount: 10,
     transaction_date: "2026-03-10",
     is_tax_deductible: false,
     goal: null,
+    created_by: null,
     ...overrides,
   };
 }
@@ -32,20 +39,20 @@ function filters(overrides: Partial<TransactionFilters> = {}) {
 
 describe("matchesFilters", () => {
   it("matches everything with the default filters", () => {
-    expect(matchesFilters(tx(), filters())).toBe(true);
+    expect(matchesFilters(tx(), filters(), CATEGORIES)).toBe(true);
   });
 
   it("applies the date range inclusively", () => {
     const f = filters({ from: "2026-03-10", to: "2026-03-10" });
-    expect(matchesFilters(tx({ transaction_date: "2026-03-10" }), f)).toBe(
-      true,
-    );
-    expect(matchesFilters(tx({ transaction_date: "2026-03-09" }), f)).toBe(
-      false,
-    );
-    expect(matchesFilters(tx({ transaction_date: "2026-03-11" }), f)).toBe(
-      false,
-    );
+    expect(
+      matchesFilters(tx({ transaction_date: "2026-03-10" }), f, CATEGORIES),
+    ).toBe(true);
+    expect(
+      matchesFilters(tx({ transaction_date: "2026-03-09" }), f, CATEGORIES),
+    ).toBe(false);
+    expect(
+      matchesFilters(tx({ transaction_date: "2026-03-11" }), f, CATEGORIES),
+    ).toBe(false);
   });
 
   it("treats an empty bound as unbounded", () => {
@@ -53,21 +60,28 @@ describe("matchesFilters", () => {
       matchesFilters(
         tx({ transaction_date: "1999-01-01" }),
         filters({ to: "2026-01-01" }),
+        CATEGORIES,
       ),
     ).toBe(true);
   });
 
   it("keeps only rows in the selected categories", () => {
     const f = filters({ categories: [1, 2] });
-    expect(matchesFilters(tx({ category: 2 }), f)).toBe(true);
-    expect(matchesFilters(tx({ category: 3 }), f)).toBe(false);
+    expect(matchesFilters(tx({ category: 2 }), f, CATEGORIES)).toBe(true);
+    expect(matchesFilters(tx({ category: 3 }), f, CATEGORIES)).toBe(false);
   });
 
   it("excludes uncategorised rows when a category filter is active", () => {
     expect(
-      matchesFilters(tx({ category: null }), filters({ categories: [1] })),
+      matchesFilters(
+        tx({ category: null }),
+        filters({ categories: [1] }),
+        CATEGORIES,
+      ),
     ).toBe(false);
-    expect(matchesFilters(tx({ category: null }), filters())).toBe(true);
+    expect(matchesFilters(tx({ category: null }), filters(), CATEGORIES)).toBe(
+      true,
+    );
   });
 
   it("taxDeductible true filters, false does not", () => {
@@ -75,33 +89,50 @@ describe("matchesFilters", () => {
       matchesFilters(
         tx({ is_tax_deductible: false }),
         filters({ taxDeductible: true }),
+        CATEGORIES,
       ),
     ).toBe(false);
     expect(
       matchesFilters(
         tx({ is_tax_deductible: true }),
         filters({ taxDeductible: true }),
+        CATEGORIES,
       ),
     ).toBe(true);
     expect(
       matchesFilters(
         tx({ is_tax_deductible: false }),
         filters({ taxDeductible: false }),
+        CATEGORIES,
       ),
     ).toBe(true);
   });
 
   it("searches description case-insensitively", () => {
-    expect(matchesFilters(tx(), filters({ q: "WEEKLY" }))).toBe(true);
-    expect(matchesFilters(tx(), filters({ q: "rent" }))).toBe(false);
+    expect(matchesFilters(tx(), filters({ q: "WEEKLY" }), CATEGORIES)).toBe(
+      true,
+    );
+    expect(matchesFilters(tx(), filters({ q: "rent" }), CATEGORIES)).toBe(
+      false,
+    );
   });
 
   it("searches the category label too", () => {
-    expect(matchesFilters(tx({ category: 1 }), filters({ q: "grocer" }))).toBe(
-      true,
-    );
     expect(
-      matchesFilters(tx({ category: null }), filters({ q: "grocer" })),
+      matchesFilters(tx({ category: 1 }), filters({ q: "grocer" }), CATEGORIES),
+    ).toBe(true);
+    expect(
+      matchesFilters(
+        tx({ category: null }),
+        filters({ q: "grocer" }),
+        CATEGORIES,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats an unknown category as having no label", () => {
+    expect(
+      matchesFilters(tx({ category: 999 }), filters({ q: "grocer" }), []),
     ).toBe(false);
   });
 
@@ -110,6 +141,7 @@ describe("matchesFilters", () => {
       matchesFilters(
         tx({ entry_type: "expense" }),
         filters({ tab: "income", page: 99 }),
+        CATEGORIES,
       ),
     ).toBe(true);
   });
@@ -169,7 +201,7 @@ describe("sortTransactions", () => {
 
 describe("applyFilters", () => {
   it("reports one empty page for no rows", () => {
-    expect(applyFilters([], filters())).toEqual({
+    expect(applyFilters([], filters(), CATEGORIES)).toEqual({
       page: [],
       total: 0,
       pageCount: 1,
@@ -182,7 +214,7 @@ describe("applyFilters", () => {
       tx({ id: 1, entry_type: "expense" }),
       tx({ id: 2, entry_type: "income" }),
     ];
-    const result = applyFilters(rows, filters({ tab: "income" }));
+    const result = applyFilters(rows, filters({ tab: "income" }), CATEGORIES);
     expect(result.counts).toEqual({
       all: 2,
       expense: 1,
@@ -198,7 +230,11 @@ describe("applyFilters", () => {
       tx({ id: 1, entry_type: "expense", is_tax_deductible: true }),
       tx({ id: 2, entry_type: "income", is_tax_deductible: false }),
     ];
-    const result = applyFilters(rows, filters({ taxDeductible: true }));
+    const result = applyFilters(
+      rows,
+      filters({ taxDeductible: true }),
+      CATEGORIES,
+    );
     expect(result.counts).toEqual({
       all: 1,
       expense: 1,
@@ -211,17 +247,25 @@ describe("applyFilters", () => {
     const rows = Array.from({ length: PAGE_SIZE + 1 }, (_, i) =>
       tx({ id: i + 1, transaction_date: "2026-01-01" }),
     );
-    const first = applyFilters(rows, filters({ sort: "oldest", page: 1 }));
+    const first = applyFilters(
+      rows,
+      filters({ sort: "oldest", page: 1 }),
+      CATEGORIES,
+    );
     expect(first.page).toHaveLength(PAGE_SIZE);
     expect(first.pageCount).toBe(2);
 
-    const second = applyFilters(rows, filters({ sort: "oldest", page: 2 }));
+    const second = applyFilters(
+      rows,
+      filters({ sort: "oldest", page: 2 }),
+      CATEGORIES,
+    );
     expect(second.page.map((t) => t.id)).toEqual([PAGE_SIZE + 1]);
   });
 
   it("clamps a page beyond the last one to the last page", () => {
     const rows = [tx({ id: 1 })];
-    const result = applyFilters(rows, filters({ page: 7 }));
+    const result = applyFilters(rows, filters({ page: 7 }), CATEGORIES);
     expect(result.pageCount).toBe(1);
     expect(result.page.map((t) => t.id)).toEqual([1]);
   });

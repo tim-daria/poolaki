@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ueo pipefail
+set -uo pipefail
 
 printf "\n🐳 Stopping database container...(ignore this if it wasn't running)\n"
 docker stop postgres_db
@@ -18,6 +18,17 @@ docker run --rm -d \
   -e POSTGRES_PASSWORD=test_password \
   -p 5432:5432 \
   postgres:18
+
+# Without this, an interrupt between here and the stop below strands ci-postgres
+# on port 5432, which then blocks the dev stack's Postgres on the next run.
+cleanup_ci_postgres() {
+  docker stop ci-postgres >/dev/null 2>&1 || true
+}
+trap cleanup_ci_postgres EXIT
+# Exit explicitly so the EXIT trap also runs on a signal.
+trap 'exit 130' INT TERM
+trap 'exit 129' HUP
+
 
 export POSTGRES_DB=test_db
 export DATABASE_USER=test_user
@@ -81,6 +92,9 @@ npm run format:check
 printf "\n🔍 Frontend: Running linter...\n"
 npm run lint
 
+printf "\n🔍 Frontend: Running unit tests...\n"
+npm run test
+
 printf "\n🔍 Frontend: Running type checker...\n"
 npx tsc -b
 
@@ -88,6 +102,7 @@ cd ..
 
 printf "\n🐳 Stopping test database...\n"
 docker stop ci-postgres
+trap - EXIT
 
 # The test database's settings were exported for pytest above, and an exported
 # variable beats .env when compose interpolates ${DB_HOST} and friends — the
