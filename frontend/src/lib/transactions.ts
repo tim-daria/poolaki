@@ -233,9 +233,9 @@ function firstProblem(
  *
  * Generic validation messages are rewritten because they describe the API
  * contract rather than the form; everything else is passed through with its
- * field named.
+ * field named. Exported for tests only; callers go through the HTTP wrappers.
  */
-function describeProblem(body: unknown): string | null {
+export function describeProblem(body: unknown): string | null {
   const problem = firstProblem(body);
   if (!problem) return null;
 
