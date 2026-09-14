@@ -102,7 +102,7 @@ Data Required:
 Retrieval: `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/analytics/categories/ranking`
+`POST /api/internal/v1/analytics/categories/ranking`
 
 Expected Response:
 > "Your biggest expense category is Food (€230)."

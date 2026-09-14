@@ -20,7 +20,6 @@ Initial supported endpoints:
 | Django → AI | POST | `/api/v1/chat` | Send user questions |
 | AI → Django | POST | `/api/internal/v1/analytics/monthly-summary` | Retrieve financial summary |
 | AI → Django | POST | `/api/internal/v1/transactions` | Retrieve transaction data |
-| AI → Django | POST | `/api/internal/v1/recurring-transactions` | Retrieve recurring commitments |
 | AI → Django | POST | `/api/internal/v1/goals/progress` | Retrieve goals data |
 
 The `/api/internal/` namespace is reserved for service-to-service communication and is not part of the public `Frontend` API.
@@ -185,34 +184,7 @@ The response uses the same transaction collection structure for filtered and unf
 
 For intents that require an aggregate value rather than individual transactions, such as "How much did I spend on Food?", the corresponding analytics endpoint should be used instead of `transactions`.
 
-### 2.3. Recurring Transactions
-`POST /api/internal/v1/recurring-transactions`
-
-Provides recurring financial commitments.
-
-#### Request Schema
-
-```
-{ 
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-
-```
-{
-  "recurring_transactions":[
-    {
-      "name":"Rent",
-      "amount":900,
-      "frequency":"monthly"
-    }
-  ]
-}
-```
-### 2.4. Category Spending
+### 2.3. Category Spending
 `POST /api/internal/v1/analytics/categories`
 
 Provides spending information for a specific category.
@@ -235,7 +207,7 @@ Provides spending information for a specific category.
 }
 ```
 
-### 2.5. Category Ranking
+### 2.4. Category Ranking
 
 `POST /api/internal/v1/analytics/categories/ranking`
 
@@ -261,7 +233,7 @@ Provides expense categories ranked by spending.
 }
 ```
 
-### 2.6. Latest Transaction
+### 2.5. Latest Transaction
 
 `POST /api/internal/v1/transactions/latest`
 
@@ -286,7 +258,7 @@ Provides the user's most recent expense transaction.
 }
 ```
 
-### 2.7. Income Summary
+### 2.6. Income Summary
 `POST /api/internal/v1/analytics/income-summary`
 
 Provides aggregated income information for a period.
@@ -309,7 +281,7 @@ Provides aggregated income information for a period.
 }
 ```
 
-### 2.8. Average Income
+### 2.7. Average Income
 `POST /api/internal/v1/analytics/income-average`
 
 Provides the user's average monthly income.
@@ -329,7 +301,7 @@ Provides the user's average monthly income.
 }
 ```
 
-### 2.9. Current Balance
+### 2.8. Current Balance
 `POST /api/internal/v1/analytics/balance`
 
 Provides the user's current financial balance.
@@ -349,7 +321,7 @@ Provides the user's current financial balance.
 }
 ```
 
-### 2.10. Goal Progress
+### 2.9. Goal Progress
 `POST /api/internal/v1/goals/progress`
 
 Provides progress information for a specific financial goal.
@@ -373,7 +345,7 @@ Provides progress information for a specific financial goal.
 }
 ```
 
-### 2.11. Goal Forecast
+### 2.10. Goal Forecast
 `POST /api/internal/v1/goals/forecast`
 
 Provides an estimated completion date for a financial goal.
@@ -394,50 +366,7 @@ Provides an estimated completion date for a financial goal.
 }
 ```
 
-### 2.12. Recurring Transactions Summary
-
-`POST /api/internal/v1/analytics/recurring-summary`
-
-Provides the total monthly cost of recurring transactions.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
-  "monthly_recurring_total": 250
-}
-```
-
-### 2.13. Recurring Transactions Forecast
-
-`POST /api/internal/v1/analytics/forecast-recurring`
-
-Provides an estimate of recurring expenses for the next month.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
-  "period": "2026-02",
-  "forecast_expenses": 300
-}
-```
-
-### 2.14. Spending Trends
+### 2.11. Spending Trends
 
 `POST /api/internal/v1/analytics/trends`
 
@@ -460,7 +389,7 @@ Provides spending trends compared with previous periods.
 }
 ```
 
-### 2.15. Cash Flow
+### 2.12. Cash Flow
 
 `POST /api/internal/v1/analytics/cash-flow`
 
@@ -483,7 +412,7 @@ Provides net cash flow for the requested period.
 }
 ```
 
-### 2.16. Shared Expenses
+### 2.13. Shared Expenses
 
 `POST /api/internal/v1/analytics/shared-expenses`
 
@@ -505,7 +434,7 @@ Provides aggregated expenses for shared accounts.
 }
 ```
 
-### 2.17. Organization Summary
+### 2.14. Organization Summary
 
 `POST /api/internal/v1/analytics/organization-summary`
 
@@ -528,7 +457,7 @@ Provides aggregated spending information for the organization.
 }
 ```
 
-### 2.18. Categories
+### 2.15. Categories
 
 `POST /api/internal/v1/categories`
 
@@ -554,7 +483,7 @@ Provides category information required for transaction categorization.
 }
 ```
 
-### 2.19. Transaction Detail
+### 2.16. Transaction Detail
 
 `POST /api/internal/v1/transactions/detail`
 

@@ -1,3 +1,5 @@
+/** @file Member avatars for the current workspace, with the owner's invite control. */
+
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useEffect, useState } from "react";
 import {
@@ -54,10 +56,8 @@ export function OrgMembers() {
   const canInvite = !org.is_personal && org.role === "owner";
 
   /**
-   * Pending invitations are only ever fetched for an owner of a shared
-   * workspace. Deriving the empty case rather than clearing `pending` on a
-   * workspace switch keeps the last owner-workspace's list from showing
-   * through, without a setState the effect would have to make synchronously.
+   * Derived rather than cleared when `canInvite` turns false: a reset would
+   * have to happen synchronously inside the effect, which cascades renders.
    */
   const visiblePending = canInvite ? pending : [];
 
@@ -76,7 +76,6 @@ export function OrgMembers() {
 
     // Owner-only endpoint. Asking as a member is a guaranteed 403, and the
     // count is only needed to decide whether to offer an invite anyway.
-    // Nothing to clear on the way out: visiblePending derives the empty case.
     if (!canInvite) return;
     fetchPendingInvitations(org.id, signal)
       .then((res) => setPending(res.invitations))
@@ -85,6 +84,11 @@ export function OrgMembers() {
       });
   };
 
+  /**
+   * No reset on a workspace switch: AppLayout keys <main> by orgId, so this
+   * component is remounted with empty state rather than re-fetching into the
+   * previous workspace's.
+   */
   useEffect(() => {
     const ac = new AbortController();
     loadMembers(ac.signal);
@@ -119,9 +123,8 @@ export function OrgMembers() {
             </Avatar>
           </Tooltip>
         ))}
-        {/* Pending invitees sit after the members, dimmed and outlined: they
-            are expected in the workspace but have not accepted yet, so they
-            should not read as people who are already in it. */}
+        {/* Dimmed and outlined: an invitee has not accepted yet, so they must
+            not read as someone already in the workspace. */}
         {visiblePending.map((p) => (
           <Tooltip
             key={`pending-${p.id}`}

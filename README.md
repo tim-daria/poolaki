@@ -17,7 +17,7 @@ Key planned features:
 - Secure user accounts (email + password, hashed & salted)
 - Personal and shared expense tracking
 - Categories, filtering, and reporting
-- Financial goals and recurring transactions
+- Financial goals
 - AI-powered conversations over financial data
 - Multi-user / concurrent usage with no data races
 

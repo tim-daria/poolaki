@@ -1,3 +1,5 @@
+/** @file Workspace navigation drawer: permanent and collapsible on desktop, overlay on mobile. */
+
 import { Link as RouterLink } from "react-router";
 import {
   Box,
@@ -13,28 +15,21 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import SyncAltOutlinedIcon from "@mui/icons-material/SyncAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import DiscountOutlinedIcon from "@mui/icons-material/DiscountOutlined";
 import { headerHeight } from "../Header/Header";
 import { NavItem } from "./NavItem";
 
 export const drawerWidth = 240;
 export const miniWidth = 64;
 
-/**
- * Relative `to` paths resolve against /o/:orgId, so every entry follows the
- * current workspace without threading orgId through props. Absolute paths
- * would escape the workspace and land on routes that do not exist.
- */
+/** Paths are relative so they resolve against /o/:orgId without threading orgId through props. */
 const navItems = [
-  // `end` — otherwise "." matches every page under /o/:orgId and Overview
-  // stays highlighted on each sub-page.
-  { label: "Overview", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
+  // `end` stops "." from matching every route under /o/:orgId.
+  { label: "Home", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
   { label: "Transactions", to: "transactions", icon: <SyncAltOutlinedIcon /> },
   { label: "Goals", to: "goals", icon: <FavoriteBorderIcon /> },
-  { label: "Categories", to: "categories", icon: <DiscountOutlinedIcon /> },
 ];
 
-/** Absolute — these sit at the app root, not under /o/:orgId. */
+/** Absolute paths: these live at the app root, not under /o/:orgId. */
 const LEGAL_LINKS = [
   { to: "/terms", label: "Terms" },
   { to: "/policy", label: "Policy" },
@@ -57,7 +52,7 @@ export function Sidebar({
 }: SidebarProps) {
   const theme = useTheme();
 
-  // On mobile the drawer overlays, so it's always full width and never mini
+  // The mobile overlay is always full width; only the desktop drawer collapses.
   const showCollapsed = !isMobile && collapsed;
   const currentWidth = showCollapsed ? miniWidth : drawerWidth;
 
@@ -65,9 +60,7 @@ export function Sidebar({
     <>
       {!isMobile && (
         <>
-          {/* Same height as the header, with the row centred inside it, so
-              "Poolaki" sits on the header label's line. The box has no border
-              of its own — only the text lines up, not the two blocks. */}
+          {/* Matches headerHeight so the brand text aligns with the header label. */}
           <Box
             sx={{
               display: "flex",
@@ -113,7 +106,6 @@ export function Sidebar({
 
       <List
         sx={{
-          // Breathing room under the brand row, in place of the old divider.
           mt: 3,
           display: "flex",
           flexDirection: "column",
@@ -127,15 +119,13 @@ export function Sidebar({
             key={item.to}
             {...item}
             collapsed={showCollapsed}
-            // The overlay covers the content it just navigated to, so it has
-            // to get out of the way. The permanent drawer stays put.
+            // The overlay must close after navigating; the permanent drawer stays open.
             onNavigate={isMobile ? onMobileClose : undefined}
           />
         ))}
       </List>
 
-      {/* mt: auto pins these to the bottom — the Drawer paper is a flex
-          column, so the gap above absorbs the free space. */}
+      {/* Drawer paper is a flex column, so mt: auto pins the links to the bottom. */}
       <Box
         sx={{
           mt: "auto",
@@ -174,8 +164,7 @@ export function Sidebar({
     bgcolor: "primary.dark",
     borderRight: 1,
     borderColor: "divider",
-    // No top padding on desktop — the brand row is measured from the very top,
-    // otherwise its text drops below the header's. Mobile has no brand row.
+    // Desktop: brand row height is measured from the top edge to align with the header.
     pt: isMobile ? 1 : 0,
     pb: 1,
     overflowX: "hidden",
@@ -188,8 +177,7 @@ export function Sidebar({
         variant="temporary"
         open={mobileOpen}
         onClose={onMobileClose}
-        // Keeps the nav in the DOM between opens — better first-open paint,
-        // and SEO-neutral here since this is behind auth.
+        // Avoids a blank first-open paint.
         slotProps={{ root: { keepMounted: true } }}
         sx={{
           "& .MuiDrawer-paper": { ...paperSx, width: drawerWidth },
