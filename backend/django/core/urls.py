@@ -13,16 +13,25 @@ from core.views.notification import (
     UnreadNotificationCountView,
 )
 from core.views.organization import (
+    OrganizationBalanceView,
     OrganizationListCreateView,
     OrganizationMemberRemoveView,
     OrganizationMembersView,
     SetInitialBalanceView,
 )
+from core.views.transaction import (
+    TransactionGetDeleteView,
+    TransactionListCreateView,
+)
 from core.views.utils import csrf
 
 urlpatterns = [
     path("csrf/", csrf),
-    path("organizations/", OrganizationListCreateView.as_view(), name="organization-list-create"),
+    path(
+        "organizations/",
+        OrganizationListCreateView.as_view(),
+        name="organization-list-create",
+    ),
     path(
         "organizations/<int:org_id>/members/",
         OrganizationMembersView.as_view(),
@@ -47,6 +56,21 @@ urlpatterns = [
         "organizations/personal/initial-balance/",
         SetInitialBalanceView.as_view(),
         name="set-initial-balance",
+    ),
+    path(
+        "organizations/<int:org_id>/transactions/",
+        TransactionListCreateView.as_view(),
+        name="transaction-list-create",
+    ),
+    path(
+        "organizations/<int:org_id>/transactions/<int:transaction_id>/",
+        TransactionGetDeleteView.as_view(),
+        name="transaction-get-delete",
+    ),
+    path(
+        "organizations/<int:org_id>/balance/",
+        OrganizationBalanceView.as_view(),
+        name="organization-balance",
     ),
     path(
         "invitations/<int:invitation_id>/accept/",

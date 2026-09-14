@@ -11,13 +11,10 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     allowedHosts: ["poolaki.localhost", "poolaki.de"],
-    hmr: process.env.CI
-      ? false
-      : {
-          host: "poolaki.localhost",
-          protocol: "wss",
-          clientPort: 443,
-        },
+    // Left unconfigured so the client derives host, port and ws/wss from the
+    // page origin: http://poolaki.localhost:8080 locally, https://poolaki.de
+    // through the tunnel. Caddy and cloudflared both forward the upgrade.
+    hmr: process.env.CI ? false : undefined,
     proxy: {
       "/api": {
         target: process.env.BACKEND_URL ?? "http://backend:8000",

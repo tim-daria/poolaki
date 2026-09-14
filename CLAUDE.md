@@ -1,0 +1,1 @@
+See AGENTS.md for coding guidelines and rules.

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] = 2026-09-07
+### Added
+- Added LLM integration through OpenRouter.
+- Added intent classification for financial questions.
+- Added hybrid retrieval orchestration.
+- Connected context and prompt builders.
+- Added LLM-generated responses through the chat endpoint.
+- Added detected intent to the chat response metadata.
+- Added OpenRouter configuration through environment variables.
+
+## [0.2.0] = 2026-08-05
+- Added context and prompt builders.
+
 ## [0.1.0] - 2026-07-22
 
 ### Added
