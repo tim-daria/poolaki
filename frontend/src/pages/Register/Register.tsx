@@ -6,7 +6,8 @@ import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import {
   ALREADY_AUTHENTICATED,
-  parseAllauthErrors,
+  NETWORK_ERROR_MESSAGE,
+  authErrorMessage,
   redirectErrorMessage,
   type AllauthError,
 } from "../../lib/authErrors";
@@ -60,20 +61,26 @@ function Register() {
       return;
     }
 
-    const res = await fetch("/_allauth/browser/v1/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCsrfToken(),
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-        password2,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/_allauth/browser/v1/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCsrfToken(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          password2,
+        }),
+      });
+    } catch {
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
 
     let data: { data?: { user: User }; errors?: AllauthError[] } | null = null;
     try {
@@ -89,11 +96,13 @@ function Register() {
     } else if (res.status === ALREADY_AUTHENTICATED) {
       setAlreadySignedIn(true);
     } else {
-      const msg = parseAllauthErrors(
-        data?.errors,
-        "Sign-up failed. Please check the details above.",
+      setError(
+        authErrorMessage(
+          res.status,
+          data?.errors,
+          "Sign-up failed. Please check the details above.",
+        ),
       );
-      setError(msg);
     }
   }
 

@@ -11,6 +11,14 @@ export interface AllauthError {
  */
 export const ALREADY_AUTHENTICATED = 409;
 
+/** Exported only because the `fetch` try/catch lives in the page components. */
+export const NETWORK_ERROR_MESSAGE =
+  "Can't reach the server. Check your connection and try again.";
+
+/** Must never hint at bad credentials; the failure is not the user's. */
+const SERVER_ERROR_MESSAGE =
+  "Something went wrong on our end. Please try again in a moment.";
+
 /** Overrides for codes returned in an allauth response body. */
 const CODE_MESSAGES: Record<string, string> = {
   invalid_credentials: "Incorrect username/email or password.",
@@ -60,7 +68,7 @@ export function redirectErrorMessage(code: string | null): string {
  * Only the first error is surfaced. A mapped message takes precedence over the
  * server's own text; `fallback` is used when no errors are present.
  */
-export function parseAllauthErrors(
+function parseAllauthErrors(
   errors: AllauthError[] | undefined,
   fallback: string,
 ): string {
@@ -69,4 +77,25 @@ export function parseAllauthErrors(
   const err = errors[0];
   const text = (err.code ? CODE_MESSAGES[err.code] : undefined) ?? err.message;
   return text;
+}
+
+/**
+ * allauth answers 429 for every rate-limited action (login, signup, password
+ * change) with no error code, so one message has to fit them all.
+ */
+const RATE_LIMIT_MESSAGE = "Too many attempts. Please try again later.";
+
+/**
+ * Message for a non-2xx allauth response. 5xx is checked as a range so proxy
+ * statuses (502/503/504) are covered; 409 is not handled here because callers
+ * branch on it before reaching this function.
+ */
+export function authErrorMessage(
+  status: number,
+  errors: AllauthError[] | undefined,
+  fallback: string,
+): string {
+  if (status >= 500) return SERVER_ERROR_MESSAGE;
+  if (status === 429) return RATE_LIMIT_MESSAGE;
+  return parseAllauthErrors(errors, fallback);
 }

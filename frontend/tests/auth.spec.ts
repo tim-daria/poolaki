@@ -236,7 +236,10 @@ test.describe.serial("User authentication", () => {
       route.fulfill({
         status: 401,
         contentType: "application/json",
-        body: JSON.stringify({ status: 401, meta: { is_authenticated: false } }),
+        body: JSON.stringify({
+          status: 401,
+          meta: { is_authenticated: false },
+        }),
       }),
     );
 
