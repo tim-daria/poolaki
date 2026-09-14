@@ -6,7 +6,8 @@ import { useAuth } from "../../context/useAuth";
 import { getCsrfToken } from "../../lib/csrf";
 import {
   ALREADY_AUTHENTICATED,
-  parseAllauthErrors,
+  NETWORK_ERROR_MESSAGE,
+  authErrorMessage,
   redirectErrorMessage,
   type AllauthError,
 } from "../../lib/authErrors";
@@ -49,19 +50,25 @@ function Login() {
     setError("");
     setAlreadySignedIn(false);
 
-    const res = await fetch("/_allauth/browser/v1/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCsrfToken(),
-      },
-      credentials: "include",
-      body: JSON.stringify(
-        identifier.includes("@")
-          ? { email: identifier, password }
-          : { username: identifier, password },
-      ),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/_allauth/browser/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCsrfToken(),
+        },
+        credentials: "include",
+        body: JSON.stringify(
+          identifier.includes("@")
+            ? { email: identifier, password }
+            : { username: identifier, password },
+        ),
+      });
+    } catch {
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
 
     let data: { data?: { user: User }; errors?: AllauthError[] } | null = null;
     try {
@@ -76,11 +83,13 @@ function Login() {
     } else if (res.status === ALREADY_AUTHENTICATED) {
       setAlreadySignedIn(true);
     } else {
-      const msg = parseAllauthErrors(
-        data?.errors,
-        "Login failed. Please check your credentials.",
+      setError(
+        authErrorMessage(
+          res.status,
+          data?.errors,
+          "Login failed. Please check your credentials.",
+        ),
       );
-      setError(msg);
     }
   }
 
