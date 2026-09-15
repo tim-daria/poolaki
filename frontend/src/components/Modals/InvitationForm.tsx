@@ -23,6 +23,8 @@ interface Props {
   onClose: () => void;
   /** Fires after a successful send, so the caller can refetch its member list. */
   onSent: () => void;
+  /** Defaults to the current workspace; Settings invites into any it lists. */
+  orgId?: number;
 }
 
 /**
@@ -40,8 +42,9 @@ interface Props {
  * caller is expected to hide the entry point otherwise — reaching this form
  * without those rights gets a 403 that has no useful message for the user.
  */
-export function InvitationForm({ open, onClose, onSent }: Props) {
-  const org = useCurrentOrg();
+export function InvitationForm({ open, onClose, onSent, orgId }: Props) {
+  const currentOrg = useCurrentOrg();
+  const targetOrgId = orgId ?? currentOrg.id;
   const { showToast } = useToast();
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
@@ -81,7 +84,7 @@ export function InvitationForm({ open, onClose, onSent }: Props) {
 
     setSubmitting(true);
     try {
-      await createInvitation(org.id, trimmed, getCsrfToken());
+      await createInvitation(targetOrgId, trimmed, getCsrfToken());
       // Not just in the catch: this component outlives the close, so a flag
       // left true here would disable both buttons on the next open.
       setSubmitting(false);
