@@ -224,7 +224,7 @@ There is no push channel, so the frontend should poll.
 | `goal_completed`    | Info text.                                                                                        |
 | `member_left`       | Info text .                                                                                       |
 | `member_removed`    | Info text, e.g. "**alice** was removed from **Trip**"                                          |
-| `removed_from_org`  | Text like "you were removed from **Trip** by bob", plus a way to leave the org view            |
+| `removed_from_org`  | Text like "you were removed from **Trip** by bob"    |
 | `organization_deleted` | Info text, e.g. "**Trip** was deleted"                                                      |
 
 The exact copy and icons are up to the frontend; the table only maps where a

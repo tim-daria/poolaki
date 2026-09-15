@@ -2,7 +2,14 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Membership, Organization, Role, User
+from core.models import (
+    Membership,
+    Notification,
+    NotificationType,
+    Organization,
+    Role,
+    User,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -206,3 +213,160 @@ def test_user_from_another_organization_cannot_view_members(
     )
 
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# POST - remove member
+# ---------------------------------------------------------------------------
+
+
+def test_owner_can_remove_member(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": member.id},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "removed"}
+
+    assert not Membership.objects.filter(user=member, org=shared_org).exists()
+
+    removed_notification = Notification.objects.filter(
+        user=member, type=NotificationType.REMOVED_FROM_ORG
+    ).get()
+    assert removed_notification.payload == {
+        "org_name": shared_org.name,
+        "removed_by": owner.username,
+    }
+
+    remaining_notifications = Notification.objects.filter(
+        user=owner, org=shared_org, type=NotificationType.MEMBER_REMOVED
+    )
+    assert remaining_notifications.count() == 1
+    assert remaining_notifications.get().payload == {
+        "org_name": shared_org.name,
+        "removed_user": member.username,
+        "removed_by": owner.username,
+    }
+
+
+def test_remove_member_notifies_all_remaining_members(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    extra_member = User.objects.create_user(
+        email="extra@example.com", username="extra", password="pass1234"
+    )
+    Membership.objects.create(user=extra_member, org=shared_org, role=Role.MEMBER)
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": member.id},
+        )
+    )
+
+    assert response.status_code == 200
+
+    # Notified: owner + extra_member, but not the removed member
+    notified = Notification.objects.filter(type=NotificationType.MEMBER_REMOVED)
+    assert notified.count() == 2
+    # assert set(notified.values_list("user_id", flat=True)) == {owner.id, extra_member.id}
+    assert not notified.filter(user=member).exists()
+
+
+def test_owner_cannot_remove_themselves(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": owner.id},
+        )
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "Use delete organization to remove yourself."
+
+    assert Membership.objects.filter(user=owner, org=shared_org).exists()
+
+
+def test_cannot_remove_user_who_is_not_a_member(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    stranger = User.objects.create_user(
+        email="stranger@example.com", username="stranger", password="pass1234"
+    )
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": stranger.id},
+        )
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "This user is not a member of the organization."
+
+
+def test_non_owner_member_cannot_remove_members(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": owner.id},
+        )
+    )
+
+    assert response.status_code == 403
+    assert Membership.objects.filter(user=owner, org=shared_org).exists()
+
+
+def test_stranger_cannot_remove_members(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    stranger = User.objects.create_user(
+        email="stranger@example.com", username="stranger", password="pass1234"
+    )
+
+    api_client.force_authenticate(user=stranger)
+
+    response = api_client.post(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": member.id},
+        )
+    )
+
+    assert response.status_code == 403
+    assert Membership.objects.filter(user=member, org=shared_org).exists()

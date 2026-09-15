@@ -177,7 +177,7 @@ class OrganizationMemberRemoveView(APIView):
         try:
             remove_member(org, target_user, request.user)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "removed"}, status=status.HTTP_200_OK)
 
 

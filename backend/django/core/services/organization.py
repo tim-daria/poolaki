@@ -91,6 +91,7 @@ def remove_member(org: Organization, target_user: User, owner: User) -> None:
             Notification(
                 user=m.user,
                 type=NotificationType.MEMBER_REMOVED,
+                org=org,
                 payload={
                     "org_name": org.name,
                     "removed_user": target_user.username,
