@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLogout } from "../context/useLogout";
+import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { Sidebar } from "./Sidebar/Sidebar";
@@ -14,6 +15,9 @@ const COLLAPSED_KEY = "sidebar:collapsed";
  * monitor, and the eye loses the line on the way back to the left edge.
  */
 const contentMaxWidth = 1280;
+
+/** For pages of stacked label-and-button rows, which read badly stretched. */
+const narrowContentMaxWidth = 880;
 
 /**
  * Storage access is guarded: a blocked or full localStorage throws, and the
@@ -44,6 +48,7 @@ function readCollapsed(): boolean {
 export function AppLayout() {
   const logout = useLogout();
   const { orgId } = useParams();
+  const narrow = useRouteMeta()?.width === "narrow";
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   // Lazy initialiser — reads storage once on mount, not on every render.
@@ -84,7 +89,12 @@ export function AppLayout() {
         <Box component="main" key={orgId} sx={{ flex: 1, overflowY: "auto" }}>
           {/* Content column, centred once the viewport outgrows it. Wraps
                the page header too, so heading and page stay on one edge. */}
-          <Box sx={{ maxWidth: contentMaxWidth, mx: "auto" }}>
+          <Box
+            sx={{
+              maxWidth: narrow ? narrowContentMaxWidth : contentMaxWidth,
+              mx: "auto",
+            }}
+          >
             <PageHeader>
               <Outlet />
             </PageHeader>

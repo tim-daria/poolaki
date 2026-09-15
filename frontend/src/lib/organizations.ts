@@ -140,3 +140,94 @@ export async function createInvitation(
   if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
   return res.json();
 }
+
+/** POST /api/v1/organizations/${org_id}/invitations/${invitation_id}/cancel/ */
+export async function cancelInvitation(
+  org_id: number,
+  invitation_id: number,
+  csrfToken: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/invitations/${invitation_id}/cancel/`,
+    {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken },
+      credentials: "include",
+    },
+  );
+  if (res.status === 400) {
+    const body = await res.json().catch(() => null);
+    // Reuses the create error: both are "the invitation is not in the state
+    // you think", and the caller shows the message either way.
+    throw new InvitationCreateError(
+      body?.error ?? "Could not cancel the invitation",
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to cancel invitation ${res.status}`);
+}
+
+/** Mirrors invitations[] in MyInvitationsView.get */
+export type MyInvitation = {
+  id: number;
+  organization_id: number;
+  organization_name: string;
+  invited_by: string | null;
+  created_at: string;
+};
+
+/** GET /api/v1/invitations/my/ — pending invitations addressed to the user. */
+export async function fetchMyInvitations(
+  signal?: AbortSignal,
+): Promise<{ invitations: MyInvitation[] }> {
+  const res = await fetch("/api/v1/invitations/my/", {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load invitations (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Mirrors MAX_MEMBERS_PER_ORG in core/services/organization.py. Duplicated
+ * rather than fetched: the backend enforces it regardless, so the worst a
+ * drift can do here is offer an invite that comes back rejected.
+ */
+export const MAX_MEMBERS = 5;
+
+/**
+ * Owners first, then by join date. The endpoint returns memberships in no
+ * particular order, and an owner buried mid-list reads as a plain member.
+ */
+export function byRoleThenJoined(a: Member, b: Member): number {
+  if (a.role !== b.role) return a.role === "owner" ? -1 : 1;
+  return a.joined_at.localeCompare(b.joined_at);
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+/**
+ * Settings row subtitle, e.g. "4 members · 1 invited · you're the owner".
+ * Counts are optional because they load per workspace after the list renders;
+ * until then only the role is shown.
+ */
+export function describeWorkspace(
+  org: Pick<Organization, "is_personal" | "role">,
+  memberCount?: number,
+  inviteCount?: number,
+): string {
+  if (org.is_personal) return "Personal · only you";
+  const parts: string[] = [];
+  if (memberCount !== undefined) parts.push(plural(memberCount, "member"));
+  if (inviteCount) parts.push(`${inviteCount} invited`);
+  parts.push(org.role === "owner" ? "you're the owner" : "member");
+  return parts.join(" · ");
+}
+
+// Flags for workspace actions whose backend routes don't exist yet. The UI
+// renders them disabled so the layout is final; flip once the route lands.
+export const CAN_RENAME_ORGANIZATION = false;
+export const CAN_DELETE_ORGANIZATION = false;
+export const CAN_MANAGE_MEMBERS = false;
+export const CAN_LEAVE_ORGANIZATION = false;
