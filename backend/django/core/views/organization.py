@@ -78,7 +78,13 @@ class OrganizationListCreateView(APIView):
 
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
-        memberships = Membership.objects.filter(user=request.user).select_related("org")
+        # Oldest workspace first; id breaks ties for memberships created in the
+        # same instant, such as the personal workspace at signup.
+        memberships = (
+            Membership.objects.filter(user=request.user)
+            .select_related("org")
+            .order_by("joined_at", "id")
+        )
 
         organizations = [
             {
