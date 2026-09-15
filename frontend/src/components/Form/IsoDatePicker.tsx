@@ -12,17 +12,34 @@ type IsoDatePickerProps = Omit<DatePickerProps, "value" | "onChange"> & {
   value: string;
   /** "" when the field is cleared or holds an invalid date. */
   onChange: (iso: string) => void;
+  /**
+   * Id of an external label, for a picker under a FieldLabel instead of its
+   * own floating `label`. MUI names the field's group only from its own
+   * label, so this wires the name through the input slot.
+   */
+  labelId?: string;
 };
 
 export function IsoDatePicker({
   value,
   onChange,
+  labelId,
+  slotProps,
   ...rest
 }: IsoDatePickerProps) {
   return (
     <DatePicker
       format="DD-MM-YYYY"
       {...rest}
+      slotProps={{
+        ...slotProps,
+        textField: {
+          ...slotProps?.textField,
+          ...(labelId && {
+            slotProps: { input: { "aria-labelledby": labelId } },
+          }),
+        },
+      }}
       value={value ? dayjs(value) : null}
       onChange={(d) => onChange(d?.isValid() ? d.format("YYYY-MM-DD") : "")}
     />

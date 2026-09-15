@@ -82,6 +82,9 @@ test.describe.serial("Workspaces", () => {
     // The header is not remounted on a switch, so the modal has to close itself.
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect(
+      page.getByText(`Workspace "${sharedName}" created`),
+    ).toBeVisible();
+    await expect(
       page.getByRole("heading", { name: new RegExp(sharedName) }),
     ).toBeVisible();
   });

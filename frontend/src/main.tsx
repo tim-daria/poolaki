@@ -1,4 +1,4 @@
-/** @file Entry point. Mounts the app with theme, date, auth and router providers. */
+/** @file Entry point. Mounts the app with theme, date, toast, auth and router providers. */
 
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
@@ -9,6 +9,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { router } from "./routes.tsx";
 import { theme } from "./theme.ts";
 import { AuthProvider } from "./context/AuthContext.tsx";
+import { ToastProvider } from "./context/ToastProvider.tsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -16,9 +17,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <AuthProvider>
-          <RouterProvider router={router} />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </ToastProvider>
       </LocalizationProvider>
     </ThemeProvider>
   </StrictMode>,

@@ -9,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import { useRestoreFocus } from "./useRestoreFocus";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 
 interface Props {
   open: boolean;
