@@ -65,11 +65,18 @@ class Command(BaseCommand):
         tables = ["core_category"]
 
         with transaction.atomic():
-            for pk, name, type_ in CATEGORIES:
-                Category.objects.update_or_create(pk=pk, defaults={"name": name, "type": type_})
-            self.stdout.write(f"categories: {Category.objects.count()}")
-
             if org is not None:
+                for pk, name, type_ in CATEGORIES:
+                    Category.objects.update_or_create(
+                        pk=pk,
+                        defaults={
+                            "org": org,
+                            "name": name,
+                            "type": type_,
+                        },
+                    )
+                self.stdout.write(f"categories: {Category.objects.count()}")
+
                 for pk, name, target_amount, target_date in GOALS:
                     Goal.objects.update_or_create(
                         pk=pk,
