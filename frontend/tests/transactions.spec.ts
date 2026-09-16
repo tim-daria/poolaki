@@ -7,17 +7,45 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { makeUsers, registerUser, toOrgId } from "./helpers.js";
 
+type OrganizationCategory = {
+  id: number;
+  org: number;
+  name: string;
+  type: "expense" | "income" | "contribution";
+};
+
+async function getOrganizationCategories(
+  page: Page,
+  orgId: number,
+): Promise<Map<string, number>> {
+  const res = await page.request.get(
+    `/api/v1/organizations/${orgId}/categories/`,
+  );
+
+  if (res.status() !== 200) {
+    throw new Error(`category GET failed: ${res.status()} ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as {
+    categories: OrganizationCategory[];
+  };
+
+  const categories = data.categories.filter(
+    (category) => category.org === orgId,
+  );
+
+  return new Map(categories.map((category) => [category.name, category.id]));
+}
+
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
- * 3 transfers, 3 tax refundable, 15 per page. Category IDs follow
- * SEED_CATEGORIES in lib/categories.ts and must exist in the database:
- * `manage.py seed_transaction_fixtures` once, no workspace needed (see
- * docs/frontend/playwright.md for how to run it with credentials).
+ * 3 transfers, 3 tax refundable, 15 per page. Category names match the
+ * defaults created for the registered organization.
  */
 type Fixture = [
   date: string,
   type: "expense" | "income" | "contribution",
-  category: number | null,
+  category: string | null,
   name: string,
   amount: number,
   tax?: boolean,
@@ -26,39 +54,54 @@ type Fixture = [
 // Posted in this order, so ids ascend down the list; same-date rows sort by
 // id, which the pagination test relies on.
 const FIXTURES: Fixture[] = [
-  ["2026-08-05", "expense", 1, "REWE", 255],
-  ["2026-08-03", "expense", 2, "Ristorante Baldi", 52],
-  ["2026-08-01", "income", 8, "Salary", 3240],
-  ["2026-08-01", "contribution", null, "To savings", 300],
-  ["2026-07-29", "expense", 1, "Edeka", 61.2],
-  ["2026-07-24", "expense", 2, "Pizzeria Nona", 27.9],
-  ["2026-07-19", "expense", 3, "Clothes", 78],
-  ["2026-07-18", "expense", 1, "REWE", 48.3],
+  ["2026-08-05", "expense", "Food", "REWE", 255],
+  ["2026-08-03", "expense", "Food", "Ristorante Baldi", 52],
+  ["2026-08-01", "income", "Salary", "Salary", 3240],
+  ["2026-08-01", "contribution", "Contribution", "To savings", 300],
+  ["2026-07-29", "expense", "Food", "Edeka", 61.2],
+  ["2026-07-24", "expense", "Food", "Pizzeria Nona", 27.9],
+  ["2026-07-19", "expense", "Shopping", "Clothes", 78],
+  ["2026-07-18", "expense", "Food", "REWE", 48.3],
   ["2026-07-17", "contribution", null, "To savings", 300],
-  ["2026-07-12", "expense", 4, "BVG monthly ticket", 49, true],
-  ["2026-07-08", "expense", 6, "Pharmacy", 18.75, true],
-  ["2026-07-05", "expense", 2, "Café Central", 9.4],
-  ["2026-07-01", "income", 8, "Salary", 3240],
-  ["2026-07-01", "expense", 5, "Rent", 1150],
-  ["2026-06-27", "expense", 1, "Lidl", 33.15],
-  ["2026-06-22", "income", 9, "Birthday gift", 100],
-  ["2026-06-20", "expense", 3, "Bookshop", 24.99, true],
+  ["2026-07-12", "expense", "Transport", "BVG monthly ticket", 49, true],
+  ["2026-07-08", "expense", "Health", "Pharmacy", 18.75, true],
+  ["2026-07-05", "expense", "Food", "Café Central", 9.4],
+  ["2026-07-01", "income", "Salary", "Salary", 3240],
+  ["2026-07-01", "expense", "Housing", "Rent", 1150],
+  ["2026-06-27", "expense", "Food", "Lidl", 33.15],
+  ["2026-06-22", "income", "Gift", "Birthday gift", 100],
+  ["2026-06-20", "expense", "Shopping", "Bookshop", 24.99, true],
   ["2026-06-17", "contribution", null, "To savings", 300],
-  ["2026-06-14", "expense", 2, "Sushi Yama", 41.5],
-  ["2026-06-10", "expense", 4, "Taxi", 22],
-  ["2026-06-06", "expense", 7, "Haircut", 35],
-  ["2026-06-03", "expense", 1, "REWE", 57.8],
-  ["2026-06-01", "income", 8, "Salary", 3240],
-  ["2026-06-01", "expense", 5, "Rent", 1150],
+  ["2026-06-14", "expense", "Food", "Sushi Yama", 41.5],
+  ["2026-06-10", "expense", "Transport", "Taxi", 22],
+  ["2026-06-06", "expense", "Utilities", "Haircut", 35],
+  ["2026-06-03", "expense", "Food", "REWE", 57.8],
+  ["2026-06-01", "income", "Salary", "Salary", 3240],
+  ["2026-06-01", "expense", "Housing", "Rent", 1150],
 ];
 
 /** POSTs one fixture row as the logged-in user, the way lib/transactions.ts does. */
-async function postTransaction(page: Page, orgId: number, row: Fixture) {
-  const [transaction_date, entry_type, category_id, description, amount, tax] =
+async function postTransaction(
+  page: Page,
+  orgId: number,
+  categories: Map<string, number>,
+  row: Fixture,
+) {
+  const [transaction_date, entry_type, category, description, amount, tax] =
     row;
   const csrftoken =
     (await page.context().cookies()).find((c) => c.name === "csrftoken")
       ?.value ?? "";
+
+  const category_id =
+    category === null ? null : (categories.get(category) ?? null);
+
+  if (category !== null && category_id === null) {
+    throw new Error(
+      `Category "${category}" does not belong to organization ${orgId}`,
+    );
+  }
+
   const res = await page.request.post(
     `/api/v1/organizations/${orgId}/transactions/`,
     {
@@ -151,10 +194,12 @@ test.describe.serial("Transactions", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     const workspace = await registerUser(page, user);
+    const orgId = toOrgId(workspace);
+    const categories = await getOrganizationCategories(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
-      await postTransaction(page, toOrgId(workspace), row);
+      await postTransaction(page, orgId, categories, row);
     }
   });
 
