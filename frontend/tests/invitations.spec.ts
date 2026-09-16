@@ -116,6 +116,9 @@ test.describe.serial("Workspace members", () => {
     await owner.getByRole("button", { name: /send invitation/i }).click();
 
     await expect(owner.getByRole("dialog")).toBeHidden();
+    await expect(
+      owner.getByText(`Invitation sent to ${guestUser.username}`),
+    ).toBeVisible();
 
     // onSent refetches before the close, so the row already has the invitee.
     // The tooltip is what separates "invited" from "member" for a sighted user.

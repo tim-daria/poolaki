@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Box, Button, Menu, MenuItem, Divider } from "@mui/material";
+import {
+  Box,
+  Button,
+  Menu,
+  MenuItem,
+  Divider,
+  Typography,
+} from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
@@ -91,6 +98,14 @@ export function OrgSwitcher() {
             }}
           >
             {org.name}
+            <Typography
+              component="span"
+              variant="body2"
+              color="text.secondary"
+              sx={{ ml: 0.75 }}
+            >
+              ({org.is_personal ? "personal" : org.role})
+            </Typography>
           </MenuItem>
         ))}
 

@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 
 import type { CloseGuard } from "./useCloseGuard";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 
 interface DialogProps<T> {
   guard: CloseGuard<T>;
@@ -20,8 +21,18 @@ interface DialogProps<T> {
  * the answer to "discard?" is easier when you can see what you typed.
  */
 export function DiscardChangesDialog<T>({ guard, message }: DialogProps<T>) {
+  // Stacked on the form's dialog, so focus has to move out of and back into
+  // a subtree MUI hides — see the hook.
+  const restoreFocus = useRestoreFocus(guard.confirming);
+
   return (
-    <Dialog open={guard.confirming} onClose={guard.keepEditing} maxWidth="xs">
+    <Dialog
+      open={guard.confirming}
+      onClose={guard.keepEditing}
+      maxWidth="xs"
+      disableRestoreFocus
+      slotProps={{ transition: { onExited: restoreFocus } }}
+    >
       {/* The theme spreads dialog titles apart for the title/close-button
           pairing; this one has no close button, so it re-centers. */}
       <DialogTitle sx={{ justifyContent: "center" }}>

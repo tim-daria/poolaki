@@ -9,6 +9,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useOrgList } from "../../context/useOrgList";
+import { useToast } from "../../context/useToast";
 import { createOrganization } from "../../lib/organizations";
 import { getCsrfToken } from "../../lib/csrf";
 import { ModalShell } from "./ModalShell";
@@ -33,6 +34,7 @@ interface Props {
  */
 export function CreateOrgForm({ open, onClose }: Props) {
   const { refresh } = useOrgList();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [balance, setBalance] = useState("");
   const [error, setError] = useState("");
@@ -91,6 +93,7 @@ export function CreateOrgForm({ open, onClose }: Props) {
       // so navigating alone will not unmount this.
       onClose();
       navigate(`/o/${org.id}`);
+      showToast(`Workspace "${org.name}" created`);
     } catch {
       setError("Failed to create workspace. Please try again.");
       setSubmitting(false);
