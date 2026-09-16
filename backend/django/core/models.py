@@ -171,6 +171,7 @@ class NotificationType(models.TextChoices):
     TRANSACTION_ADDED = "transaction_added", "Transaction added"
     GOAL_COMPLETED = "goal_completed", "Goal completed"
     MEMBER_LEFT = "member_left", "Member left"
+    OWNERSHIP_TRANSFERRED = "ownership_transferred", "Ownership transferred"
 
 
 class Notification(models.Model):
