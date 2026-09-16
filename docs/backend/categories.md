@@ -2,9 +2,19 @@
 
 All endpoints in this document require authentication.
 
+## Categories overview
+
+Categories are organization-scoped labels for transactions. Each category has a name and one of three types:
+
+- **Income** — money received by the organization.
+- **Expense** — money spent by the organization.
+- **Contribution** — money allocated toward a goal.
+
+Any organization member can view and manage the organization's categories.
+
 ## Categories endpoints
 
-Categories belong to an organization and classify transactions as income, expenses, or goal contributions. Any member of the organization can manage its categories.
+Categories belong to an organization and classify transactions as income, expenses, or goal contributions.
 
 ### List categories
 
@@ -12,11 +22,11 @@ Categories belong to an organization and classify transactions as income, expens
 GET /api/v1/organizations/{org_id}/categories/
 ```
 
-Optional query parameter:
+Query parameters:
 
-- `type` (`income`, `expense`, `contribution`)
+- `type` (optional, one of `income`, `expense`, `contribution`)
 
-The filter is exact. An unsupported value returns an empty list.
+The filter is exact: only categories with the matching type are returned. An unsupported value or a wrong enum value returns an empty list.
 
 Response example:
 
@@ -39,7 +49,7 @@ Status:
 
 - `200 OK` on success
 - `403 Forbidden` when the user is not a member of the organization
-
+<!--
 ### Create category
 
 ```http
@@ -78,6 +88,7 @@ Status:
 - `201 Created` on success
 - `400 Bad Request` when validation fails or the category already exists
 - `403 Forbidden` when the user is not a member of the organization
+-->
 
 ### Get category details
 
@@ -104,6 +115,7 @@ Status:
 - `403 Forbidden` when the user is not a member of the organization
 - `404 Not Found` when the category does not exist in the organization
 
+<!--
 ### Update category
 
 ```http
@@ -156,23 +168,23 @@ Status:
 - `204 No Content` on successful deletion
 - `403 Forbidden` when the user is not a member of the organization
 - `404 Not Found` when the category does not exist in the organization
+-->
 
 ## Default categories
 
-When we call functions `create_shared_organization()` and `create_personal_organization` default categories are creating.
+Shared and personal organizations are created with the following default categories:
 
-``` python
-DEFAULT_CATEGORIES = (
-    ("Food", CategoryType.EXPENSE),
-    ("Transport", CategoryType.EXPENSE),
-    ("Housing", CategoryType.EXPENSE),
-    ("Entertainment", CategoryType.EXPENSE),
-    ("Shopping", CategoryType.EXPENSE),
-    ("Health", CategoryType.EXPENSE),
-    ("Utilities", CategoryType.EXPENSE),
-    ("Salary", CategoryType.INCOME),
-    ("Freelance", CategoryType.INCOME),
-    ("Contribution", CategoryType.CONTRIBUTION),
-)
-```
-We can change default categories list in the file `backend/django/core/services/category.py`
+| Category | Type |
+| --- | --- |
+| Food | Expense |
+| Transport | Expense |
+| Housing | Expense |
+| Entertainment | Expense |
+| Shopping | Expense |
+| Health | Expense |
+| Utilities | Expense |
+| Salary | Income |
+| Freelance | Income |
+| Contribution | Contribution |
+
+The default list is defined in [`backend/django/core/services/category.py`](../../backend/django/core/services/category.py).
