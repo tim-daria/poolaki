@@ -21,6 +21,7 @@ def test_create_default_categories_creates_expected_categories(
         ("Utilities", CategoryType.EXPENSE),
         ("Salary", CategoryType.INCOME),
         ("Freelance", CategoryType.INCOME),
+        ("Gift", CategoryType.INCOME),
         ("Contribution", CategoryType.CONTRIBUTION),
     ]
 
@@ -31,5 +32,5 @@ def test_create_default_categories_only_adds_categories_to_given_organization(
 ) -> None:
     create_default_categories(shared_org)
 
-    assert Category.objects.filter(org=shared_org).count() == 10
+    assert Category.objects.filter(org=shared_org).count() == 11
     assert not Category.objects.filter(org=personal_org).exists()
