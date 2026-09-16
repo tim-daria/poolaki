@@ -245,6 +245,16 @@ jobs:
           echo "Waiting for backend..."
           timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
 
+          # TEMPORARY SEEDING:
+          # The transaction specs post rows against the category ids the
+          # frontend seed declares; a fresh database has none, so the API
+          # rejects them and the suite fails in beforeAll. Categories need no
+          # workspace, which is why no org id is passed here.
+          # The credentials are sourced the way the entrypoint does it, since
+          # an exec'd shell starts without them. See docs/frontend/playwright.md.
+          docker compose exec -T backend sh -c \
+            'set -a; . /vault/agent/secrets/db-creds.env; set +a; python manage.py seed_transaction_fixtures'
+
       - name: Playwright e2e tests
         env:
           BASE_URL: http://localhost:5173
