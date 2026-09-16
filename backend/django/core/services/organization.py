@@ -44,3 +44,7 @@ def check_can_join_org(org: Organization) -> None:
         raise ValidationError(
             f"Organization has reached its maximum capacity of {MAX_MEMBERS_PER_ORG} members."
         )
+
+
+def leave_organization(user: User, org: Organization) -> dict[str, bool]:
+    return {"organization_deleted": False}

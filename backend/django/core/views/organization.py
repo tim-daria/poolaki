@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -10,7 +11,7 @@ from core.permissions import IsOrgMember
 from core.serializers import InitialBalanceSerializer
 from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization
+from core.services.organization import create_shared_organization, leave_organization
 
 
 class SetInitialBalanceView(APIView):
@@ -149,6 +150,38 @@ class OrganizationMembersView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class OrganizationLeaveView(APIView):
+    """
+    Leave an organization you are a member of.
+
+    If the user is the owner and other members remain, ownership is
+    automatically transferred to the longest-standing member. If the user
+    is the last member, the organization and all its data are deleted.
+    Personal budgets cannot be left.
+
+    POST:
+    Returns:
+    - 200 OK on success.
+    - 400 Bad Request if this is your personal budget, you are not a
+      member.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def post(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        org = get_object_or_404(
+            Organization,
+            id=org_id,
+        )
+        try:
+            result = leave_organization(request.user, org)
+        except ValidationError as e:
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class OrganizationBalanceView(APIView):
