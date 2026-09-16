@@ -75,7 +75,7 @@ urlpatterns = [
     path(
         "organizations/<int:org_id>/categories/<int:category_id>/",
         CategoryReadUpdateDeleteView.as_view(),
-        name="category-get-delete",
+        name="category-detail",
     ),
     path(
         "organizations/<int:org_id>/balance/",

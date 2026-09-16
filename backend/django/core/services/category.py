@@ -10,6 +10,7 @@ DEFAULT_CATEGORIES = (
     ("Utilities", CategoryType.EXPENSE),
     ("Salary", CategoryType.INCOME),
     ("Freelance", CategoryType.INCOME),
+    ("Gift", CategoryType.INCOME),
     ("Contribution", CategoryType.CONTRIBUTION),
 )
 
