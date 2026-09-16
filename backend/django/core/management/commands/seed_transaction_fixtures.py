@@ -65,9 +65,6 @@ class Command(BaseCommand):
         tables = ["core_category"]
 
         with transaction.atomic():
-            # for pk, name, type_ in CATEGORIES:
-            # Category.objects.update_or_create(pk=pk, defaults={"name": name, "type": type_})
-
             if org is not None:
                 for pk, name, type_ in CATEGORIES:
                     Category.objects.update_or_create(
