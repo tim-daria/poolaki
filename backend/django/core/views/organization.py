@@ -165,9 +165,9 @@ class OrganizationMemberRemoveView(APIView):
     Only the organization owner may remove members. The owner cannot
     remove themselves through this endpoint.
 
-    POST:
+    DELETE:
     Returns:
-    - 200 OK on success.
+    - 204 No Content on success.
     - 400 Bad Request if the target is not a member, or is the requesting
       owner themselves.
     - 403 Forbidden if the requesting user is not the organization owner.
@@ -175,7 +175,7 @@ class OrganizationMemberRemoveView(APIView):
 
     permission_classes = [IsAuthenticated, IsOrgOwner]
 
-    def post(self, request: Request, org_id: int, user_id: int) -> Response:
+    def delete(self, request: Request, org_id: int, user_id: int) -> Response:
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, id=org_id)
         target_user = get_object_or_404(User, id=user_id)
@@ -184,7 +184,7 @@ class OrganizationMemberRemoveView(APIView):
             remove_member(org, target_user, request.user)
         except ValidationError as e:
             return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"status": "removed"}, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class OrganizationBalanceView(APIView):

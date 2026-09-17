@@ -216,7 +216,7 @@ def test_user_from_another_organization_cannot_view_members(
 
 
 # ---------------------------------------------------------------------------
-# POST - remove member
+# DELETE - remove member
 # ---------------------------------------------------------------------------
 
 
@@ -228,15 +228,14 @@ def test_owner_can_remove_member(
 ) -> None:
     api_client.force_authenticate(user=owner)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": member.id},
         )
     )
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "removed"}
+    assert response.status_code == 204
 
     assert not Membership.objects.filter(user=member, org=shared_org).exists()
 
@@ -272,14 +271,14 @@ def test_remove_member_notifies_all_remaining_members(
 
     api_client.force_authenticate(user=owner)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": member.id},
         )
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # Notified: owner + extra_member, but not the removed member
     notified = Notification.objects.filter(type=NotificationType.MEMBER_REMOVED)
@@ -295,7 +294,7 @@ def test_owner_cannot_remove_themselves(
 ) -> None:
     api_client.force_authenticate(user=owner)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": owner.id},
@@ -319,7 +318,7 @@ def test_cannot_remove_user_who_is_not_a_member(
 
     api_client.force_authenticate(user=owner)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": stranger.id},
@@ -338,7 +337,7 @@ def test_non_owner_member_cannot_remove_members(
 ) -> None:
     api_client.force_authenticate(user=member)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": owner.id},
@@ -361,7 +360,7 @@ def test_stranger_cannot_remove_members(
 
     api_client.force_authenticate(user=stranger)
 
-    response = api_client.post(
+    response = api_client.delete(
         reverse(
             "organization-remove-member",
             kwargs={"org_id": shared_org.id, "user_id": member.id},

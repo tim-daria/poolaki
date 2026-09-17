@@ -38,7 +38,7 @@ urlpatterns = [
         name="organization-members",
     ),
     path(
-        "organizations/<int:org_id>/members/<int:user_id>/remove/",
+        "organizations/<int:org_id>/members/<int:user_id>/",
         OrganizationMemberRemoveView.as_view(),
         name="organization-remove-member",
     ),

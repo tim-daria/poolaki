@@ -14,8 +14,8 @@ All endpoints require authentication.
 | `transaction_added`  | "A new transaction was added"                                            | reserved (will be created when transactions go multi-org) |
 | `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
 | `member_left`        | "A member left the organization"                                         | reserved                                                 |
-| `member_removed`     | "A member was removed from the organization"                             | `POST /api/v1/organizations/{org_id}/members/{user_id}/remove/` |
-| `removed_from_org`   | "You were removed from an organization"                                  | `POST /api/v1/organizations/{org_id}/members/{user_id}/remove/` |
+| `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
+| `removed_from_org`   | "You were removed from an organization"                                  | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
 | `organization_deleted` | "An organization was deleted"                                           | reserved                                                 |
 
 Unknown/absent types are possible as the feature grows — the frontend should

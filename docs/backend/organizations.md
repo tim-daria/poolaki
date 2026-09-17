@@ -129,20 +129,14 @@ Status:
 ### Remove a member
 
 ```http
-POST /api/v1/organizations/{org_id}/members/{user_id}/remove/
+DELETE /api/v1/organizations/{org_id}/members/{user_id}/
 ```
 
 Only the organization owner can remove members. No request body is required.
 
-Response example:
-
-```json
-{ "status": "removed" }
-```
-
 Status:
 
-- `200 OK` on success
+- `204 No Content` on success
 - `400 Bad Request` when the target is not a member of the organization,
   or when the owner tries to remove themselves (use organization deletion
   to remove yourself)
