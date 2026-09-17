@@ -79,18 +79,18 @@ def remove_member(org: Organization, target_user: User, owner: User) -> None:
         raise ValidationError("This user is not a member of the organization.")
     membership.delete()
 
-    Notification.objects.create(
-        user=target_user,
-        type=NotificationType.REMOVED_FROM_ORG,
-        org=org,
-        payload={"org_name": org.name, "removed_by": owner.username},
-    )
-
-    remaining_members = Membership.objects.filter(org=org)
-    Notification.objects.bulk_create(
-        [
+    # Values-only lookup: the fan-out needs just user ids, avoids N+1 on the User FK.
+    remaining_user_ids = list(Membership.objects.filter(org=org).values_list("user_id", flat=True))
+    notifications = [
+        Notification(
+            user_id=target_user.id,
+            type=NotificationType.REMOVED_FROM_ORG,
+            org=org,
+            payload={"org_name": org.name, "removed_by": owner.username},
+        ),
+        *[
             Notification(
-                user=m.user,
+                user_id=uid,
                 type=NotificationType.MEMBER_REMOVED,
                 org=org,
                 payload={
@@ -99,6 +99,7 @@ def remove_member(org: Organization, target_user: User, owner: User) -> None:
                     "removed_by": owner.username,
                 },
             )
-            for m in remaining_members
-        ]
-    )
+            for uid in remaining_user_ids
+        ],
+    ]
+    Notification.objects.bulk_create(notifications)
