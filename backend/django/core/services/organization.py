@@ -16,10 +16,12 @@ from core.models import (
 )
 
 MAX_MEMBERS_PER_ORG = 5
+MAX_ORGS_PER_USER = 10
 
 
 @transaction.atomic
 def create_shared_organization(org_name: str, amount: Decimal, owner: User) -> Organization:
+    check_can_join_more_orgs(owner)
     org = Organization.objects.create(
         name=org_name,
         initial_balance=amount,
@@ -106,3 +108,49 @@ def leave_organization(user: User, org: Organization) -> dict[str, Any]:
     )
 
     return {"organization_deleted": False}
+
+
+def check_can_join_more_orgs(user: User) -> None:
+    """Used when creating new organization and accepting an invitation."""
+    current_count = Membership.objects.filter(user=user).count()
+    if current_count >= MAX_ORGS_PER_USER:
+        raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")
+
+
+@transaction.atomic
+def remove_member(org: Organization, user_id: int, owner: User) -> None:
+    """
+    Remove a member from an organization. Only the owner can do this, and
+    the owner cannot remove themselves this way.
+    """
+    if user_id == owner.id:
+        raise ValidationError("Use leave organization to remove yourself.")
+    membership = Membership.objects.filter(org=org, user_id=user_id).select_related("user").first()
+    if membership is None:
+        raise ValidationError("This user is not a member of the organization.")
+    target_user = membership.user
+    membership.delete()
+
+    remaining_user_ids = list(Membership.objects.filter(org=org).values_list("user_id", flat=True))
+    notifications = [
+        Notification(
+            user_id=target_user.id,
+            type=NotificationType.REMOVED_FROM_ORG,
+            org=org,
+            payload={"org_name": org.name, "removed_by": owner.username},
+        ),
+        *[
+            Notification(
+                user_id=uid,
+                type=NotificationType.MEMBER_REMOVED,
+                org=org,
+                payload={
+                    "org_name": org.name,
+                    "removed_user": target_user.username,
+                    "removed_by": owner.username,
+                },
+            )
+            for uid in remaining_user_ids
+        ],
+    ]
+    Notification.objects.bulk_create(notifications)

@@ -14,12 +14,16 @@ All endpoints require authentication.
 | `transaction_added`  | "A new transaction was added"                                            | reserved (will be created when transactions go multi-org) |
 | `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
 | `member_left`        | "A member left the organization"                                         | reserved                                                 |
+| `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
+| `removed_from_org`   | "You were removed from an organization"                                  | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
+| `ownership_transferred` | "You are now the owner of an organization"                    | reserved (next PR — ownership transfer when the owner leaves) |
+| `owner_changed`      | "The organization owner changed"                               | reserved (next PR — ownership transfer when the owner leaves) |
+| `organization_deleted` | "An organization was deleted"                                           | reserved                                                 |
 
 Unknown/absent types are possible as the feature grows — the frontend should
 render `type` defensively (default icon/text for unknown values).
 
-`payload` is a JSON object. The only producer today is the invitation flow,
-whose payload is:
+`payload` is a JSON object. The invitation flow (the oldest producer) uses:
 
 ```json
 {
@@ -29,6 +33,19 @@ whose payload is:
   "invited_by": "bob"
 }
 ```
+
+`member_removed` and `removed_from_org` (both produced by the remove-member
+endpoint) carry:
+
+```json
+{
+  "org_name": "Trip",
+  "removed_user": "alice",
+  "removed_by": "bob"
+}
+```
+
+(`removed_from_org` omits `removed_user`.)
 
 Other types may add their own fields later; treat `payload` as type-specific.
 
@@ -208,6 +225,11 @@ There is no push channel, so the frontend should poll.
 | `transaction_added` | Text like "bob added a new €20 transaction to **Family Account**"                                 |
 | `goal_completed`    | Info text.                                                                                        |
 | `member_left`       | Info text .                                                                                       |
+| `member_removed`    | Info text, e.g. "**alice** was removed from **Trip**"                                          |
+| `removed_from_org`  | Text like "you were removed from **Trip** by bob"    |
+| `ownership_transferred` | Text like "you are now the owner of **Trip**" (sent to the new owner)  |
+| `owner_changed`       | Text like "**Daria** replaced **Ivan** as the owner of **Trip**" (sent to remaining members) |
+| `organization_deleted` | Info text, e.g. "**Trip** was deleted"                                                      |
 
 The exact copy and icons are up to the frontend; the table only maps where a
 click should go.

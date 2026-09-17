@@ -83,6 +83,59 @@ npx playwright install chromium
 
 ---
 
+## Test fixtures the suite depends on - TEMPORARY before API lands
+
+The transaction specs create rows through the real API, and the frontend still
+declares its categories and goals client-side ([lib/categories.ts](../../frontend/src/lib/categories.ts),
+[lib/goals.ts](../../frontend/src/lib/goals.ts)) because the backend exposes no
+endpoint for either. A `POST /transactions/` references a category id
+that has to exist in the database, and a fresh database has none — the API
+answers 400 and the suite fails in `beforeAll`.
+
+`manage.py` needs the database credentials, which the entrypoint sources from
+the Vault agent's files at start-up. An exec'd shell starts *without* them, so
+a bare `docker compose exec -T backend python manage.py ...` fails with
+`fe_sendauth: no password supplied`. Source the same file first; a small shell
+function keeps that out of the way:
+
+```bash
+manage() {
+  docker compose exec -T backend sh -c \
+    "set -a; . /vault/agent/secrets/db-creds.env; set +a; python manage.py $*"
+}
+```
+
+Seed them once per database:
+
+```bash
+manage seed_transaction_fixtures
+```
+
+Categories are not scoped to a workspace, so every test user the suite registers
+can use the same rows and no argument is needed. 
+
+Goals *are* scoped to a workspace, so they are seeded only when you name one.
+Do this when you want to try the transaction form's **Saving** tab by hand — a
+contribution is rejected unless the goal belongs to the workspace you are in:
+
+```bash
+# The number is the workspace id from the URL, /o/<id>
+manage seed_transaction_fixtures 1
+
+# Print what it would write and roll back
+manage seed_transaction_fixtures 1 --dry-run
+```
+
+The command is idempotent: it updates the rows in place, so running it twice is
+safe. Note that the goal ids are fixed, so naming a *different* workspace moves
+those goals rather than adding more.
+
+> **IMPORTANT:** Named volumes survive `docker compose down` — reseeding is only needed after
+> `docker compose down -v`, which drops the database. Drop this step entirely
+> once the categories move into a data migration.
+
+---
+
 ## Emulating the CI environment locally
 
 Local environments use Caddy (`https://poolaki.localhost`) for HTTPS and routing. In CI,
@@ -98,27 +151,32 @@ To reproduce the CI setup locally when a test fails on GitHub Actions:
 COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml docker compose up -d --build frontend backend
 ```
 
-**2. Run database migrations** inside the backend container:
+**2. Migrations** run in the backend entrypoint before `/health/` answers, so
+there is nothing to do here. If you ever need `manage.py` by hand, use the
+`manage` function from the section above; a bare `docker compose exec` has no
+database credentials.
+
+**3. Seed the fixtures the transaction specs need** (see the section above):
 
 ```bash
-docker compose exec backend python manage.py migrate
+manage seed_transaction_fixtures
 ```
 
-**3. Stream container logs** (recommended) in a second terminal, to watch server
+**4. Stream container logs** (recommended) in a second terminal, to watch server
 responses and debug API failures:
 
 ```bash
 docker compose logs -f backend frontend
 ```
 
-**4. Run the E2E suite** against the CI base URL:
+**5. Run the E2E suite** against the CI base URL:
 
 ```bash
 cd frontend
 BASE_URL=http://localhost:5173 npx playwright test
 ```
 
-**5. Tear down** when you're done:
+**6. Tear down** when you're done:
 
 ```bash
 COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml docker compose down -v

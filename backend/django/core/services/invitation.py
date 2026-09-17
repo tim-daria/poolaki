@@ -12,9 +12,14 @@ from core.models import (
     Role,
     User,
 )
-from core.services.organization import check_can_add_member, check_can_join_org
+from core.services.organization import (
+    check_can_add_member,
+    check_can_join_more_orgs,
+    check_can_join_org,
+)
 
 
+@transaction.atomic
 def create_invitation(org: Organization, invited_username: str, invited_by: User) -> Invitation:
     """
     Create a pending invitation for an existing user to join an organization.
@@ -72,6 +77,7 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
     return invitation
 
 
+@transaction.atomic
 def cancel_invitation(org_id: int, invitation_id: int) -> Invitation:
     """
     Cancel a pending invitation and return the updated invitation.
@@ -112,6 +118,7 @@ def accept_invitation(invitation: Invitation, invited_user: User) -> Membership:
     if invitation.status != InvitationStatus.PENDING:
         raise ValidationError(f"This invitation is already {invitation.status}.")
     check_can_join_org(invitation.org)
+    check_can_join_more_orgs(invited_user)
     membership = Membership.objects.create(user=invited_user, org=invitation.org, role=Role.MEMBER)
     invitation.status = InvitationStatus.ACCEPTED
     invitation.responded_at = timezone.now()
@@ -122,6 +129,7 @@ def accept_invitation(invitation: Invitation, invited_user: User) -> Membership:
     return membership
 
 
+@transaction.atomic
 def decline_invitation(invitation: Invitation, invited_user: User) -> Invitation:
     """
     Decline a pending invitation.
