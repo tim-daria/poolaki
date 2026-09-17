@@ -83,7 +83,10 @@ class InvitationListCreateView(APIView):
         try:
             invitation = create_invitation(org, username, request.user)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # changed to e.messages, so the error is shown to user
+            # as plain text, not "['Error message']"
+            # PermissionError doesn't have .messages, didn't get this change
+            return Response({"error": "; ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "id": invitation.id,
@@ -116,7 +119,7 @@ class CancelInvitationView(APIView):
         try:
             invitation = cancel_invitation(org_id, invitation_id)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "; ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"id": invitation.id, "status": invitation.status}, status=status.HTTP_200_OK
         )
@@ -146,7 +149,7 @@ class AcceptInvitationView(APIView):
         except PermissionError as e:
             return Response({"error": str(e)}, status=403)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({"error": "; ".join(e.messages)}, status=400)
 
         return Response(
             {"organization_id": membership.org_id, "organization_name": membership.org.name},
@@ -177,7 +180,7 @@ class DeclineInvitationView(APIView):
         except PermissionError as e:
             return Response({"error": str(e)}, status=403)
         except ValidationError as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({"error": "; ".join(e.messages)}, status=400)
 
         return Response(
             {"invitation_id": invitation_id, "status": invitation.status}, status=status.HTTP_200_OK

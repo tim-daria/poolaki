@@ -57,6 +57,8 @@ jobs:
       POSTGRES_DB: test_db
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
+      DATABASE_USER: test_user
+      DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
@@ -202,6 +204,7 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           DB_HOST=db
           DB_PORT=5432
+          VAULT_ADDR=${{ secrets.VAULT_ADDR }}
           DJANGO_SUPERUSER_USERNAME=${{ secrets.DJANGO_SUPERUSER_USERNAME }}
           DJANGO_SUPERUSER_EMAIL=${{ secrets.DJANGO_SUPERUSER_EMAIL }}
           DJANGO_SUPERUSER_PASSWORD=${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
@@ -227,31 +230,46 @@ jobs:
       # In playwright.config.ts, set:
       #   baseURL: process.env.BASE_URL ?? 'https://poolaki.localhost'
       # so local dev still uses Caddy while CI uses the direct ports.
+      # The backend entrypoint sources DB credentials from Vault agent files
+      # and applies migrations itself before /health/ responds, so no extra
+      # `docker compose exec ... migrate` is needed (and it would fail: an
+      # exec'd process does not inherit the sourced credentials).
       - name: Start services via docker compose
         working-directory: .
         env:
-          # Tells docker compose which profile/override to use in CI.
-          # Create a docker-compose.ci.yml that exposes ports 3000 and 5173
-          # directly without Caddy, or just ensure your base compose file
-          # already exposes those ports.
           COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: |
-          docker compose up -d --build frontend backend
-          # Wait until the frontend dev server is actually responding.
-          # Vite can take a few seconds to finish its initial build.
+          docker compose up -d --build
           echo "Waiting for frontend..."
-          timeout 60 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
           echo "Waiting for backend..."
-          timeout 60 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
 
-          docker compose exec -T backend python manage.py migrate
+          # TEMPORARY SEEDING:
+          # The transaction specs post rows against the category ids the
+          # frontend seed declares; a fresh database has none, so the API
+          # rejects them and the suite fails in beforeAll. Categories need no
+          # workspace, which is why no org id is passed here.
+          # The credentials are sourced the way the entrypoint does it, since
+          # an exec'd shell starts without them. See docs/frontend/playwright.md.
+          docker compose exec -T backend sh -c \
+            'set -a; . /vault/agent/secrets/db-creds.env; set +a; python manage.py seed_transaction_fixtures'
 
       - name: Playwright e2e tests
         env:
-          # Playwright reads this in playwright.config.ts as the baseURL.
           BASE_URL: http://localhost:5173
           BACKEND_URL: http://localhost:8000 # optional, if your tests call the API directly
         run: npm run test:e2e
+
+      - name: Debug on failure
+        if: failure()
+        working-directory: .
+        env:
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
+        run: |
+          docker compose ps
+          docker compose logs vault
+          docker compose logs backend
 
       - name: Upload Playwright report
         # Always upload the HTML report so you can inspect failures even when
@@ -263,14 +281,11 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
-      - name: Show docker logs
-        if: failure()
-        working-directory: .
-        run: docker compose logs backend
-
       - name: Stop services
         if: always()
         working-directory: .
+        env:
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
         run: docker compose down
 
   # ── ai-service — runs ONLY when ai-service/** changed ─────────────────────────

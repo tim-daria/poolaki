@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Box, Button, Menu, MenuItem, Divider } from "@mui/material";
+import {
+  Box,
+  Button,
+  Menu,
+  MenuItem,
+  Divider,
+  Typography,
+} from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { CreateOrgModal } from "../CreateOrgModal";
+import { CreateOrgForm } from "../Modals/CreateOrgForm";
 
 /**
  * Switching workspaces is a navigation — OrgLayout resolves :orgId against the
@@ -91,6 +98,14 @@ export function OrgSwitcher() {
             }}
           >
             {org.name}
+            <Typography
+              component="span"
+              variant="body2"
+              color="text.secondary"
+              sx={{ ml: 0.75 }}
+            >
+              ({org.is_personal ? "personal" : org.role})
+            </Typography>
           </MenuItem>
         ))}
 
@@ -106,7 +121,10 @@ export function OrgSwitcher() {
         </MenuItem>
       </Menu>
 
-      {createOpen && <CreateOrgModal onClose={() => setCreateOpen(false)} />}
+      {/* Deliberately not keyed off createOpen: staying mounted is what lets
+          the dialog play its closing fade. The form clears itself once that
+          has finished, so reopening still starts blank. */}
+      <CreateOrgForm open={createOpen} onClose={() => setCreateOpen(false)} />
     </>
   );
 }

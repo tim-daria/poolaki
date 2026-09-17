@@ -6,15 +6,15 @@ The Poolaki AI Service is an independent microservice responsible for AI-related
 
 The service is built with FastAPI and is designed to keep AI capabilities decoupled from the Django backend. It will progressively support RAG orchestration, prompt management, retrieval, and LLM communication.
 
-Currently, this service provides the foundation for future AI features and exposes a health check endpoint.
+Currently, this service provides RAG orchestration + intent classification + LLM integration (openRouter) and exposes a health check endpoint.
 
 ---
 
 ## AI Service Responsibility
 
-The backend is responsible for retrieving and calculating accurate financial data from the application database.
+The backend is responsible for retrieving financial data from the application database.
 
-The AI service doesn't replace backend business logic. Instead, it interprets user questions, determines the required information, and generates natural language responses based on validated data provided by the backend.
+The AI service doesn't replace backend business logic. Instead, it interprets user intention and questions, determines the required information, and generates natural language responses based on validated data provided by the backend.
 
 Example:
 
@@ -35,21 +35,74 @@ AI response:
 
 The AI Service runs as an independent Docker container and communicates with the Django backend through HTTP APIs.
 
+**note:_** `Django` integration currently uses a temporary mock client for local development and end-to-end testing. It will be replaced by the internal Django API integration.
+
 Current architecture:
+```text
+                         User Question
+                              |
+                              v
+                    +-------------------+
+                    |     AI Service    |
+                    |      FastAPI      |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    | Intention Service |
+                    | Intent Detection  |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    |     Retriever     |
+                    | Hybrid Retrieval  |
+                    +-------------------+
+                       /             \
+                      v               v
+             +---------------+   +---------------+
+             |   Django API  |   |   Vector DB   |
+             | Structured    |   | Unstructured  |
+             | Financial Data|   | Context       |
+             +---------------+   +---------------+
+                      \               /
+                       v             v
+                    +-------------------+
+                    |  Context Builder  |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    |   Prompt Builder  |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    |     LLM Client    |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    |  External LLM     |
+                    |     Provider      |
+                    +-------------------+
+                              |
+                              v
+                         AI Response
 ```
-jango Backend
-|
-| HTTP API
-|
-AI Service (FastAPI)
-```
+**Components**
+- Intention Service: classifies the user's question into a supported financial intent.
+- Retriever: orchestrates retrieval of structured and unstructured context based on the detected intent.
+- Context Builder: combines and limits the retrieved context before sending it to the LLM.
+- Prompt Builder: loads the prompt templates and injects the user question and retrieved context.
+- LLM Client: communicates with the external LLM provider and returns the generated response.
 
 **Future AI Components:**
 
-- Retrieval layer
-- Context builder
-- Prompt management
-- LLM provider integration
+- Vector database integration (`pgvector`)
+- Embedding generation and indexing
+- Additional retrieval strategies (optional)
+- LLM fallback and resilience mechanisms
 
 For detailed architecture documentation, see: [architecture.md](../docs/ai/architecture.md)
 
@@ -89,6 +142,7 @@ The following tools are required:
 
 - Docker
 - Docker Compose
+- LLM provider external API key
 
 Optional development environment:
 
@@ -110,8 +164,12 @@ Example:
 ```env
 AI_SERVICE_ENV=development
 AI_SERVICE_PORT=8000
+
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=<your-openrouter-api-key>
+LLM_MODEL=<your-model>
 ```
-**Note:** Additional variables will be added when external AI providers, models, and retrieval infrastructure are implemented.
+**Note:** include LLM provider configuration.
 
 ## Instructions
 
@@ -141,6 +199,27 @@ The service exposes a health check endpoint used by Docker health monitoring. En
   "status": "healthy"
 }
 ```
+
+## Test chat endpoint
+
+```
+docker compose exec caddy wget -qO- \
+  --header="Content-Type: application/json" \
+  --post-data='{"user_id":123,"organization_id":456,"question":"How much did I spend this month?"}' \
+  http://ai-service:8000/api/v1/chat
+```
+
+### Expected response:
+
+```
+{
+  "answer": "...",
+  "metadata": {
+    "intent": "monthly_summary"
+  }
+}
+```
+**Note**: The chat endpoint currently supports intent classification, retrieval, context construction, prompt generation, and LLM response generation.
 
 ## API Documentation
 FastAPI automatically generates interactive API documentation.
@@ -183,3 +262,6 @@ Changes are documented in: [CHANGELOG.md](CHANGELOG.md)
 ## Resources
 https://fastapi.tiangolo.com/
 https://docs.docker.com/ai/sandboxes/
+RAG tutorial: https://youtu.be/swvzKSOEluc?si=TQ8qIycFKaRhsjMy
+Hybrid RAG referent: https://github.com/davidvonthenen/2026-wearedevelopers-eu-hybridrag/tree/main
+https://openrouter.ai/models

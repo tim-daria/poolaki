@@ -1,13 +1,13 @@
 services:
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    restart: unless-stopped
-    command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
-    networks:
-      - tunnel_net
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
+  #   environment:
+  #     TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+  #   networks:
+  #     - tunnel_net
   
   caddy:
     image: caddy:2.11-alpine
@@ -50,14 +50,18 @@ services:
     - "8000"
     environment:
       TZ: Europe/Berlin
+      VAULT_ADDR: http://vault:8200
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./backend/django:/app
+      - vault_agent:/vault/agent/secrets:ro
     tmpfs:
       - /tmp:exec,mode=777
-    env_file:
-      - .env
     networks:
       - backend_net
+      - vault_net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -68,6 +72,9 @@ services:
       db:
         condition: service_healthy
         restart: true
+      vault:
+        condition: service_healthy
+        restart: true
 
   db:
     image: postgres:18
@@ -75,18 +82,21 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
+      - ./backend/postgres:/docker-entrypoint-initdb.d:ro
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # PG Values are needed for psql to restore the database from backup
+      PGDATABASE: ${POSTGRES_DB}
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
       TZ: Europe/Berlin
+      VAULT_ADDR: "http://vault:8200"
     networks:
       - backend_net
       - backup_net
+      - vault_net
     ports:
       - "5432:5432"
     healthcheck:
@@ -164,7 +174,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
-      GF_SERVER_ROOT_URL: "https://grafana.localhost"
+      GF_SERVER_ROOT_URL: "http://grafana.localhost"
       GF_USERS_ALLOW_SIGN_UP: false
       GF_AUTH_ANONYMOUS_ENABLED: false
       GF_AUTH_DISABLE_LOGIN_FORM: false
@@ -320,12 +330,63 @@ services:
     # - Monitor latency, requests, errors, token usage
 
 ######################################################
-# Security #
+# HashiCorp Vault #
 ######################################################
 
+  vault:
+    build:
+      context: ./vault
+      dockerfile: ./Dockerfile
+    container_name: vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    # expose:
+    #   - "8200"
+    ports:
+    - "8200:8200"
+    volumes:
+    - ./vault/config:/vault/config
+    - vault_data:/vault/data
+    - vault_init:/vault/secure/
+    - vault_id:/vault/secure/id
+    - vault_agent:/vault/agent/secrets
+    env_file: 
+    - .env
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
+      VAULT_CONFIG: "/vault/config"
+    networks:
+    - vault_net
+    healthcheck:
+      test: ["CMD", "sh", "-c", "vault status | grep -q 'Sealed.*false'"]
+      retries: 3
+      start_period: 30s
+      timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
 
-
-
+  vault-agent-django:
+    image: hashicorp/vault:2.0
+    container_name: vault-agent-django
+    entrypoint: ["vault", "agent", "-config=/vault/config/hcl/agent.hcl"]
+    volumes:
+      - ./vault/config/hcl/agent.hcl:/vault/config/hcl/agent.hcl
+      - ./vault/agent/templates:/vault/agent/templates
+      - vault_agent:/vault/agent/secrets
+      - vault_id:/vault/secure/id
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
+    networks:
+      - vault_net
+    depends_on:
+      vault:
+        condition: service_started
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_db:
@@ -333,6 +394,10 @@ volumes:
   caddy_config:
   grafana_data:
   prom_data:
+  vault_data:
+  vault_init:
+  vault_id:
+  vault_agent:
 
 networks:
   backend_net:
@@ -343,3 +408,11 @@ networks:
     name: backup_net
   tunnel_net:
     name: tunnel_net
+  vault_net:
+    name: vault_net
+
+secrets:
+  vault_role_id:
+    file: ./vault/secure/django/role_id
+  vault_secret_id:
+    file: ./vault/secure/django/secret_id

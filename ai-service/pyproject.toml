@@ -34,3 +34,9 @@ packages = ["app"]
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated.*"
 ]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+
+[tool.ruff.lint]
+ignore = ["B008"]

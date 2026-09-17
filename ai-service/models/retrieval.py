@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class RetrievalRequest(BaseModel):
-    user_id: str
-    organization_id: str
+    user_id: int
+    organization_id: int
     question: str
     intent: str
     top_k: int = Field(default=5, ge=1)

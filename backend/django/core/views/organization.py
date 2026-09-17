@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember, IsOrgOwner
 from core.serializers import InitialBalanceSerializer
-from core.services.balance import set_initial_balance
+from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import create_shared_organization, remove_member
 
@@ -78,7 +78,13 @@ class OrganizationListCreateView(APIView):
 
     def get(self, request: Request) -> Response:
         assert isinstance(request.user, User)
-        memberships = Membership.objects.filter(user=request.user).select_related("org")
+        # Oldest workspace first; id breaks ties for memberships created in the
+        # same instant, such as the personal workspace at signup.
+        memberships = (
+            Membership.objects.filter(user=request.user)
+            .select_related("org")
+            .order_by("joined_at", "id")
+        )
 
         organizations = [
             {

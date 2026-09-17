@@ -1,6 +1,14 @@
+/** @file Member avatars for the current workspace, with the owner's invite control. */
+
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useEffect, useState } from "react";
-import { type Member, fetchMembers } from "../../lib/organizations";
+import {
+  type Member,
+  type PendingInvitation,
+  fetchMembers,
+  fetchPendingInvitations,
+} from "../../lib/organizations";
+import { InvitationForm } from "../Modals/InvitationForm";
 import {
   AvatarGroup,
   IconButton,
@@ -13,6 +21,13 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
+
+/**
+ * Mirrors MAX_MEMBERS_PER_ORG in core/services/organization.py. Duplicated
+ * rather than fetched: the backend enforces it regardless, so the worst a
+ * drift can do here is offer an invite that comes back rejected.
+ */
+const MAX_MEMBERS = 5;
 
 /**
  * Owners first, then by join date.
@@ -30,17 +45,55 @@ export function OrgMembers() {
   const org = useCurrentOrg();
   const theme = useTheme();
   const [members, setMembers] = useState<Member[]>([]);
-  // TODO: add pending members
+  const [pending, setPending] = useState<PendingInvitation[]>([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-  useEffect(() => {
-    const ac = new AbortController();
+  /**
+   * Only the owner may invite, and only into a shared workspace. Anyone else
+   * pressing the button would get a 403 or a 400 whose message is about
+   * permissions rather than anything they can fix, so the button is not shown.
+   */
+  const canInvite = !org.is_personal && org.role === "owner";
 
-    fetchMembers(org.id, ac.signal)
+  /**
+   * Derived rather than cleared when `canInvite` turns false: a reset would
+   * have to happen synchronously inside the effect, which cascades renders.
+   */
+  const visiblePending = canInvite ? pending : [];
+
+  /**
+   * Mirrors the backend's own capacity rule: pending invitations occupy a slot
+   * too, otherwise a sixth invite is sent only to be rejected on accept.
+   */
+  const isFull = members.length + visiblePending.length >= MAX_MEMBERS;
+
+  const loadMembers = (signal?: AbortSignal) => {
+    fetchMembers(org.id, signal)
       .then((res) => setMembers([...res.members].sort(byRoleThenJoined)))
       .catch((e) => {
         if (e.name !== "AbortError") setMembers([]);
       });
-  }, [org.id]);
+
+    // Owner-only endpoint. Asking as a member is a guaranteed 403, and the
+    // count is only needed to decide whether to offer an invite anyway.
+    if (!canInvite) return;
+    fetchPendingInvitations(org.id, signal)
+      .then((res) => setPending(res.invitations))
+      .catch((e) => {
+        if (e.name !== "AbortError") setPending([]);
+      });
+  };
+
+  /**
+   * No reset on a workspace switch: AppLayout keys <main> by orgId, so this
+   * component is remounted with empty state rather than re-fetching into the
+   * previous workspace's.
+   */
+  useEffect(() => {
+    const ac = new AbortController();
+    loadMembers(ac.signal);
+    return () => ac.abort();
+  }, [loadMembers]);
 
   return (
     <Stack
@@ -56,7 +109,7 @@ export function OrgMembers() {
         sx={{
           "& .MuiAvatar-root": {
             width: 36,
-            aspectRatio: 1 / 1,
+            height: 36,
             fontSize: "1rem",
           },
         }}
@@ -70,20 +123,45 @@ export function OrgMembers() {
             </Avatar>
           </Tooltip>
         ))}
+        {/* Dimmed and outlined: an invitee has not accepted yet, so they must
+            not read as someone already in the workspace. */}
+        {visiblePending.map((p) => (
+          <Tooltip
+            key={`pending-${p.id}`}
+            title={`${p.invited_user} (invited)`}
+          >
+            <Avatar
+              sx={{
+                bgcolor: "transparent",
+                color: "text.disabled",
+                border: "2px dashed",
+                borderColor: "divider",
+              }}
+            >
+              {initials(p.invited_user)}
+            </Avatar>
+          </Tooltip>
+        ))}
       </AvatarGroup>
-      {/*TODO: tie with backend
-			Happy UI - render pending members
-			If 5 (with pending), hide the "Add" button*/}
-      <IconButton
-        onClick={() => {}}
-        sx={{
-          backgroundColor: "primary.light",
-          border: "2px dashed",
-          borderColor: "primary.main",
-        }}
-      >
-        <AddIcon fontSize="small" />
-      </IconButton>
+      {canInvite && !isFull && (
+        <IconButton
+          onClick={() => setInviteOpen(true)}
+          aria-label="invite a member"
+          sx={{
+            backgroundColor: "primary.light",
+            border: "2px dashed",
+            borderColor: "primary.main",
+          }}
+        >
+          <AddIcon fontSize="small" />
+        </IconButton>
+      )}
+
+      <InvitationForm
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onSent={loadMembers}
+      />
     </Stack>
   );
 }

@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-export function Policy() {
+function Policy() {
   return (
     <>
       <h1>Here will be Privacy Policy</h1>
