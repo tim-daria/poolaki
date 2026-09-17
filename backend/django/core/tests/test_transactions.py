@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Goal, Organization, Transaction, User
+from core.models import Category, CategoryType, Goal, Organization, Transaction, User
 
 pytestmark = pytest.mark.django_db
 
@@ -124,6 +124,29 @@ def test_create_transaction_rejects_goal_from_another_organization(
 
     assert response.status_code == 400
 
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
+def test_create_transaction_rejects_category_from_another_organization(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    personal_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=personal_org,
+        name="Private",
+        type=CategoryType.EXPENSE,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 

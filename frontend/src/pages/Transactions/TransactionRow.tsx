@@ -3,7 +3,7 @@
 import { Chip, TableCell, TableRow, Typography } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import { Money } from "../../components/Money";
-import { categoryById } from "../../lib/categories";
+import { categoryById, type Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
 import { displayAmount } from "../../lib/money";
 import type { EntryType, Transaction } from "../../lib/transactions";
@@ -26,23 +26,25 @@ const ROW_STYLE: Record<
  * Contributions carry no category on the wire; "Savings" is what they are
  * filed under in the UI.
  */
-function categoryLabel(t: Transaction): string | null {
+function categoryLabel(t: Transaction, categories: Category[]): string | null {
   if (t.entry_type === "contribution") return "Savings";
-  return categoryById(t.category)?.label ?? null;
+  return categoryById(categories, t.category)?.name ?? null;
 }
 
 interface TransactionRowProps {
   transaction: Transaction;
   /** Opens the row for editing. */
   onClick?: (t: Transaction) => void;
+  categories: Category[];
 }
 
 export function TransactionRow({
   transaction: t,
   onClick,
+  categories: categories,
 }: TransactionRowProps) {
   const style = ROW_STYLE[t.entry_type];
-  const category = categoryLabel(t);
+  const category = categoryLabel(t, categories);
 
   return (
     <TableRow

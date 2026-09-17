@@ -6,7 +6,8 @@ import { formatName } from "./text";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
- * stands in like SEED_CATEGORIES does. A contribution is rejected with 400
+ * stands in, the way categories did before they moved to fetchCategories in
+ * lib/categories.ts. A contribution is rejected with 400
  * unless a Goal row with that id exists for the workspace
  * (TransactionCreateSerializer.validate_goal_id). Replace with a fetch once
  * the endpoints land; goalById keeps its signature.
