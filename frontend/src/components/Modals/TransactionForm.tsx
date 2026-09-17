@@ -28,7 +28,10 @@ import { TextInput } from "../Form/TextInput";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useToast } from "../../context/useToast";
 import { getCsrfToken } from "../../lib/csrf";
-import { selectableCategories } from "../../lib/categories";
+import {
+  selectableCategories,
+  contributionCategory,
+} from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
 import { SEED_GOALS, goalById, type Goal } from "../../lib/goals";
 import {
@@ -162,6 +165,11 @@ export function TransactionForm({
 
     setError("");
     setSaving(true);
+    // A transfer has no category picker, so it is filed under the workspace's
+    // Contribution category. Null while the list loads; the backend allows it.
+    const payload = isTransfer
+      ? { ...draft, category: contributionCategory(categories)?.id ?? null }
+      : draft;
     try {
       // A transfer may leave the description blank, in which case the goal name
       // shown in the placeholder is what gets stored.
@@ -169,13 +177,13 @@ export function TransactionForm({
         ? await updateTransaction(
             org.id,
             editRow.id,
-            draft,
+            payload,
             getCsrfToken(),
             selectedGoal?.name,
           )
         : await createTransaction(
             org.id,
-            draft,
+            payload,
             getCsrfToken(),
             selectedGoal?.name,
           );
