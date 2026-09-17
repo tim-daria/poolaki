@@ -283,7 +283,7 @@ def test_remove_member_notifies_all_remaining_members(
     # Notified: owner + extra_member, but not the removed member
     notified = Notification.objects.filter(type=NotificationType.MEMBER_REMOVED)
     assert notified.count() == 2
-    # assert set(notified.values_list("user_id", flat=True)) == {owner.id, extra_member.id}
+    assert set(notified.values_list("user_id", flat=True)) == {owner.id, extra_member.id}
     assert not notified.filter(user=member).exists()
 
 

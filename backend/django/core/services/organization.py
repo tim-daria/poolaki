@@ -61,7 +61,7 @@ def check_can_join_more_orgs(user: User) -> None:
     """Used when creating new organization and accepting an invitation."""
     current_count = Membership.objects.filter(user=user).count()
     if current_count >= MAX_ORGS_PER_USER:
-        raise ValidationError(f"You can have a maximum of {MAX_MEMBERS_PER_ORG} workspaces.")
+        raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")
 
 
 @transaction.atomic
