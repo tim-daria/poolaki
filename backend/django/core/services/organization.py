@@ -56,6 +56,7 @@ def check_can_join_org(org: Organization) -> None:
         )
 
 
+@transaction.atomic
 def leave_organization(user: User, org: Organization) -> dict[str, Any]:
     """
     Remove the current user from an organization.
