@@ -1,8 +1,12 @@
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from core.models import (
+    Invitation,
+    InvitationStatus,
     Membership,
     Notification,
     NotificationType,
@@ -387,3 +391,180 @@ def test_stranger_cannot_remove_members(
 
     assert response.status_code == 403
     assert Membership.objects.filter(user=member, org=shared_org).exists()
+
+
+# ---------------------------------------------------------------------------
+# POST - leave organization
+# ---------------------------------------------------------------------------
+
+
+def test_member_can_leave_organization(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
+
+    assert response.status_code == 200
+    assert response.json() == {"organization_deleted": False, "org_name": None}
+
+    assert not Membership.objects.filter(user=member, org=shared_org).exists()
+    # the staying member is notified; a plain member leaves trigger no transfer
+    member_left = Notification.objects.filter(
+        user=owner, org=shared_org, type=NotificationType.MEMBER_LEFT
+    )
+    assert member_left.count() == 1
+    assert member_left.get().payload == {
+        "user": member.username,
+        "org_name": shared_org.name,
+    }
+    assert not Notification.objects.filter(type=NotificationType.OWNERSHIP_TRANSFERRED).exists()
+
+
+def test_owner_leaving_transfers_ownership_to_longest_standing_member(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    extra_member = User.objects.create_user(
+        email="extra@example.com", username="extra", password="pass1234"
+    )
+    Membership.objects.create(user=extra_member, org=shared_org, role=Role.MEMBER)
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
+
+    assert response.status_code == 200
+    assert response.json() == {"organization_deleted": False, "org_name": None}
+
+    assert not Membership.objects.filter(user=owner, org=shared_org).exists()
+    assert Membership.objects.get(user=member, org=shared_org).role == Role.OWNER
+    assert Membership.objects.get(user=extra_member, org=shared_org).role == Role.MEMBER
+
+    transfer_notification = Notification.objects.get(
+        user=member, type=NotificationType.OWNERSHIP_TRANSFERRED
+    )
+    assert transfer_notification.payload == {
+        "previous_owner": owner.username,
+        "org_name": shared_org.name,
+    }
+
+    # the other member is informed, the new owner is not (they got the personal one)
+    owner_changed = Notification.objects.filter(type=NotificationType.OWNER_CHANGED)
+    assert owner_changed.count() == 1
+    changed = owner_changed.get()
+    assert changed.user_id == extra_member.id
+    assert changed.payload == {
+        "previous_owner": owner.username,
+        "new_owner": member.username,
+        "org_name": shared_org.name,
+    }
+
+    member_left = Notification.objects.filter(type=NotificationType.MEMBER_LEFT, org=shared_org)
+    assert set(member_left.values_list("user_id", flat=True)) == {member.id, extra_member.id}
+
+
+def test_owner_leaving_ownership_tie_breaks_by_user_id(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    extra_member = User.objects.create_user(
+        email="extra@example.com", username="extra", password="pass1234"
+    )
+    member_join = Membership.objects.get(user=member, org=shared_org)
+    Membership.objects.create(user=extra_member, org=shared_org, role=Role.MEMBER)
+
+    # make both members join at the same instant: the lower user id must win
+    Membership.objects.filter(org=shared_org).exclude(user=owner).update(
+        joined_at=member_join.joined_at
+    )
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
+
+    assert response.status_code == 200
+    assert Membership.objects.get(user=member, org=shared_org).role == Role.OWNER
+    assert Membership.objects.get(user=extra_member, org=shared_org).role == Role.MEMBER
+
+
+def test_last_member_leaving_deletes_organization(
+    api_client: APIClient,
+    owner: User,
+) -> None:
+    org = Organization.objects.create(
+        name="Solo org", is_personal=False, initial_balance=Decimal("0")
+    )
+    Membership.objects.create(user=owner, org=org, role=Role.OWNER)
+    org_id = org.id
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": org_id}))
+
+    assert response.status_code == 200
+    assert response.json() == {"organization_deleted": True, "org_name": "Solo org"}
+    assert not Organization.objects.filter(id=org_id).exists()
+
+
+def test_last_member_leaving_notifies_pending_invitation_recipients(
+    api_client: APIClient,
+    owner: User,
+    invitee: User,
+) -> None:
+    org = Organization.objects.create(
+        name="Solo org", is_personal=False, initial_balance=Decimal("0")
+    )
+    Membership.objects.create(user=owner, org=org, role=Role.OWNER)
+    invitation = Invitation.objects.create(
+        org=org, invited_user=invitee, invited_by=owner, status=InvitationStatus.PENDING
+    )
+    org_id = org.id
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": org_id}))
+
+    assert response.status_code == 200
+    assert response.json() == {"organization_deleted": True, "org_name": "Solo org"}
+    assert not Organization.objects.filter(id=org_id).exists()
+
+    # the invitation is deleted with the org; the invitee is told about the deletion
+    assert not Invitation.objects.filter(id=invitation.id).exists()
+    deleted = Notification.objects.get(user=invitee, type=NotificationType.ORGANIZATION_DELETED)
+    assert deleted.payload == {"org_name": "Solo org", "last_member": owner.username}
+    assert deleted.org is None
+
+
+def test_cannot_leave_personal_budget(
+    api_client: APIClient,
+    personal_user: tuple[User, Organization],
+) -> None:
+    user, personal_org = personal_user
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": personal_org.id}))
+
+    assert response.status_code == 400
+    assert "Can not leave your personal budget." in response.json()["errors"]
+    assert Membership.objects.filter(user=user, org=personal_org).exists()
+
+
+def test_non_member_cannot_leave_organization(
+    api_client: APIClient,
+    shared_org: Organization,
+    stranger: User,
+) -> None:
+    api_client.force_authenticate(user=stranger)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
+
+    assert response.status_code == 403

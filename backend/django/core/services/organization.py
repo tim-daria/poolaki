@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Any
+from typing import TypedDict
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -58,42 +58,92 @@ def check_can_join_org(org: Organization) -> None:
         )
 
 
+def check_can_join_more_orgs(user: User) -> None:
+    """Used when creating new organization and accepting an invitation."""
+    current_count = Membership.objects.filter(user=user).count()
+    if current_count >= MAX_ORGS_PER_USER:
+        raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")
+
+
+class LeaveOrganizationResult(TypedDict):
+    organization_deleted: bool
+    org_name: str | None  # None if the organization keeps existing
+
+
 @transaction.atomic
-def leave_organization(user: User, org: Organization) -> dict[str, Any]:
+def leave_organization(user: User, org: Organization) -> LeaveOrganizationResult:
     """
     Remove the current user from an organization.
 
     If the leaving user is the owner and other members remain,
     ownership is automatically transferred to the longest-standing
-    remaining member. If the leaving user is the last member, the
-    organization (and everything belonging to it) is deleted.
-
-    Returns:
-        A dict with "organization_deleted": True if the user was the last
-        member and the organization was removed, False otherwise.
+    remaining member (ties broken by user id). If the leaving user is
+    the last member, the organization is deleted and the recipients of
+    its pending invitations are notified.
     """
     if org.is_personal:
         raise ValidationError("Can not leave your personal budget.")
-    membership = Membership.objects.filter(user=user, org=org).first()
-    if membership is None:
-        raise ValidationError("You are not a member of this organization.")
-    remaining = Membership.objects.filter(org=org).exclude(user=user)
-    if not remaining.exists():
-        org_name = org.name
-        membership.delete()
+    try:
+        membership = Membership.objects.get(user=user, org=org)
+    except Membership.DoesNotExist:
+        raise ValidationError("You are not a member of this organization.") from None
+    remaining = list(
+        Membership.objects.filter(org=org)
+        .exclude(pk=membership.pk)
+        .select_related("user")
+        .order_by("joined_at", "user_id")
+    )
+    org_name = org.name
+    if not remaining:
+        pending_invitee_ids = list(
+            Invitation.objects.filter(org=org, status=InvitationStatus.PENDING).values_list(
+                "invited_user_id", flat=True
+            )
+        )
         org.delete()
-        return {"organization_deleted": True, "org_name": org_name}
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user_id=uid,
+                    type=NotificationType.ORGANIZATION_DELETED,
+                    payload={
+                        "org_name": org_name,
+                        "last_member": user.username,
+                    },
+                )
+                for uid in pending_invitee_ids
+            ]
+        )
+        return LeaveOrganizationResult(organization_deleted=True, org_name=org_name)
     if membership.role == Role.OWNER:
-        new_owner = remaining.order_by("joined_at").first()
-        if new_owner:
-            new_owner.role = Role.OWNER
-            new_owner.save(update_fields=["role"])
-            Notification.objects.create(
+        # List is non-empty and ordered: first element is the longest-standing member.
+        new_owner = remaining[0]
+        new_owner.role = Role.OWNER
+        new_owner.save(update_fields=["role"])
+        notifications = [
+            Notification(
                 user=new_owner.user,
                 type=NotificationType.OWNERSHIP_TRANSFERRED,
                 org=org,
-                payload={"previous_owner": user.username, "org_name": org.name},
-            )
+                payload={"previous_owner": user.username, "org_name": org_name},
+            ),
+            # the new owner already got the personal notification
+            *[
+                Notification(
+                    user_id=uid,
+                    type=NotificationType.OWNER_CHANGED,
+                    org=org,
+                    payload={
+                        "previous_owner": user.username,
+                        "new_owner": new_owner.user.username,
+                        "org_name": org_name,
+                    },
+                )
+                for uid in (m.user_id for m in remaining[1:])
+            ],
+        ]
+        Notification.objects.bulk_create(notifications)
+
     membership.delete()
     Notification.objects.bulk_create(
         [
@@ -101,20 +151,13 @@ def leave_organization(user: User, org: Organization) -> dict[str, Any]:
                 user=m.user,
                 type=NotificationType.MEMBER_LEFT,
                 org=org,
-                payload={"user": user.username, "org_name": org.name},
+                payload={"user": user.username, "org_name": org_name},
             )
             for m in remaining
         ]
     )
 
-    return {"organization_deleted": False}
-
-
-def check_can_join_more_orgs(user: User) -> None:
-    """Used when creating new organization and accepting an invitation."""
-    current_count = Membership.objects.filter(user=user).count()
-    if current_count >= MAX_ORGS_PER_USER:
-        raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")
+    return LeaveOrganizationResult(organization_deleted=False, org_name=None)
 
 
 @transaction.atomic

@@ -162,16 +162,12 @@ class OrganizationLeaveView(APIView):
     """
     Leave an organization you are a member of.
 
-    If the user is the owner and other members remain, ownership is
-    automatically transferred to the longest-standing member. If the user
-    is the last member, the organization and all its data are deleted.
-    Personal budgets cannot be left.
+    Owner departure transfers ownership to the longest-standing remaining
+    member; leaving as the last member deletes the organization.
 
-    POST:
-    Returns:
     - 200 OK on success.
-    - 400 Bad Request if this is your personal budget, you are not a
-      member.
+    - 400 Bad Request if this is your personal budget.
+    - 403 Forbidden if you are not a member of the organization.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
