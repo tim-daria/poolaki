@@ -67,16 +67,17 @@ def check_can_join_more_orgs(user: User) -> None:
 
 
 @transaction.atomic
-def remove_member(org: Organization, target_user: User, owner: User) -> None:
+def remove_member(org: Organization, user_id: int, owner: User) -> None:
     """
     Remove a member from an organization. Only the owner can do this, and
     the owner cannot remove themselves this way.
     """
-    if target_user.id == owner.id:
+    if user_id == owner.id:
         raise ValidationError("Use delete organization to remove yourself.")
-    membership = Membership.objects.filter(user=target_user, org=org).first()
+    membership = Membership.objects.filter(org=org, user_id=user_id).select_related("user").first()
     if membership is None:
         raise ValidationError("This user is not a member of the organization.")
+    target_user = membership.user
     membership.delete()
 
     # Values-only lookup: the fan-out needs just user ids, avoids N+1 on the User FK.

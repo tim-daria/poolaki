@@ -329,6 +329,24 @@ def test_cannot_remove_user_who_is_not_a_member(
     assert "This user is not a member of the organization." in response.json()["errors"]
 
 
+def test_cannot_remove_unknown_user_id(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.delete(
+        reverse(
+            "organization-remove-member",
+            kwargs={"org_id": shared_org.id, "user_id": 999999},
+        )
+    )
+
+    assert response.status_code == 400
+    assert "This user is not a member of the organization." in response.json()["errors"]
+
+
 def test_non_owner_member_cannot_remove_members(
     api_client: APIClient,
     owner: User,

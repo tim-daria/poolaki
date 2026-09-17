@@ -137,9 +137,9 @@ Only the organization owner can remove members. No request body is required.
 Status:
 
 - `204 No Content` on success
-- `400 Bad Request` when the target is not a member of the organization,
-  or when the owner tries to remove themselves (use organization deletion
-  to remove yourself)
+- `400 Bad Request` when the user_id is not a member of the organization
+  (including unknown users), or when the owner tries to remove themselves
+  (use organization deletion to remove yourself)
 - `403 Forbidden` when the requester is not the organization owner
 
 Side effects:

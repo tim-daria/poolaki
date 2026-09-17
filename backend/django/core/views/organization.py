@@ -168,8 +168,8 @@ class OrganizationMemberRemoveView(APIView):
     DELETE:
     Returns:
     - 204 No Content on success.
-    - 400 Bad Request if the target is not a member, or is the requesting
-      owner themselves.
+    - 400 Bad Request if user_id is not an organization member (including
+      unknown users), or is the requesting owner themselves.
     - 403 Forbidden if the requesting user is not the organization owner.
     """
 
@@ -178,10 +178,9 @@ class OrganizationMemberRemoveView(APIView):
     def delete(self, request: Request, org_id: int, user_id: int) -> Response:
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, id=org_id)
-        target_user = get_object_or_404(User, id=user_id)
 
         try:
-            remove_member(org, target_user, request.user)
+            remove_member(org, user_id, request.user)
         except ValidationError as e:
             return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
