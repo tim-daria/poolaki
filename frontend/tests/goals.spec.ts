@@ -8,18 +8,17 @@
  * never pulls app source into the node tsconfig project.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { makeUsers, registerUser } from "./helpers.js";
+import { openAsSharedOwner } from "./helpers.js";
 
 test.describe.serial("Goals", () => {
   let page: Page;
   let goalsUrl: string;
 
-  const [user] = makeUsers("goal", "goal_unused");
-
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    const workspace = await registerUser(page, user);
-    goalsUrl = `${workspace}/savings`;
+    // Nothing here is saved, so the shared owner's workspace is safe to use.
+    const owner = await openAsSharedOwner(browser);
+    page = owner.page;
+    goalsUrl = `${owner.personalUrl}/goals`;
   });
 
   test.afterAll(async () => {

@@ -1,6 +1,11 @@
 // @ts-check
 import { test, expect, type Page } from "@playwright/test";
-import { makeUsers, registerUser, createSharedWorkspace } from "./helpers.js";
+import {
+  makeUsers,
+  registerUser,
+  createSharedWorkspace,
+  openAsSharedOwner,
+} from "./helpers.js";
 
 /**
  * The member row and the invite dialog.
@@ -21,7 +26,8 @@ test.describe.serial("Workspace members", () => {
 
   // Different first letters: initials() takes the first character, and the
   // tests tell the owner's avatar from the guest's by exactly that.
-  const [ownerUser, guestUser] = makeUsers("ownr", "gst");
+  // The owner is the shared one (initial "O"); only the guest signs up here.
+  const [guestUser] = makeUsers("gst", "gst_unused");
   const sharedName = `Crew ${Date.now()}`;
   const unknownUsername = `nobody_${Date.now()}`;
 
@@ -42,15 +48,15 @@ test.describe.serial("Workspace members", () => {
   }
 
   test.beforeAll(async ({ browser }) => {
-    owner = await browser.newPage();
+    const shared = await openAsSharedOwner(browser);
+    owner = shared.page;
+    ownerPersonalUrl = shared.personalUrl;
     guest = await browser.newPage();
-
-    ownerPersonalUrl = await registerUser(owner, ownerUser);
     await registerUser(guest, guestUser);
 
     sharedUrl = await createSharedWorkspace(
       owner,
-      ownerUser.username,
+      shared.user.username,
       sharedName,
     );
   });
