@@ -61,9 +61,7 @@ def check_can_join_more_orgs(user: User) -> None:
     """Used when creating new organization and accepting an invitation."""
     current_count = Membership.objects.filter(user=user).count()
     if current_count >= MAX_ORGS_PER_USER:
-        raise ValidationError(
-            f"You cannot belong to more than {MAX_MEMBERS_PER_ORG} organizations."
-        )
+        raise ValidationError(f"You can have a maximum of {MAX_MEMBERS_PER_ORG} workspaces.")
 
 
 @transaction.atomic
@@ -80,7 +78,6 @@ def remove_member(org: Organization, user_id: int, owner: User) -> None:
     target_user = membership.user
     membership.delete()
 
-    # Values-only lookup: the fan-out needs just user ids, avoids N+1 on the User FK.
     remaining_user_ids = list(Membership.objects.filter(org=org).values_list("user_id", flat=True))
     notifications = [
         Notification(

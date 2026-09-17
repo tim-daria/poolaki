@@ -54,7 +54,6 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
         raise ValidationError("No user found with this username.") from None
     if Membership.objects.filter(user=invited_user, org=org).exists():
         raise ValidationError("This user is already a member.")
-    check_can_join_more_orgs(invited_user)
     pending_invitation = Invitation.objects.filter(
         org=org, invited_user=invited_user, status=InvitationStatus.PENDING
     ).first()
@@ -119,6 +118,7 @@ def accept_invitation(invitation: Invitation, invited_user: User) -> Membership:
     if invitation.status != InvitationStatus.PENDING:
         raise ValidationError(f"This invitation is already {invitation.status}.")
     check_can_join_org(invitation.org)
+    check_can_join_more_orgs(invited_user)
     membership = Membership.objects.create(user=invited_user, org=invitation.org, role=Role.MEMBER)
     invitation.status = InvitationStatus.ACCEPTED
     invitation.responded_at = timezone.now()
