@@ -44,7 +44,7 @@ class SetInitialBalanceView(APIView):
             org = set_initial_balance(request.user, initial_balance)
         except PersonalOrganizationMissingError:
             return Response(
-                {"error": "Personal organization is missing"},
+                {"errors": ["Personal organization is missing"]},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
@@ -104,7 +104,7 @@ class OrganizationListCreateView(APIView):
         assert isinstance(request.user, User)
         name = request.data.get("name", "").strip()
         if not name:
-            return Response({"error": "name is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": ["name is required"]}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = InitialBalanceSerializer(data=request.data)
         if not serializer.is_valid():
@@ -180,10 +180,12 @@ class OrganizationLeaveView(APIView):
             id=org_id,
         )
         try:
-            result = leave_organization(request.user, org)
+            organization_deleted = leave_organization(request.user, org)
+        except PermissionError as e:
+            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
             return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result, status=status.HTTP_200_OK)
+        return Response({"organization_deleted": organization_deleted}, status=status.HTTP_200_OK)
 
 
 class OrganizationMemberRemoveView(APIView):

@@ -144,7 +144,7 @@ class AcceptInvitationView(APIView):
         try:
             membership = accept_invitation(invitation, request.user)
         except PermissionError as e:
-            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
             return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -175,7 +175,7 @@ class DeclineInvitationView(APIView):
         try:
             invitation = decline_invitation(invitation, request.user)
         except PermissionError as e:
-            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
             return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -132,9 +132,12 @@ export async function createInvitation(
   if (res.status === 400) {
     const body = await res.json().catch(() => null);
     throw new InvitationCreateError(
-      // Two shapes: the serializer rejects the field as {username: [...]},
-      // the service rejects the request as {error: "..."}.
-      body?.error ?? body?.username?.[0] ?? "Could not send the invitation",
+      // Three shapes: the service rejects the request as {errors: [...]},
+      // legacy code as {error: "..."}, the serializer the field as {username: [...]}.
+      body?.errors?.[0] ??
+        body?.error ??
+        body?.username?.[0] ??
+        "Could not send the invitation",
     );
   }
   if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
