@@ -35,7 +35,7 @@ def seed_default_categories(apps, schema_editor) -> None:
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0001_initial"),
+        ("core", "0002_alter_notification_org_alter_notification_type"),
     ]
 
     operations = [

@@ -13,6 +13,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.category import create_default_categories
 
 MAX_MEMBERS_PER_ORG = 5
 MAX_ORGS_PER_USER = 10
