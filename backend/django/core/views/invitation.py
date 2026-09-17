@@ -83,10 +83,7 @@ class InvitationListCreateView(APIView):
         try:
             invitation = create_invitation(org, username, request.user)
         except ValidationError as e:
-            # changed to e.messages, so the error is shown to user
-            # as plain text, not "['Error message']"
-            # PermissionError doesn't have .messages, didn't get this change
-            return Response({"error": "; ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "id": invitation.id,
@@ -119,7 +116,7 @@ class CancelInvitationView(APIView):
         try:
             invitation = cancel_invitation(org_id, invitation_id)
         except ValidationError as e:
-            return Response({"error": "; ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"id": invitation.id, "status": invitation.status}, status=status.HTTP_200_OK
         )
@@ -147,9 +144,9 @@ class AcceptInvitationView(APIView):
         try:
             membership = accept_invitation(invitation, request.user)
         except PermissionError as e:
-            return Response({"error": str(e)}, status=403)
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
-            return Response({"error": "; ".join(e.messages)}, status=400)
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {"organization_id": membership.org_id, "organization_name": membership.org.name},
@@ -178,9 +175,9 @@ class DeclineInvitationView(APIView):
         try:
             invitation = decline_invitation(invitation, request.user)
         except PermissionError as e:
-            return Response({"error": str(e)}, status=403)
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
-            return Response({"error": "; ".join(e.messages)}, status=400)
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {"invitation_id": invitation_id, "status": invitation.status}, status=status.HTTP_200_OK
