@@ -173,6 +173,8 @@ class NotificationType(models.TextChoices):
     MEMBER_LEFT = "member_left", "Member left"
     MEMBER_REMOVED = "member_removed", "Member removed"
     REMOVED_FROM_ORG = "removed_from_org", "Removed from org"
+    OWNERSHIP_TRANSFERRED = "ownership_transferred", "Ownership transferred"
+    OWNER_CHANGED = "owner_changed", "Owner changed"
     ORGANIZATION_DELETED = "organization_deleted", "Organization deleted"
 
 

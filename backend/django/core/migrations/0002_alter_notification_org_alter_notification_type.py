@@ -19,6 +19,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='notification',
             name='type',
-            field=models.CharField(choices=[('invitation', 'Invitation'), ('transaction_added', 'Transaction added'), ('goal_completed', 'Goal completed'), ('member_left', 'Member left'), ('member_removed', 'Member removed'), ('removed_from_org', 'Removed from org'), ('organization_deleted', 'Organization deleted')], max_length=30),
+            field=models.CharField(choices=[('invitation', 'Invitation'), ('transaction_added', 'Transaction added'), ('goal_completed', 'Goal completed'), ('member_left', 'Member left'), ('member_removed', 'Member removed'), ('removed_from_org', 'Removed from org'), ('ownership_transferred', 'Ownership transferred'), ('owner_changed', 'Owner changed'), ('organization_deleted', 'Organization deleted')], max_length=30),
         ),
     ]

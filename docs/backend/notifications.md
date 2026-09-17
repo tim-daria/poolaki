@@ -16,6 +16,8 @@ All endpoints require authentication.
 | `member_left`        | "A member left the organization"                                         | reserved                                                 |
 | `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
 | `removed_from_org`   | "You were removed from an organization"                                  | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
+| `ownership_transferred` | "You are now the owner of an organization"                    | reserved (next PR — ownership transfer when the owner leaves) |
+| `owner_changed`      | "The organization owner changed"                               | reserved (next PR — ownership transfer when the owner leaves) |
 | `organization_deleted` | "An organization was deleted"                                           | reserved                                                 |
 
 Unknown/absent types are possible as the feature grows — the frontend should
@@ -225,6 +227,8 @@ There is no push channel, so the frontend should poll.
 | `member_left`       | Info text .                                                                                       |
 | `member_removed`    | Info text, e.g. "**alice** was removed from **Trip**"                                          |
 | `removed_from_org`  | Text like "you were removed from **Trip** by bob"    |
+| `ownership_transferred` | Text like "you are now the owner of **Trip**" (sent to the new owner)  |
+| `owner_changed`       | Text like "**Daria** replaced **Ivan** as the owner of **Trip**" (sent to remaining members) |
 | `organization_deleted` | Info text, e.g. "**Trip** was deleted"                                                      |
 
 The exact copy and icons are up to the frontend; the table only maps where a

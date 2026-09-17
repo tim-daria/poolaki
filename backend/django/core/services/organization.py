@@ -71,7 +71,7 @@ def remove_member(org: Organization, user_id: int, owner: User) -> None:
     the owner cannot remove themselves this way.
     """
     if user_id == owner.id:
-        raise ValidationError("Use delete organization to remove yourself.")
+        raise ValidationError("Use leave organization to remove yourself.")
     membership = Membership.objects.filter(org=org, user_id=user_id).select_related("user").first()
     if membership is None:
         raise ValidationError("This user is not a member of the organization.")

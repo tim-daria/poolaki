@@ -139,7 +139,7 @@ Status:
 - `204 No Content` on success
 - `400 Bad Request` when the user_id is not a member of the organization
   (including unknown users), or when the owner tries to remove themselves
-  (use organization deletion to remove yourself)
+  (use leave organization to remove yourself)
 - `403 Forbidden` when the requester is not the organization owner
 
 Side effects:
