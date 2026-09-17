@@ -302,7 +302,7 @@ def test_owner_cannot_remove_themselves(
     )
 
     assert response.status_code == 400
-    assert "Use delete organization to remove yourself." in response.json()["errors"]
+    assert "Use leave organization to remove yourself." in response.json()["errors"]
 
     assert Membership.objects.filter(user=owner, org=shared_org).exists()
 
