@@ -128,6 +128,33 @@ those goals rather than adding more.
 
 ---
 
+## Test users and the signup rate limit
+
+allauth allows 20 signups per minute per IP. Every spec used to register its
+own users, so a parallel run signed up about a dozen accounts within seconds
+and back-to-back runs failed in `beforeAll` on the Sign up page.
+
+The `setup` project ([shared-owner.setup.ts](../../frontend/tests/shared-owner.setup.ts))
+now registers one **shared owner** per run and saves the session to
+`frontend/playwright/.auth/` (git-ignored). It runs before any spec, including
+when you run a single file. Specs open it with `openAsSharedOwner(browser)` from
+[helpers.ts](../../frontend/tests/helpers.ts).
+
+Which user to use in a new spec:
+
+| The user... | Use |
+|---|---|
+| only creates things: workspaces, invitations, transactions | the shared owner |
+| is asserted on by per-user state: notification or invitation counts | `registerUser` |
+| changes their password or logs out of the shared session | `registerUser` |
+| is what the test is about: signup, registration redirects | `registerUser` |
+
+When the shared owner needs data with exact counts, put it in a workspace of
+its own (`createWorkspaceViaApi`), not in their personal workspace, which
+other specs use at the same time.
+
+---
+
 ## Emulating the CI environment locally
 
 Local environments use Caddy (`https://poolaki.localhost`) for HTTPS and routing. In CI,
