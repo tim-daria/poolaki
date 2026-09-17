@@ -66,6 +66,7 @@ def check_can_join_more_orgs(user: User) -> None:
         )
 
 
+@transaction.atomic
 def remove_member(org: Organization, target_user: User, owner: User) -> None:
     """
     Remove a member from an organization. Only the owner can do this, and

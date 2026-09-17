@@ -19,6 +19,7 @@ from core.services.organization import (
 )
 
 
+@transaction.atomic
 def create_invitation(org: Organization, invited_username: str, invited_by: User) -> Invitation:
     """
     Create a pending invitation for an existing user to join an organization.
@@ -77,6 +78,7 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
     return invitation
 
 
+@transaction.atomic
 def cancel_invitation(org_id: int, invitation_id: int) -> Invitation:
     """
     Cancel a pending invitation and return the updated invitation.
@@ -127,6 +129,7 @@ def accept_invitation(invitation: Invitation, invited_user: User) -> Membership:
     return membership
 
 
+@transaction.atomic
 def decline_invitation(invitation: Invitation, invited_user: User) -> Invitation:
     """
     Decline a pending invitation.
