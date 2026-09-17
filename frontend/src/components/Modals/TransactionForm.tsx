@@ -45,6 +45,7 @@ import {
   type Transaction,
   type TransactionDraft,
 } from "../../lib/transactions";
+import { useCategories } from "../../hooks/useCategories";
 
 interface Props {
   open: boolean;
@@ -86,6 +87,7 @@ export function TransactionForm({
   onDeleted,
 }: Props) {
   const org = useCurrentOrg();
+  const categories = useCategories();
   const { showToast } = useToast();
 
   /**
@@ -113,6 +115,7 @@ export function TransactionForm({
   const isTransfer = draft.entry_type === "contribution";
   const isExpense = draft.entry_type === "expense";
   const selectedGoal = goalById(SEED_GOALS, draft.goal);
+  const options = selectableCategories(categories, draft.entry_type);
 
   /** Tracks the open/closed edge, so the block below runs once per opening. */
   const [wasOpen, setWasOpen] = useState(open);
@@ -350,17 +353,15 @@ export function TransactionForm({
                             Select
                           </Box>
                         ) : (
-                          selectableCategories(draft.entry_type).find(
-                            (c) => c.id === value,
-                          )?.label
+                          options.find((c) => c.id === value)?.name
                         ),
                     },
                   }}
                   required
                 >
-                  {selectableCategories(draft.entry_type).map((c) => (
+                  {options.map((c) => (
                     <MenuItem key={c.id} value={c.id}>
-                      {c.label}
+                      {c.name}
                     </MenuItem>
                   ))}
                 </TextField>
