@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -ueo pipefail
 
+# Runs on every exit, including a failing check aborting the script under
+# `set -e`. Without it, the dev stack is left with the project database down
+# and the throwaway one still holding host port 5432.
+#
+# Both commands exit 1 when the container does not exist (an abort before the
+# `docker run` below, or a precheck run with the compose stack down), so each
+# is guarded: an unguarded failure would kill the rest of the trap and mask
+# the exit status of the check that actually failed.
+cleanup() {
+  printf "\n🐳 Stopping test database...\n"
+  docker stop ci-postgres >/dev/null 2>&1 || true
+
+  printf "\n🐳 Starting database container...(ignore this if it wasn't running)\n"
+  docker start postgres_db >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 printf "\n🐳 Stopping database container...(ignore this if it wasn't running)\n"
 docker stop postgres_db
 
@@ -11,6 +28,9 @@ uv venv --clear
 uv sync
 
 printf "\n🐳 Creating test database...\n"
+# The trap above does not fire on SIGKILL or a reboot, so a leftover container
+# can still be holding the name and host port 5432.
+docker stop ci-postgres >/dev/null 2>&1 || true
 docker run --rm -d \
   --name ci-postgres \
   -e POSTGRES_DB=test_db \
@@ -81,15 +101,12 @@ npm run format:check
 printf "\n🔍 Frontend: Running linter...\n"
 npm run lint
 
+printf "\n🔍 Frontend: Running unit tests...\n"
+npm run test
+
 printf "\n🔍 Frontend: Running type checker...\n"
 npx tsc -b
 
 cd ..
-
-printf "\n🐳 Stopping test database...\n"
-docker stop ci-postgres
-
-printf "\n🐳 Starting database container...(ignore this if it wasn't running)\n"
-docker start postgres_db
 
 printf "\n✅ All checks done!\n"
