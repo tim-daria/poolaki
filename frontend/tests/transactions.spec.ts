@@ -120,7 +120,7 @@ async function postTransaction(
   if (res.status() !== 201) {
     throw new Error(
       `transaction POST failed: ${res.status()} ${await res.text()} — ` +
-        "if it names category_id, seed the categories first (see the file header).",
+        "if it names category_id, the id is not one of this workspace's own.",
     );
   }
 }
@@ -188,6 +188,8 @@ function ariaHiddenHits(page: Page): Promise<string[]> {
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
+  /** Name → id for this workspace's categories; the ids differ per workspace. */
+  let categories: Map<string, number>;
 
   const [user] = makeUsers("tx", "tx_unused");
 
@@ -195,7 +197,7 @@ test.describe.serial("Transactions", () => {
     page = await browser.newPage();
     const workspace = await registerUser(page, user);
     const orgId = toOrgId(workspace);
-    const categories = await getOrganizationCategories(page, orgId);
+    categories = await getOrganizationCategories(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
@@ -289,11 +291,11 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("3");
     await expect(tab("Income")).toContainText("0");
 
-    // Category labels are searchable too.
-    await search.fill("eating");
-    await expect(rows()).toHaveCount(4);
+    // Category labels are searchable too: no description contains "food".
+    await search.fill("food");
+    await expect(rows()).toHaveCount(9);
     for (const row of await rows().all()) {
-      await expect(row).toContainText("Eating out");
+      await expect(row).toContainText("Food");
     }
 
     await search.fill("nothing matches this");
@@ -330,35 +332,30 @@ test.describe.serial("Transactions", () => {
     };
     await typeDate("From", "01072026");
     await typeDate("To", "31082026");
-    await panel.getByText("Groceries", { exact: true }).click();
-    await panel.getByText("Eating out", { exact: true }).click();
+    await panel.getByText("Food", { exact: true }).click();
+    await panel.getByText("Shopping", { exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
 
     await expect(filtersButton()).toContainText("3");
     await expect(page).toHaveURL(/from=2026-07-01/);
-    await expect(page).toHaveURL(/cat=1%2C2/);
+    // The ids belong to this workspace, and ?cat= lists them in click order.
+    const cat = `${categories.get("Food")}%2C${categories.get("Shopping")}`;
+    await expect(page).toHaveURL(new RegExp(`cat=${cat}`));
 
     // Chips sit outside the panel, next to "Clear all".
     const chips = page.locator(".MuiChip-deletable");
-    await expect(chips).toHaveText([
-      "1 Jul – 31 Aug",
-      "Groceries",
-      "Eating out",
-    ]);
+    await expect(chips).toHaveText(["1 Jul – 31 Aug", "Food", "Shopping"]);
 
-    // Jul–Aug rows in those two categories.
-    await expect(showing("6 of 6")).toBeVisible();
+    // Jul–Aug rows in those two categories: 6 Food and 1 Shopping.
+    await expect(showing("7 of 7")).toBeVisible();
     await expect(tab("Income")).toContainText("0");
 
     // Removing one chip keeps the other two.
-    await chips
-      .filter({ hasText: "Groceries" })
-      .getByTestId("CancelIcon")
-      .click();
+    await chips.filter({ hasText: "Food" }).getByTestId("CancelIcon").click();
     await expect(chips).toHaveCount(2);
     await expect(filtersButton()).toContainText("2");
-    await expect(showing("3 of 3")).toBeVisible();
+    await expect(showing("1 of 1")).toBeVisible();
 
     await page.getByRole("button", { name: "Clear all" }).click();
     await expect(chips).toHaveCount(0);
@@ -426,7 +423,7 @@ test.describe.serial("Transactions", () => {
       "Ristorante Baldi",
     );
     await expect(dialog.getByLabel("Amount")).toHaveValue("52,00");
-    await expect(dialog.getByLabel("Category")).toHaveText("Eating out");
+    await expect(dialog.getByLabel("Category")).toHaveText("Food");
     await expect(dialog.getByRole("button", { name: "Delete" })).toBeVisible();
 
     // No PATCH route yet: fields are locked and Save stays off.
@@ -542,13 +539,15 @@ test.describe.serial("Transactions", () => {
     await panel.getByRole("button", { name: "This year" }).click();
     // click, not check: the popover re-anchors when the Filters badge grows,
     // and check() would treat that movement as a failed toggle and retry.
-    for (const name of ["Groceries", "Salary"]) {
+    for (const name of ["Food", "Salary"]) {
       const box = panel.getByRole("checkbox", { name });
       await box.click();
       await expect(box).toBeChecked();
     }
-    await expect(panel.getByText("8 transactions match")).toBeVisible();
-    await expect(page).toHaveURL(/cat=1%2C8/);
+    // 9 Food rows plus 3 Salary, all dated this year.
+    await expect(panel.getByText("12 transactions match")).toBeVisible();
+    const cat = `${categories.get("Food")}%2C${categories.get("Salary")}`;
+    await expect(page).toHaveURL(new RegExp(`cat=${cat}`));
 
     // Categories only: the date range survives.
     await clearCategories.click();
@@ -566,7 +565,7 @@ test.describe.serial("Transactions", () => {
     await page.getByRole("button", { name: "Add transaction" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Category").click();
-    await page.getByRole("option", { name: "Groceries" }).click();
+    await page.getByRole("option", { name: "Food" }).click();
     await dialog.getByLabel("Description").fill("Zero");
     await dialog.getByLabel("Amount").fill("0");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
@@ -600,9 +599,7 @@ test.describe.serial("Transactions", () => {
     await expect(tax).toHaveCount(0);
     await dialog.getByLabel("Category").click();
     await expect(page.getByRole("option", { name: "Salary" })).toBeVisible();
-    await expect(page.getByRole("option", { name: "Groceries" })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("option", { name: "Food" })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
     await dialog.getByRole("button", { name: "Saving" }).click();
