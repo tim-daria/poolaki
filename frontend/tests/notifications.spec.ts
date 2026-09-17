@@ -5,6 +5,7 @@ import {
   registerUser,
   createSharedWorkspace,
   inviteMember,
+  openAsSharedOwner,
   toOrgId,
 } from "./helpers.js";
 
@@ -20,23 +21,23 @@ test.describe.serial("Notifications", () => {
   let owner: Page;
   let workspaceUrl: string;
 
-  const [testUser, ownerUser] = makeUsers("notif", "notif_own");
+  // Only the invitee signs up: the panel counts are theirs. The owner is shared.
+  const [testUser] = makeUsers("notif", "notif_unused");
   const acceptedName = `Trip A ${new Date().getTime()}`;
   const declinedName = `Trip B ${new Date().getTime()}`;
   const clearedName = `Trip C ${new Date().getTime()}`;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-    owner = await browser.newPage();
-
     workspaceUrl = await registerUser(page, testUser);
-    await registerUser(owner, ownerUser);
+    const shared = await openAsSharedOwner(browser);
+    owner = shared.page;
 
     // The switcher's accessible name is the *current* workspace, so each
     // creation is named after the workspace it is clicked from.
     const urlA = await createSharedWorkspace(
       owner,
-      ownerUser.username,
+      shared.user.username,
       acceptedName,
     );
     const urlB = await createSharedWorkspace(owner, acceptedName, declinedName);

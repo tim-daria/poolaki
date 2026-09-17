@@ -26,9 +26,13 @@ export default defineConfig({
   // Only test with Chromium — Firefox and WebKit can be added later.
   // In CI you're already installing only Chromium, so this must match.
   projects: [
+    // Runs first, also for a single spec: registers the shared owner the
+    // other specs sign in as (see "Shared owner" in tests/helpers.ts).
+    { name: "setup", testMatch: /\.setup\.ts$/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
     },
   ],
 

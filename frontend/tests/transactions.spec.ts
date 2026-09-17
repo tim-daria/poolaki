@@ -5,7 +5,11 @@
  * add/edit modal, against rows posted through the real API.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { makeUsers, registerUser, toOrgId } from "./helpers.js";
+import {
+  createWorkspaceViaApi,
+  openAsSharedOwner,
+  toOrgId,
+} from "./helpers.js";
 
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
@@ -146,11 +150,11 @@ test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
 
-  const [user] = makeUsers("tx", "tx_unused");
-
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    const workspace = await registerUser(page, user);
+    page = (await openAsSharedOwner(browser)).page;
+    // A workspace of its own: every count below assumes exactly FIXTURES, and
+    // the shared owner's personal workspace is open to other specs.
+    const workspace = await createWorkspaceViaApi(page, `Ledger ${Date.now()}`);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
