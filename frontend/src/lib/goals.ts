@@ -12,6 +12,8 @@ import { formatName } from "./text";
  * the endpoints land; goalById keeps its signature.
  */
 
+export type GoalIcon = "emergency" | "house" | "vacation" | "loan" | "laptop" | "sport";
+
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
   id: number;
@@ -21,15 +23,19 @@ export type Goal = {
   saved_amount: number;
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
+  icon: GoalIcon;
+  paid_off: boolean;
 };
 
-export const SEED_GOALS: Goal[] = [
+const SEED_GOALS: Goal[] = [
   {
     id: 1,
     name: "New laptop",
     target_amount: 2000,
     saved_amount: 1790,
     target_date: "2026-12-31",
+    icon: "laptop", 
+    paid_off: false
   },
   {
     id: 2,
@@ -37,8 +43,28 @@ export const SEED_GOALS: Goal[] = [
     target_amount: 3000,
     saved_amount: 620,
     target_date: null,
+    icon: "emergency",
+    paid_off: false
+  },
+  { id: 3,
+    name: "Student loan",
+    target_amount: 12000,
+    saved_amount: 12000,
+    target_date: "2024-01-01",
+    icon: "loan",
+    paid_off: true
   },
 ];
+
+/**
+ * TODO: no goals API exists yet. Swap the body for a real fetch
+ * (`GET /api/v1/organizations/${org_id}/goals/`) once it lands, the
+ * signature (org_id in, Promise<Goal[]> out) is written to match that call,
+ * so Goals.tsx does not need to change, just the `await` it already has room for.
+ */
+export async function getGoals(_org_id: number): Promise<Goal[]> {
+  return SEED_GOALS;
+}
 
 export function goalById(goals: Goal[], id: number | null): Goal | undefined {
   return id === null ? undefined : goals.find((g) => g.id === id);
@@ -104,6 +130,9 @@ function fromDTO(d: GoalDTO): Goal {
     target_amount: Number(d.target_amount),
     saved_amount: Number(d.saved_amount),
     target_date: d.target_date,
+    // Not sent by the backend yet — safe defaults until it is.
+    icon: "emergency",
+    paid_off: false,
   };
 }
 
