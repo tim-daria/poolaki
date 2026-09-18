@@ -17,12 +17,12 @@ function Goals() {
   const [adding, setAdding] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
 
-    useEffect(() => {
+  useEffect(() => {
     getGoals(org.id).then(setGoals);
   }, [org.id]);
 
   const active = goals.filter((g) => !g.paid_off);
-  const archived = goals.filter((g) => g.paid_off); 
+  const archived = goals.filter((g) => g.paid_off);
 
   return (
     <Box
@@ -33,7 +33,9 @@ function Goals() {
         Add goal
       </PageActionButton>
       <GoalForm open={adding} onClose={() => setAdding(false)} />
-      <Typography variant="overline" color="text.secondary">IN PROGRESS</Typography>
+      <Typography variant="overline" color="text.secondary">
+        IN PROGRESS
+      </Typography>
       <Box
         sx={{
           display: "grid",
@@ -48,7 +50,13 @@ function Goals() {
       <Typography variant="overline" color="text.secondary">
         Archived
       </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 1 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: 1,
+        }}
+      >
         {archived.map((g) => (
           <ArchivedGoalRow key={g.id} goal={g} />
         ))}
