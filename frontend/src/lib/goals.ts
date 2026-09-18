@@ -13,7 +13,8 @@ import { formatName } from "./text";
  * the endpoints land; goalById keeps its signature.
  */
 
-export type GoalIcon = "emergency" | "house" | "vacation" | "loan" | "laptop" | "sport";
+export type GoalIcon =
+  "emergency" | "house" | "vacation" | "loan" | "laptop" | "sport";
 
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
@@ -35,8 +36,8 @@ export const SEED_GOALS: Goal[] = [
     target_amount: 2000,
     saved_amount: 1790,
     target_date: "2026-12-31",
-    icon: "laptop", 
-    paid_off: false
+    icon: "laptop",
+    paid_off: false,
   },
   {
     id: 2,
@@ -45,15 +46,16 @@ export const SEED_GOALS: Goal[] = [
     saved_amount: 620,
     target_date: null,
     icon: "emergency",
-    paid_off: false
+    paid_off: false,
   },
-  { id: 3,
+  {
+    id: 3,
     name: "Student loan",
     target_amount: 12000,
     saved_amount: 12000,
     target_date: "2024-01-01",
     icon: "loan",
-    paid_off: true
+    paid_off: true,
   },
   {
     id: 4,
@@ -81,7 +83,8 @@ export const SEED_GOALS: Goal[] = [
  * signature (org_id in, Promise<Goal[]> out) is written to match that call,
  * so Goals.tsx does not need to change, just the `await` it already has room for.
  */
-export async function getGoals(_org_id: number): Promise<Goal[]> {
+export async function getGoals(org_id: number): Promise<Goal[]> {
+  void org_id; // TODO: use once the fetch call replaces the seed
   return SEED_GOALS;
 }
 
