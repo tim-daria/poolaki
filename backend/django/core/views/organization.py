@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -6,11 +7,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Membership, Organization, User
-from core.permissions import IsOrgMember
+from core.permissions import IsOrgMember, IsOrgOwner
 from core.serializers import InitialBalanceSerializer
 from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization
+from core.services.organization import create_shared_organization, remove_member
 
 
 class SetInitialBalanceView(APIView):
@@ -155,6 +156,34 @@ class OrganizationMembersView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class OrganizationMemberRemoveView(APIView):
+    """
+    Remove a member from the organization.
+
+    Only the organization owner may remove members. The owner cannot
+    remove themselves through this endpoint.
+
+    DELETE:
+    Returns:
+    - 204 No Content on success.
+    - 400 Bad Request if user_id is not an organization member (including
+      unknown users), or is the requesting owner themselves.
+    - 403 Forbidden if the requesting user is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def delete(self, request: Request, org_id: int, user_id: int) -> Response:
+        assert isinstance(request.user, User)
+        org = get_object_or_404(Organization, id=org_id)
+
+        try:
+            remove_member(org, user_id, request.user)
+        except ValidationError as e:
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class OrganizationBalanceView(APIView):
