@@ -14,6 +14,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.organization import MAX_ORGS_PER_USER
 
 pytestmark = pytest.mark.django_db
 
@@ -136,7 +137,7 @@ def test_create_shared_organization_requires_name(
     )
 
     assert response.status_code == 400
-    assert response.json()["error"] == "name is required"
+    assert response.json()["errors"] == ["name is required"]
 
 
 def test_create_shared_organization_rejects_invalid_balance(
@@ -409,7 +410,7 @@ def test_member_can_leave_organization(
     response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
 
     assert response.status_code == 200
-    assert response.json() == {"organization_deleted": False, "org_name": None}
+    assert response.json() == {"organization_deleted": False}
 
     assert not Membership.objects.filter(user=member, org=shared_org).exists()
     # the staying member is notified; a plain member leaves trigger no transfer
@@ -440,7 +441,7 @@ def test_owner_leaving_transfers_ownership_to_longest_standing_member(
     response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
 
     assert response.status_code == 200
-    assert response.json() == {"organization_deleted": False, "org_name": None}
+    assert response.json() == {"organization_deleted": False}
 
     assert not Membership.objects.filter(user=owner, org=shared_org).exists()
     assert Membership.objects.get(user=member, org=shared_org).role == Role.OWNER
@@ -510,7 +511,7 @@ def test_last_member_leaving_deletes_organization(
     response = api_client.post(reverse("organization-leave", kwargs={"org_id": org_id}))
 
     assert response.status_code == 200
-    assert response.json() == {"organization_deleted": True, "org_name": "Solo org"}
+    assert response.json() == {"organization_deleted": True}
     assert not Organization.objects.filter(id=org_id).exists()
 
 
@@ -533,7 +534,7 @@ def test_last_member_leaving_notifies_pending_invitation_recipients(
     response = api_client.post(reverse("organization-leave", kwargs={"org_id": org_id}))
 
     assert response.status_code == 200
-    assert response.json() == {"organization_deleted": True, "org_name": "Solo org"}
+    assert response.json() == {"organization_deleted": True}
     assert not Organization.objects.filter(id=org_id).exists()
 
     # the invitation is deleted with the org; the invitee is told about the deletion
@@ -568,3 +569,58 @@ def test_non_member_cannot_leave_organization(
     response = api_client.post(reverse("organization-leave", kwargs={"org_id": shared_org.id}))
 
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Per-user organization cap (MAX_ORGS_PER_USER)
+# ---------------------------------------------------------------------------
+
+
+def _give_orgs(user: User, count: int) -> None:
+    """Create shared orgs with user as owner via ORM; cap checks must be bypassed in fixtures."""
+    for i in range(count):
+        org = Organization.objects.create(
+            name=f"Cap org {i}", is_personal=False, initial_balance=Decimal("0")
+        )
+        Membership.objects.create(user=user, org=org, role=Role.OWNER)
+
+
+def test_cannot_create_organization_at_per_user_cap(
+    api_client: APIClient,
+    owner: User,
+) -> None:
+    _give_orgs(owner, MAX_ORGS_PER_USER)
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse("organization-list-create"),
+        {"name": "One too many", "initial_balance": "10"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"] == [
+        f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces."
+    ]
+    assert not Organization.objects.filter(name="One too many").exists()
+    assert Membership.objects.filter(user=owner).count() == MAX_ORGS_PER_USER
+
+
+def test_can_create_organization_at_one_below_per_user_cap(
+    api_client: APIClient,
+    owner: User,
+) -> None:
+    """Boundary: with MAX_ORGS_PER_USER - 1 orgs the MAX_ORGS_PER_USER-th must be allowed."""
+    _give_orgs(owner, MAX_ORGS_PER_USER - 1)
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        reverse("organization-list-create"),
+        {"name": "The tenth", "initial_balance": "10"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Membership.objects.filter(user=owner).count() == MAX_ORGS_PER_USER

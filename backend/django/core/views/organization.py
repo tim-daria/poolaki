@@ -72,6 +72,8 @@ class OrganizationListCreateView(APIView):
 
     Returns:
     - 201 Created with the created organization.
+    - 400 Bad Request if the user has no name, invalid balance, or has
+      reached the per-user organization limit.
     """
 
     permission_classes = [IsAuthenticated]
@@ -111,7 +113,10 @@ class OrganizationListCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         initial_balance = serializer.validated_data["initial_balance"]
-        org = create_shared_organization(name, initial_balance, request.user)
+        try:
+            org = create_shared_organization(name, initial_balance, request.user)
+        except ValidationError as e:
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
