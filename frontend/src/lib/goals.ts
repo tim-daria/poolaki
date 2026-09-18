@@ -1,8 +1,8 @@
 /** @file Goal types, form draft, and API calls. Reads are seeded until a goals API exists. */
 
-import { TODAY } from "./date";
-import { toMoneyString, validateAmount } from "./money";
-import { formatName } from "./text";
+import { TODAY } from "./date.js";
+import { toMoneyString, validateAmount } from "./money.js";
+import { formatName } from "./text.js";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
@@ -66,13 +66,22 @@ export const SEED_GOALS: Goal[] = [
     icon: "vacation",
     paid_off: true,
   },
-  // {
-  //   id: 5,
-  //   name: "Wedding rings",
-  //   target_amount: 900,
-  //   saved_amount: 900,
-  //   target_date: "2023-08-15",
-  //   icon: "vacation",
+  {
+    id: 5,
+    name: "Wedding rings",
+    target_amount: 900,
+    saved_amount: 900,
+    target_date: "2023-08-15",
+    icon: "vacation",
+    paid_off: true,
+  },
+  //   {
+  //   id: 6,
+  //   name: "New bike",
+  //   target_amount: 1000,
+  //   saved_amount: 200,
+  //   target_date: "2026-08-15",
+  //   icon: "sport",
   //   paid_off: true,
   // },
 ];
