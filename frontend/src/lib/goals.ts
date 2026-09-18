@@ -28,7 +28,7 @@ export type Goal = {
   paid_off: boolean;
 };
 
-const SEED_GOALS: Goal[] = [
+export const SEED_GOALS: Goal[] = [
   {
     id: 1,
     name: "New laptop",
@@ -55,6 +55,24 @@ const SEED_GOALS: Goal[] = [
     icon: "loan",
     paid_off: true
   },
+  // {
+  //   id: 4,
+  //   name: "Vacation fund",
+  //   target_amount: 1500,
+  //   saved_amount: 1500,
+  //   target_date: "2024-06-01",
+  //   icon: "vacation",
+  //   paid_off: true,
+  // },
+  // {
+  //   id: 5,
+  //   name: "Wedding rings",
+  //   target_amount: 900,
+  //   saved_amount: 900,
+  //   target_date: "2023-08-15",
+  //   icon: "vacation",
+  //   paid_off: true,
+  // },
 ];
 
 /**
