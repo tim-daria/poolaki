@@ -55,15 +55,15 @@ export const SEED_GOALS: Goal[] = [
     icon: "loan",
     paid_off: true
   },
-  // {
-  //   id: 4,
-  //   name: "Vacation fund",
-  //   target_amount: 1500,
-  //   saved_amount: 1500,
-  //   target_date: "2024-06-01",
-  //   icon: "vacation",
-  //   paid_off: true,
-  // },
+  {
+    id: 4,
+    name: "Vacation fund",
+    target_amount: 1500,
+    saved_amount: 1500,
+    target_date: "2024-06-01",
+    icon: "vacation",
+    paid_off: true,
+  },
   // {
   //   id: 5,
   //   name: "Wedding rings",

@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Avatar, Box, IconButton, LinearProgress, Menu, MenuItem, Typography } from "@mui/material";
+import { Avatar, Box, IconButton, LinearProgress, Menu, MenuItem, Paper, Typography } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
 import { goalIconMap } from "./goalIcons";
-import styles from "./Goals.module.css";
 
 interface Props {
   goal: Goal;
@@ -23,8 +22,11 @@ export function GoalCard({ goal }: Props) {
   const deadline = formatDeadline(goal.target_date);
 
   return (
-    <Box className={styles.card}>
-      <Box className={styles.cardTop}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 1, borderRadius: 3 }}
+    >
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <Avatar sx={{ bgcolor: "primary.light", color: "primary.dark" }}>
           <Icon fontSize="small" />
         </Avatar>
@@ -40,11 +42,13 @@ export function GoalCard({ goal }: Props) {
         </Menu>
       </Box>
 
-      <Typography className={styles.cardName}>{goal.name}</Typography>
+      <Typography sx={{ fontWeight: 700 }}>{goal.name}</Typography>
 
       <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <Typography className={styles.cardSaved}>€{displayAmount(goal.saved_amount)}</Typography>
-        <Typography className={styles.cardMeta}>of €{displayAmount(goal.target_amount)}</Typography>
+        <Typography sx={{ fontWeight: 700, fontSize: "1.15rem" }}>
+          €{displayAmount(goal.saved_amount)} </Typography>
+       <Typography variant="body2" color="text.secondary">
+          of €{displayAmount(goal.target_amount)} </Typography>
       </Box>
 
       <LinearProgress
@@ -59,9 +63,11 @@ export function GoalCard({ goal }: Props) {
       />
 
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography className={styles.cardPct}>{pct}% Completed</Typography>
-        {deadline && <Typography className={styles.cardPct}>By {deadline}</Typography>}
+        <Typography variant="body2" color="text.secondary">{pct}% Completed</Typography>
+        {deadline && (
+          <Typography variant="body2" color="text.secondary">By {deadline}</Typography>
+        )}
       </Box>
-    </Box>
+    </Paper>
   );
 }

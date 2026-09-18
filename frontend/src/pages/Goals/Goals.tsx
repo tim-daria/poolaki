@@ -11,7 +11,6 @@ import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { getGoals, type Goal } from "../../lib/goals";
 import { GoalCard } from "./GoalCard";
 import { ArchivedGoalRow } from "./ArchivedGoalRow";
-import styles from "./Goals.module.css";
 
 function Goals() {
   const org = useCurrentOrg();
@@ -34,18 +33,26 @@ function Goals() {
         Add goal
       </PageActionButton>
       <GoalForm open={adding} onClose={() => setAdding(false)} />
-      <Typography className={styles.sectionLabel}>IN PROGRESS</Typography>
-      <Box className={styles.cardGrid}>
+      <Typography variant="overline" color="text.secondary">IN PROGRESS</Typography>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 2,
+        }}
+      >
         {active.map((g) => (
           <GoalCard key={g.id} goal={g} />
         ))}
       </Box>
-      <Typography className={styles.sectionLabel}>ARCHIVED</Typography>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          {archived.map((g) => (
-            <ArchivedGoalRow key={g.id} goal={g} />
-            ))}
-        </Box>
+      <Typography variant="overline" color="text.secondary">
+        Archived
+      </Typography>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 1 }}>
+        {archived.map((g) => (
+          <ArchivedGoalRow key={g.id} goal={g} />
+        ))}
+      </Box>
     </Box>
   );
 }
