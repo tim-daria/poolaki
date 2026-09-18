@@ -1,8 +1,8 @@
 /** @file Goal types, form draft, and API calls. Reads are seeded until a goals API exists. */
 
-import { TODAY } from "./date";
-import { toMoneyString, validateAmount } from "./money";
-import { formatName } from "./text";
+import { TODAY } from "./date.js";
+import { toMoneyString, validateAmount } from "./money.js";
+import { formatName } from "./text.js";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
@@ -11,6 +11,9 @@ import { formatName } from "./text";
  * (TransactionCreateSerializer.validate_goal_id). Replace with a fetch once
  * the endpoints land; goalById keeps its signature.
  */
+
+export type GoalIcon =
+  "emergency" | "house" | "vacation" | "loan" | "laptop" | "sport";
 
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
@@ -21,6 +24,8 @@ export type Goal = {
   saved_amount: number;
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
+  icon: GoalIcon;
+  paid_off: boolean;
 };
 
 export const SEED_GOALS: Goal[] = [
@@ -30,6 +35,8 @@ export const SEED_GOALS: Goal[] = [
     target_amount: 2000,
     saved_amount: 1790,
     target_date: "2026-12-31",
+    icon: "laptop",
+    paid_off: false,
   },
   {
     id: 2,
@@ -37,8 +44,57 @@ export const SEED_GOALS: Goal[] = [
     target_amount: 3000,
     saved_amount: 620,
     target_date: null,
+    icon: "emergency",
+    paid_off: false,
   },
+  {
+    id: 3,
+    name: "Student loan",
+    target_amount: 12000,
+    saved_amount: 12000,
+    target_date: "2024-01-01",
+    icon: "loan",
+    paid_off: true,
+  },
+  {
+    id: 4,
+    name: "Vacation fund",
+    target_amount: 1500,
+    saved_amount: 1500,
+    target_date: "2024-06-01",
+    icon: "vacation",
+    paid_off: true,
+  },
+  {
+    id: 5,
+    name: "Wedding rings",
+    target_amount: 900,
+    saved_amount: 900,
+    target_date: "2023-08-15",
+    icon: "vacation",
+    paid_off: true,
+  },
+  //   {
+  //   id: 6,
+  //   name: "New bike",
+  //   target_amount: 1000,
+  //   saved_amount: 200,
+  //   target_date: "2026-08-15",
+  //   icon: "sport",
+  //   paid_off: true,
+  // },
 ];
+
+/**
+ * TODO: no goals API exists yet. Swap the body for a real fetch
+ * (`GET /api/v1/organizations/${org_id}/goals/`) once it lands, the
+ * signature (org_id in, Promise<Goal[]> out) is written to match that call,
+ * so Goals.tsx does not need to change, just the `await` it already has room for.
+ */
+export async function getGoals(org_id: number): Promise<Goal[]> {
+  void org_id; // TODO: use once the fetch call replaces the seed
+  return SEED_GOALS;
+}
 
 export function goalById(goals: Goal[], id: number | null): Goal | undefined {
   return id === null ? undefined : goals.find((g) => g.id === id);
@@ -104,6 +160,9 @@ function fromDTO(d: GoalDTO): Goal {
     target_amount: Number(d.target_amount),
     saved_amount: Number(d.saved_amount),
     target_date: d.target_date,
+    // Not sent by the backend yet — safe defaults until it is.
+    icon: "emergency",
+    paid_off: false,
   };
 }
 

@@ -6,6 +6,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeUsers, registerUser } from "./helpers.js";
+import { SEED_GOALS } from "../src/lib/goals.js";
 
 test.describe.serial("Goals", () => {
   let page: Page;
@@ -74,5 +75,13 @@ test.describe.serial("Goals", () => {
     await page.getByRole("button", { name: "Add goal" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await dialog.getByRole("button", { name: "Cancel" }).click();
+  });
+  test("renders active goals as cards and paid-off goals as archived rows", async () => {
+    const active = SEED_GOALS.find((g) => !g.paid_off)!;
+    const archived = SEED_GOALS.find((g) => g.paid_off)!;
+
+    await expect(page.getByText(active.name)).toBeVisible();
+    await expect(page.getByText(archived.name)).toBeVisible();
+    await expect(page.getByText("PAID OFF").first()).toBeVisible();
   });
 });
