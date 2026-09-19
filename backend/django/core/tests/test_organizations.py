@@ -128,16 +128,19 @@ def test_create_shared_organization_requires_name(
 
     api_client.force_authenticate(user=user)
 
-    response = api_client.post(
-        reverse("organization-list-create"),
-        {
-            "initial_balance": "100",
-        },
-        format="json",
-    )
-
-    assert response.status_code == 400
-    assert response.json()["errors"] == ["name is required"]
+    # missing, empty, and whitespace-only names all fail the shared name contract
+    for body in (
+        {"initial_balance": "100"},
+        {"name": "", "initial_balance": "100"},
+        {"name": "   ", "initial_balance": "100"},
+    ):
+        response = api_client.post(
+            reverse("organization-list-create"),
+            body,
+            format="json",
+        )
+        assert response.status_code == 400
+        assert "name" in response.json()
 
 
 def test_create_shared_organization_rejects_invalid_balance(

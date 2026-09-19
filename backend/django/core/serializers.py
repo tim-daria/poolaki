@@ -24,6 +24,14 @@ class OrganizationNameSerializer(serializers.Serializer[Organization]):
     name = serializers.CharField(max_length=100, allow_blank=False, trim_whitespace=True)
 
 
+class OrganizationCreateSerializer(OrganizationNameSerializer, InitialBalanceSerializer):
+    """Contracts for POST /organizations/: name + initial balance.
+
+    Pure composition — DRF merges the declared fields of both base
+    classes, so each field stays defined exactly once.
+    """
+
+
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
 

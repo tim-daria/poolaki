@@ -2,7 +2,8 @@
 
 All endpoints in this document require authentication.
 
-Validation and permission errors use one contract:
+Business-rule and permission errors use one contract for `400 Bad Request`
+and `403 Forbidden`:
 
 ```json
 {
@@ -10,7 +11,18 @@ Validation and permission errors use one contract:
 }
 ```
 
-for both `400 Bad Request` and `403 Forbidden`.
+Field-level validation (missing/empty/too-long values in the request
+body) returns the DRF field shape, keyed by the invalid field:
+
+```json
+{
+  "name": ["This field may not be blank."]
+}
+```
+
+The `name` field has the same contract everywhere it is validated
+(create and rename): 1-100 characters, leading/trailing whitespace
+trimmed.
 
 ## Organization endpoints
 
@@ -75,8 +87,9 @@ Response example:
 Status:
 
 - `201 Created` on success
-- `400 Bad Request` when the payload is invalid, or the creator already
-  belongs to the maximum of 10 organizations, for example:
+- `400 Bad Request` when the name or balance is invalid (field shape,
+  e.g. `{"name": ["This field may not be blank."]}`), or the creator
+  already belongs to the maximum of 10 organizations:
 
   ```json
   {

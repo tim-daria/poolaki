@@ -8,7 +8,11 @@ from rest_framework.views import APIView
 
 from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember, IsOrgOwner
-from core.serializers import InitialBalanceSerializer, OrganizationNameSerializer
+from core.serializers import (
+    InitialBalanceSerializer,
+    OrganizationCreateSerializer,
+    OrganizationNameSerializer,
+)
 from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import (
@@ -109,14 +113,12 @@ class OrganizationListCreateView(APIView):
 
     def post(self, request: Request) -> Response:
         assert isinstance(request.user, User)
-        name = request.data.get("name", "").strip()
-        if not name:
-            return Response({"errors": ["name is required"]}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = InitialBalanceSerializer(data=request.data)
+        serializer = OrganizationCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        name = serializer.validated_data["name"]
         initial_balance = serializer.validated_data["initial_balance"]
         try:
             org = create_shared_organization(name, initial_balance, request.user)
