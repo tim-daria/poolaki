@@ -205,6 +205,40 @@ Side effects (see [notifications.md](notifications.md)):
 - if the organization is deleted, the recipients of its pending
   invitations receive `organization_deleted`
 
+### Rename an organization
+
+```http
+PATCH /api/v1/organizations/{org_id}/
+```
+
+Only the organization owner may rename it. A user's personal budget
+cannot be renamed.
+
+Request body:
+
+```json
+{
+  "name": "Winter fund"
+}
+```
+
+Success response (`200 OK`):
+
+```json
+{
+  "id": 2,
+  "name": "Winter fund"
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` if `name` is missing, empty, longer than 100
+  characters (leading/trailing whitespace is trimmed before validation),
+  or if the organization is a personal budget
+- `403 Forbidden` when the requester is not the organization owner
+
 ### Get current balance
 
 ```http
