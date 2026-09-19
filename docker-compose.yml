@@ -1,14 +1,23 @@
 services:
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    build:
+      context: ./backend/cloudflare
+      dockerfile: Dockerfile
     container_name: cloudflared
     restart: unless-stopped
-    command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:60123 run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    volumes:
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: cloudflare
     networks:
       - tunnel_net
-
+    depends_on:
+      vault:
+        condition: service_healthy
+  
   caddy:
     image: caddy:2.11-alpine
     container_name: caddy
@@ -56,12 +65,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./backend/django:/app
-      - vault_agent:/vault/agent/secrets:ro
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: django
     tmpfs:
       - /tmp:exec,mode=777
     networks:
       - backend_net
-      - vault_net
+      # - vault_net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -165,15 +179,16 @@ services:
       start_period: 15s
       timeout: 5s
 
+
   grafana:
-    image: grafana/grafana:13.1
+    build:
+      context: ./backend
+      dockerfile: monitoring/Dockerfile
     container_name: grafana
     restart: unless-stopped
     expose:
       - "3000"
     environment:
-      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
       GF_SERVER_ROOT_URL: "http://grafana.localhost"
       GF_USERS_ALLOW_SIGN_UP: false
       GF_AUTH_ANONYMOUS_ENABLED: false
@@ -183,9 +198,6 @@ services:
       # SMTP Settings
       GF_SMTP_ENABLED: true
       GF_SMTP_HOST: ${SMTP_HOST}
-      GF_SMTP_USER: ${SMTP_USER}
-      GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
       GF_SMTP_FROM_NAME: "Grafana Alerts"
       GF_SMTP_SKIP_VERIFY: false
       GF_UNIFIED_ALERTING_ENABLED: "true"
@@ -195,6 +207,12 @@ services:
     volumes:
       - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: grafana
     networks:
       - backend_net
     healthcheck:
@@ -206,7 +224,11 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-        restart: true
+        # restart: true
+      vault:
+        condition: service_healthy
+        # restart: true
+
 
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
@@ -225,7 +247,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-        restart: true
+        # restart: true
+
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -247,6 +270,7 @@ services:
       - backup_net
     depends_on:
       - caddy
+
 
 ######################################################
 # Backup #
@@ -276,7 +300,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-        restart: true
+        # restart: true
+
 
 ######################################################
 # RAG - System #
@@ -351,7 +376,7 @@ services:
     - vault_init:/vault/secure/
     - vault_id:/vault/secure/id
     - vault_agent:/vault/agent/secrets
-    env_file:
+    env_file: 
     - .env
     environment:
       TZ: Europe/Berlin
@@ -368,9 +393,9 @@ services:
       db:
         condition: service_healthy
 
-  vault-agent-django:
+  vault_agent:
     image: hashicorp/vault:2.0
-    container_name: vault-agent-django
+    container_name: vault_agent
     entrypoint: ["vault", "agent", "-config=/vault/config/hcl/agent.hcl"]
     volumes:
       - ./vault/config/hcl/agent.hcl:/vault/config/hcl/agent.hcl
@@ -410,9 +435,3 @@ networks:
     name: tunnel_net
   vault_net:
     name: vault_net
-
-secrets:
-  vault_role_id:
-    file: ./vault/secure/django/role_id
-  vault_secret_id:
-    file: ./vault/secure/django/secret_id
