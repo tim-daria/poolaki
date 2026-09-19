@@ -2,6 +2,16 @@
 
 All endpoints in this document require authentication.
 
+Validation and permission errors use one contract:
+
+```json
+{
+  "errors": ["Human-readable message"]
+}
+```
+
+for both `400 Bad Request` and `403 Forbidden`.
+
 ## Organization endpoints
 
 ### List organizations for the current user
@@ -66,7 +76,13 @@ Status:
 
 - `201 Created` on success
 - `400 Bad Request` when the payload is invalid, or the creator already
-  belongs to the maximum of 10 organizations
+  belongs to the maximum of 10 organizations, for example:
+
+  ```json
+  {
+    "errors": ["You can have a maximum of 10 workspaces."]
+  }
+  ```
 
 ### Set the personal organization initial balance
 
@@ -148,6 +164,47 @@ Side effects:
 - every remaining member receives a `member_removed` notification
   (see [notifications.md](notifications.md))
 
+### Leave an organization
+
+```http
+POST /api/v1/organizations/{org_id}/leave/
+```
+
+No request body is required.
+
+Success response (`200 OK`):
+
+```json
+{
+  "organization_deleted": false
+}
+```
+
+`organization_deleted` is `true` only if the leaving user was the last
+member and the organization was deleted.
+
+Behavior:
+
+- if the leaving user is the owner, ownership is transferred to the
+  longest-standing remaining member (ties are broken by the smaller user ID)
+- if no members remain, the organization and its pending invitations are
+  deleted
+- a user can not leave their personal budget
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` if the organization is the user's personal budget
+- `403 Forbidden` if the user is not a member of the organization
+
+Side effects (see [notifications.md](notifications.md)):
+
+- every remaining member receives a `member_left` notification
+- on ownership transfer: the new owner receives `ownership_transferred`,
+  every other remaining member receives `owner_changed`
+- if the organization is deleted, the recipients of its pending
+  invitations receive `organization_deleted`
+
 ### Get current balance
 
 ```http
@@ -168,7 +225,7 @@ Response example:
 Status:
 
 - `200 OK` on success
-- `403 Forbidden` if the invitation was not sent to the current user
+- `403 Forbidden` if the user is not a member of the organization
 
 ## Invitation endpoints
 
@@ -248,7 +305,7 @@ Possible error responses:
 
 ```json
 {
-  "error": "Invitation is invalid or already resolved"
+  "errors": ["Cannot cancel an invitation that is already cancelled."]
 }
 ```
 
@@ -309,7 +366,7 @@ Response example:
 Status:
 
 - `200 OK` on success
-- `400 Bad Request` if the invitation is no longer pending, or the organization has since reached its member limit
+- `400 Bad Request` if the invitation is no longer pending, the organization has since reached its member limit, or the invited user already belongs to the maximum of 10 organizations
 - `403 Forbidden` if the invitation was not sent to the current user
 - `404 Not Found` if the invitation does not exist
 
