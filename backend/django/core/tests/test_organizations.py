@@ -624,3 +624,138 @@ def test_can_create_organization_at_one_below_per_user_cap(
 
     assert response.status_code == 201
     assert Membership.objects.filter(user=owner).count() == MAX_ORGS_PER_USER
+
+
+# ---------------------------------------------------------------------------
+# PATCH - rename organization
+# ---------------------------------------------------------------------------
+
+
+def test_owner_can_rename_organization(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": shared_org.id}),
+        {"name": "Winter fund"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"id": shared_org.id, "name": "Winter fund"}
+
+    shared_org.refresh_from_db()
+    assert shared_org.name == "Winter fund"
+
+
+def test_rename_is_idempotent_when_name_unchanged(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": shared_org.id}),
+        {"name": shared_org.name},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    shared_org.refresh_from_db()
+    assert shared_org.name == response.json()["name"]
+
+
+def test_rename_trims_whitespace(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": shared_org.id}),
+        {"name": "   Padded name   "},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Padded name"
+
+
+def test_member_cannot_rename_organization(
+    api_client: APIClient,
+    member: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=member)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": shared_org.id}),
+        {"name": "Hijacked"},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    shared_org.refresh_from_db()
+    assert shared_org.name != "Hijacked"
+
+
+def test_cannot_rename_personal_budget(
+    api_client: APIClient,
+    personal_org: Organization,
+    owner: User,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": personal_org.id}),
+        {"name": "My custom budget"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"] == ["The name of your personal budget cannot be changed."]
+    personal_org.refresh_from_db()
+    assert personal_org.name != "My custom budget"
+
+
+def test_rename_with_empty_name_rejected(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    # whitespace-only body passes as a string but must trim to empty and fail
+    api_client.force_authenticate(user=owner)
+
+    for body in ({"name": ""}, {"name": "    "}, {}):
+        response = api_client.patch(
+            reverse("organization-update", kwargs={"org_id": shared_org.id}),
+            body,
+            format="json",
+        )
+        assert response.status_code == 400
+
+    shared_org.refresh_from_db()
+    assert shared_org.name == "Family budget"
+
+
+def test_rename_longer_than_100_chars_rejected(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        reverse("organization-update", kwargs={"org_id": shared_org.id}),
+        {"name": "x" * 101},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    shared_org.refresh_from_db()
+    assert shared_org.name == "Family budget"
