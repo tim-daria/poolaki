@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-export function Terms() {
+function Terms() {
   return (
     <>
       <h1>Here will be Terms of Use</h1>

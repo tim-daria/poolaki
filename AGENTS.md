@@ -4,19 +4,45 @@ All code comments must be concise, direct, and technically precise. Avoid verbos
 
 ## Core Rules
 
-1. **Explain the "Why", Not the "How" or "What"**
-   * Do not restate what TypeScript types or the code itself clearly show.
+1. **File-Level Overview**
+   * Every file must start with a concise header (1–3 sentences) defining its primary responsibility and scope.
+   * **TypeScript**: Use `/** @file ... */` at the very top.
+   * **Python**: Use a top-level module docstring `"""..."""` as the first statement.
+
+2. **Explain the "Why", Not the "How" or "What"**
+   * Do not restate what static types, function signatures, or self-explanatory code already show.
    * Document non-obvious constraints, edge cases, and business logic invariants.
 
-2. **No Backend or Framework Lore**
-   * Do not explain backend implementation details, framework defaults, or database settings (e.g., avoid mentions of `blank=True`, `DRF settings`, `on_delete=SET_NULL`, or Django internal class names).
-   * Focus strictly on what the frontend/client code needs to know (e.g., write "Category ID. Null if unselected" instead of "FK to Category table").
+3. **No Framework or Database Lore**
+   * Do not document framework defaults, database flags, or ORM internal settings unless critical to the caller.
+   * Focus strictly on contract guarantees and preconditions.
 
-3. **No Storytelling or UI Scenarios**
-   * Do not write narrative stories, hypothetical user journeys, or visual bug descriptions (e.g., avoid "if a user clicks tab A then tab B they might submit X").
-   * State the technical rule directly: "Resets incompatible fields to prevent submitting invalid state."
+4. **No Storytelling or UI Scenarios**
+   * Do not write hypothetical user flows or narrative bug post-mortems.
+   * State the technical rule directly.
 
-4. **Formatting & Length**
-   * **TSDoc (`/** ... */`)**: Keep type and function headers to 1–2 sentences.
-   * **Property comments**: Single-line summaries only.
-   * **Inline comments (`// ...`)**: Use only for subtle workarounds or non-obvious calculations. Do not comment trivial statements.
+5. **Syntax & Formatting**
+   * **TypeScript / TSX**:
+     * File header: `/** @file ... */`
+     * TSDoc: `/** ... */` (1–2 sentences for types/functions). Avoid redundant `@param` if TypeScript types are self-describing.
+     * Inline: `// ...` (only for non-obvious calculations or workarounds).
+   * **Python**:
+     * Module docstring: `"""Single-line or concise summary."""` at line 1.
+     * Function docstrings: Follow PEP 257 / Google style (`Args:`, `Returns:` only when behavior is non-obvious).
+     * Inline: `# ...`
+
+6. **Section Dividers**
+   * Use banner comments only in large files (100+ lines) with distinct logical stages.
+   * **TypeScript**:
+     ```typescript
+     /* ---------------------------------- */
+     /*             Section Name           */
+     /* ---------------------------------- */
+     ```
+   * **Python**:
+     ```python
+     # ------------------------------------ #
+     #              Section Name            #
+     # ------------------------------------ #
+     ```
+   * Do not use in short files (< 100 lines) or single-purpose components.
