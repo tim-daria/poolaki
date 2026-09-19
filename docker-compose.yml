@@ -65,7 +65,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./backend/django:/app
-      # - vault_agent:/vault/agent/secrets:ro
       - type: volume
         source: vault_agent
         target: /vault/agent/secrets
@@ -97,7 +96,6 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
-      # - ./backend/postgres:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -182,7 +180,6 @@ services:
 
 
   grafana:
-    # image: grafana/grafana:13.1
     build:
       context: ./backend
       dockerfile: monitoring/Dockerfile
@@ -191,8 +188,6 @@ services:
     expose:
       - "3000"
     environment:
-      # GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
-      # GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
       GF_SERVER_ROOT_URL: "http://grafana.localhost"
       GF_USERS_ALLOW_SIGN_UP: false
       GF_AUTH_ANONYMOUS_ENABLED: false
@@ -202,9 +197,6 @@ services:
       # SMTP Settings
       GF_SMTP_ENABLED: true
       GF_SMTP_HOST: ${SMTP_HOST}
-      # GF_SMTP_USER: ${SMTP_USER}
-      # GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      # GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
       GF_SMTP_FROM_NAME: "Grafana Alerts"
       GF_SMTP_SKIP_VERIFY: false
       GF_UNIFIED_ALERTING_ENABLED: "true"
@@ -442,9 +434,3 @@ networks:
     name: tunnel_net
   vault_net:
     name: vault_net
-
-# secrets:
-#   vault_role_id:
-#     file: ./vault/secure/django/role_id
-#   vault_secret_id:
-#     file: ./vault/secure/django/secret_id
