@@ -48,8 +48,12 @@ class TransactionListCreateView(APIView):
 
     def get(self, request: Request, org_id: int) -> Response:
         assert isinstance(request.user, User)
-        transactions = Transaction.objects.filter(org_id=org_id).select_related(
-            "category", "created_by", "goal"
+        # Newest first, the order the page shows by default; id breaks ties
+        # within a day.
+        transactions = (
+            Transaction.objects.filter(org_id=org_id)
+            .select_related("category", "created_by", "goal")
+            .order_by("-transaction_date", "-id")
         )
         return Response(
             {"transactions": TransactionResponseSerializer(transactions, many=True).data},

@@ -96,6 +96,7 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
+      - ./backend/postgres:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
