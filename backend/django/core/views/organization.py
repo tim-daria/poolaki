@@ -8,10 +8,15 @@ from rest_framework.views import APIView
 
 from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember, IsOrgOwner
-from core.serializers import InitialBalanceSerializer
+from core.serializers import InitialBalanceSerializer, OrganizationNameSerializer
 from core.services.balance import calculate_org_balance, set_initial_balance
 from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization, leave_organization, remove_member
+from core.services.organization import (
+    create_shared_organization,
+    leave_organization,
+    remove_member,
+    rename_organization,
+)
 
 
 class SetInitialBalanceView(APIView):
@@ -127,6 +132,41 @@ class OrganizationListCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class OrganizationUpdateView(APIView):
+    """
+    Rename an organization.
+
+    Only the organization owner may rename it, and a user's personal
+    budget cannot be renamed.
+
+    PATCH:
+    Request body:
+    - name (string, 1-100 chars, whitespace-trimmed): the new organization name.
+
+    Returns:
+    - 200 OK with the updated organization id and name.
+    - 400 Bad Request if the name is missing, empty, or longer than 100
+      characters, or if the organization is a personal budget.
+    - 403 Forbidden if the requester is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def patch(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        org = get_object_or_404(Organization, id=org_id)
+        serializer = OrganizationNameSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rename_organization(org, serializer.validated_data["name"])
+        except ValidationError as e:
+            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"id": org.id, "name": org.name}, status=status.HTTP_200_OK)
 
 
 class OrganizationMembersView(APIView):

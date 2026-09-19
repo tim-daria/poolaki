@@ -18,6 +18,7 @@ from core.views.organization import (
     OrganizationListCreateView,
     OrganizationMemberRemoveView,
     OrganizationMembersView,
+    OrganizationUpdateView,
     SetInitialBalanceView,
 )
 from core.views.transaction import (
@@ -32,6 +33,11 @@ urlpatterns = [
         "organizations/",
         OrganizationListCreateView.as_view(),
         name="organization-list-create",
+    ),
+    path(
+        "organizations/<int:org_id>/",
+        OrganizationUpdateView.as_view(),
+        name="organization-update",
     ),
     path(
         "organizations/<int:org_id>/leave/",

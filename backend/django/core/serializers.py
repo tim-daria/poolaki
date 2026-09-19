@@ -19,6 +19,11 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
     )
 
 
+class OrganizationNameSerializer(serializers.Serializer[Organization]):
+    # trim: "   "-style names are rejected instead of stored
+    name = serializers.CharField(max_length=100, allow_blank=False, trim_whitespace=True)
+
+
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
 

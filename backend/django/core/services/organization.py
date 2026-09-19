@@ -184,3 +184,12 @@ def remove_member(org: Organization, user_id: int, owner: User) -> None:
         },
         org=org,
     )
+
+
+def rename_organization(org: Organization, new_name: str) -> Organization:
+    """Rename a shared organization. Personal budgets are not renamable."""
+    if org.is_personal:
+        raise ValidationError("The name of your personal budget cannot be changed.")
+    org.name = new_name
+    org.save(update_fields=["name"])
+    return org
