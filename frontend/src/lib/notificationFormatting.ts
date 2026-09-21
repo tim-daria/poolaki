@@ -1,6 +1,9 @@
-import type { NotificationType, InvitationPayload } from "../context/NotificationContext";
+import type {
+  NotificationType,
+  InvitationPayload,
+} from "../context/NotificationContext";
 
-export type NotificationDetails = { text: string; route: string | null; };
+export type NotificationDetails = { text: string; route: string | null };
 
 /**
  * Checks if the payload matches the expected invitation shape.
@@ -36,7 +39,10 @@ export function getNotificationDetails(
   type: NotificationType,
   payload: Record<string, unknown>,
 ): NotificationDetails {
-  const orgName = typeof payload.org_name === "string" ? payload.org_name : "the organization";
+  const orgName =
+    typeof payload.org_name === "string"
+      ? payload.org_name
+      : "the organization";
 
   switch (type) {
     case "invitation":

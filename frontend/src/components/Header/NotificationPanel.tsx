@@ -11,11 +11,11 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
-import { useNavigate } from "react-router";//to handle route redirection on notification click
-import { 
-  getNotificationDetails, 
-  getNotificationActorName, 
-  isInvitationPayload 
+import { useNavigate } from "react-router"; //to handle route redirection on notification click
+import {
+  getNotificationDetails,
+  getNotificationActorName,
+  isInvitationPayload,
 } from "../../lib/notificationFormatting";
 import { useNotifications } from "../../context/useNotifications";
 import { getCsrfToken } from "../../lib/csrf";
@@ -336,10 +336,14 @@ export function NotificationPanel({
                 }}
                 sx={{
                   p: 1.5,
-                  cursor: details.route && !isInvitation ? "pointer" : "default",
+                  cursor:
+                    details.route && !isInvitation ? "pointer" : "default",
                   transition: "background-color 0.2s",
                   "&:hover": {
-                    bgcolor: details.route && !isInvitation ? "action.hover" : "inherit",
+                    bgcolor:
+                      details.route && !isInvitation
+                        ? "action.hover"
+                        : "inherit",
                   },
                 }}
               >
@@ -451,9 +455,14 @@ export function NotificationPanel({
                           <Typography
                             variant="caption"
                             color="error"
-                            sx={{ display: "block", mt: 1, fontSize: "0.75rem" }}
+                            sx={{
+                              display: "block",
+                              mt: 1,
+                              fontSize: "0.75rem",
+                            }}
                           >
-                            You have reached the maximum limit of 10 organizations. Leave one to accept this invitation.
+                            You have reached the maximum limit of 10
+                            organizations. Leave one to accept this invitation.
                           </Typography>
                         )}
                       </Box>
