@@ -138,6 +138,12 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      # ── Vitest ─────────────────────────────────────────────────────────────
+      # Unit tests for the pure modules (money parsing, filters, validation,
+      # error mapping). Node environment only; nothing here needs the stack.
+      - name: Unit tests
+        run: npm run test
+
       # ── Build ──────────────────────────────────────────────────────────────
       # Typechecks and bundles. ESLint alone does not resolve imports, so
       # without this a branch whose package.json is missing a dependency the
