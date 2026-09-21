@@ -28,9 +28,7 @@ import {
   InvitationResolveError,
 } from "../../lib/notifications";
 import type {
-  InvitationPayload,
   Notification,
-  NotificationType,
 } from "../../context/NotificationContext";
 
 interface NotificationPanelProps {
