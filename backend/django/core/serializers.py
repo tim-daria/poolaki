@@ -1,7 +1,10 @@
+# from typing import Any
+
 from rest_framework import serializers
 
 from core.models import (
     Category,
+    # CategoryType,
     EntryType,
     Goal,
     Invitation,
@@ -48,6 +51,12 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
             raise serializers.ValidationError("Goal does not belong to this organization.")
         return goal
 
+    def validate_category_id(self, category: Category | None) -> Category | None:
+        org_id = self.context.get("org_id")
+        if category is not None and category.org_id != org_id:
+            raise serializers.ValidationError("Category does not belong to this organization.")
+        return category
+
 
 class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
     org_id = serializers.IntegerField(read_only=True)
@@ -71,4 +80,91 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
             "is_tax_deductible",
             "created_by",
             "created_at",
+        )
+
+
+# class CategoryCreateSerializer(serializers.Serializer[Category]):
+#     name = serializers.CharField(
+# 		max_length=50, allow_blank=False, allow_null=False, required=True
+#     )
+#     type = serializers.ChoiceField(
+#         choices=CategoryType.choices,
+#         allow_blank=False,
+#         allow_null=False,
+#         required=True,
+#         error_messages={
+#             "invalid_choice": "Invalid category type.",
+#             "blank": "Category type may not be blank.",
+#             "null": "Category type may not be null.",
+#             "required": "Category type is required.",
+#         },
+#     )
+
+#     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+#         org = self.context["org"]
+
+#         if Category.objects.filter(
+#             org=org,
+#             name=attrs["name"],
+#             type=attrs["type"],
+#         ).exists():
+#             raise serializers.ValidationError(
+#                 {"name": "This category already exists in this organization."}
+#             )
+
+#         return attrs
+
+
+# class CategoryUpdateSerializer(serializers.Serializer[Category]):
+#     name = serializers.CharField(
+#       max_length=50, allow_blank=False, allow_null=False, required=False
+#     )
+#     type = serializers.ChoiceField(
+#         choices=CategoryType.choices,
+#         allow_blank=False,
+#         allow_null=False,
+#         required=False,
+#         error_messages={
+#             "invalid_choice": "Invalid category type.",
+#             "blank": "Category type may not be blank.",
+#             "null": "Category type may not be null.",
+#         },
+#     )
+
+#     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+#         category = self.context["category"]
+#         name = attrs.get("name", category.name)
+#         category_type = attrs.get("type", category.type)
+
+#         if not attrs:
+#             raise serializers.ValidationError("At least one field must be provided.")
+
+#         if (
+#             Category.objects.filter(
+#                 org=category.org,
+#                 name=name,
+#                 type=category_type,
+#             )
+#             .exclude(pk=category.pk)
+#             .exists()
+#         ):
+#             raise serializers.ValidationError(
+#                 {"name": "This category already exists in this organization."}
+#             )
+
+#         return attrs
+
+
+class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
+    org = serializers.IntegerField(source="org_id", read_only=True)
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Category
+        fields = (
+            "id",
+            "org",
+            "name",
+            "type",
         )

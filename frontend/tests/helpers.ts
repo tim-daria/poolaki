@@ -44,8 +44,8 @@ export async function registerUser(
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Username").fill(user.username);
   await page.getByLabel("Password", { exact: true }).fill(user.password);
-  await page.getByLabel("Confirm Password").fill(user.password);
-  await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+  await page.getByLabel("Confirm password").fill(user.password);
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
   // "/" is only a redirect now — the app always settles on /o/:orgId.
   await page.waitForURL(/\/o\/\d+$/);
   return new URL(page.url()).pathname;

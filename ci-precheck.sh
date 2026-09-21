@@ -89,7 +89,32 @@ cd ..
 printf "\n🐳 Stopping test database...\n"
 docker stop ci-postgres
 
-printf "\n🐳 Starting database container...(ignore this if it wasn't running)\n"
-docker start postgres_db
+# The test database's settings were exported for pytest above, and an exported
+# variable beats .env when compose interpolates ${DB_HOST} and friends — the
+# stack would come up pointing at localhost:5432/test_db. Drop them so the
+# services are built from .env as usual.
+unset POSTGRES_DB DATABASE_USER DATABASE_PASSWORD DB_HOST DB_PORT
+
+# The e2e suite drives the real app, so the dev stack has to be up: it owns
+# port 5432, which is why the test database is stopped first.
+printf "\n🐳 Starting the dev stack...\n"
+docker compose up -d
+
+printf "\n⏳ Waiting for the app...\n"
+for _ in $(seq 1 90); do
+  if curl -sf http://poolaki.localhost:8080/health/ >/dev/null; then break; fi
+  sleep 2
+done
+curl -sf http://poolaki.localhost:8080/health/ >/dev/null
+
+printf "\n🎭 Running Playwright e2e tests...\n"
+cd frontend
+
+# No-op once the browser is cached; CI installs it the same way.
+npx playwright install chromium
+
+npm run test:e2e
+
+cd ..
 
 printf "\n✅ All checks done!\n"
