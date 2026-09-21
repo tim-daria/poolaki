@@ -83,14 +83,17 @@ npx playwright install chromium
 
 ---
 
-## Test fixtures the suite depends on - TEMPORARY before API lands
+## Goal fixtures - TEMPORARY before the goals API lands
 
-The transaction specs create rows through the real API, and the frontend still
-declares its categories and goals client-side ([lib/categories.ts](../../frontend/src/lib/categories.ts),
-[lib/goals.ts](../../frontend/src/lib/goals.ts)) because the backend exposes no
-endpoint for either. A `POST /transactions/` references a category id
-that has to exist in the database, and a fresh database has none — the API
-answers 400 and the suite fails in `beforeAll`.
+The transaction specs create rows through the real API and need nothing seeded:
+every workspace gets its own categories when it is created, and the specs read
+them back from `GET /organizations/<org_id>/categories/`.
+
+Goals are the exception. The backend exposes no endpoint for them, so the
+frontend still declares them client-side in
+[lib/goals.ts](../../frontend/src/lib/goals.ts), and a contribution is rejected
+unless a goal with that id exists in the workspace you are in. Seeding is
+therefore only needed to try the transaction form's **Saving** tab by hand.
 
 `manage.py` needs the database credentials, which the entrypoint sources from
 the Vault agent's files at start-up. An exec'd shell starts *without* them, so
@@ -105,18 +108,7 @@ manage() {
 }
 ```
 
-Seed them once per database:
-
-```bash
-manage seed_transaction_fixtures
-```
-
-Categories are not scoped to a workspace, so every test user the suite registers
-can use the same rows and no argument is needed. 
-
-Goals *are* scoped to a workspace, so they are seeded only when you name one.
-Do this when you want to try the transaction form's **Saving** tab by hand — a
-contribution is rejected unless the goal belongs to the workspace you are in:
+Goals are scoped to a workspace, so the command takes the one to seed:
 
 ```bash
 # The number is the workspace id from the URL, /o/<id>
@@ -132,7 +124,7 @@ those goals rather than adding more.
 
 > **IMPORTANT:** Named volumes survive `docker compose down` — reseeding is only needed after
 > `docker compose down -v`, which drops the database. Drop this step entirely
-> once the categories move into a data migration.
+> once the goals endpoints land.
 
 ---
 
@@ -156,10 +148,12 @@ there is nothing to do here. If you ever need `manage.py` by hand, use the
 `manage` function from the section above; a bare `docker compose exec` has no
 database credentials.
 
-**3. Seed the fixtures the transaction specs need** (see the section above):
+**3. Seed the goals** — optional, and only for trying the **Saving** tab by
+hand; the specs need nothing seeded (see the section above):
 
 ```bash
-manage seed_transaction_fixtures
+# The number is the workspace id from the URL, /o/<id>
+manage seed_transaction_fixtures 1
 ```
 
 **4. Stream container logs** (recommended) in a second terminal, to watch server
