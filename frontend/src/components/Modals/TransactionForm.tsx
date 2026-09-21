@@ -28,7 +28,10 @@ import { TextInput } from "../Form/TextInput";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useToast } from "../../context/useToast";
 import { getCsrfToken } from "../../lib/csrf";
-import { selectableCategories } from "../../lib/categories";
+import {
+  selectableCategories,
+  contributionCategory,
+} from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
 import { SEED_GOALS, goalById, type Goal } from "../../lib/goals";
 import {
@@ -45,6 +48,7 @@ import {
   type Transaction,
   type TransactionDraft,
 } from "../../lib/transactions";
+import { useCategories } from "../../hooks/useCategories";
 
 interface Props {
   open: boolean;
@@ -86,6 +90,7 @@ export function TransactionForm({
   onDeleted,
 }: Props) {
   const org = useCurrentOrg();
+  const categories = useCategories();
   const { showToast } = useToast();
 
   /**
@@ -113,6 +118,7 @@ export function TransactionForm({
   const isTransfer = draft.entry_type === "contribution";
   const isExpense = draft.entry_type === "expense";
   const selectedGoal = goalById(SEED_GOALS, draft.goal);
+  const options = selectableCategories(categories, draft.entry_type);
 
   /** Tracks the open/closed edge, so the block below runs once per opening. */
   const [wasOpen, setWasOpen] = useState(open);
@@ -159,6 +165,11 @@ export function TransactionForm({
 
     setError("");
     setSaving(true);
+    // A transfer has no category picker, so it is filed under the workspace's
+    // Contribution category. Null while the list loads; the backend allows it.
+    const payload = isTransfer
+      ? { ...draft, category: contributionCategory(categories)?.id ?? null }
+      : draft;
     try {
       // A transfer may leave the description blank, in which case the goal name
       // shown in the placeholder is what gets stored.
@@ -166,13 +177,13 @@ export function TransactionForm({
         ? await updateTransaction(
             org.id,
             editRow.id,
-            draft,
+            payload,
             getCsrfToken(),
             selectedGoal?.name,
           )
         : await createTransaction(
             org.id,
-            draft,
+            payload,
             getCsrfToken(),
             selectedGoal?.name,
           );
@@ -350,17 +361,15 @@ export function TransactionForm({
                             Select
                           </Box>
                         ) : (
-                          selectableCategories(draft.entry_type).find(
-                            (c) => c.id === value,
-                          )?.label
+                          options.find((c) => c.id === value)?.name
                         ),
                     },
                   }}
                   required
                 >
-                  {selectableCategories(draft.entry_type).map((c) => (
+                  {options.map((c) => (
                     <MenuItem key={c.id} value={c.id}>
-                      {c.label}
+                      {c.name}
                     </MenuItem>
                   ))}
                 </TextField>

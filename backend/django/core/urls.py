@@ -1,5 +1,9 @@
 from django.urls import path
 
+from core.views.category import (
+    CategoryListCreateView,
+    CategoryReadUpdateDeleteView,
+)
 from core.views.invitation import (
     AcceptInvitationView,
     CancelInvitationView,
@@ -57,6 +61,7 @@ urlpatterns = [
         SetInitialBalanceView.as_view(),
         name="set-initial-balance",
     ),
+    # Transactions
     path(
         "organizations/<int:org_id>/transactions/",
         TransactionListCreateView.as_view(),
@@ -66,6 +71,17 @@ urlpatterns = [
         "organizations/<int:org_id>/transactions/<int:transaction_id>/",
         TransactionGetDeleteView.as_view(),
         name="transaction-get-delete",
+    ),
+    # Categories
+    path(
+        "organizations/<int:org_id>/categories/",
+        CategoryListCreateView.as_view(),
+        name="category-list-create",
+    ),
+    path(
+        "organizations/<int:org_id>/categories/<int:category_id>/",
+        CategoryReadUpdateDeleteView.as_view(),
+        name="category-detail",
     ),
     path(
         "organizations/<int:org_id>/balance/",

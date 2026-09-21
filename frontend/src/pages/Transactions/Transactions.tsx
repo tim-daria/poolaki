@@ -45,6 +45,7 @@ import { FilterPanel } from "./FilterPanel";
 import { tintedWhenActive } from "./styles";
 import { TransactionRow } from "./TransactionRow";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
+import { useCategories } from "../../hooks/useCategories";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -86,6 +87,7 @@ const activeChipSx = { bgcolor: "primary.light", fontWeight: 500 } as const;
 
 function Transactions() {
   const org = useCurrentOrg();
+  const categories = useCategories();
   const [rows, setRows] = useState<Transaction[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const filtersApi = useTransactionFilters();
@@ -115,7 +117,7 @@ function Transactions() {
 
   // Filtering runs over every row on the client: the endpoint returns the
   // workspace's full history and takes no query params yet.
-  const result = rows ? applyFilters(rows, filters) : null;
+  const result = rows ? applyFilters(rows, filters, categories) : null;
 
   /**
    * The page number is clamped when rows drop below it, so the control has to
@@ -308,7 +310,9 @@ function Transactions() {
                 {filters.categories.map((id) => (
                   <Chip
                     key={id}
-                    label={categoryById(id)?.label ?? `Category ${id}`}
+                    label={
+                      categoryById(categories, id)?.name ?? `Category ${id}`
+                    }
                     onDelete={() => toggleCategory(id)}
                     sx={activeChipSx}
                   />
@@ -330,6 +334,7 @@ function Transactions() {
             )}
 
             <FilterPanel
+              categories={categories}
               anchor={filterAnchor}
               onClose={() => setFilterAnchor(null)}
               matchCount={result.total}
@@ -356,6 +361,7 @@ function Transactions() {
                 <TableBody>
                   {result.page.map((t) => (
                     <TransactionRow
+                      categories={categories}
                       key={t.id}
                       transaction={t}
                       onClick={setEditing}

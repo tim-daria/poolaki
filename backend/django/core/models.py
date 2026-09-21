@@ -82,11 +82,21 @@ class Invitation(models.Model):
 class CategoryType(models.TextChoices):
     INCOME = "income", "Income"
     EXPENSE = "expense", "Expense"
+    CONTRIBUTION = "contribution", "Contribution"
 
 
 class Category(models.Model):
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=50)
-    type = models.CharField(max_length=10, choices=CategoryType.choices)
+    type = models.CharField(max_length=20, choices=CategoryType.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["org", "name", "type"],
+                name="unique_category_per_org",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -116,7 +126,7 @@ class Goal(models.Model):
 class EntryType(models.TextChoices):
     INCOME = "income", "Income"
     EXPENSE = "expense", "Expense"
-    CONTRIBUTION = "contribution", "Goal contribution"
+    CONTRIBUTION = "contribution", "Contribution"
 
 
 class Transaction(models.Model):
