@@ -27,9 +27,7 @@ import {
   declineInvitation,
   InvitationResolveError,
 } from "../../lib/notifications";
-import type {
-  Notification,
-} from "../../context/NotificationContext";
+import type { Notification } from "../../context/NotificationContext";
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
