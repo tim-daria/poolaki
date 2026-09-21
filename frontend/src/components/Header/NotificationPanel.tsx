@@ -59,8 +59,8 @@ export function NotificationPanel({
   const theme = useTheme();
   const navigate = useNavigate();
   const { notifications, clearAll, loadFullList, refresh } = useNotifications();
-  const { orgs, refresh: refreshOrgList } = useOrgList();
-  const isAtOrgLimit = (orgs?.length ?? 0) >= 10;
+  const { organizations, refresh: refreshOrgList } = useOrgList();
+  const isAtOrgLimit = (organizations?.length ?? 0) >= 10;
   const [filter, setFilter] = useState<"all" | "invitations">("all");
 
   const [busyIds, setBusyIds] = useState<Record<number, boolean>>({});
