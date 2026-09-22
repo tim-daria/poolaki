@@ -13,6 +13,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.category import create_default_categories
 
 MAX_MEMBERS_PER_ORG = 5
 MAX_ORGS_PER_USER = 10
@@ -27,6 +28,7 @@ def create_shared_organization(org_name: str, amount: Decimal, owner: User) -> O
         is_personal=False,
     )
     Membership.objects.create(user=owner, org=org, role=Role.OWNER)
+    create_default_categories(org)
     return org
 
 

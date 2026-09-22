@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
@@ -40,5 +41,12 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+
+  test: {
+    // Unit tests cover the pure modules under src/lib and friends; nothing
+    // renders, so no DOM environment is installed. Playwright owns tests/.
+    environment: "node",
+    include: ["src/**/*.test.ts"],
   },
 });

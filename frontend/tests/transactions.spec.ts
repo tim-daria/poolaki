@@ -7,17 +7,45 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { makeUsers, registerUser, toOrgId } from "./helpers.js";
 
+type OrganizationCategory = {
+  id: number;
+  org: number;
+  name: string;
+  type: "expense" | "income" | "contribution";
+};
+
+async function getOrganizationCategories(
+  page: Page,
+  orgId: number,
+): Promise<Map<string, number>> {
+  const res = await page.request.get(
+    `/api/v1/organizations/${orgId}/categories/`,
+  );
+
+  if (res.status() !== 200) {
+    throw new Error(`category GET failed: ${res.status()} ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as {
+    categories: OrganizationCategory[];
+  };
+
+  const categories = data.categories.filter(
+    (category) => category.org === orgId,
+  );
+
+  return new Map(categories.map((category) => [category.name, category.id]));
+}
+
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
- * 3 transfers, 3 tax refundable, 15 per page. Category IDs follow
- * SEED_CATEGORIES in lib/categories.ts and must exist in the database:
- * `manage.py seed_transaction_fixtures` once, no workspace needed (see
- * docs/frontend/playwright.md for how to run it with credentials).
+ * 3 transfers, 3 tax refundable, 15 per page. Category names match the
+ * defaults created for the registered organization.
  */
 type Fixture = [
   date: string,
   type: "expense" | "income" | "contribution",
-  category: number | null,
+  category: string | null,
   name: string,
   amount: number,
   tax?: boolean,
@@ -26,39 +54,54 @@ type Fixture = [
 // Posted in this order, so ids ascend down the list; same-date rows sort by
 // id, which the pagination test relies on.
 const FIXTURES: Fixture[] = [
-  ["2026-08-05", "expense", 1, "REWE", 255],
-  ["2026-08-03", "expense", 2, "Ristorante Baldi", 52],
-  ["2026-08-01", "income", 8, "Salary", 3240],
-  ["2026-08-01", "contribution", null, "To savings", 300],
-  ["2026-07-29", "expense", 1, "Edeka", 61.2],
-  ["2026-07-24", "expense", 2, "Pizzeria Nona", 27.9],
-  ["2026-07-19", "expense", 3, "Clothes", 78],
-  ["2026-07-18", "expense", 1, "REWE", 48.3],
+  ["2026-08-05", "expense", "Food", "REWE", 255],
+  ["2026-08-03", "expense", "Food", "Ristorante Baldi", 52],
+  ["2026-08-01", "income", "Salary", "Salary", 3240],
+  ["2026-08-01", "contribution", "Contribution", "To savings", 300],
+  ["2026-07-29", "expense", "Food", "Edeka", 61.2],
+  ["2026-07-24", "expense", "Food", "Pizzeria Nona", 27.9],
+  ["2026-07-19", "expense", "Shopping", "Clothes", 78],
+  ["2026-07-18", "expense", "Food", "REWE", 48.3],
   ["2026-07-17", "contribution", null, "To savings", 300],
-  ["2026-07-12", "expense", 4, "BVG monthly ticket", 49, true],
-  ["2026-07-08", "expense", 6, "Pharmacy", 18.75, true],
-  ["2026-07-05", "expense", 2, "Café Central", 9.4],
-  ["2026-07-01", "income", 8, "Salary", 3240],
-  ["2026-07-01", "expense", 5, "Rent", 1150],
-  ["2026-06-27", "expense", 1, "Lidl", 33.15],
-  ["2026-06-22", "income", 9, "Birthday gift", 100],
-  ["2026-06-20", "expense", 3, "Bookshop", 24.99, true],
+  ["2026-07-12", "expense", "Transport", "BVG monthly ticket", 49, true],
+  ["2026-07-08", "expense", "Health", "Pharmacy", 18.75, true],
+  ["2026-07-05", "expense", "Food", "Café Central", 9.4],
+  ["2026-07-01", "income", "Salary", "Salary", 3240],
+  ["2026-07-01", "expense", "Housing", "Rent", 1150],
+  ["2026-06-27", "expense", "Food", "Lidl", 33.15],
+  ["2026-06-22", "income", "Gift", "Birthday gift", 100],
+  ["2026-06-20", "expense", "Shopping", "Bookshop", 24.99, true],
   ["2026-06-17", "contribution", null, "To savings", 300],
-  ["2026-06-14", "expense", 2, "Sushi Yama", 41.5],
-  ["2026-06-10", "expense", 4, "Taxi", 22],
-  ["2026-06-06", "expense", 7, "Haircut", 35],
-  ["2026-06-03", "expense", 1, "REWE", 57.8],
-  ["2026-06-01", "income", 8, "Salary", 3240],
-  ["2026-06-01", "expense", 5, "Rent", 1150],
+  ["2026-06-14", "expense", "Food", "Sushi Yama", 41.5],
+  ["2026-06-10", "expense", "Transport", "Taxi", 22],
+  ["2026-06-06", "expense", "Utilities", "Haircut", 35],
+  ["2026-06-03", "expense", "Food", "REWE", 57.8],
+  ["2026-06-01", "income", "Salary", "Salary", 3240],
+  ["2026-06-01", "expense", "Housing", "Rent", 1150],
 ];
 
 /** POSTs one fixture row as the logged-in user, the way lib/transactions.ts does. */
-async function postTransaction(page: Page, orgId: number, row: Fixture) {
-  const [transaction_date, entry_type, category_id, description, amount, tax] =
+async function postTransaction(
+  page: Page,
+  orgId: number,
+  categories: Map<string, number>,
+  row: Fixture,
+) {
+  const [transaction_date, entry_type, category, description, amount, tax] =
     row;
   const csrftoken =
     (await page.context().cookies()).find((c) => c.name === "csrftoken")
       ?.value ?? "";
+
+  const category_id =
+    category === null ? null : (categories.get(category) ?? null);
+
+  if (category !== null && category_id === null) {
+    throw new Error(
+      `Category "${category}" does not belong to organization ${orgId}`,
+    );
+  }
+
   const res = await page.request.post(
     `/api/v1/organizations/${orgId}/transactions/`,
     {
@@ -77,7 +120,7 @@ async function postTransaction(page: Page, orgId: number, row: Fixture) {
   if (res.status() !== 201) {
     throw new Error(
       `transaction POST failed: ${res.status()} ${await res.text()} — ` +
-        "if it names category_id, seed the categories first (see the file header).",
+        "if it names category_id, the id is not one of this workspace's own.",
     );
   }
 }
@@ -145,16 +188,20 @@ function ariaHiddenHits(page: Page): Promise<string[]> {
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
+  /** Name → id for this workspace's categories; the ids differ per workspace. */
+  let categories: Map<string, number>;
 
   const [user] = makeUsers("tx", "tx_unused");
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     const workspace = await registerUser(page, user);
+    const orgId = toOrgId(workspace);
+    categories = await getOrganizationCategories(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
-      await postTransaction(page, toOrgId(workspace), row);
+      await postTransaction(page, orgId, categories, row);
     }
   });
 
@@ -244,11 +291,11 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("3");
     await expect(tab("Income")).toContainText("0");
 
-    // Category labels are searchable too.
-    await search.fill("eating");
-    await expect(rows()).toHaveCount(4);
+    // Category labels are searchable too: no description contains "food".
+    await search.fill("food");
+    await expect(rows()).toHaveCount(9);
     for (const row of await rows().all()) {
-      await expect(row).toContainText("Eating out");
+      await expect(row).toContainText("Food");
     }
 
     await search.fill("nothing matches this");
@@ -285,35 +332,30 @@ test.describe.serial("Transactions", () => {
     };
     await typeDate("From", "01072026");
     await typeDate("To", "31082026");
-    await panel.getByText("Groceries", { exact: true }).click();
-    await panel.getByText("Eating out", { exact: true }).click();
+    await panel.getByText("Food", { exact: true }).click();
+    await panel.getByText("Shopping", { exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
 
     await expect(filtersButton()).toContainText("3");
     await expect(page).toHaveURL(/from=2026-07-01/);
-    await expect(page).toHaveURL(/cat=1%2C2/);
+    // The ids belong to this workspace, and ?cat= lists them in click order.
+    const cat = `${categories.get("Food")}%2C${categories.get("Shopping")}`;
+    await expect(page).toHaveURL(new RegExp(`cat=${cat}`));
 
     // Chips sit outside the panel, next to "Clear all".
     const chips = page.locator(".MuiChip-deletable");
-    await expect(chips).toHaveText([
-      "1 Jul – 31 Aug",
-      "Groceries",
-      "Eating out",
-    ]);
+    await expect(chips).toHaveText(["1 Jul – 31 Aug", "Food", "Shopping"]);
 
-    // Jul–Aug rows in those two categories.
-    await expect(showing("6 of 6")).toBeVisible();
+    // Jul–Aug rows in those two categories: 6 Food and 1 Shopping.
+    await expect(showing("7 of 7")).toBeVisible();
     await expect(tab("Income")).toContainText("0");
 
     // Removing one chip keeps the other two.
-    await chips
-      .filter({ hasText: "Groceries" })
-      .getByTestId("CancelIcon")
-      .click();
+    await chips.filter({ hasText: "Food" }).getByTestId("CancelIcon").click();
     await expect(chips).toHaveCount(2);
     await expect(filtersButton()).toContainText("2");
-    await expect(showing("3 of 3")).toBeVisible();
+    await expect(showing("1 of 1")).toBeVisible();
 
     await page.getByRole("button", { name: "Clear all" }).click();
     await expect(chips).toHaveCount(0);
@@ -381,7 +423,7 @@ test.describe.serial("Transactions", () => {
       "Ristorante Baldi",
     );
     await expect(dialog.getByLabel("Amount")).toHaveValue("52,00");
-    await expect(dialog.getByLabel("Category")).toHaveText("Eating out");
+    await expect(dialog.getByLabel("Category")).toHaveText("Food");
     await expect(dialog.getByRole("button", { name: "Delete" })).toBeVisible();
 
     // No PATCH route yet: fields are locked and Save stays off.
@@ -497,13 +539,15 @@ test.describe.serial("Transactions", () => {
     await panel.getByRole("button", { name: "This year" }).click();
     // click, not check: the popover re-anchors when the Filters badge grows,
     // and check() would treat that movement as a failed toggle and retry.
-    for (const name of ["Groceries", "Salary"]) {
+    for (const name of ["Food", "Salary"]) {
       const box = panel.getByRole("checkbox", { name });
       await box.click();
       await expect(box).toBeChecked();
     }
-    await expect(panel.getByText("8 transactions match")).toBeVisible();
-    await expect(page).toHaveURL(/cat=1%2C8/);
+    // 9 Food rows plus 3 Salary, all dated this year.
+    await expect(panel.getByText("12 transactions match")).toBeVisible();
+    const cat = `${categories.get("Food")}%2C${categories.get("Salary")}`;
+    await expect(page).toHaveURL(new RegExp(`cat=${cat}`));
 
     // Categories only: the date range survives.
     await clearCategories.click();
@@ -521,7 +565,7 @@ test.describe.serial("Transactions", () => {
     await page.getByRole("button", { name: "Add transaction" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Category").click();
-    await page.getByRole("option", { name: "Groceries" }).click();
+    await page.getByRole("option", { name: "Food" }).click();
     await dialog.getByLabel("Description").fill("Zero");
     await dialog.getByLabel("Amount").fill("0");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
@@ -555,9 +599,7 @@ test.describe.serial("Transactions", () => {
     await expect(tax).toHaveCount(0);
     await dialog.getByLabel("Category").click();
     await expect(page.getByRole("option", { name: "Salary" })).toBeVisible();
-    await expect(page.getByRole("option", { name: "Groceries" })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("option", { name: "Food" })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
     await dialog.getByRole("button", { name: "Saving" }).click();
