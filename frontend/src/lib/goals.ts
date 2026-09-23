@@ -1,20 +1,21 @@
 /** @file Goal types, form draft, and API calls. Reads are seeded until a goals API exists. */
 
-import { TODAY } from "./date.js";
-import { toMoneyString, validateAmount } from "./money.js";
-import { formatName } from "./text.js";
+import { TODAY } from "./date";
+import { parseMoney, toMoneyString, validateAmount } from "./money";
+import { formatName } from "./text";
+import { SEED_GOALS } from "./goals.seed";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
- * stands in, the way categories did before they moved to fetchCategories in
+ * (lib/goals.seed.ts) stands in, the way categories did before they moved to fetchCategories in
  * lib/categories.ts. A contribution is rejected with 400
  * unless a Goal row with that id exists for the workspace
  * (TransactionCreateSerializer.validate_goal_id). Replace with a fetch once
  * the endpoints land; goalById keeps its signature.
  */
 
-export type GoalIcon =
-  "emergency" | "house" | "vacation" | "loan" | "laptop" | "sport";
+/** Mirrors core.models.GoalStatus. */
+export type GoalStatus = "active" | "completed" | "archived";
 
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
@@ -25,66 +26,15 @@ export type Goal = {
   saved_amount: number;
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
-  icon: GoalIcon;
-  paid_off: boolean;
+  status: GoalStatus;
 };
 
-export const SEED_GOALS: Goal[] = [
-  {
-    id: 1,
-    name: "New laptop",
-    target_amount: 2000,
-    saved_amount: 1790,
-    target_date: "2026-12-31",
-    icon: "laptop",
-    paid_off: false,
-  },
-  {
-    id: 2,
-    name: "Emergency fund",
-    target_amount: 3000,
-    saved_amount: 620,
-    target_date: null,
-    icon: "emergency",
-    paid_off: false,
-  },
-  {
-    id: 3,
-    name: "Student loan",
-    target_amount: 12000,
-    saved_amount: 12000,
-    target_date: "2024-01-01",
-    icon: "loan",
-    paid_off: true,
-  },
-  {
-    id: 4,
-    name: "Vacation fund",
-    target_amount: 1500,
-    saved_amount: 1500,
-    target_date: "2024-06-01",
-    icon: "vacation",
-    paid_off: true,
-  },
-  {
-    id: 5,
-    name: "Wedding rings",
-    target_amount: 900,
-    saved_amount: 900,
-    target_date: "2023-08-15",
-    icon: "vacation",
-    paid_off: true,
-  },
-  //   {
-  //   id: 6,
-  //   name: "New bike",
-  //   target_amount: 1000,
-  //   saved_amount: 200,
-  //   target_date: "2026-08-15",
-  //   icon: "sport",
-  //   paid_off: true,
-  // },
-];
+/**
+ * Filed away by the user: leaves the active list and stops accepting
+ * contributions. `completed` is deliberately not archived — a goal that reaches
+ * its target stays active until the user archives it.
+ */
+export const isArchived = (g: Goal) => g.status === "archived";
 
 /**
  * TODO: no goals API exists yet. Swap the body for a real fetch
@@ -152,18 +102,34 @@ type GoalDTO = {
   target_amount: string;
   saved_amount: string;
   target_date: string | null;
+  /**
+   * Raw, not GoalStatus: no serializer sends this yet, so the boundary
+   * validates it (parseGoalStatus) rather than assuming it, unlike
+   * entry_type in lib/transactions.ts whose serializer already exists.
+   */
+  status: string;
 };
+
+/** Parses the API's status field; throws on an unknown or missing value. */
+function parseGoalStatus(wire: string): GoalStatus {
+  switch (wire) {
+    case "active":
+    case "completed":
+    case "archived":
+      return wire;
+    default:
+      throw new Error(`Unknown goal status from API: ${wire}`);
+  }
+}
 
 function fromDTO(d: GoalDTO): Goal {
   return {
     id: d.id,
     name: d.name,
-    target_amount: Number(d.target_amount),
-    saved_amount: Number(d.saved_amount),
+    target_amount: parseMoney(d.target_amount),
+    saved_amount: parseMoney(d.saved_amount),
     target_date: d.target_date,
-    // Not sent by the backend yet — safe defaults until it is.
-    icon: "emergency",
-    paid_off: false,
+    status: parseGoalStatus(d.status),
   };
 }
 

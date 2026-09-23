@@ -1,12 +1,14 @@
 // @ts-check
 /// <reference lib="dom" />
 /**
- * @file Goals page e2e: the add-goal modal skeleton. Creation is locked until
- * the goals API lands, so these cover opening, validation and the guard.
+ * @file Goals page e2e: the add-goal modal skeleton and the active/archived
+ * split. Creation is locked until the goals API lands, so the modal tests
+ * cover opening, validation and the guard. The list is the frontend seed
+ * (lib/goals.seed.ts); names are asserted as literals on purpose, so the spec
+ * never pulls app source into the node tsconfig project.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeUsers, registerUser } from "./helpers.js";
-import { SEED_GOALS } from "../src/lib/goals.js";
 
 test.describe.serial("Goals", () => {
   let page: Page;
@@ -17,7 +19,7 @@ test.describe.serial("Goals", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     const workspace = await registerUser(page, user);
-    goalsUrl = `${workspace}/goals`;
+    goalsUrl = `${workspace}/savings`;
   });
 
   test.afterAll(async () => {
@@ -27,16 +29,16 @@ test.describe.serial("Goals", () => {
   test.beforeEach(async () => {
     await page.goto(goalsUrl);
     await expect(
-      page.getByRole("heading", { name: "Goals", level: 1 }),
+      page.getByRole("heading", { name: "Savings", level: 1 }),
     ).toBeVisible();
   });
 
-  test("Add goal opens a blank, locked form", async () => {
-    await page.getByRole("button", { name: "Add goal" }).click();
+  test("Add saving opens a blank, locked form", async () => {
+    await page.getByRole("button", { name: "Add saving" }).click();
     const dialog = page.getByRole("dialog");
 
     await expect(
-      dialog.getByRole("heading", { name: "Add goal" }),
+      dialog.getByRole("heading", { name: "Add saving" }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await expect(dialog.getByLabel("Target amount")).toHaveValue("");
@@ -54,7 +56,7 @@ test.describe.serial("Goals", () => {
   });
 
   test("unsaved input is guarded and the name is normalised on blur", async () => {
-    await page.getByRole("button", { name: "Add goal" }).click();
+    await page.getByRole("button", { name: "Add saving" }).click();
     const dialog = page.getByRole("dialog");
     const name = dialog.getByLabel("Name");
 
@@ -72,16 +74,23 @@ test.describe.serial("Goals", () => {
     await expect(dialog).toBeHidden();
 
     // Reopening starts blank again.
-    await page.getByRole("button", { name: "Add goal" }).click();
+    await page.getByRole("button", { name: "Add saving" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await dialog.getByRole("button", { name: "Cancel" }).click();
   });
-  test("renders active goals as cards and paid-off goals as archived rows", async () => {
-    const active = SEED_GOALS.find((g) => !g.paid_off)!;
-    const archived = SEED_GOALS.find((g) => g.paid_off)!;
 
-    await expect(page.getByText(active.name)).toBeVisible();
-    await expect(page.getByText(archived.name)).toBeVisible();
-    await expect(page.getByText("PAID OFF").first()).toBeVisible();
+  // Scoped by region on purpose: getByText is a case-insensitive substring
+  // match, so page-wide "Archived" would also hit the section heading.
+  test("splits goals into Active cards and Archived rows", async () => {
+    const active = page.getByRole("region", { name: "Active goals" });
+    const archived = page.getByRole("region", { name: "Archived goals" });
+
+    await expect(active.getByText("New laptop")).toBeVisible();
+    await expect(active.getByRole("progressbar")).toHaveCount(2);
+    await expect(active.getByText("Vacation fund")).toHaveCount(0);
+
+    await expect(archived.getByText("Vacation fund")).toBeVisible();
+    await expect(archived.getByRole("progressbar")).toHaveCount(0);
+    await expect(archived.getByText("New laptop")).toHaveCount(0);
   });
 });

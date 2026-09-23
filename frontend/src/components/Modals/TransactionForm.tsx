@@ -33,7 +33,9 @@ import {
   contributionCategory,
 } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
-import { SEED_GOALS, goalById, type Goal } from "../../lib/goals";
+import { goalById, isArchived, type Goal } from "../../lib/goals";
+import { SEED_GOALS } from "../../lib/goals.seed";
+
 import {
   CAN_EDIT_TRANSACTIONS,
   TransactionError,
@@ -321,7 +323,7 @@ export function TransactionForm({
                   }
                   required
                 >
-                  {SEED_GOALS.map((g) => (
+                  {SEED_GOALS.filter((g) => !isArchived(g)).map((g) => (
                     <MenuItem key={g.id} value={g.id}>
                       <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
                       <Typography

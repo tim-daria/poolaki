@@ -1,6 +1,7 @@
+/** @file Card for a non-archived goal: saved amount, progress bar, deadline and a row-actions menu. */
+
 import { useState } from "react";
 import {
-  Avatar,
   Box,
   IconButton,
   LinearProgress,
@@ -12,7 +13,6 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
-import { goalIconMap } from "./goalIcons";
 
 interface Props {
   goal: Goal;
@@ -26,10 +26,9 @@ function formatDeadline(iso: string | null): string | null {
   });
 }
 
-/** Card for an active (not yet paid off) goal: icon, saved amount, progress, deadline. */
+/** Card for a non-archived goal; a completed one shows at 100% until it is archived. */
 export function GoalCard({ goal }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const Icon = goalIconMap[goal.icon];
   const pct = Math.min(
     100,
     Math.round((goal.saved_amount / goal.target_amount) * 100),
@@ -50,13 +49,11 @@ export function GoalCard({ goal }: Props) {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          // Only the actions button lives in this row; keep it on the right.
+          justifyContent: "flex-end",
           alignItems: "flex-start",
         }}
       >
-        <Avatar sx={{ bgcolor: "primary.light", color: "primary.dark" }}>
-          <Icon fontSize="small" />
-        </Avatar>
         <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
           <MoreVertIcon fontSize="small" />
         </IconButton>

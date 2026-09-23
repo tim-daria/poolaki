@@ -1,4 +1,4 @@
-/** @file Goals page. Placeholder body until the goals API lands; the add modal is wired. */
+/** @file Goals page: non-archived goals as progress cards, archived ones as rows; the add modal is wired. */
 
 import { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
@@ -8,7 +8,7 @@ import {
 } from "../../components/PageHeader/PageHeader";
 import { GoalForm } from "../../components/Modals/GoalForm";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { getGoals, type Goal } from "../../lib/goals";
+import { getGoals, isArchived, type Goal } from "../../lib/goals";
 import { GoalCard } from "./GoalCard";
 import { ArchivedGoalRow } from "./ArchivedGoalRow";
 
@@ -21,8 +21,8 @@ function Goals() {
     getGoals(org.id).then(setGoals);
   }, [org.id]);
 
-  const active = goals.filter((g) => !g.paid_off);
-  const archived = goals.filter((g) => g.paid_off);
+  const active = goals.filter((g) => !isArchived(g));
+  const archived = goals.filter(isArchived);
 
   return (
     <Box
@@ -30,13 +30,15 @@ function Goals() {
     >
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
-        Add goal
+        Add saving
       </PageActionButton>
       <GoalForm open={adding} onClose={() => setAdding(false)} />
       <Typography variant="overline" color="text.secondary">
-        IN PROGRESS
+        Active
       </Typography>
       <Box
+        component="section"
+        aria-label="Active goals"
         sx={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -51,6 +53,8 @@ function Goals() {
         Archived
       </Typography>
       <Box
+        component="section"
+        aria-label="Archived goals"
         sx={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",

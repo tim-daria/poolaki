@@ -1,12 +1,11 @@
-import { Avatar, Box, Chip, Paper, Typography } from "@mui/material";
+/** @file Compact row for an archived goal: name and final saved/target amounts. */
+
+import { Box, Paper, Typography } from "@mui/material";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
-import { goalIconMap } from "./goalIcons";
 
-/** Row for a paid-off goal — the only archived state the backend will have. */
+/** Row for an archived goal. Dimmed: it is no longer being saved for. */
 export function ArchivedGoalRow({ goal }: { goal: Goal }) {
-  const Icon = goalIconMap[goal.icon];
-
   return (
     <Paper
       variant="outlined"
@@ -16,19 +15,16 @@ export function ArchivedGoalRow({ goal }: { goal: Goal }) {
         alignItems: "center",
         gap: 1.5,
         borderRadius: 3,
+        // Dimmed so an archived goal does not read as one still in progress.
+        color: "text.disabled",
       }}
     >
-      <Avatar
-        sx={{ bgcolor: "action.disabledBackground", color: "text.secondary" }}
-      >
-        <Icon fontSize="small" />
-      </Avatar>
       <Typography sx={{ fontWeight: 700, flex: 1 }}>{goal.name}</Typography>
       <Box sx={{ textAlign: "right" }}>
         <Typography sx={{ fontWeight: 700 }}>
-          €{displayAmount(goal.saved_amount)}
+          €{displayAmount(goal.saved_amount)} of €
+          {displayAmount(goal.target_amount)}
         </Typography>
-        <Chip label="PAID OFF" size="small" sx={{ mt: 0.3 }} />
       </Box>
     </Paper>
   );
