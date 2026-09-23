@@ -1,7 +1,7 @@
-/** @file Goals page: every goal as a card, split into Active and Archived; the add modal and the Contribute modal are wired. */
+/** @file Goals page: every goal as a card in a foldable Active, Completed or Archived section; the add modal and the Contribute modal are wired. */
 
 import { useEffect, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import {
   PageActionButton,
   PageTitle,
@@ -9,14 +9,22 @@ import {
 import { GoalForm } from "../../components/Modals/GoalForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { getGoals, isArchived, type Goal } from "../../lib/goals";
+import {
+  getGoals,
+  goalState,
+  oldestFirst,
+  type Goal,
+  type GoalStatus,
+} from "../../lib/goals";
 import { GoalCard } from "./GoalCard";
+import { GoalSection } from "./GoalSection";
 
-const cardGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(300px, 1fr))",
-  gap: 2,
-} as const;
+/** One section per state, in page order; Archived starts folded. */
+const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
+  { state: "active", title: "Active", defaultOpen: true },
+  { state: "completed", title: "Completed", defaultOpen: true },
+  { state: "archived", title: "Archived", defaultOpen: false },
+];
 
 function Goals() {
   const org = useCurrentOrg();
@@ -29,8 +37,7 @@ function Goals() {
     getGoals(org.id).then(setGoals);
   }, [org.id]);
 
-  const active = goals.filter((g) => !isArchived(g));
-  const archived = goals.filter(isArchived);
+  const ordered = [...goals].sort(oldestFirst);
 
   return (
     <Box
@@ -42,36 +49,31 @@ function Goals() {
       </PageActionButton>
       <GoalForm open={adding} onClose={() => setAdding(false)} />
       {/* No onSaved: saved_amount comes from the seed until the API lands, so
-          there is nothing to refresh yet. */}
+          there is nothing to refresh yet. No onInfo on the cards either: the
+          Info view is not built, so archived cards are inert on click. */}
       <TransactionForm
         open={contributeTo !== null}
         onClose={() => setContributeTo(null)}
         goal={contributeTo?.id}
       />
-      <Typography variant="overline" color="text.secondary">
-        Active
-      </Typography>
-      <Box component="section" aria-label="Active goals" sx={cardGrid}>
-        {active.map((g) => (
-          <GoalCard
-            key={g.id}
-            goal={g}
-            onContribute={() => setContributeTo(g)}
-          />
-        ))}
-      </Box>
-      <Typography variant="overline" color="text.secondary">
-        Archived
-      </Typography>
-      <Box component="section" aria-label="Archived goals" sx={cardGrid}>
-        {archived.map((g) => (
-          <GoalCard
-            key={g.id}
-            goal={g}
-            onContribute={() => setContributeTo(g)}
-          />
-        ))}
-      </Box>
+      {SECTIONS.map(({ state, title, defaultOpen }) => (
+        <GoalSection
+          key={state}
+          title={title}
+          ariaLabel={`${title} goals`}
+          defaultOpen={defaultOpen}
+        >
+          {ordered
+            .filter((g) => goalState(g) === state)
+            .map((g) => (
+              <GoalCard
+                key={g.id}
+                goal={g}
+                onContribute={() => setContributeTo(g)}
+              />
+            ))}
+        </GoalSection>
+      ))}
     </Box>
   );
 }

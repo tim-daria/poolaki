@@ -40,6 +40,8 @@ export type Goal = {
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
   status: GoalStatus;
+  /** ISO datetime, as DRF serialises Goal.created_at; lists sort on it. */
+  created_at: string;
 };
 
 /**
@@ -62,6 +64,15 @@ export function goalFlags(g: Goal, today: string = TODAY): GoalFlag[] {
     flags.push("overdue");
   }
   return flags;
+}
+
+/**
+ * List order within a section: oldest first, so a new goal appends rather
+ * than jumping to the front. ISO datetimes in one format compare correctly as
+ * strings. The page splits by state before sorting, so state is not part of it.
+ */
+export function oldestFirst(a: Goal, b: Goal): number {
+  return a.created_at.localeCompare(b.created_at);
 }
 
 /**
@@ -136,6 +147,7 @@ type GoalDTO = {
    * entry_type in lib/transactions.ts whose serializer already exists.
    */
   status: string;
+  created_at: string;
 };
 
 /** Parses the API's status field; throws on an unknown or missing value. */
@@ -158,6 +170,7 @@ function fromDTO(d: GoalDTO): Goal {
     saved_amount: parseMoney(d.saved_amount),
     target_date: d.target_date,
     status: parseGoalStatus(d.status),
+    created_at: d.created_at,
   };
 }
 
