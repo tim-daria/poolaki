@@ -25,7 +25,10 @@ class LLMClient:
         )
 
     async def generate_response(self, prompt: str) -> str:
-        models = [settings.llm_model, settings.llm_fallback_model]
+        models = [settings.llm_model]
+
+        if settings.llm_fallback_model:
+            models.append(settings.llm_fallback_model)
         last_error: Exception | None = None
 
         for model in models:
