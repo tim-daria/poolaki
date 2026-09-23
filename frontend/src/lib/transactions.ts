@@ -107,6 +107,11 @@ export function emptyDraft(): TransactionDraft {
   };
 }
 
+/** Add flow pre-set to a goal: the Saving tab with `goal` chosen, everything else as emptyDraft. */
+export function contributionDraft(goal: number): TransactionDraft {
+  return changeType({ ...emptyDraft(), goal }, "contribution");
+}
+
 /**
  * A loaded row → form state, for the edit flow. Mirror image of emptyDraft.
  *

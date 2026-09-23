@@ -17,6 +17,19 @@ import { SEED_GOALS } from "./goals.seed";
 /** Mirrors core.models.GoalStatus. */
 export type GoalStatus = "active" | "completed" | "archived";
 
+/**
+ * The state a goal is shown in. Completion is derived, never set: a goal that has
+ * reached its target is "completed" while it stays un-archived. Only "archived"
+ * comes from the wire; if the backend ever sends "completed" the amounts still
+ * decide, so the two cannot disagree.
+ */
+export function goalState(g: Goal): GoalStatus {
+  if (g.status === "archived") return "archived";
+  return g.saved_amount >= g.target_amount ? "completed" : "active";
+}
+
+export const isArchived = (g: Goal) => goalState(g) === "archived";
+
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
   id: number;
@@ -30,11 +43,26 @@ export type Goal = {
 };
 
 /**
- * Filed away by the user: leaves the active list and stops accepting
- * contributions. `completed` is deliberately not archived — a goal that reaches
- * its target stays active until the user archives it.
+ * Conditions worth calling out on a goal. Extend the union to add one; the card
+ * renders whatever comes back. TODO: "off_limits" (spent more than planned) joins
+ * once contributions are wired up — it needs transaction data, so goalFlags will
+ * grow a parameter then; the list shape stays.
  */
-export const isArchived = (g: Goal) => g.status === "archived";
+export type GoalFlag = "overdue";
+
+/**
+ * Flags for a goal, in display order. Derived from the amounts and dates, not
+ * from the state, so they persist once a goal is archived. ISO "YYYY-MM-DD"
+ * strings compare correctly as strings; a goal due today is not overdue.
+ */
+export function goalFlags(g: Goal, today: string = TODAY): GoalFlag[] {
+  const flags: GoalFlag[] = [];
+  const reached = g.saved_amount >= g.target_amount;
+  if (!reached && g.target_date !== null && g.target_date < today) {
+    flags.push("overdue");
+  }
+  return flags;
+}
 
 /**
  * TODO: no goals API exists yet. Swap the body for a real fetch
