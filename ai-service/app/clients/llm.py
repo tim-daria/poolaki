@@ -59,21 +59,62 @@ class LLMClient:
                         raise LLMClientError("LLM response missing content")
 
                     logger.info(
-                        "LLM response successful: model=%s time=%.2fs",
-                        model,
-                        time.perf_counter() - start_time,
+                        "LLM response successful",
+                        extra={
+                            "model": model,
+                            "attempt": attempt + 1,
+                            "duration": round(
+                                time.perf_counter() - start_time,
+                                2,
+                            ),
+                        },
                     )
 
                     return content
-                except (httpx.HTTPError, LLMClientError) as exc:
+
+                except httpx.TimeoutException as exc:
                     last_error = exc
+
                     logger.warning(
-                        "LLM attempt failed: model=%s attempt=%s",
+                        "LLM timeout",
+                        extra={
+                            "model": model,
+                            "attempt": attempt + 1,
+                        },
+                    )
+
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+
+                    logger.warning(
+                        "LLM request failed",
+                        extra={
+                            "model": model,
+                            "attempt": attempt + 1,
+                            "status_code": status_code,
+                        },
+                    )
+
+                    if not self._is_retryable_status(status_code):
+                        raise LLMClientError(
+                            f"Non-retryable LLM error: {status_code}"
+                        ) from exc
+
+                    last_error = exc
+
+                except LLMClientError as exc:
+                    last_error = exc
+
+                    logger.warning(
+                        "LLM response validation failed: model=%s attempt=%s",
                         model,
                         attempt + 1,
                     )
 
         raise LLMClientError("All LLM attempts failed") from last_error
+
+    def _is_retryable_status(self, status_code: int) -> bool:
+        return status_code in {429, 502, 503}
 
     async def close(self) -> None:
         await self._client.aclose()
