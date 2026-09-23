@@ -20,9 +20,9 @@ async def chat(
 ) -> ChatResponse:
     try:
         answer, intent = await llm_service.generate_response(
-        user_id=payload.user_id,
-        organization_id=payload.organization_id,
-        question=payload.question,
+            user_id=payload.user_id,
+            organization_id=payload.organization_id,
+            question=payload.question,
         )
     except LLMClientError as exc:
         raise HTTPException(
