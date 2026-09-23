@@ -8,8 +8,10 @@ from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+
 class LLMClientError(Exception):
     """All LLM attempts fail."""
+
 
 class LLMClient:
     def __init__(self) -> None:
@@ -49,9 +51,9 @@ class LLMClient:
 
                     data: dict[str, Any] = response.json()
                     # print("LLM RESPONSE:", data)
-                    content = data.get("choices", [{}])[0].get(
-                        "message", {}
-                    ).get("content")
+                    content = (
+                        data.get("choices", [{}])[0].get("message", {}).get("content")
+                    )
 
                     if not content:
                         raise LLMClientError("LLM response missing content")
