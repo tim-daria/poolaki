@@ -11,6 +11,7 @@ from app.services.retrieval import BaseRetriever
 
 logger = logging.getLogger(__name__)
 
+
 class LLMService:
     def __init__(
         self,
