@@ -21,6 +21,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { displayAmount } from "../../lib/money";
 import { monthYear } from "../../lib/date";
 import { GoalStatusAvatar } from "./GoalStatusAvatar";
+import { cardFrameSx } from "./styles";
 
 interface Props {
   goal: Goal;
@@ -139,20 +140,7 @@ export function GoalCard({ goal, onContribute, onInfo }: Props) {
           e.preventDefault();
           open?.();
         }}
-        sx={{
-          p: 2.5,
-          display: "flex",
-          flexDirection: "column",
-          gap: 1,
-          borderRadius: 3,
-          color: look.text,
-          cursor: "pointer",
-          "&:hover": { bgcolor: "action.hover", borderColor: "text.secondary" },
-          "&:focus-visible": {
-            outline: "2px solid",
-            outlineColor: "primary.main",
-          },
-        }}
+        sx={[cardFrameSx, { color: look.text }]}
       >
         <Box
           sx={{

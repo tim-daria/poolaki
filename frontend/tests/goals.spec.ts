@@ -101,6 +101,10 @@ test.describe.serial("Goals", () => {
     // Active: New laptop (past deadline → overdue), House downpayment (on
     // track). Completed: Emergency fund (exactly 100%), Cat mansion (101%).
     await expect(active.getByText("New laptop")).toBeVisible();
+    // The "start a new saving" prompt only appears when Active is empty.
+    await expect(
+      page.getByRole("button", { name: "Start a new saving" }),
+    ).toHaveCount(0);
     await expect(active.getByRole("progressbar")).toHaveCount(2);
     // MUI icons carry data-testid="<Name>Icon"; one per card.
     await expect(active.getByTestId("SavingsOutlinedIcon")).toHaveCount(2);
@@ -245,5 +249,23 @@ test.describe.serial("Goals", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  // `?empty` is a dev-only switch in the seed path (lib/goals.seed.ts); it
+  // goes away with the seed once the API lands.
+  test("with no goals, Active offers to start one", async () => {
+    await page.goto(`${goalsUrl}?empty`);
+    const active = page.getByRole("region", { name: "Active goals" });
+    await expect(active.getByRole("group")).toHaveCount(0);
+
+    const prompt = page.getByRole("button", { name: "Start a new saving" });
+    await expect(prompt).toBeVisible();
+    await prompt.click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "Add saving" }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
   });
 });

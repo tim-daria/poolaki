@@ -18,6 +18,7 @@ import {
 } from "../../lib/goals";
 import { GoalCard } from "./GoalCard";
 import { GoalSection } from "./GoalSection";
+import { NewGoalCard } from "./NewGoalCard";
 
 /** One section per state, in page order; Archived starts folded. */
 const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
@@ -56,24 +57,31 @@ function Goals() {
         onClose={() => setContributeTo(null)}
         goal={contributeTo?.id}
       />
-      {SECTIONS.map(({ state, title, defaultOpen }) => (
-        <GoalSection
-          key={state}
-          title={title}
-          ariaLabel={`${title} goals`}
-          defaultOpen={defaultOpen}
-        >
-          {ordered
-            .filter((g) => goalState(g) === state)
-            .map((g) => (
-              <GoalCard
-                key={g.id}
-                goal={g}
-                onContribute={() => setContributeTo(g)}
-              />
-            ))}
-        </GoalSection>
-      ))}
+      {SECTIONS.map(({ state, title, defaultOpen }) => {
+        const cards = ordered
+          .filter((g) => goalState(g) === state)
+          .map((g) => (
+            <GoalCard
+              key={g.id}
+              goal={g}
+              onContribute={() => setContributeTo(g)}
+            />
+          ));
+        return (
+          <GoalSection
+            key={state}
+            title={title}
+            ariaLabel={`${title} goals`}
+            defaultOpen={defaultOpen}
+          >
+            {cards}
+            {/* Nothing in progress: prompt for one where the first card would sit. */}
+            {state === "active" && cards.length === 0 && (
+              <NewGoalCard onClick={() => setAdding(true)} />
+            )}
+          </GoalSection>
+        );
+      })}
     </Box>
   );
 }

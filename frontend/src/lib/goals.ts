@@ -3,7 +3,7 @@
 import { TODAY } from "./date";
 import { parseMoney, toMoneyString, validateAmount } from "./money";
 import { formatName } from "./text";
-import { SEED_GOALS } from "./goals.seed";
+import { SEED_GOALS, seedIsEmptied } from "./goals.seed";
 
 /**
  * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
@@ -83,7 +83,7 @@ export function oldestFirst(a: Goal, b: Goal): number {
  */
 export async function getGoals(org_id: number): Promise<Goal[]> {
   void org_id; // TODO: use once the fetch call replaces the seed
-  return SEED_GOALS;
+  return seedIsEmptied() ? [] : SEED_GOALS;
 }
 
 export function goalById(goals: Goal[], id: number | null): Goal | undefined {

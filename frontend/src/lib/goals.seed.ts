@@ -87,3 +87,14 @@ export const SEED_GOALS: Goal[] = [
     created_at: "2024-03-01T09:00:00Z",
   },
 ];
+
+/**
+ * Dev-only preview of the no-goals page: append `?empty` to the URL. Lives with
+ * the seed because it goes away with it; a production build never reads it.
+ */
+export function seedIsEmptied(): boolean {
+  return (
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).has("empty")
+  );
+}
