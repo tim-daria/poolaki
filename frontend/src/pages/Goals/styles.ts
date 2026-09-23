@@ -11,6 +11,6 @@ export const cardFrameSx = {
   gap: 1,
   borderRadius: 3,
   cursor: "pointer",
-  "&:hover": { bgcolor: "primary.light", borderColor: "text.secondary" },
+  "&:hover": { borderColor: "primary.main" },
   "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main" },
 } as const;
