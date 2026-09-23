@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     llm_fallback_model: str
     llm_api_key: str
     llm_timeout: float = 30.0
+    llm_max_retries: int = 1
 
     django_base_url: str
 
