@@ -1,9 +1,15 @@
+import logging
+import time
 from typing import Any
 
 import httpx
 
 from app.config.settings import settings
 
+logger = logging.getLogger(__name__)
+
+class LLMClientError(Exception):
+    """All LLM attempts fail."""
 
 class LLMClient:
     def __init__(self) -> None:
@@ -17,32 +23,55 @@ class LLMClient:
         )
 
     async def generate_response(self, prompt: str) -> str:
-        payload: dict[str, Any] = {
-            "model": settings.llm_model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-        }
+        models = [settings.llm_model, settings.llm_fallback_model]
+        last_error: Exception | None = None
 
-        response = await self._client.post(
-            "/chat/completions",
-            json=payload,
-        )
+        for model in models:
+            for attempt in range(settings.llm_max_retries + 1):
+                start_time = time.perf_counter()
 
-        if response.is_error:
-            print("LLM ERROR STATUS:", response.status_code)
-            print("LLM ERROR BODY:", response.text)
+                try:
+                    payload: dict[str, Any] = {
+                        "model": model,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": prompt,
+                            }
+                        ],
+                    }
 
-        response.raise_for_status()
+                    response = await self._client.post(
+                        "/chat/completions",
+                        json=payload,
+                    )
+                    response.raise_for_status()
 
-        data = response.json()
+                    data: dict[str, Any] = response.json()
+                    # print("LLM RESPONSE:", data)
+                    content = data.get("choices", [{}])[0].get(
+                        "message", {}
+                    ).get("content")
 
-        # print("LLM RESPONSE:", data) # Debbug
+                    if not content:
+                        raise LLMClientError("LLM response missing content")
 
-        return data["choices"][0]["message"]["content"]
+                    logger.info(
+                        "LLM response successful: model=%s time=%.2fs",
+                        model,
+                        time.perf_counter() - start_time,
+                    )
+
+                    return content
+                except (httpx.HTTPError, LLMClientError) as exc:
+                    last_error = exc
+                    logger.warning(
+                        "LLM attempt failed: model=%s attempt=%s",
+                        model,
+                        attempt + 1,
+                    )
+
+        raise LLMClientError("All LLM attempts failed") from last_error
 
     async def close(self) -> None:
         await self._client.aclose()
