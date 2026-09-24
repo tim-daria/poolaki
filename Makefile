@@ -12,6 +12,11 @@ all: up
 up:
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
+re:
+	@docker compose down
+	@docker compose build
+	@docker compose -f "$(COMPOSE_FILE)" up -d
+
 down:
 	@docker compose -f "$(COMPOSE_FILE)" down
 
@@ -57,57 +62,57 @@ tPostgres:
 	@docker exec -it postgres_db psql -d app_database
 
 rbCaddy:
-	$(MAKE) down;
+	$(MAKE) down caddy;
 	@docker compose -f "$(COMPOSE_FILE)" build caddy
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDjango:
-	$(MAKE) down;
+	$(MAKE) down backend;
 	@docker compose -f "$(COMPOSE_FILE)" build backend
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbNode:
-	$(MAKE) down;
+	$(MAKE) down frontend;
 	@docker compose -f "$(COMPOSE_FILE)" build frontend
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPostgres:
-	$(MAKE) down;
+	$(MAKE) down db;
 	@docker compose -f "$(COMPOSE_FILE)" build db
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPrometheus:
-	$(MAKE) down;
+	$(MAKE) down prometheus;
 	@docker compose -f "$(COMPOSE_FILE)" build prometheus
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbGrafana:
-	$(MAKE) down;
+	$(MAKE) down grafana;
 	@docker compose -f "$(COMPOSE_FILE)" build grafana
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbVault:
-	$(MAKE) down;
+	$(MAKE) down vault;
 	@docker compose -f "$(COMPOSE_FILE)" build vault
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAgent:
-	$(MAKE) down;
+	$(MAKE) down vault_agent;
 	@docker compose -f "$(COMPOSE_FILE)" build vault_agent
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDbBackup:
-	$(MAKE) down;
+	$(MAKE) down db_backup;
 	@docker compose -f "$(COMPOSE_FILE)" build db_backup
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAi:
-	$(MAKE) down;
+	$(MAKE) down ai-service;
 	@docker compose -f "$(COMPOSE_FILE)" build ai-service
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbCloudflare:
-	$(MAKE) down;
+	$(MAKE) down cloudflared;
 	@docker compose -f "$(COMPOSE_FILE)" build cloudflared
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
