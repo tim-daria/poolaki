@@ -47,17 +47,17 @@ import { initials } from "../../lib/initials";
 import {
   CAN_DELETE_ORGANIZATION,
   CAN_LEAVE_ORGANIZATION,
-  CAN_MANAGE_MEMBERS,
   CAN_RENAME_ORGANIZATION,
-  InvitationCreateError,
   MAX_MEMBERS,
   type Member,
   type Organization,
   type PendingInvitation,
+  WorkspaceRequestError,
   byRoleThenJoined,
   cancelInvitation,
   fetchMembers,
   fetchPendingInvitations,
+  removeMember,
 } from "../../lib/organizations";
 
 const joinedFormat = new Intl.DateTimeFormat("en-GB", {
@@ -165,10 +165,12 @@ function MembersSection({ org }: { org: Organization }) {
   const [pending, setPending] = useState<PendingInvitation[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [cancelling, setCancelling] = useState<PendingInvitation | null>(null);
+  const [removing, setRemoving] = useState<Member | null>(null);
+  // Shared by both confirm dialogs; only one can be open at a time.
   const [busy, setBusy] = useState(false);
   const isOwner = org.role === "owner";
 
-  // Bumped to refetch after an invite or a cancel.
+  // Bumped to refetch after an invite, a cancel or a removal.
   const [version, setVersion] = useState(0);
   const reload = () => setVersion((v) => v + 1);
 
@@ -194,18 +196,38 @@ function MembersSection({ org }: { org: Organization }) {
     try {
       await cancelInvitation(org.id, cancelling.id, getCsrfToken());
       showToast(`Invitation to ${cancelling.invited_user} cancelled`);
-      reload();
     } catch (err) {
       // Most likely answered in the meantime; the refetch shows the new state.
       showToast(
-        err instanceof InvitationCreateError
+        err instanceof WorkspaceRequestError
           ? err.message
           : "Could not cancel the invitation",
       );
-      reload();
     } finally {
+      reload();
       setBusy(false);
       setCancelling(null);
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removing) return;
+    setBusy(true);
+    try {
+      await removeMember(org.id, removing.user_id, getCsrfToken());
+      showToast(`${removing.username} removed from ${org.name}`);
+    } catch (err) {
+      // A 400 means they already left; a 403 means we're no longer the
+      // owner. The refetch shows the truth either way.
+      showToast(
+        err instanceof WorkspaceRequestError
+          ? err.message
+          : `Could not remove ${removing.username}`,
+      );
+    } finally {
+      reload();
+      setBusy(false);
+      setRemoving(null);
     }
   }
 
@@ -241,6 +263,7 @@ function MembersSection({ org }: { org: Organization }) {
             isSelf={m.user_id === user?.id}
             email={m.user_id === user?.id ? user.email : undefined}
             canManage={isOwner}
+            onRemove={() => setRemoving(m)}
           />
         ))}
         {pending.map((p) => (
@@ -288,6 +311,16 @@ function MembersSection({ org }: { org: Organization }) {
         onCancel={() => setCancelling(null)}
         busy={busy}
       />
+      <ConfirmDialog
+        open={removing !== null}
+        title="Remove member?"
+        message={`${removing?.username ?? ""} will lose access to ${org.name} and its transactions until invited again.`}
+        confirmLabel="Remove"
+        cancelLabel="Keep"
+        onConfirm={confirmRemove}
+        onCancel={() => setRemoving(null)}
+        busy={busy}
+      />
     </>
   );
 }
@@ -297,9 +330,16 @@ interface MemberRowProps {
   isSelf: boolean;
   email?: string;
   canManage: boolean;
+  onRemove: () => void;
 }
 
-function MemberRow({ member, isSelf, email, canManage }: MemberRowProps) {
+function MemberRow({
+  member,
+  isSelf,
+  email,
+  canManage,
+  onRemove,
+}: MemberRowProps) {
   const theme = useTheme();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const role = member.role === "owner" ? "Owner" : "Member";
@@ -352,14 +392,19 @@ function MemberRow({ member, isSelf, email, canManage }: MemberRowProps) {
                 open={Boolean(anchor)}
                 onClose={() => setAnchor(null)}
               >
-                <MenuItem disabled={!CAN_MANAGE_MEMBERS}>
+                {/* Close the menu in the same handler that opens the confirm
+                    dialog, so its focus trap is gone before the dialog's
+                    starts (same as OrgSwitcher). */}
+                <MenuItem
+                  onClick={() => {
+                    setAnchor(null);
+                    onRemove();
+                  }}
+                >
                   <ListItemIcon>
                     <PersonRemoveOutlinedIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText
-                    primary="Remove from workspace"
-                    secondary={CAN_MANAGE_MEMBERS ? undefined : "Coming soon"}
-                  />
+                  <ListItemText primary="Remove from workspace" />
                 </MenuItem>
               </Menu>
             </>

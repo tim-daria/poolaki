@@ -15,6 +15,7 @@ import {
   List,
   ListItemButton,
   Stack,
+  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -50,6 +51,7 @@ import {
   declineInvitation,
 } from "../../lib/notifications";
 import {
+  MAX_ORGS,
   type MyInvitation,
   type Organization,
   describeWorkspace,
@@ -199,6 +201,8 @@ function WorkspacesCard() {
     return () => ac.abort();
   }, [organizations]);
 
+  const atLimit = organizations.length >= MAX_ORGS;
+
   // The personal workspace first, then shared ones in the backend's order.
   const sorted = [...organizations].sort(
     (a, b) => Number(b.is_personal) - Number(a.is_personal),
@@ -210,14 +214,19 @@ function WorkspacesCard() {
         title="Workspaces"
         titleVariant="section"
         action={
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCreating(true)}
-            sx={{ fontWeight: 600 }}
-          >
-            New workspace
-          </Button>
+          <Tooltip title={atLimit ? `Up to ${MAX_ORGS} workspaces` : ""}>
+            <span>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setCreating(true)}
+                disabled={atLimit}
+                sx={{ fontWeight: 600 }}
+              >
+                New workspace
+              </Button>
+            </span>
+          </Tooltip>
         }
       />
 

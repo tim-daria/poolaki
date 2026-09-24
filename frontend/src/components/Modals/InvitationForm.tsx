@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import {
-  InvitationCreateError,
+  WorkspaceRequestError,
   createInvitation,
 } from "../../lib/organizations";
 import { getCsrfToken } from "../../lib/csrf";
@@ -97,7 +97,7 @@ export function InvitationForm({ open, onClose, onSent, orgId }: Props) {
       // A 400 is the user's input, not a failure: show what the backend said
       // and stay open so the username can be corrected in place.
       setError(
-        err instanceof InvitationCreateError
+        err instanceof WorkspaceRequestError
           ? err.message
           : "Failed to send the invitation. Please try again.",
       );
