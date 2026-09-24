@@ -47,27 +47,32 @@ if [ "$INITIALIZED" = "false" ]; then
 	# create access role for database
 	vault write database/roles/db_role \
 		db_name=$POSTGRES_DB \
-		default_ttl="4h" \
-		max_ttl="12h" \
-		creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+		default_ttl="1h" \
+		max_ttl="4h" \
+		creation_statements="
+			CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+			GRANT CONNECT ON DATABASE \"$POSTGRES_DB\" TO \"{{name}}\"; \
 			GRANT ALL PRIVILEGES ON SCHEMA public TO \"{{name}}\"; \
 			GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\"; \
-			GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";" \
-		revocation_statements="REASSIGN OWNED BY \"{{name}}\" TO $POSTGRES_USER; \
-        DROP OWNED BY \"{{name}}\"; \
-        DROP ROLE IF EXISTS \"{{name}}\";"
+			GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";
+		" \
+		revocation_statements="
+			REASSIGN OWNED BY \"{{name}}\" TO \"$POSTGRES_USER\"; \
+			DROP OWNED BY \"{{name}}\"; \
+			DROP ROLE IF EXISTS \"{{name}}\";
+		"
 
 	# connect to database
 	vault write database/config/$POSTGRES_DB \
 		plugin_name=postgresql-database-plugin \
 		allowed_roles="db_role" \
-		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:5432/$POSTGRES_DB?sslmode=disable" \
+		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:$DB_PORT/$POSTGRES_DB?sslmode=disable" \
 		username=$POSTGRES_USER \
 		password=$POSTGRES_PASSWORD
 
 	# rotate root credentials
 	# password from the .env file is not longer valid from here
-	vault write -f database/rotate-root/"$POSTGRES_DB"
+	# vault write -f database/rotate-root/"$POSTGRES_DB"
 
 	# verify dynamic credentials can be issued (output suppressed: it would
 	# print a live database password)
@@ -90,35 +95,46 @@ if [ "$INITIALIZED" = "false" ]; then
 		intra42_client_id="$INTRA42_CLIENT_ID" \
 		intra42_client_secret="$INTRA42_CLIENT_SECRET"
 
+	vault kv put secret/grafana \
+		gf_admin_user="$GF_ADMIN_USER" \
+		gf_admin_password="$GF_ADMIN_PASSWORD" \
+		smtp_user="$SMTP_USER" \
+		smtp_password="$SMTP_PASSWORD" \
+		smtp_from_address="$SMTP_FROM_ADDRESS"
+	
+	vault kv put secret/cloudflare \
+		tunnel_token="$TUNNEL_TOKEN"
+
 	#######################################
 	###### Setup AppRole auth method #####
 	#######################################
 
 	# load policies for service
-	vault policy write django-policy /vault/config/policies/django-policy.hcl
-	# vault policy write django-admin-policy vault/config/policies/django-admin-policy.hcl
+	vault policy write vault-policy /vault/config/policies/vault-policy.hcl
 
 	# enable approle auth method
 	vault auth enable approle
 
+	### Agent role ###
+
 	# create role to access the database
 	# secret_id_ttl=0 --> never expires
 	# secret_id_num_uses=0 --> unlimited use (set to 1 for single-use)
-	vault write auth/approle/role/django-role \
-		token_policies="django-policy" \
+	vault write auth/approle/role/agent-role \
+		token_policies="vault-policy" \
 		token_ttl=1h \
 		token_max_ttl=4h \
 		secret_id_ttl=0 \
 		secret_id_num_uses=0
 	
 	# get roleID & secretID for django-role
-	vault read -format=json auth/approle/role/django-role/role-id \
-		| jq -r '.data.role_id' > /vault/secure/id/django_role_id
+	vault read -format=json auth/approle/role/agent-role/role-id \
+		| jq -r '.data.role_id' > /vault/secure/id/role_id
 
-	vault write -f -format=json auth/approle/role/django-role/secret-id \
-		| jq -r '.data.secret_id' > /vault/secure/id/django_secret_id
+	vault write -f -format=json auth/approle/role/agent-role/secret-id \
+		| jq -r '.data.secret_id' > /vault/secure/id/secret_id
 
-	chmod 644 /vault/secure/id/django_role_id /vault/secure/id/django_secret_id
+	chmod 644 /vault/secure/id/role_id /vault/secure/id/secret_id
 
 else
 	# unseal vault if initialized
@@ -137,6 +153,7 @@ else
 	else
 		echo "Vault already unsealed."
 	fi
+
 fi
 
 # Bring the vault server process to the foreground that container stays alive
