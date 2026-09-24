@@ -29,6 +29,8 @@ export type Transaction = {
   is_tax_deductible: boolean;
   /** Goal ID. Only present on contributions. */
   goal: number | null;
+  /** Creator's username; null once that account is deleted. */
+  created_by: string | null;
 };
 
 /** Raw API shape, used only inside this module, mirrors the serializers.py. */
@@ -50,7 +52,7 @@ type TransactionDTO = {
 
 /**
  * Maps raw API DTO to the internal Transaction model.
- * Maps fields explicitly to drop unused API keys (org_id, created_*).
+ * Maps fields explicitly to drop unused API keys (org_id, created_at).
  */
 function fromDTO(d: TransactionDTO): Transaction {
   return {
@@ -63,6 +65,7 @@ function fromDTO(d: TransactionDTO): Transaction {
     transaction_date: d.transaction_date,
     is_tax_deductible: d.is_tax_deductible,
     goal: d.goal_id,
+    created_by: d.created_by,
   };
 }
 
@@ -102,6 +105,11 @@ export function emptyDraft(): TransactionDraft {
     transaction_date: TODAY,
     is_tax_deductible: false,
   };
+}
+
+/** Add flow pre-set to a goal: the Saving tab with `goal` chosen, everything else as emptyDraft. */
+export function contributionDraft(goal: number): TransactionDraft {
+  return changeType({ ...emptyDraft(), goal }, "contribution");
 }
 
 /**
@@ -233,9 +241,9 @@ function firstProblem(
  *
  * Generic validation messages are rewritten because they describe the API
  * contract rather than the form; everything else is passed through with its
- * field named.
+ * field named. Exported for tests only; callers go through the HTTP wrappers.
  */
-function describeProblem(body: unknown): string | null {
+export function describeProblem(body: unknown): string | null {
   const problem = firstProblem(body);
   if (!problem) return null;
 

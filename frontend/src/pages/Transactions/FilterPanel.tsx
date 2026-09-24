@@ -13,7 +13,7 @@ import {
 import dayjs, { type Dayjs } from "dayjs";
 import { IsoDatePicker } from "../../components/Form/IsoDatePicker";
 import { useRestoreFocus } from "../../hooks/useRestoreFocus";
-import { SEED_CATEGORIES, type CategoryKind } from "../../lib/categories";
+import { type Category, type CategoryKind } from "../../lib/categories";
 import { tintedWhenActive } from "./styles";
 import type { TransactionFiltersApi } from "./useTransactionFilters";
 
@@ -57,6 +57,7 @@ interface FilterPanelProps extends TransactionFiltersApi {
   /** Element the popover hangs from; null keeps it closed. */
   anchor: HTMLElement | null;
   onClose: () => void;
+  categories: Category[];
   /**
    * Rows the current filters leave. Shown in the footer so the effect of a
    * checkbox is visible without closing the popover.
@@ -73,6 +74,7 @@ export function FilterPanel({
   clear,
   activeCount,
   matchCount,
+  categories,
 }: FilterPanelProps) {
   /** The Filters button must not keep focus while the panel hides it — see the hook. */
   const restoreFocus = useRestoreFocus(Boolean(anchor));
@@ -165,8 +167,9 @@ export function FilterPanel({
                 columnGap: 1,
               }}
             >
-              {SEED_CATEGORIES.filter((c) => c.kind === section.kind).map(
-                (c) => (
+              {categories
+                .filter((c) => c.type === section.kind)
+                .map((c) => (
                   <FormControlLabel
                     key={c.id}
                     sx={checkLabelSx}
@@ -177,10 +180,9 @@ export function FilterPanel({
                         onChange={() => toggleCategory(c.id)}
                       />
                     }
-                    label={c.label}
+                    label={c.name}
                   />
-                ),
-              )}
+                ))}
             </Box>
           </Stack>
         ))}
