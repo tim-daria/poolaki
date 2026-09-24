@@ -10,7 +10,10 @@ import {
 } from "@mui/material";
 import { useOrgList } from "../../context/useOrgList";
 import { useToast } from "../../context/useToast";
-import { createOrganization } from "../../lib/organizations";
+import {
+  WorkspaceRequestError,
+  createOrganization,
+} from "../../lib/organizations";
 import { getCsrfToken } from "../../lib/csrf";
 import { ModalShell } from "./ModalShell";
 import { DiscardChangesDialog } from "./CloseGuard";
@@ -94,8 +97,13 @@ export function CreateOrgForm({ open, onClose }: Props) {
       onClose();
       navigate(`/o/${org.id}`);
       showToast(`Workspace "${org.name}" created`);
-    } catch {
-      setError("Failed to create workspace. Please try again.");
+    } catch (err) {
+      // A 400 carries a reason the user can act on (e.g. the workspace cap).
+      setError(
+        err instanceof WorkspaceRequestError
+          ? err.message
+          : "Failed to create workspace. Please try again.",
+      );
       setSubmitting(false);
     }
   }
