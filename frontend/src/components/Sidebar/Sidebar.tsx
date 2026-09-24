@@ -26,7 +26,7 @@ const navItems = [
   // `end` stops "." from matching every route under /o/:orgId.
   { label: "Home", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
   { label: "Transactions", to: "transactions", icon: <SyncAltOutlinedIcon /> },
-  { label: "Goals", to: "goals", icon: <FavoriteBorderIcon /> },
+  { label: "Savings", to: "savings", icon: <FavoriteBorderIcon /> },
 ];
 
 /** Absolute paths: these live at the app root, not under /o/:orgId. */
