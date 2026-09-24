@@ -73,57 +73,57 @@ rbCaddy:
 # 	$(MAKE) down caddy;
 	@docker compose down caddy
 	@docker compose -f "$(COMPOSE_FILE)" build caddy
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDjango:
 	@docker compose down backend;
 	@docker compose -f "$(COMPOSE_FILE)" build backend
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbNode:
 	@docker compose down frontend;
 	@docker compose -f "$(COMPOSE_FILE)" build frontend
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPostgres:
 	@docker compose down db;
 	@docker compose -f "$(COMPOSE_FILE)" build db
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPrometheus:
 	@docker compose down prometheus;
 	@docker compose -f "$(COMPOSE_FILE)" build prometheus
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbGrafana:
 	@docker compose down grafana;
 	@docker compose -f "$(COMPOSE_FILE)" build grafana
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbVault:
 	@docker compose down vault;
 	@docker compose -f "$(COMPOSE_FILE)" build vault
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAgent:
 	@docker compose down vault_agent;
 	@docker compose -f "$(COMPOSE_FILE)" build vault_agent
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDbBackup:
 	@docker compose down db_backup;
 	@docker compose -f "$(COMPOSE_FILE)" build db_backup
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAi:
 	@docker compose down ai-service;
 	@docker compose -f "$(COMPOSE_FILE)" build ai-service
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbCloudflare:
 	@docker compose down cloudflared;
 	@docker compose -f "$(COMPOSE_FILE)" build cloudflared
-	@docker compose -f "$(COMPOSE_FILE)" up -d
+# 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 clean:
 	@echo "=== 🗑️ Remove all container, networks and volumes 🗑️ ==="
