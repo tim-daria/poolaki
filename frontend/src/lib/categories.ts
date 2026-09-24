@@ -1,42 +1,57 @@
-/** @file Fixed category list and lookups. Seeded client-side until the backend exposes GET categories. */
+/** @file Category types, lookups, and API calls. */
 
 import type { EntryType } from "./transactions";
 
-export type CategoryKind = "expense" | "income";
+export type CategoryKind = "expense" | "income" | "contribution";
 
+/** Mirrors CategoryResponseSerializer. */
 export type Category = {
-  /** Must match core.Category.id in the backend. */
   id: number;
-  label: string;
-  kind: CategoryKind;
+  name: string;
+  type: CategoryKind;
 };
 
-/** IDs are placeholders until a data migration fixes them. */
-export const SEED_CATEGORIES: Category[] = [
-  { id: 1, label: "Groceries", kind: "expense" },
-  { id: 2, label: "Eating out", kind: "expense" },
-  { id: 3, label: "Shopping", kind: "expense" },
-  { id: 4, label: "Transport", kind: "expense" },
-  { id: 5, label: "Housing", kind: "expense" },
-  { id: 6, label: "Health", kind: "expense" },
-  { id: 7, label: "Other", kind: "expense" },
-  { id: 8, label: "Salary", kind: "income" },
-  { id: 9, label: "Gift", kind: "income" },
-  { id: 10, label: "Other income", kind: "income" },
-];
-
-const BY_ID = new Map(SEED_CATEGORIES.map((c) => [c.id, c]));
-
-/** Undefined for null IDs and IDs the seed does not know. */
-export function categoryById(id: number | null): Category | undefined {
-  return id === null ? undefined : BY_ID.get(id);
+/** Undefined for null IDs and IDs not in the list (e.g. still loading). */
+export function categoryById(
+  categories: Category[],
+  id: number | null,
+): Category | undefined {
+  return id === null ? undefined : categories.find((c) => c.id === id);
 }
 
 /**
  * Categories a user may pick for a given entry type. A contribution carries no
  * category on the wire; the table labels it "Savings" itself.
  */
-export function selectableCategories(entryType: EntryType): Category[] {
+export function selectableCategories(
+  categories: Category[],
+  entryType: EntryType,
+): Category[] {
   if (entryType === "contribution") return [];
-  return SEED_CATEGORIES.filter((c) => c.kind === entryType);
+  return categories.filter((c) => c.type === entryType);
+}
+
+/** GET /api/v1/organizations/${org_id}/categories/ */
+export async function fetchCategories(
+  org_id: number,
+  signal?: AbortSignal,
+): Promise<Category[]> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/categories/`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load categories (${res.status})`);
+  const data: { categories: Category[] } = await res.json();
+  return data.categories;
+}
+
+/**
+ * The category every contribution is filed under. Created per organization by
+ * the backend, so it is looked up rather than hard-coded; undefined only while
+ * the list is still loading.
+ */
+export function contributionCategory(
+  categories: Category[],
+): Category | undefined {
+  return categories.find((c) => c.type === "contribution");
 }

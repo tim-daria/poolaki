@@ -1,5 +1,6 @@
 // @ts-check
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { registerUser } from "./helpers.js";
 
 /**
  * Workspace routing: the URL owns the workspace.
@@ -33,17 +34,8 @@ test.describe.serial("Workspaces", () => {
   });
 
   test("registration lands on a workspace URL, not /", async () => {
-    await page.goto("/register");
-
-    await page.getByLabel("Email").fill(testUser.email);
-    await page.getByLabel("Username").fill(testUser.username);
-    await page.getByLabel("Password", { exact: true }).fill(testUser.password);
-    await page.getByLabel("Confirm Password").fill(testUser.password);
-    await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-
-    // "/" is only a redirect now — the app always settles on /o/:orgId.
-    await page.waitForURL(/\/o\/\d+$/);
-    personalUrl = new URL(page.url()).pathname;
+    // The helper waits for the /o/:orgId redirect and returns its pathname.
+    personalUrl = await registerUser(page, testUser);
 
     // The personal workspace is named "<username>'s budget" by the signup signal.
     await expect(
