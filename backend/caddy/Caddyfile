@@ -1,59 +1,101 @@
 {
-    admin 0.0.0.0:2019
-    auto_https off
-    servers {
-        metrics {
-            per_host
-        }
-    }
+	admin localhost:2019
+	auto_https off
+	servers {
+		metrics {
+			per_host
+		}
+	}
+	debug
+	order coraza_waf first
+
+	log waf_debug {
+		output stdout
+		format console
+		level debug
+		include "http.handlers.waf"
+	}
+}
+
+(waf) {
+	coraza_waf {
+		load_owasp_crs
+		directives `
+		Include /etc/caddy/coraza.conf
+        Include /etc/caddy/coraza/crs-setup.conf
+        Include /etc/caddy/coraza/rules/*.conf
+		SecDefaultAction "phase:3,log,auditlog,pass"
+		SecDefaultAction "phase:4,log,auditlog,pass"
+		SecDefaultAction "phase:5,log,auditlog,pass"
+		SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,deny,status:403"
+		`
+	}
+
+	handle_errors 403 {
+		header X-Blocked "true"
+		root * /etc/caddy/custom-pages
+		rewrite * /{err.status_code}.html
+		file_server
+		templates
+	}
 }
 
 poolaki.de:80 {
-    handle /admin/* {
-        reverse_proxy backend:8000
-    }
-    handle /_allauth/* {
-        reverse_proxy backend:8000
-    }
-    handle /api/* {
-        reverse_proxy backend:8000
-    }
-    handle /static/* {
-        reverse_proxy backend:8000
-    }
-    handle /accounts/* {
-        reverse_proxy backend:8000
-    }
-    handle {
-        reverse_proxy frontend:5173
-    }
+	import waf
+	log {
+		output file /coroza/logs/poolaki.de.access.log
+		format json
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+	handle /_allauth/* {
+		reverse_proxy backend:8000
+	}
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /static/* {
+		reverse_proxy backend:8000
+	}
+	handle /accounts/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:5173
+	}
 }
 
 poolaki.localhost:80 {
-    handle /admin/* {
-        reverse_proxy backend:8000
-    }
-    handle /_allauth/* {
-        reverse_proxy backend:8000
-    }
-    handle /api/* {
-        reverse_proxy backend:8000
-    }
-    handle /static/* {
-        reverse_proxy backend:8000
-    }
-    handle /accounts/* {
-        reverse_proxy backend:8000
-    }
-    handle {
-        reverse_proxy frontend:5173
-    }
+	import waf
+	log {
+		output file /coroza/logs/poolaki.localhost.access.log
+		format json
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+	handle /_allauth/* {
+		reverse_proxy backend:8000
+	}
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /static/* {
+		reverse_proxy backend:8000
+	}
+	handle /accounts/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:5173
+	}
 }
 
 grafana.localhost:80 {
-    reverse_proxy grafana:3000
+	reverse_proxy grafana:3000
 }
 
 prometheus.localhost:80 {
-    reverse_proxy prometheus:9090
+	reverse_proxy prometheus:9090
 }

@@ -10,7 +10,10 @@ services:
       - tunnel_net
 
   caddy:
-    image: caddy:2.11-alpine
+    # image: caddy:2.11-alpine
+    build:
+      context: ./backend/caddy
+      dockerfile: Dockerfile
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -18,9 +21,11 @@ services:
     environment:
       TZ: Europe/Berlin
     volumes:
-      - ./backend/caddy/:/etc/caddy
+      - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+      - coraza_logs:/coraza/logs:rw
+      - ./backend/caddy/403.html:/etc/caddy/custom-pages/403.html:ro
     networks:
       - tunnel_net
       - frontend_net
@@ -402,6 +407,7 @@ volumes:
   postgres_db:
   caddy_data:
   caddy_config:
+  coraza_logs:
   grafana_data:
   prom_data:
   vault_data:
