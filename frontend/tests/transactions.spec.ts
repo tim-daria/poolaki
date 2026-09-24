@@ -5,7 +5,11 @@
  * add/edit modal, against rows posted through the real API.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { makeUsers, registerUser, toOrgId } from "./helpers.js";
+import {
+  createWorkspaceViaApi,
+  openAsSharedOwner,
+  toOrgId,
+} from "./helpers.js";
 
 type OrganizationCategory = {
   id: number;
@@ -191,11 +195,11 @@ test.describe.serial("Transactions", () => {
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
 
-  const [user] = makeUsers("tx", "tx_unused");
-
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    const workspace = await registerUser(page, user);
+    page = (await openAsSharedOwner(browser)).page;
+    // A workspace of its own: every count below assumes exactly FIXTURES, and
+    // the shared owner's personal workspace is open to other specs.
+    const workspace = await createWorkspaceViaApi(page, `Ledger ${Date.now()}`);
     const orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
