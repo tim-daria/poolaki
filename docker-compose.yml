@@ -178,6 +178,8 @@ services:
       retries: 3
       start_period: 15s
       timeout: 5s
+    profiles:
+      - prod
 
 
   grafana:
@@ -224,11 +226,9 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-        # restart: true
-      vault:
-        condition: service_healthy
-        # restart: true
-
+        restart: true
+    profiles:
+      - prod
 
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
@@ -247,8 +247,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-        # restart: true
-
+        restart: true
+    profiles:
+      - prod
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -270,6 +271,8 @@ services:
       - backup_net
     depends_on:
       - caddy
+    profiles:
+      - prod
 
 
 ######################################################
@@ -300,8 +303,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-        # restart: true
-
+        restart: true
+    profiles:
+      - prod
 
 ######################################################
 # RAG - System #
