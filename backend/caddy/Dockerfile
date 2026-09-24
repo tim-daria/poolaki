@@ -18,4 +18,3 @@ RUN git clone --depth 1 --branch v4.3.0 \
     rm -rf /tmp/crs
 
 COPY coraza.conf /etc/caddy/coraza.conf
-# COPY coraza-api.conf /etc/caddy/coraza-api.conf
