@@ -92,9 +92,9 @@ export const router = createBrowserRouter([
                         lazy: () => import("./pages/Transactions/Transactions"),
                       },
                       {
-                        path: "goals",
+                        path: "savings",
                         handle: {
-                          title: "Goals",
+                          title: "Savings",
                           subtitle:
                             "Create, manage, and achieve your savings goals",
                         },

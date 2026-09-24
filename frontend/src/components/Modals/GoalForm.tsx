@@ -104,7 +104,7 @@ export function GoalForm({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    <ModalShell open={open} title="Add goal" onClose={guard.requestClose}>
+    <ModalShell open={open} title="Add saving" onClose={guard.requestClose}>
       {/* The form wraps content AND actions, or Enter never reaches submit. */}
       <form onSubmit={handleSubmit}>
         <DialogContent>
