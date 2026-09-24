@@ -1,3 +1,11 @@
+/** @file Starting balance of the personal workspace; the endpoint has no shared-workspace counterpart. */
+
+/**
+ * Flip once the backend can set a shared workspace's starting balance. Until
+ * then Home shows the action disabled, so the layout is final.
+ */
+export const CAN_SET_SHARED_STARTING_BALANCE = false;
+
 export async function submitInitialBalance(
   balance: string,
   csrfToken: string,
@@ -24,6 +32,6 @@ export async function submitInitialBalance(
 
   return {
     ok: false,
-    error: "Failed to create organisation. Please try again.",
+    error: "Could not save the starting balance. Please try again.",
   };
 }
