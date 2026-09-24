@@ -70,71 +70,72 @@ tPostgres:
 	@docker exec -it postgres_db psql -d app_database
 
 rbCaddy:
-	$(MAKE) down caddy;
+# 	$(MAKE) down caddy;
+	@docker compose down caddy
 	@docker compose -f "$(COMPOSE_FILE)" build caddy
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDjango:
-	$(MAKE) down backend;
+	@docker compose down backend;
 	@docker compose -f "$(COMPOSE_FILE)" build backend
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbNode:
-	$(MAKE) down frontend;
+	@docker compose down frontend;
 	@docker compose -f "$(COMPOSE_FILE)" build frontend
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPostgres:
-	$(MAKE) down db;
+	@docker compose down db;
 	@docker compose -f "$(COMPOSE_FILE)" build db
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbPrometheus:
-	$(MAKE) down prometheus;
+	@docker compose down prometheus;
 	@docker compose -f "$(COMPOSE_FILE)" build prometheus
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbGrafana:
-	$(MAKE) down grafana;
+	@docker compose down grafana;
 	@docker compose -f "$(COMPOSE_FILE)" build grafana
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbVault:
-	$(MAKE) down vault;
+	@docker compose down vault;
 	@docker compose -f "$(COMPOSE_FILE)" build vault
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAgent:
-	$(MAKE) down vault_agent;
+	@docker compose down vault_agent;
 	@docker compose -f "$(COMPOSE_FILE)" build vault_agent
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbDbBackup:
-	$(MAKE) down db_backup;
+	@docker compose down db_backup;
 	@docker compose -f "$(COMPOSE_FILE)" build db_backup
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbAi:
-	$(MAKE) down ai-service;
+	@docker compose down ai-service;
 	@docker compose -f "$(COMPOSE_FILE)" build ai-service
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 rbCloudflare:
-	$(MAKE) down cloudflared;
+	@docker compose down cloudflared;
 	@docker compose -f "$(COMPOSE_FILE)" build cloudflared
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
 clean:
 	@echo "=== 🗑️ Remove all container, networks and volumes 🗑️ ==="
-	$(MAKE) down;
+	@docker compose down;
 	@docker system prune -f
 
 fclean:
 	@echo "=== 🗑️ Remove all images, container, networks and volumes 🗑️ ==="
-	$(MAKE) down;
+	@docker compose down;
 	@docker system prune -af
 
 rmVolumes:
 	@echo "=== 🗑️ Remove all volumes 🗑️ ==="
-	$(MAKE) down -v;
+	@docker compose down -v;
 	@docker volume prune -f
