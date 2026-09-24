@@ -1,7 +1,7 @@
 
 COMPOSE_FILE=./docker-compose.yml
 
-.PHONY: up down stop start build status status_all logs clean fclean \
+.PHONY: up re prod re-prod down stop start build status status_all logs clean fclean \
 		rbCaddy rbDjango rbPostgres rbNode rbGrafana \
 		rbPrometheus rbVault rbAgent rbCloudflare rbDbBackup rbAi \
 		tCaddy tDjango tPostgres tNode tGrafana \
@@ -17,11 +17,19 @@ re:
 	@docker compose build
 	@docker compose -f "$(COMPOSE_FILE)" up -d
 
+prod:
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod up -d
+
+re-prod:
+	@docker compose --profile prod down
+	@docker compose build
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod up -d
+
 down:
-	@docker compose -f "$(COMPOSE_FILE)" down
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod down
 
 down-v:
-	@docker compose -f "$(COMPOSE_FILE)" down -v
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod down -v
 
 stop: 
 	@docker compose -f "$(COMPOSE_FILE)" stop
