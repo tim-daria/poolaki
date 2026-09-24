@@ -59,6 +59,12 @@ export async function createOrganization(
     credentials: "include",
     body: JSON.stringify({ name, initial_balance: initialBalance }),
   });
+  if (res.status === 400) {
+    const body = await res.json().catch(() => null);
+    throw new WorkspaceRequestError(
+      errorMessageFrom(body, "Could not create the workspace"),
+    );
+  }
   if (!res.ok) throw new Error(`Failed to create workspace (${res.status})`);
   return res.json();
 }
@@ -111,11 +117,32 @@ export async function fetchPendingInvitations(
 /**
  * Backend's 400 message, e.g. "No user found with this username."
  *
- * Separate from a plain Error because these are the user's own input —
- * unknown username, already a member, org full — and belong in the form,
- * not in a generic "something went wrong".
+ * Separate from a plain Error because the backend rejected the request with a
+ * message meant for the user — unknown username, workspace full, member
+ * already gone — and that belongs in the UI, not in a generic "something went
+ * wrong".
  */
-export class InvitationCreateError extends Error {}
+export class WorkspaceRequestError extends Error {}
+
+/**
+ * First user-facing message in a 400 body. The API answers in three shapes:
+ * `{errors: [...]}` from services, `{error: "..."}` from older views, and
+ * `{field: [...]}` from serializers. Exported for tests.
+ */
+export function errorMessageFrom(body: unknown, fallback: string): string {
+  if (typeof body !== "object" || body === null) return fallback;
+  const rec = body as Record<string, unknown>;
+  const firstString = (v: unknown): string | undefined =>
+    Array.isArray(v) && typeof v[0] === "string" ? v[0] : undefined;
+  const fromErrors = firstString(rec.errors);
+  if (fromErrors) return fromErrors;
+  if (typeof rec.error === "string" && rec.error) return rec.error;
+  for (const value of Object.values(rec)) {
+    const msg = firstString(value);
+    if (msg) return msg;
+  }
+  return fallback;
+}
 
 /** POST /api/v1/organizations/${org_id}/invitations/ */
 export async function createInvitation(
@@ -131,13 +158,8 @@ export async function createInvitation(
   });
   if (res.status === 400) {
     const body = await res.json().catch(() => null);
-    throw new InvitationCreateError(
-      // Three shapes: the service rejects the request as {errors: [...]},
-      // legacy code as {error: "..."}, the serializer the field as {username: [...]}.
-      body?.errors?.[0] ??
-        body?.error ??
-        body?.username?.[0] ??
-        "Could not send the invitation",
+    throw new WorkspaceRequestError(
+      errorMessageFrom(body, "Could not send the invitation"),
     );
   }
   if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
@@ -160,13 +182,39 @@ export async function cancelInvitation(
   );
   if (res.status === 400) {
     const body = await res.json().catch(() => null);
-    // Reuses the create error: both are "the invitation is not in the state
-    // you think", and the caller shows the message either way.
-    throw new InvitationCreateError(
-      body?.error ?? "Could not cancel the invitation",
+    throw new WorkspaceRequestError(
+      errorMessageFrom(body, "Could not cancel the invitation"),
     );
   }
   if (!res.ok) throw new Error(`Failed to cancel invitation ${res.status}`);
+}
+
+/**
+ * DELETE /api/v1/organizations/${org_id}/members/${user_id}/
+ *
+ * Owner-only. A 400 means the row is stale — the user already left or was
+ * removed — so callers should refetch rather than retry.
+ */
+export async function removeMember(
+  org_id: number,
+  user_id: number,
+  csrfToken: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/members/${user_id}/`,
+    {
+      method: "DELETE",
+      headers: { "X-CSRFToken": csrfToken },
+      credentials: "include",
+    },
+  );
+  if (res.status === 400) {
+    const body = await res.json().catch(() => null);
+    throw new WorkspaceRequestError(
+      errorMessageFrom(body, "Could not remove the member"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to remove member ${res.status}`);
 }
 
 /** Mirrors invitations[] in MyInvitationsView.get */
@@ -196,6 +244,12 @@ export async function fetchMyInvitations(
  * drift can do here is offer an invite that comes back rejected.
  */
 export const MAX_MEMBERS = 5;
+
+/**
+ * Mirrors MAX_ORGS_PER_USER in core/services/organization.py. Counts every
+ * membership, the personal workspace included, as the backend does.
+ */
+export const MAX_ORGS = 10;
 
 /**
  * Owners first, then by join date. The endpoint returns memberships in no
@@ -229,8 +283,8 @@ export function describeWorkspace(
 }
 
 // Flags for workspace actions whose backend routes don't exist yet. The UI
-// renders them disabled so the layout is final; flip once the route lands.
+// renders them disabled so the layout is final; delete a flag once its route
+// lands (member removal already has).
 export const CAN_RENAME_ORGANIZATION = false;
 export const CAN_DELETE_ORGANIZATION = false;
-export const CAN_MANAGE_MEMBERS = false;
 export const CAN_LEAVE_ORGANIZATION = false;

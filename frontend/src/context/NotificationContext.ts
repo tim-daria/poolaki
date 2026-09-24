@@ -6,6 +6,8 @@ export type NotificationType =
   | "transaction_added"
   | "goal_completed"
   | "member_left"
+  | "member_removed"
+  | "removed_from_org"
   | (string & {});
 
 /**
@@ -18,6 +20,19 @@ export type InvitationPayload = {
   org_id: number;
   org_name: string;
   invited_by: string;
+};
+
+/** Sent to every remaining member when the owner removes someone. */
+export type MemberRemovedPayload = {
+  org_name: string;
+  removed_user: string;
+  removed_by: string;
+};
+
+/** Sent to the removed user; the org may no longer be visible to them. */
+export type RemovedFromOrgPayload = {
+  org_name: string;
+  removed_by: string;
 };
 
 export type Notification = {

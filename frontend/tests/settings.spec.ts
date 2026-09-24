@@ -13,7 +13,7 @@ import {
 /**
  * @file The account Settings page and per-workspace settings: reaching them
  * from the account menu, the invitations banner, cancelling a pending invite,
- * and changing the password end to end.
+ * changing the password and removing a member end to end.
  */
 test.describe.serial("Settings", () => {
   let owner: Page;
@@ -152,5 +152,34 @@ test.describe.serial("Settings", () => {
     await guest.getByLabel("Password", { exact: true }).fill(newPassword);
     await guest.getByRole("button", { name: "Login", exact: true }).click();
     await guest.waitForURL(/\/o\/\d+$/);
+  });
+
+  // Last: the Quit test above needs the guest to still be a member.
+  test("the owner can remove a member, who is told about it", async () => {
+    // A fresh load: the member list was fetched before the guest accepted.
+    await owner.goto(`${sharedUrl}/settings/workspaces/${toOrgId(sharedUrl)}`);
+    await expect(
+      owner.getByRole("main").getByText(guestUser.username),
+    ).toBeVisible();
+
+    await owner
+      .getByRole("button", { name: `Manage ${guestUser.username}` })
+      .click();
+    await owner
+      .getByRole("menuitem", { name: "Remove from workspace" })
+      .click();
+    await owner.getByRole("button", { name: "Remove", exact: true }).click();
+
+    await expect(
+      owner.getByText(`${guestUser.username} removed from ${sharedName}`),
+    ).toBeVisible();
+    await expect(
+      owner.getByRole("main").getByText(guestUser.username),
+    ).toBeHidden();
+
+    await guest.getByRole("button", { name: "Notifications" }).click();
+    await expect(
+      guest.getByText(`${ownerUser.username} removed you from ${sharedName}`),
+    ).toBeVisible();
   });
 });
