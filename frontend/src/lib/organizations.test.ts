@@ -9,6 +9,35 @@ import {
   successorOwner,
 } from "./organizations";
 
+describe("errorMessageFrom", () => {
+  const fallback = "Something went wrong";
+
+  it("takes the first entry of a service errors list", () => {
+    expect(errorMessageFrom({ errors: ["a", "b"] }, fallback)).toBe("a");
+  });
+
+  it("reads a single error string", () => {
+    expect(errorMessageFrom({ error: "x" }, fallback)).toBe("x");
+  });
+
+  it("reads the first serializer field error", () => {
+    expect(errorMessageFrom({ username: ["taken"] }, fallback)).toBe("taken");
+  });
+
+  it("prefers the errors list over a single error", () => {
+    expect(
+      errorMessageFrom({ errors: ["list"], error: "single" }, fallback),
+    ).toBe("list");
+  });
+
+  it.each([null, undefined, "nope", {}, { errors: [] }, { error: "" }])(
+    "falls back for %j",
+    (body) => {
+      expect(errorMessageFrom(body, fallback)).toBe(fallback);
+    },
+  );
+});
+
 describe("describeWorkspace", () => {
   it("describes a personal workspace without counts", () => {
     expect(describeWorkspace({ is_personal: true, role: "owner" }, 1, 0)).toBe(
