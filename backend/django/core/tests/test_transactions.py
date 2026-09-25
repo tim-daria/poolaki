@@ -150,6 +150,52 @@ def test_create_transaction_rejects_category_from_another_organization(
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
+def test_create_transaction_accepts_category_matching_entry_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=shared_org,
+        name="Groceries",
+        type=CategoryType.EXPENSE,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    transaction = Transaction.objects.get(id=response.data["id"])
+    assert transaction.category_id == category.id
+
+
+def test_create_transaction_rejects_category_with_different_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=shared_org,
+        name="Salary",
+        type=CategoryType.INCOME,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["category_id"] == ["Category type must match transaction entry type."]
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
 @pytest.mark.parametrize("method", ["get", "post"])
 def test_transactions_require_organization_membership(
     api_client: APIClient, stranger: User, personal_org: Organization, method: str
@@ -297,6 +343,67 @@ def test_transaction_patch_rejects_category_from_another_organization(
     )
 
     assert response.status_code == 400
+    transaction.refresh_from_db()
+    assert transaction.category_id is None
+
+
+def test_transaction_patch_accepts_category_matching_entry_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    category = Category.objects.create(
+        org=shared_org,
+        name="Groceries",
+        type=CategoryType.EXPENSE,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": category.id},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    transaction.refresh_from_db()
+    assert transaction.category_id == category.id
+
+
+def test_transaction_patch_rejects_category_with_different_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    category = Category.objects.create(
+        org=shared_org,
+        name="Salary",
+        type=CategoryType.INCOME,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": category.id},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["category_id"] == ["Category type must match transaction entry type."]
     transaction.refresh_from_db()
     assert transaction.category_id is None
 
