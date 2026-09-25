@@ -11,6 +11,12 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
+import { useNavigate } from "react-router"; //to handle route redirection on notification click
+import {
+  getNotificationDetails,
+  getNotificationActorName,
+  isInvitationPayload,
+} from "../../lib/notificationFormatting";
 import { useNotifications } from "../../context/useNotifications";
 import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
@@ -21,18 +27,17 @@ import {
   declineInvitation,
   InvitationResolveError,
 } from "../../lib/notifications";
-import type {
-  InvitationPayload,
-  Notification,
-  NotificationType,
-} from "../../context/NotificationContext";
+import type { Notification } from "../../context/NotificationContext";
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
   onClose: () => void;
 }
 
-/** "just now" / "5m ago" / "2h ago" / "3d ago" — good enough for an inbox menu. */
+/**
+ * Calculates a human-readable relative time string from an ISO timestamp.
+ * "just now" / "5m ago" / "2h ago" / "3d ago" — good enough for an inbox menu.
+ */
 function timeAgo(iso: string): string {
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -43,44 +48,8 @@ function timeAgo(iso: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-function isInvitationPayload(
-  p: Record<string, unknown>,
-): p is InvitationPayload {
-  return (
-    typeof p.invitation_id === "number" && typeof p.invited_by === "string"
-  );
-}
-
-function typeText(type: NotificationType, p: Record<string, unknown>): string {
-  switch (type) {
-    case "invitation":
-      return isInvitationPayload(p)
-        ? `${p.invited_by} invited you to ${p.org_name} workspace`
-        : "You have a new invitation";
-    case "transaction_added":
-      return "A new transaction was added";
-    case "goal_completed":
-      return "A spending goal has been achieved";
-    case "member_left":
-      return "A member left the organization";
-    default:
-      return "Notification";
-  }
-}
-
 /**
  * The notification inbox, anchored to the header bell.
- *
- * A Popover rather than a Menu: `Menu` renders role="menu", whose children
- * must be menu items, and a menuitem may not contain focusable descendants —
- * which every invitation row does (Accept / Decline). Popover is what Menu is
- * built on, so focus trap, focus restore and Escape-to-close are unchanged;
- * only the MenuList keyboard model, which never applied here, is gone.
- *
- * The backend marks the matching notification read on accept/decline, so on
- * success we refetch the notification list (badge + rows). Accepting also
- * adds a workspace, so we refresh the shared org list — that is what the
- * OrgSwitcher reads.
  */
 
 export function NotificationPanel({
@@ -88,8 +57,10 @@ export function NotificationPanel({
   onClose,
 }: NotificationPanelProps) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { notifications, clearAll, loadFullList, refresh } = useNotifications();
-  const { refresh: refreshOrgList } = useOrgList();
+  const { organizations, refresh: refreshOrgList } = useOrgList();
+  const isAtOrgLimit = (organizations?.length ?? 0) >= 10;
   const [filter, setFilter] = useState<"all" | "invitations">("all");
 
   const [busyIds, setBusyIds] = useState<Record<number, boolean>>({});
@@ -342,9 +313,8 @@ export function NotificationPanel({
           {filteredNotifications.map((n) => {
             const isInvitation = n.type === "invitation";
             const payload = n.payload;
-            const userName = isInvitationPayload(payload)
-              ? payload.invited_by
-              : "User";
+            const userName = getNotificationActorName(n.type, payload);
+            const details = getNotificationDetails(n.type, payload);
 
             const isBusy = Boolean(busyIds[n.id]);
             const errorMessage = errors[n.id];
@@ -354,15 +324,23 @@ export function NotificationPanel({
                 key={n.id}
                 component="li"
                 elevation={0}
+                onClick={() => {
+                  if (details.route && !isInvitation) {
+                    navigate(details.route);
+                    onClose();
+                  }
+                }}
                 sx={{
                   p: 1.5,
-                  // The palette's "subtle tint", used app-wide for gentle
-                  // emphasis. Not action.hover: that is translucent black
-                  // meaning "under the cursor", so a row wearing it
-                  // permanently reads as stuck in a hover state.
-                  // bgcolor: isInvitation ? "background.default" : "transparent",
-                  // borderBottom: isInvitation ? "none" : "1px solid",
-                  // borderColor: "divider",
+                  cursor:
+                    details.route && !isInvitation ? "pointer" : "default",
+                  transition: "background-color 0.2s",
+                  "&:hover": {
+                    bgcolor:
+                      details.route && !isInvitation
+                        ? "action.hover"
+                        : "inherit",
+                  },
                 }}
               >
                 <Box
@@ -407,7 +385,7 @@ export function NotificationPanel({
                       color="text.secondary"
                       sx={{ fontSize: "0.825rem", mt: 0.2 }}
                     >
-                      {typeText(n.type, payload)}
+                      {details.text}
                     </Typography>
 
                     {errorMessage && (
@@ -422,48 +400,67 @@ export function NotificationPanel({
 
                     {/* Inline Invitation Actions */}
                     {isInvitation && (
-                      <Box sx={{ display: "flex", gap: 1, mt: 1.5 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          disabled={isBusy}
-                          onClick={() =>
-                            void handleResolveInvitation(n, "decline")
-                          }
-                          sx={{
-                            bgcolor: "background.paper",
-                            borderColor: "primary.main",
-                            borderRadius: 999,
-                            color: "text.primary",
-                            px: 2,
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            "&:hover": {
-                              bgcolor: "primary.light",
-                              borderColor: "divider",
-                            },
-                          }}
-                        >
-                          Decline
-                        </Button>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          disabled={isBusy}
-                          onClick={() =>
-                            void handleResolveInvitation(n, "accept")
-                          }
-                          sx={{
-                            bgcolor: "primary.main",
-                            borderRadius: 999,
-                            px: 2,
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            "&:hover": { bgcolor: "primary.dark" },
-                          }}
-                        >
-                          Accept
-                        </Button>
+                      <Box sx={{ mt: 1.5 }}>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            disabled={isBusy}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleResolveInvitation(n, "decline");
+                            }}
+                            sx={{
+                              bgcolor: "background.paper",
+                              borderColor: "primary.main",
+                              borderRadius: 999,
+                              color: "text.primary",
+                              px: 2,
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              "&:hover": {
+                                bgcolor: "primary.light",
+                                borderColor: "divider",
+                              },
+                            }}
+                          >
+                            Decline
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            disabled={isBusy || isAtOrgLimit}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleResolveInvitation(n, "accept");
+                            }}
+                            sx={{
+                              bgcolor: "primary.main",
+                              borderRadius: 999,
+                              px: 2,
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              "&:hover": { bgcolor: "primary.dark" },
+                            }}
+                          >
+                            Accept
+                          </Button>
+                        </Box>
+
+                        {isAtOrgLimit && (
+                          <Typography
+                            variant="caption"
+                            color="error"
+                            sx={{
+                              display: "block",
+                              mt: 1,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            You have reached the maximum limit of 10
+                            organizations. Leave one to accept this invitation.
+                          </Typography>
+                        )}
                       </Box>
                     )}
                   </Box>

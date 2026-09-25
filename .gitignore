@@ -45,3 +45,5 @@ blob-report/
 # Vault files
 vault/secure
 vault/read_vault.sh
+
+.agent/
