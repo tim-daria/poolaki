@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from core.models import Membership, NotificationType, Organization, Transaction, User
-from core.services.organization import _notify_users
+from core.services.notification import notify_users
 
 
 @transaction.atomic
@@ -32,9 +32,8 @@ def create_transaction_entry(
         transaction_date=transaction_date,
         is_tax_deductible=is_tax_deductible,
     )
-    # Creator is excluded; no notification in a personal budget
-    # about new transaction.
-    _notify_users(
+    # A personal budget has a single member, so no notifications about new transaction.
+    notify_users(
         list(
             Membership.objects.filter(org=org)
             .exclude(user=created_by)
