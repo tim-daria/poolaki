@@ -95,19 +95,23 @@ def leave_organization(user: User, org: Organization) -> bool:
     Returns:
         True if the organization was deleted.
     """
-    # Serialize membership mutations (leave/remove) against the org row.
-    Organization.objects.select_for_update().get(pk=org.pk)
+    # Serialize membership mutations (leave/remove) against the org row;
+    # rebind so all reads use the locked row, not the caller's stale instance.
+    org = Organization.objects.select_for_update().get(pk=org.pk)
     if org.is_personal:
         raise ValidationError("Can not leave your personal budget.")
-    try:
-        membership = Membership.objects.get(user=user, org=org)
-    except Membership.DoesNotExist:
-        # Safety net: the view's IsOrgMember permission answers 403 first.
-        raise PermissionError("You are not a member of this organization.") from None
+    membership = Membership.objects.filter(user=user, org=org).first()
+    if membership is None:
+        # Reachable only in the race where the owner removes this user
+        # between the view's permission check and the org-row lock.
+        raise ValidationError("You are not a member of this organization.")
+    # (user_id, username) pairs, ordered so the first entry is the
+    # longest-standing member; one query instead of rows plus user joins.
     remaining = list(
         Membership.objects.filter(org=org)
         .exclude(pk=membership.pk)
         .order_by("joined_at", "user_id")
+        .values_list("user_id", "user__username")
     )
     org_name = org.name
     if not remaining:
@@ -124,29 +128,29 @@ def leave_organization(user: User, org: Organization) -> bool:
         )
         return True
     if membership.role == Role.OWNER:
-        # List is non-empty and ordered: first element is the longest-standing member.
-        new_owner = remaining[0]
-        Membership.objects.filter(pk=new_owner.pk).update(role=Role.OWNER)
+        # First pair is the longest-standing remaining member.
+        new_owner_user_id, new_owner_username = remaining[0]
+        Membership.objects.filter(org=org, user_id=new_owner_user_id).update(role=Role.OWNER)
         _notify_users(
-            [new_owner.user_id],
+            [new_owner_user_id],
             NotificationType.OWNERSHIP_TRANSFERRED,
             {"previous_owner": user.username, "org_name": org_name},
             org=org,
         )
-        # the new owner gets only the personal notification above
+        # The new owner already got the personal notification above.
         _notify_users(
-            [m.user_id for m in remaining[1:]],
+            [uid for uid, _ in remaining[1:]],
             NotificationType.OWNER_CHANGED,
             {
                 "previous_owner": user.username,
-                "new_owner": new_owner.user.username,
+                "new_owner": new_owner_username,
                 "org_name": org_name,
             },
             org=org,
         )
     membership.delete()
     _notify_users(
-        [m.user_id for m in remaining],
+        [uid for uid, _ in remaining],
         NotificationType.MEMBER_LEFT,
         {"user": user.username, "org_name": org_name},
         org=org,
@@ -162,8 +166,9 @@ def remove_member(org: Organization, user_id: int, owner: User) -> None:
     """
     if user_id == owner.id:
         raise ValidationError("Use leave organization to remove yourself.")
-    # Serialize membership mutations (leave/remove) against the org row.
-    Organization.objects.select_for_update().get(pk=org.pk)
+    # Serialize membership mutations (leave/remove) against the org row;
+    # rebind so all reads use the locked row, not the caller's stale instance.
+    org = Organization.objects.select_for_update().get(pk=org.pk)
     membership = Membership.objects.filter(org=org, user_id=user_id).select_related("user").first()
     if membership is None:
         raise ValidationError("This user is not a member of the organization.")

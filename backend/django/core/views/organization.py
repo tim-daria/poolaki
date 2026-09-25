@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -14,7 +13,6 @@ from core.serializers import (
     OrganizationNameSerializer,
 )
 from core.services.balance import calculate_org_balance, set_initial_balance
-from core.services.exceptions import PersonalOrganizationMissingError
 from core.services.organization import (
     create_shared_organization,
     leave_organization,
@@ -49,13 +47,7 @@ class SetInitialBalanceView(APIView):
 
         initial_balance = serializer.validated_data["initial_balance"]
 
-        try:
-            org = set_initial_balance(request.user, initial_balance)
-        except PersonalOrganizationMissingError:
-            return Response(
-                {"errors": ["Personal organization is missing"]},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        org = set_initial_balance(request.user, initial_balance)
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
 
     def post(self, request: Request) -> Response:
@@ -120,10 +112,7 @@ class OrganizationListCreateView(APIView):
 
         name = serializer.validated_data["name"]
         initial_balance = serializer.validated_data["initial_balance"]
-        try:
-            org = create_shared_organization(name, initial_balance, request.user)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        org = create_shared_organization(name, initial_balance, request.user)
 
         return Response(
             {
@@ -164,10 +153,7 @@ class OrganizationUpdateView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            rename_organization(org, serializer.validated_data["name"])
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        rename_organization(org, serializer.validated_data["name"])
         return Response({"id": org.id, "name": org.name}, status=status.HTTP_200_OK)
 
 
@@ -226,12 +212,7 @@ class OrganizationLeaveView(APIView):
             Organization,
             id=org_id,
         )
-        try:
-            organization_deleted = leave_organization(request.user, org)
-        except PermissionError as e:
-            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        organization_deleted = leave_organization(request.user, org)
         return Response({"organization_deleted": organization_deleted}, status=status.HTTP_200_OK)
 
 
@@ -256,10 +237,7 @@ class OrganizationMemberRemoveView(APIView):
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, id=org_id)
 
-        try:
-            remove_member(org, user_id, request.user)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        remove_member(org, user_id, request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -23,16 +23,15 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
 
 
 class OrganizationNameSerializer(serializers.Serializer[Organization]):
-    # trim: "   "-style names are rejected instead of stored
     name = serializers.CharField(max_length=100, allow_blank=False, trim_whitespace=True)
 
 
-class OrganizationCreateSerializer(OrganizationNameSerializer, InitialBalanceSerializer):
-    """Contracts for POST /organizations/: name + initial balance.
-
-    Pure composition — DRF merges the declared fields of both base
-    classes, so each field stays defined exactly once.
-    """
+class OrganizationCreateSerializer(OrganizationNameSerializer):
+    initial_balance = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+    )
 
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):

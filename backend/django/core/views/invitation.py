@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -80,10 +79,7 @@ class InvitationListCreateView(APIView):
         username = serializer.validated_data["username"]
         org = Organization.objects.get(id=org_id)
 
-        try:
-            invitation = create_invitation(org, username, request.user)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        invitation = create_invitation(org, username, request.user)
         return Response(
             {
                 "id": invitation.id,
@@ -113,10 +109,7 @@ class CancelInvitationView(APIView):
     def post(self, request: Request, org_id: int, invitation_id: int) -> Response:
         assert isinstance(request.user, User)
 
-        try:
-            invitation = cancel_invitation(org_id, invitation_id)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        invitation = cancel_invitation(org_id, invitation_id)
         return Response(
             {"id": invitation.id, "status": invitation.status}, status=status.HTTP_200_OK
         )
@@ -141,13 +134,7 @@ class AcceptInvitationView(APIView):
         assert isinstance(request.user, User)
         invitation = get_object_or_404(Invitation, id=invitation_id)
 
-        try:
-            membership = accept_invitation(invitation, request.user)
-        except PermissionError as e:
-            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
-
+        membership = accept_invitation(invitation, request.user)
         return Response(
             {"organization_id": membership.org_id, "organization_name": membership.org.name},
             status=status.HTTP_200_OK,
@@ -172,13 +159,7 @@ class DeclineInvitationView(APIView):
         assert isinstance(request.user, User)
         invitation = get_object_or_404(Invitation, id=invitation_id)
 
-        try:
-            invitation = decline_invitation(invitation, request.user)
-        except PermissionError as e:
-            return Response({"errors": [str(e)]}, status=status.HTTP_403_FORBIDDEN)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
-
+        invitation = decline_invitation(invitation, request.user)
         return Response(
             {"invitation_id": invitation_id, "status": invitation.status}, status=status.HTTP_200_OK
         )
