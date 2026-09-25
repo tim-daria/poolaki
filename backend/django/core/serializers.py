@@ -57,6 +57,17 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
         queryset=Goal.objects.all(), allow_null=True, required=False
     )
 
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        category = attrs.get("category_id")
+        entry_type = attrs["entry_type"]
+
+        if isinstance(category, Category) and category.type != entry_type:
+            raise serializers.ValidationError(
+                {"category_id": ("Category type must match transaction entry type.")}
+            )
+
+        return attrs
+
     def validate_goal_id(self, goal: Goal | None) -> Goal | None:
         org_id = self.context.get("org_id")
         if goal is not None and goal.org_id != org_id:
@@ -106,11 +117,23 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
     transaction_date = serializers.DateField(required=False)
     is_tax_deductible = serializers.BooleanField(required=False)
 
-    def validate_category_id(self, category: Category) -> Category | None:
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        category = attrs.get("category_id")
+        transaction = self.context["transaction"]
+
+        if isinstance(category, Category) and category.type != transaction.entry_type:
+            raise serializers.ValidationError(
+                {"category_id": ("Category type must match transaction entry type.")}
+            )
+
+        return attrs
+
+    def validate_category_id(self, category: Category | None) -> Category | None:
         org_id = self.context.get("org_id")
 
         if category is not None and category.org_id != org_id:
             raise serializers.ValidationError("Category does not belong to this organization.")
+
         return category
 
 

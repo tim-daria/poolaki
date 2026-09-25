@@ -141,7 +141,13 @@ class TransactionGetDeleteView(APIView):
             created_by=user,
         )
 
-        serializer = TransactionUpdateSerializer(data=request.data, context={"org_id": org_id})
+        serializer = TransactionUpdateSerializer(
+            data=request.data,
+            context={
+                "org_id": org_id,
+                "transaction": transaction,
+            },
+        )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
