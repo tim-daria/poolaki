@@ -10,7 +10,11 @@ from rest_framework.views import APIView
 
 from core.models import Organization, Transaction, User
 from core.permissions import IsOrgMember
-from core.serializers import TransactionCreateSerializer, TransactionResponseSerializer
+from core.serializers import (
+    TransactionCreateSerializer,
+    TransactionResponseSerializer,
+    TransactionUpdateSerializer,
+)
 
 # from core.services.balance import calculate_org_balance
 from core.services.transaction import create_transaction_entry
@@ -86,12 +90,21 @@ class TransactionListCreateView(APIView):
 
 class TransactionGetDeleteView(APIView):
     """
-        Retrieve or delete a transaction from the specified organization.
+        Retrieve, update, or delete a transaction from the specified organization.
 
         GET
 
     Returns:
         - 200 OK with the transaction for GET requests.
+
+        PATCH
+        Partially updates a transaction created by the authenticated user.
+        Only fields included in the request are changed. Supported fields are
+        amount, description, transaction_date, is_tax_deductible, and category_id.
+        A category must belong to the specified organization.
+
+    Returns:
+        - 200 OK with the updated transaction for PATCH requests.
 
         DELETE
         Deletes the requested transaction. Income transactions can be deleted only
@@ -112,6 +125,50 @@ class TransactionGetDeleteView(APIView):
             id=transaction_id,
             org_id=org_id,
         )
+        return Response(
+            {"transaction": TransactionResponseSerializer(transaction, many=False).data},
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request: Request, org_id: int, transaction_id: int) -> Response:
+        user = request.user
+        assert isinstance(user, User)
+
+        transaction = get_object_or_404(
+            Transaction,
+            id=transaction_id,
+            org_id=org_id,
+            created_by=user,
+        )
+
+        serializer = TransactionUpdateSerializer(data=request.data, context={"org_id": org_id})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        updated_fields = set()
+        if "category_id" in data:
+            transaction.category = data["category_id"]
+            updated_fields.add("category")
+
+        if "amount" in data:
+            transaction.amount = data["amount"]
+            updated_fields.add("amount")
+
+        if "description" in data:
+            transaction.description = data["description"]
+            updated_fields.add("description")
+
+        if "transaction_date" in data:
+            transaction.transaction_date = data["transaction_date"]
+            updated_fields.add("transaction_date")
+
+        if "is_tax_deductible" in data:
+            transaction.is_tax_deductible = data["is_tax_deductible"]
+            updated_fields.add("is_tax_deductible")
+
+        with db_transaction.atomic():
+            transaction.save(update_fields=updated_fields)
+
         return Response(
             {"transaction": TransactionResponseSerializer(transaction, many=False).data},
             status=status.HTTP_200_OK,
