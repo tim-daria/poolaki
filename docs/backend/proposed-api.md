@@ -1,8 +1,10 @@
 # Proposed API structure for future modules
 
-The endpoints in this document are not implemented yet and should be treated as a
-suggested contract for the next backend iterations. They are meant to guide
-development for transactions, notifications, goals, and related finance flows.
+The endpoints in this document (categories, goals, recurring transactions) are
+not implemented yet and should be treated as a suggested contract for the next
+backend iterations. Already-implemented modules are documented in their own
+files, e.g. [notifications.md](notifications.md) and
+[organizations.md](organizations.md).
 
 ## Categories
 
@@ -70,37 +72,6 @@ PATCH /api/v1/organizations/{org_id}/goals/{goal_id}/
 POST /api/v1/organizations/{org_id}/goals/{goal_id}/archive/
 ```
 
-## Notifications
-
-Notifications should be read by the authenticated user and grouped by read/unread state.
-
-### List notifications
-
-```http
-GET /api/v1/notifications/
-```
-
-Response example:
-
-```json
-{
-  "notifications": [
-    {
-      "id": 12,
-      "type": "invitation",
-      "org_id": 2,
-      "org_name": "Trip",
-      "payload": {
-        "invitation_id": 7,
-        "invited_by": "bob"
-      },
-      "is_read": false,
-      "created_at": "2026-08-12T13:05:00Z"
-    }
-  ]
-}
-```
-
 ## Recurring transactions
 
 ```http
@@ -126,8 +97,17 @@ Suggested payload:
 
 ## Response conventions
 
-For future finance features, the API should follow a consistent pattern:
+New finance features must follow the patterns the existing API already uses:
 
-- list endpoints return an object with a top-level collection, for example `transactions`, `goals`, or `notifications`
+- list endpoints return an object with a top-level collection, for example
+  `transactions`, `goals`, or `notifications`
 - permission checks are enforced by organization membership and role
 - when relevant, all endpoints should support filtering and pagination
+- validation and permission errors use one contract for `400 Bad Request`
+  and `403 Forbidden`:
+
+  ```json
+  {
+    "errors": ["Human-readable message"]
+  }
+  ```
