@@ -33,11 +33,14 @@ import {
   contributionCategory,
 } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
-import { SEED_GOALS, goalById, type Goal } from "../../lib/goals";
+import { goalById, isArchived, type Goal } from "../../lib/goals";
+import { SEED_GOALS } from "../../lib/goals.seed";
+
 import {
   CAN_EDIT_TRANSACTIONS,
   TransactionError,
   changeType,
+  contributionDraft,
   createTransaction,
   deleteTransaction,
   emptyDraft,
@@ -59,6 +62,8 @@ interface Props {
   transaction?: Transaction;
   /** Required alongside `transaction`: the Delete button lives in this modal. */
   onDeleted?: (id: number) => void;
+  /** Add flow only: open on the Saving tab with this goal chosen. Ignored when `transaction` is set. */
+  goal?: number;
 }
 
 /** Tab label per entry type. */
@@ -88,6 +93,7 @@ export function TransactionForm({
   onSaved,
   transaction,
   onDeleted,
+  goal,
 }: Props) {
   const org = useCurrentOrg();
   const categories = useCategories();
@@ -134,7 +140,11 @@ export function TransactionForm({
     if (open) {
       // `transaction` is read here rather than watched, since re-seeding
       // mid-edit would discard what the user has typed.
-      const seeded = transaction ? toDraft(transaction) : emptyDraft();
+      const seeded = transaction
+        ? toDraft(transaction)
+        : goal !== undefined
+          ? contributionDraft(goal)
+          : emptyDraft();
       setEditRow(transaction ?? null);
       setDraft(seeded);
       setError("");
@@ -321,7 +331,7 @@ export function TransactionForm({
                   }
                   required
                 >
-                  {SEED_GOALS.map((g) => (
+                  {SEED_GOALS.filter((g) => !isArchived(g)).map((g) => (
                     <MenuItem key={g.id} value={g.id}>
                       <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
                       <Typography

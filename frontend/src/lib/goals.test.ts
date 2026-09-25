@@ -1,12 +1,8 @@
 /** @file Goal lookup and draft validation. */
 
 import { describe, expect, it } from "vitest";
-import {
-  goalById,
-  SEED_GOALS,
-  validateGoalDraft,
-  type GoalDraft,
-} from "./goals";
+import { goalById, validateGoalDraft, type GoalDraft } from "./goals";
+import { SEED_GOALS } from "./goals.seed";
 
 describe("goalById", () => {
   it("finds a goal by id", () => {

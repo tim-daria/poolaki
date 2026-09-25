@@ -25,7 +25,7 @@ else
 fi
 
 # Cleanup for backups older then 7 days
-DELETED=$(find /backups -name "backup_*.sql" -mtime +7 -print -delete)
+DELETED=$(find /backups -name "backup_*.sql" -mtime +3 -print -delete)
 if [ -n "$DELETED" ]; then
     echo "[$LOGTIME] Deleted old backups:"
     echo "$DELETED"
