@@ -206,8 +206,8 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password": "https://poolaki.localhost/auth/reset-password",
     "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
     "account_signup": "http://poolaki.localhost:8080/register",
-    "socialaccount_login_error": "http://poolaki.localhost:8080/login",
-    "socialaccount_login": "http://poolaki.localhost:8080/oauth-callback",
+    "socialaccount_login_error": "http://poolaki.lde/login",
+    "socialaccount_login": "http://poolaki.de/oauth-callback",
 }
 
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
