@@ -90,6 +90,59 @@ Returns `200 OK` with the transaction data:
 }
 ```
 
+### Edit a transaction
+
+`PATCH /api/organizations/{org_id}/transactions/{transaction_id}/`
+
+Partially updates a transaction created by the authenticated user and returns
+`200 OK` with the updated transaction representation. Only fields included in
+the request are changed; omitted fields retain their existing values.
+
+Supported request fields:
+
+- `amount`: decimal value with up to 14 digits and 2 decimal places
+- `description`: text up to 1024 characters; an empty string or `null` clears the description
+- `transaction_date`: ISO date (`YYYY-MM-DD`)
+- `is_tax_deductible`: boolean
+- `category_id`: ID of a category belonging to the organization; `null` clears the category
+
+The `entry_type`, `goal_id`, organization, and creator cannot be changed through
+this endpoint. A category from another organization is rejected with `400 Bad
+Request`. A transaction that does not belong to the authenticated user is not
+available for update and returns `404 Not Found`.
+
+Example request:
+
+```json
+{
+  "amount": "0.00",
+  "description": "Updated description",
+  "transaction_date": "2026-08-25",
+  "is_tax_deductible": false,
+  "category_id": 3
+}
+```
+
+Example response:
+
+```json
+{
+  "transaction": {
+    "id": 1,
+    "org_id": 10,
+    "goal_id": null,
+    "category_id": 3,
+    "entry_type": "expense",
+    "amount": "0.00",
+    "description": "Updated description",
+    "transaction_date": "2026-08-25",
+    "is_tax_deductible": false,
+    "created_by": "username",
+    "created_at": "2026-08-24T12:00:00Z"
+  }
+}
+```
+
 ### Delete a transaction
 
 `DELETE /api/organizations/{org_id}/transactions/{transaction_id}/`
