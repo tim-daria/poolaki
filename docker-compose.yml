@@ -86,7 +86,7 @@ services:
       db:
         condition: service_healthy
         restart: true
-      vault:
+      vault_agent:
         condition: service_healthy
         restart: true
 
@@ -227,6 +227,8 @@ services:
       prometheus:
         condition: service_healthy
         restart: true
+      vault_agent:
+        condition: service_healthy
     profiles:
       - prod
 
@@ -414,8 +416,12 @@ services:
     depends_on:
       vault:
         condition: service_started
-      db:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "test", "-f", "/vault/secure/id/agent-token"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
 volumes:
   postgres_db:

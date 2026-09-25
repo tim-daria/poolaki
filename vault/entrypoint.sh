@@ -44,6 +44,14 @@ if [ "$INITIALIZED" = "false" ]; then
 	# enable database secret engine
 	vault secrets enable database
 
+	# connect to database
+	vault write database/config/$POSTGRES_DB \
+		plugin_name=postgresql-database-plugin \
+		allowed_roles="db_role" \
+		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:$DB_PORT/$POSTGRES_DB?sslmode=disable" \
+		username=$POSTGRES_USER \
+		password=$POSTGRES_PASSWORD
+
 	# create access role for database
 	vault write database/roles/db_role \
 		db_name=$POSTGRES_DB \
@@ -62,17 +70,9 @@ if [ "$INITIALIZED" = "false" ]; then
 			DROP ROLE IF EXISTS \"{{name}}\";
 		"
 
-	# connect to database
-	vault write database/config/$POSTGRES_DB \
-		plugin_name=postgresql-database-plugin \
-		allowed_roles="db_role" \
-		connection_url="postgresql://{{username}}:{{password}}@$DB_HOST:$DB_PORT/$POSTGRES_DB?sslmode=disable" \
-		username=$POSTGRES_USER \
-		password=$POSTGRES_PASSWORD
-
 	# rotate root credentials
 	# password from the .env file is not longer valid from here
-	# vault write -f database/rotate-root/"$POSTGRES_DB"
+	vault write -f database/rotate-root/"$POSTGRES_DB"
 
 	# verify dynamic credentials can be issued (output suppressed: it would
 	# print a live database password)
@@ -112,10 +112,10 @@ if [ "$INITIALIZED" = "false" ]; then
 	# load policies for service
 	vault policy write vault-policy /vault/config/policies/vault-policy.hcl
 
+	### Agent role ###
+
 	# enable approle auth method
 	vault auth enable approle
-
-	### Agent role ###
 
 	# create role to access the database
 	# secret_id_ttl=0 --> never expires
@@ -138,6 +138,7 @@ if [ "$INITIALIZED" = "false" ]; then
 
 else
 	# unseal vault if initialized
+	echo
 	echo "Vault already initialized, checking seal status..."
 	# SEALED=$(vault status -format=json | jq -r '.sealed')
 	SEALED=$(vault_status_json | jq -r '.sealed')
@@ -155,6 +156,8 @@ else
 	fi
 
 fi
+
+echo "VAULT UNSEALED AND READY: $(date +%s.%N)" >> /vault/secure/id/timing.log
 
 # Bring the vault server process to the foreground that container stays alive
 # and signals (SIGTERM etc.) are handled properly
