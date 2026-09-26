@@ -85,8 +85,12 @@ Response example:
 
 Status:
 
-- `200 OK` on success
+- `201 Created` on success
 - `403 Forbidden` when the user is not the organization owner
+
+Side effect (see [notifications.md](notifications.md)): every other member of
+the organization receives a `transaction_added` notification; the creator is
+not notified.
 
 ### Get transaction details
 
