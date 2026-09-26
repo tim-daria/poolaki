@@ -14,12 +14,17 @@ services:
           subpath: cloudflare
     networks:
       - tunnel_net
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics 0.0.0.0:60123", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     depends_on:
       vault:
         condition: service_healthy
-  
+
   caddy:
-    # image: caddy:2.11-alpine
     build:
       context: ./backend/caddy
       dockerfile: Dockerfile
@@ -91,9 +96,8 @@ services:
       db:
         condition: service_healthy
         restart: true
-      vault:
+      vault_agent:
         condition: service_healthy
-        restart: true
 
   db:
     image: postgres:18
@@ -375,8 +379,6 @@ services:
     restart: unless-stopped
     cap_add:
       - IPC_LOCK
-    # expose:
-    #   - "8200"
     ports:
     - "8200:8200"
     volumes:
@@ -416,11 +418,16 @@ services:
       VAULT_ADDR: ${VAULT_ADDR}
     networks:
       - vault_net
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /vault/secure/id/agent-token || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       vault:
-        condition: service_started
-      db:
         condition: service_healthy
+
 
 volumes:
   postgres_db:

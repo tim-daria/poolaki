@@ -1,7 +1,7 @@
 FROM caddy:2-builder AS builder
 
 RUN xcaddy build \
-    --with github.com/corazawaf/coraza-caddy/v2
+	--with github.com/corazawaf/coraza-caddy/v2
 
 FROM caddy:2
 
@@ -11,10 +11,12 @@ COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 # Pin to a specific version! Don't just grab "master"
 RUN git clone --depth 1 --branch v4.3.0 \
-    https://github.com/coreruleset/coreruleset /tmp/crs && \
-    mkdir -p /etc/caddy/coraza && \
-    cp -r /tmp/crs/rules /etc/caddy/coraza/ && \
-    cp /tmp/crs/crs-setup.conf.example /etc/caddy/coraza/crs-setup.conf && \
-    rm -rf /tmp/crs
+	https://github.com/coreruleset/coreruleset /tmp/crs && \
+	mkdir -p /etc/caddy/coraza && \
+	cp -r /tmp/crs/rules /etc/caddy/coraza/ && \
+	cp /tmp/crs/crs-setup.conf.example /etc/caddy/coraza/crs-setup.conf && \
+	rm -rf /tmp/crs
+
+# USER 1337:1337
 
 COPY coraza.conf /etc/caddy/coraza.conf
