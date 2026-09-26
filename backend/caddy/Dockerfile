@@ -17,6 +17,14 @@ RUN git clone --depth 1 --branch v4.3.0 \
 	cp /tmp/crs/crs-setup.conf.example /etc/caddy/coraza/crs-setup.conf && \
 	rm -rf /tmp/crs
 
-# USER 1337:1337
+# Create a non-root user/group (alpine uses addgroup/adduser, not groupadd/useradd)
+RUN addgroup -g 1337 -S caddy && \
+    adduser -u 1337 -S -G caddy caddy
+
+RUN mkdir -p /data /config /coraza/logs && \
+    chown -R caddy:caddy /data /config /etc/caddy /coraza/logs
 
 COPY coraza.conf /etc/caddy/coraza.conf
+RUN chown caddy:caddy /etc/caddy/coraza.conf
+
+USER caddy
