@@ -314,17 +314,28 @@ services:
   ai-service:
     build:
       context: ./ai-service
+      dockerfile: Dockerfile
     container_name: ai-service
     user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
     expose:
       - "8000"
-    env_file:
-      - ./ai-service/.env
     environment:
-      - PYTHONPATH=.
+      PYTHONPATH: .
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      DJANGO_BASE_URL: ${DJANGO_BASE_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+      LLM_TIMEOUT: ${LLM_TIMEOUT}
+      TZ: Europe/Berlin
     volumes:
       - ./ai-service:/app
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: ai-service
     networks:
       - backend_net
     healthcheck:
@@ -339,6 +350,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    depends_on:
+      - vault_agent
 
     # Future:
     # depends_on:
