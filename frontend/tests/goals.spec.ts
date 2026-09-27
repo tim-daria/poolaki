@@ -18,7 +18,7 @@ test.describe.serial("Goals", () => {
     // Nothing here is saved, so the shared owner's workspace is safe to use.
     const owner = await openAsSharedOwner(browser);
     page = owner.page;
-    goalsUrl = `${owner.personalUrl}/goals`;
+    goalsUrl = `${owner.personalUrl}/savings`;
   });
 
   test.afterAll(async () => {
