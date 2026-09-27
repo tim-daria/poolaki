@@ -1,5 +1,9 @@
 /** @file Starting balance of the personal workspace; the endpoint has no shared-workspace counterpart. */
 
+import { isRejection, rejectionMessage } from "./apiErrors";
+
+const GENERIC = "Could not save the starting balance. Please try again.";
+
 /**
  * Flip once the backend can set a shared workspace's starting balance. Until
  * then Home shows the action disabled, so the layout is final.
@@ -32,6 +36,6 @@ export async function submitInitialBalance(
 
   return {
     ok: false,
-    error: "Could not save the starting balance. Please try again.",
+    error: isRejection(res) ? await rejectionMessage(res, GENERIC) : GENERIC,
   };
 }
