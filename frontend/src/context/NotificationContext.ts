@@ -4,11 +4,8 @@ import { createContext } from "react";
 export type NotificationType =
   | "invitation"
   | "transaction_added"
-  // | "goal_completed"
-  // | "member_left"
-  | "member_removed"
-  | "removed_from_org"
-  // | "organization_deleted"
+  | "goal_completed"
+  | "member_left"
   | (string & {});
 
 /**
