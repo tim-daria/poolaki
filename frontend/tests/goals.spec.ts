@@ -20,7 +20,7 @@ test.describe.serial("Goals", () => {
     page = owner.page;
     // Overdue is derived from the seed deadlines against today, so pin today.
     await freezeClock(page);
-    goalsUrl = `${owner.personalUrl}/goals`;
+    goalsUrl = `${owner.personalUrl}/savings`;
   });
 
   test.afterAll(async () => {
