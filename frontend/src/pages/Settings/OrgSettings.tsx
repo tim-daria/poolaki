@@ -1,10 +1,10 @@
 /**
  * @file Settings for one workspace: its name, and for shared workspaces the
- * members, pending invitations and deletion.
+ * members, pending invitations, leaving and deletion.
  */
 
 import { type ReactNode, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
   Avatar,
   Box,
@@ -36,6 +36,7 @@ import {
 import { PageTitle } from "../../components/PageHeader/PageHeader";
 import { ConfirmDialog } from "../../components/Modals/ConfirmDialog";
 import { InvitationForm } from "../../components/Modals/InvitationForm";
+import { RenameOrgForm } from "../../components/Modals/RenameOrgForm";
 import { NoAccessScreen } from "../../components/NoAccessScreen";
 import { useAuth } from "../../context/useAuth";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
@@ -45,9 +46,7 @@ import { avatarColor } from "../../lib/avatarColor";
 import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
 import {
-  CAN_DELETE_ORGANIZATION,
-  CAN_LEAVE_ORGANIZATION,
-  CAN_RENAME_ORGANIZATION,
+  type LeaveOutcome,
   MAX_MEMBERS,
   type Member,
   type Organization,
@@ -57,7 +56,10 @@ import {
   cancelInvitation,
   fetchMembers,
   fetchPendingInvitations,
+  leaveOrganization,
+  leaveOutcome,
   removeMember,
+  successorOwner,
 } from "../../lib/organizations";
 
 const joinedFormat = new Intl.DateTimeFormat("en-GB", {
@@ -68,13 +70,121 @@ const joinedFormat = new Intl.DateTimeFormat("en-GB", {
 
 function OrgSettings() {
   const { workspaceId } = useParams();
-  const current = useCurrentOrg();
   const { organizations } = useOrgList();
   const org = organizations.find((o) => String(o.id) === workspaceId);
 
   if (!org) return <NoAccessScreen orgId={workspaceId} />;
 
+  // Keyed so switching between workspace URLs never carries one workspace's
+  // members, dialogs or drafts into another: the route element is shared.
+  return <WorkspaceSettings key={org.id} org={org} />;
+}
+
+function WorkspaceSettings({ org }: { org: Organization }) {
+  const current = useCurrentOrg();
+  const { user } = useAuth();
+  const { refresh } = useOrgList();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
   const isOwner = org.role === "owner";
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [pending, setPending] = useState<PendingInvitation[]>([]);
+  // Bumped to refetch after an invite, a cancel, a removal or a failed leave.
+  const [version, setVersion] = useState(0);
+  const reload = () => setVersion((v) => v + 1);
+
+  useEffect(() => {
+    // A personal workspace only ever holds its owner; nothing to fetch.
+    if (org.is_personal) return;
+    const ac = new AbortController();
+    fetchMembers(org.id, ac.signal)
+      .then((res) => setMembers([...res.members].sort(byRoleThenJoined)))
+      .catch(() => {});
+    // Owner-only endpoint; a member asking gets a guaranteed 403.
+    if (isOwner) {
+      fetchPendingInvitations(org.id, ac.signal)
+        .then((res) => setPending(res.invitations))
+        .catch(() => {});
+    }
+    return () => ac.abort();
+  }, [org.id, org.is_personal, isOwner, version]);
+
+  const [renaming, setRenaming] = useState(false);
+  const [leaving, setLeaving] = useState<LeaveOutcome | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // The self row is always present once loaded, so an empty list means the
+  // fetch has not landed yet and no leave/delete row should be offered.
+  const membersLoaded = members.length > 0;
+  const outcome = membersLoaded ? leaveOutcome(org.role, members.length) : null;
+  const successor = user ? successorOwner(members, user.id) : undefined;
+
+  async function confirmLeave() {
+    setBusy(true);
+    try {
+      const { organization_deleted } = await leaveOrganization(
+        org.id,
+        getCsrfToken(),
+      );
+      // Navigate before refreshing: OrgLayout and this page resolve the org
+      // from the list, so refreshing first would render NoAccessScreen for a
+      // workspace we just left. "/" goes through OrgRedirect, which picks a
+      // workspace from the still-stale list; the refresh then trims it.
+      navigate(org.id === current.id ? "/" : `/o/${current.id}/settings`, {
+        replace: true,
+      });
+      await refresh().catch(() => {});
+      showToast(
+        organization_deleted
+          ? `Workspace "${org.name}" deleted`
+          : `You left ${org.name}`,
+      );
+    } catch (err) {
+      showToast(
+        err instanceof WorkspaceRequestError
+          ? err.message
+          : "Could not leave the workspace",
+      );
+      setBusy(false);
+      setLeaving(null);
+      reload();
+    }
+  }
+
+  const leaveConfirm = {
+    leave: {
+      title: `Leave ${org.name}?`,
+      message:
+        "You lose access to its transactions until you're invited again.",
+      confirmLabel: "Leave",
+      cancelLabel: "Stay",
+    },
+    transfer: {
+      title: `Leave ${org.name}?`,
+      message: `${successor?.username ?? "The longest-standing member"} becomes the owner, and you lose access until you're invited again.`,
+      confirmLabel: "Leave",
+      cancelLabel: "Stay",
+    },
+    delete: {
+      title: `Delete ${org.name}?`,
+      message: `You're its only member. The workspace and all its transactions will be deleted${
+        pending.length
+          ? `, and ${pending.length} pending invitation${pending.length === 1 ? "" : "s"} withdrawn.`
+          : "."
+      }`,
+      confirmLabel: "Delete",
+      cancelLabel: "Keep",
+    },
+  } satisfies Record<
+    LeaveOutcome,
+    {
+      title: string;
+      message: string;
+      confirmLabel: string;
+      cancelLabel: string;
+    }
+  >;
 
   return (
     <Box sx={settingsColumnSx}>
@@ -88,63 +198,93 @@ function OrgSettings() {
           title="Workspace name"
           subtitle={org.name}
           action={
-            isOwner && (
-              <ComingSoon enabled={CAN_RENAME_ORGANIZATION}>
-                <Button
-                  variant="outlined"
-                  disabled={!CAN_RENAME_ORGANIZATION}
-                  sx={outlinedActionSx}
-                >
-                  Rename
-                </Button>
-              </ComingSoon>
+            // The backend rejects renaming the personal workspace.
+            isOwner &&
+            !org.is_personal && (
+              <Button
+                variant="outlined"
+                onClick={() => setRenaming(true)}
+                sx={outlinedActionSx}
+              >
+                Rename
+              </Button>
             )
           }
         />
-        {/* A personal workspace only ever holds its owner, so a member
-            list would be a list of one. */}
         {!org.is_personal && (
           <>
             <Divider sx={{ my: 2.5 }} />
-            <MembersSection key={org.id} org={org} />
+            <MembersSection
+              org={org}
+              members={members}
+              pending={pending}
+              reload={reload}
+            />
           </>
         )}
       </SettingsCard>
 
-      {/* Members leave rather than delete; the owner has nobody to hand
-          the workspace to, so leaving isn't offered to them. */}
-      {!org.is_personal && !isOwner && (
+      {/* An owner leaving hands the workspace to the longest-standing member;
+          only a sole owner deletes it, via the Delete row below. */}
+      {!org.is_personal && (outcome === "leave" || outcome === "transfer") && (
         <SettingsCard>
           <SettingsRow
             title="Leave workspace"
-            subtitle="You lose access to its transactions until invited again"
+            subtitle={
+              outcome === "transfer"
+                ? "Ownership passes to the longest-standing member"
+                : "You lose access to its transactions until invited again"
+            }
             action={
-              <ComingSoon enabled={CAN_LEAVE_ORGANIZATION}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  disabled={!CAN_LEAVE_ORGANIZATION}
-                  sx={{ fontWeight: 600 }}
-                >
-                  Quit
-                </Button>
-              </ComingSoon>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setLeaving(outcome)}
+                sx={{ fontWeight: 600 }}
+              >
+                Quit
+              </Button>
             }
           />
         </SettingsCard>
       )}
 
-      {!org.is_personal && isOwner && (
+      {!org.is_personal && isOwner && outcome !== "transfer" && (
+        <SettingsCard>
+          <SettingsRow
+            title="Delete workspace"
+            subtitle={
+              outcome === "delete"
+                ? "You're the only member, so the workspace and its transactions are deleted"
+                : "All members lose access to its transactions"
+            }
+            action={
+              <Button
+                variant="outlined"
+                color="error"
+                disabled={outcome !== "delete"}
+                onClick={() => setLeaving("delete")}
+                sx={{ fontWeight: 600 }}
+              >
+                Delete
+              </Button>
+            }
+          />
+        </SettingsCard>
+      )}
+
+      {/* Deleting with other members present has no backend route yet. */}
+      {!org.is_personal && isOwner && outcome === "transfer" && (
         <SettingsCard>
           <SettingsRow
             title="Delete workspace"
             subtitle="All members lose access to its transactions"
             action={
-              <ComingSoon enabled={CAN_DELETE_ORGANIZATION}>
+              <ComingSoon enabled={false}>
                 <Button
                   variant="outlined"
                   color="error"
-                  disabled={!CAN_DELETE_ORGANIZATION}
+                  disabled
                   sx={{ fontWeight: 600 }}
                 >
                   Delete
@@ -154,39 +294,44 @@ function OrgSettings() {
           />
         </SettingsCard>
       )}
+
+      <RenameOrgForm
+        open={renaming}
+        onClose={() => setRenaming(false)}
+        org={org}
+      />
+      <ConfirmDialog
+        open={leaving !== null}
+        {...leaveConfirm[leaving ?? "leave"]}
+        onConfirm={confirmLeave}
+        onCancel={() => setLeaving(null)}
+        busy={busy}
+      />
     </Box>
   );
 }
 
-function MembersSection({ org }: { org: Organization }) {
+interface MembersSectionProps {
+  org: Organization;
+  members: Member[];
+  pending: PendingInvitation[];
+  reload: () => void;
+}
+
+function MembersSection({
+  org,
+  members,
+  pending,
+  reload,
+}: MembersSectionProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [pending, setPending] = useState<PendingInvitation[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [cancelling, setCancelling] = useState<PendingInvitation | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
   // Shared by both confirm dialogs; only one can be open at a time.
   const [busy, setBusy] = useState(false);
   const isOwner = org.role === "owner";
-
-  // Bumped to refetch after an invite, a cancel or a removal.
-  const [version, setVersion] = useState(0);
-  const reload = () => setVersion((v) => v + 1);
-
-  useEffect(() => {
-    const ac = new AbortController();
-    fetchMembers(org.id, ac.signal)
-      .then((res) => setMembers([...res.members].sort(byRoleThenJoined)))
-      .catch(() => {});
-    // Owner-only endpoint; a member asking gets a guaranteed 403.
-    if (isOwner) {
-      fetchPendingInvitations(org.id, ac.signal)
-        .then((res) => setPending(res.invitations))
-        .catch(() => {});
-    }
-    return () => ac.abort();
-  }, [org.id, isOwner, version]);
 
   const isFull = members.length + pending.length >= MAX_MEMBERS;
 

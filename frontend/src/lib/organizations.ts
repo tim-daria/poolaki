@@ -10,6 +10,8 @@
  * looks exactly like a permissions bug.
  */
 
+import { isRejection, rejectionMessage } from "./apiErrors";
+
 /** Mirrors core.models.Role. */
 export type Role = "owner" | "member";
 
@@ -59,13 +61,65 @@ export async function createOrganization(
     credentials: "include",
     body: JSON.stringify({ name, initial_balance: initialBalance }),
   });
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new WorkspaceRequestError(
-      errorMessageFrom(body, "Could not create the workspace"),
+      await rejectionMessage(res, "Could not create the workspace"),
     );
   }
   if (!res.ok) throw new Error(`Failed to create workspace (${res.status})`);
+  return res.json();
+}
+
+/** Mirrors max_length in OrganizationNameSerializer. */
+export const MAX_ORG_NAME_LENGTH = 100;
+
+/**
+ * PATCH /api/v1/organizations/${org_id}/
+ *
+ * Owner only. The personal workspace is rejected with 400; a field error on
+ * `name` (blank, over MAX_ORG_NAME_LENGTH) arrives as `{name: [...]}`.
+ */
+export async function renameOrganization(
+  org_id: number,
+  name: string,
+  csrfToken: string,
+): Promise<{ id: number; name: string }> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify({ name }),
+  });
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not rename the workspace"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to rename workspace (${res.status})`);
+  return res.json();
+}
+
+/**
+ * POST /api/v1/organizations/${org_id}/leave/
+ *
+ * An owner leaving hands ownership to the longest-standing remaining member;
+ * the last member leaving deletes the workspace, which the response reports.
+ */
+export async function leaveOrganization(
+  org_id: number,
+  csrfToken: string,
+): Promise<{ organization_deleted: boolean }> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/leave/`, {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken },
+    credentials: "include",
+  });
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not leave the workspace"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to leave workspace (${res.status})`);
   return res.json();
 }
 
@@ -115,34 +169,14 @@ export async function fetchPendingInvitations(
 }
 
 /**
- * Backend's 400 message, e.g. "No user found with this username."
+ * Backend's 400/403 message, e.g. "No user found with this username."
  *
  * Separate from a plain Error because the backend rejected the request with a
  * message meant for the user — unknown username, workspace full, member
- * already gone — and that belongs in the UI, not in a generic "something went
- * wrong".
+ * already gone, no longer the owner — and that belongs in the UI, not in a
+ * generic "something went wrong".
  */
 export class WorkspaceRequestError extends Error {}
-
-/**
- * First user-facing message in a 400 body. The API answers in three shapes:
- * `{errors: [...]}` from services, `{error: "..."}` from older views, and
- * `{field: [...]}` from serializers. Exported for tests.
- */
-export function errorMessageFrom(body: unknown, fallback: string): string {
-  if (typeof body !== "object" || body === null) return fallback;
-  const rec = body as Record<string, unknown>;
-  const firstString = (v: unknown): string | undefined =>
-    Array.isArray(v) && typeof v[0] === "string" ? v[0] : undefined;
-  const fromErrors = firstString(rec.errors);
-  if (fromErrors) return fromErrors;
-  if (typeof rec.error === "string" && rec.error) return rec.error;
-  for (const value of Object.values(rec)) {
-    const msg = firstString(value);
-    if (msg) return msg;
-  }
-  return fallback;
-}
 
 /** POST /api/v1/organizations/${org_id}/invitations/ */
 export async function createInvitation(
@@ -156,10 +190,9 @@ export async function createInvitation(
     credentials: "include",
     body: JSON.stringify({ username }),
   });
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new WorkspaceRequestError(
-      errorMessageFrom(body, "Could not send the invitation"),
+      await rejectionMessage(res, "Could not send the invitation"),
     );
   }
   if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
@@ -180,10 +213,9 @@ export async function cancelInvitation(
       credentials: "include",
     },
   );
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new WorkspaceRequestError(
-      errorMessageFrom(body, "Could not cancel the invitation"),
+      await rejectionMessage(res, "Could not cancel the invitation"),
     );
   }
   if (!res.ok) throw new Error(`Failed to cancel invitation ${res.status}`);
@@ -193,7 +225,8 @@ export async function cancelInvitation(
  * DELETE /api/v1/organizations/${org_id}/members/${user_id}/
  *
  * Owner-only. A 400 means the row is stale — the user already left or was
- * removed — so callers should refetch rather than retry.
+ * removed — and a 403 that we are no longer the owner; callers should refetch
+ * rather than retry.
  */
 export async function removeMember(
   org_id: number,
@@ -208,10 +241,9 @@ export async function removeMember(
       credentials: "include",
     },
   );
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new WorkspaceRequestError(
-      errorMessageFrom(body, "Could not remove the member"),
+      await rejectionMessage(res, "Could not remove the member"),
     );
   }
   if (!res.ok) throw new Error(`Failed to remove member ${res.status}`);
@@ -282,9 +314,28 @@ export function describeWorkspace(
   return parts.join(" · ");
 }
 
-// Flags for workspace actions whose backend routes don't exist yet. The UI
-// renders them disabled so the layout is final; delete a flag once its route
-// lands (member removal already has).
-export const CAN_RENAME_ORGANIZATION = false;
-export const CAN_DELETE_ORGANIZATION = false;
-export const CAN_LEAVE_ORGANIZATION = false;
+export type LeaveOutcome = "leave" | "transfer" | "delete";
+
+/**
+ * What the leave endpoint will do, worked out from what the settings page
+ * already knows, so the confirm dialog can say so before the request.
+ */
+export function leaveOutcome(role: Role, memberCount: number): LeaveOutcome {
+  if (memberCount <= 1) return "delete";
+  return role === "owner" ? "transfer" : "leave";
+}
+
+/**
+ * The backend's successor rule when an owner leaves: earliest joined_at among
+ * the others, ties broken by the smaller user id.
+ */
+export function successorOwner(
+  members: Member[],
+  selfId: number,
+): Member | undefined {
+  return members
+    .filter((m) => m.user_id !== selfId)
+    .sort(
+      (a, b) => a.joined_at.localeCompare(b.joined_at) || a.user_id - b.user_id,
+    )[0];
+}
