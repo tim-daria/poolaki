@@ -8,6 +8,9 @@ export type NotificationType =
   | "member_left"
   | "member_removed"
   | "removed_from_org"
+  | "ownership_transferred"
+  | "owner_changed"
+  | "organization_deleted"
   | (string & {});
 
 /**
@@ -33,6 +36,31 @@ export type MemberRemovedPayload = {
 export type RemovedFromOrgPayload = {
   org_name: string;
   removed_by: string;
+};
+
+/** Sent to every remaining member when someone leaves. */
+export type MemberLeftPayload = {
+  user: string;
+  org_name: string;
+};
+
+/** Sent to the member who became owner because the owner left. */
+export type OwnershipTransferredPayload = {
+  previous_owner: string;
+  org_name: string;
+};
+
+/** Sent to the other remaining members when the owner left. */
+export type OwnerChangedPayload = {
+  previous_owner: string;
+  new_owner: string;
+  org_name: string;
+};
+
+/** Sent to pending invitees when the last member left; the org is gone. */
+export type OrganizationDeletedPayload = {
+  org_name: string;
+  last_member: string;
 };
 
 export type Notification = {
