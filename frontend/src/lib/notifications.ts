@@ -6,7 +6,7 @@
  * Django sees an anonymous request and returns 403.
  */
 import type { Notification } from "../context/NotificationContext";
-import { firstErrorMessage } from "./apiErrors";
+import { isRejection, rejectionMessage } from "./apiErrors";
 
 export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
   const res = await fetch("/api/v1/notifications/unread-count/", {
@@ -92,10 +92,9 @@ export async function acceptInvitation(
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
   });
-  if (res.status === 400 || res.status === 403) {
-    const body: unknown = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new InvitationResolveError(
-      firstErrorMessage(body) ?? "Invitation could not be accepted",
+      await rejectionMessage(res, "Invitation could not be accepted"),
     );
   }
   if (!res.ok) throw new Error(`Failed to accept invitation (${res.status})`);
@@ -112,10 +111,9 @@ export async function declineInvitation(
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
   });
-  if (res.status === 400 || res.status === 403) {
-    const body: unknown = await res.json().catch(() => null);
+  if (isRejection(res)) {
     throw new InvitationResolveError(
-      firstErrorMessage(body) ?? "Invitation could not be declined",
+      await rejectionMessage(res, "Invitation could not be declined"),
     );
   }
   if (!res.ok) throw new Error(`Failed to decline invitation (${res.status})`);
