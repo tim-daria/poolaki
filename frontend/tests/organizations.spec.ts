@@ -37,9 +37,10 @@ test.describe.serial("Workspaces", () => {
     // The helper waits for the /o/:orgId redirect and returns its pathname.
     personalUrl = await registerUser(page, testUser);
 
-    // The personal workspace is named "<username>'s budget" by the signup signal.
+    // The personal workspace is named "<username>'s budget" by the signup
+    // signal; the header's switcher shows it (Home greets instead of titling).
     await expect(
-      page.getByRole("heading", { name: new RegExp(testUser.username) }),
+      page.getByRole("button", { name: new RegExp(testUser.username) }),
     ).toBeVisible();
   });
 
@@ -77,7 +78,7 @@ test.describe.serial("Workspaces", () => {
       page.getByText(`Workspace "${sharedName}" created`),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: new RegExp(sharedName) }),
+      page.getByRole("button", { name: new RegExp(sharedName) }),
     ).toBeVisible();
   });
 
@@ -105,14 +106,14 @@ test.describe.serial("Workspaces", () => {
     page.off("request", record);
 
     await expect(
-      page.getByRole("heading", { name: new RegExp(testUser.username) }),
+      page.getByRole("button", { name: new RegExp(testUser.username) }),
     ).toBeVisible();
 
     // Back is meaningful now that the workspace lives in the URL.
     await page.goBack();
     await expect(page).toHaveURL(sharedUrl);
     await expect(
-      page.getByRole("heading", { name: new RegExp(sharedName) }),
+      page.getByRole("button", { name: new RegExp(sharedName) }),
     ).toBeVisible();
   });
 
@@ -220,12 +221,12 @@ test.describe.serial("Workspaces", () => {
 
     await expect(tabA).toHaveURL(personalUrl);
     await expect(
-      tabA.getByRole("heading", { name: new RegExp(testUser.username) }),
+      tabA.getByRole("button", { name: new RegExp(testUser.username) }),
     ).toBeVisible();
 
     await expect(tabB).toHaveURL(sharedUrl);
     await expect(
-      tabB.getByRole("heading", { name: new RegExp(sharedName) }),
+      tabB.getByRole("button", { name: new RegExp(sharedName) }),
     ).toBeVisible();
 
     await tabA.close();
