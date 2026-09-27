@@ -151,7 +151,10 @@ Which user to use in a new spec:
 
 When the shared owner needs data with exact counts, put it in a workspace of
 its own (`createWorkspaceViaApi`), not in their personal workspace, which
-other specs use at the same time.
+other specs use at the same time. The same goes for anything destructive:
+`settings.spec.ts` has the shared owner delete a workspace, and it is a
+throwaway one created for that test, never the shared workspace the rest of
+the suite invites into.
 
 ---
 
