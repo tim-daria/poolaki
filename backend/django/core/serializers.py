@@ -22,6 +22,18 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
     )
 
 
+class OrganizationNameSerializer(serializers.Serializer[Organization]):
+    name = serializers.CharField(max_length=100, allow_blank=False, trim_whitespace=True)
+
+
+class OrganizationCreateSerializer(OrganizationNameSerializer):
+    initial_balance = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+    )
+
+
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
 

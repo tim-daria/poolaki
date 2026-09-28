@@ -222,6 +222,16 @@ SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
 ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
 
 # ======================================================
+# REST FRAMEWORK
+# ======================================================
+
+REST_FRAMEWORK = {
+    # Single place mapping service exceptions to the API error contract.
+    "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
+}
+
+
+# ======================================================
 # INTERNATIONALIZATION
 # ======================================================
 
