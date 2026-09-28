@@ -413,7 +413,7 @@ services:
       - vault_net
     depends_on:
       vault:
-        condition: service_started
+        condition: service_healthy
       db:
         condition: service_healthy
 

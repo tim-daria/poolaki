@@ -42,8 +42,5 @@ blob-report/
 # Certificates
 *.pem
 
-# Vault files
-vault/secure
-vault/read_vault.sh
-
-.agent/
+# Docker
+.dockerignore
