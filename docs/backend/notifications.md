@@ -13,12 +13,12 @@ All endpoints require authentication.
 | `invitation`         | "You have been invited to an organization"                               | `POST /api/v1/organizations/{org_id}/invitations/`         |
 | `transaction_added`  | "A new transaction was added"                                            | reserved (will be created when transactions go multi-org) |
 | `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
-| `member_left`        | "A member left the organization"                                         | reserved                                                 |
+| `member_left`        | "A member left the organization"                                         | `POST /api/v1/organizations/{org_id}/leave/` |
 | `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
 | `removed_from_org`   | "You were removed from an organization"                                  | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
-| `ownership_transferred` | "You are now the owner of an organization"                    | reserved (next PR — ownership transfer when the owner leaves) |
-| `owner_changed`      | "The organization owner changed"                               | reserved (next PR — ownership transfer when the owner leaves) |
-| `organization_deleted` | "An organization was deleted"                                           | reserved                                                 |
+| `ownership_transferred` | "You are now the owner of an organization"                    | `POST /api/v1/organizations/{org_id}/leave/` (sent to the new owner) |
+| `owner_changed`      | "The organization owner changed"                               | `POST /api/v1/organizations/{org_id}/leave/` (sent to remaining members) |
+| `organization_deleted` | "An organization was deleted"                                           | `POST /api/v1/organizations/{org_id}/leave/` (sent to pending-invitation recipients when the last member leaves) |
 
 Unknown/absent types are possible as the feature grows — the frontend should
 render `type` defensively (default icon/text for unknown values).
@@ -46,6 +46,40 @@ endpoint) carry:
 ```
 
 (`removed_from_org` omits `removed_user`.)
+
+The leave endpoint (`POST /api/v1/organizations/{org_id}/leave/`) produces:
+
+- `member_left` (to every remaining member):
+
+  ```json
+  {
+    "user": "alice",
+    "org_name": "Trip"
+  }
+  ```
+
+- `ownership_transferred` (to the new owner) and `owner_changed` (to every
+  other remaining member) when the owner leaves:
+
+  ```json
+  {
+    "previous_owner": "alice",
+    "new_owner": "bob",
+    "org_name": "Trip"
+  }
+  ```
+
+  (`ownership_transferred` omits `new_owner` — the recipient is the new owner.)
+
+- `organization_deleted` (to the recipients of pending invitations when the
+  last member leaves). Such notifications have `org = null`:
+
+  ```json
+  {
+    "org_name": "Trip",
+    "last_member": "alice"
+  }
+  ```
 
 Other types may add their own fields later; treat `payload` as type-specific.
 
@@ -245,9 +279,9 @@ click should go.
    - the organization list (`GET /api/v1/organizations/`) — after accepting,
      the new organization appears there and the user may want to switch to it.
 4. On `400 Bad Request` (invitation no longer pending, e.g. the owner
-   already cancelled it, or member limit hit) show the `error` field and hide
-   the Accept/Decline buttons for that row. A 404 means the invitation was
-   deleted.
+   already cancelled it, or member limit hit) show the first message from the
+   `errors` array and hide the Accept/Decline buttons for that row.
+   A 404 means the invitation was deleted.
 
 ### Polling cadence
 

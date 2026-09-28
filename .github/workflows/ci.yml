@@ -218,6 +218,10 @@ jobs:
           INTRA42_CLIENT_SECRET=${{ secrets.INTRA42_CLIENT_SECRET }}
           GF_ADMIN_USER=${{ secrets.GF_ADMIN_USER }}
           GF_ADMIN_PASSWORD=${{ secrets.GF_ADMIN_PASSWORD }}
+          SMTP_USER=
+          SMTP_PASSWORD=
+          SMTP_FROM_ADDRESS=
+          TUNNEL_TOKEN=
           TZ=Europe/Berlin
           EOF
 
