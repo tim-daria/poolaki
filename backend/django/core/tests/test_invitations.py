@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -12,6 +14,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.organization import MAX_ORGS_PER_USER
 
 pytestmark = pytest.mark.django_db
 
@@ -389,6 +392,36 @@ class TestAcceptInvitation:
         assert response.status_code == 403
         pending_invitation.refresh_from_db()
         assert pending_invitation.status == InvitationStatus.PENDING
+
+    def test_cannot_accept_invitation_at_per_user_cap(
+        self,
+        api_client: APIClient,
+        owner: User,
+        invitee: User,
+        shared_org: Organization,
+    ) -> None:
+        # invitee already belongs to MAX_ORGS_PER_USER orgs (created directly,
+        # bypassing the cap in fixtures); the invitation targets one more org
+        for i in range(MAX_ORGS_PER_USER):
+            org = Organization.objects.create(
+                name=f"Cap org {i}", is_personal=False, initial_balance=Decimal("0")
+            )
+            Membership.objects.create(user=invitee, org=org, role=Role.OWNER)
+        pending = Invitation.objects.create(
+            org=shared_org, invited_user=invitee, invited_by=owner, status=InvitationStatus.PENDING
+        )
+
+        api_client.force_authenticate(user=invitee)
+        response = api_client.post(accept_url(pending.id))
+
+        assert response.status_code == 400
+        assert response.json()["errors"] == [
+            f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces."
+        ]
+        assert not Membership.objects.filter(user=invitee, org=shared_org).exists()
+        assert Membership.objects.filter(user=invitee).count() == MAX_ORGS_PER_USER
+        pending.refresh_from_db()
+        assert pending.status == InvitationStatus.PENDING
 
     def test_cannot_accept_already_declined_invitation(
         self, api_client: APIClient, invitee: User, pending_invitation: Invitation
