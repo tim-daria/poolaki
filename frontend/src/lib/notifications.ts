@@ -6,6 +6,7 @@
  * Django sees an anonymous request and returns 403.
  */
 import type { Notification } from "../context/NotificationContext";
+import { firstErrorMessage } from "./apiErrors";
 
 export async function fetchUnreadCount(signal?: AbortSignal): Promise<number> {
   const res = await fetch("/api/v1/notifications/unread-count/", {
@@ -71,19 +72,16 @@ export async function markNotificationsRead(
   return res.json();
 }
 
-export class InvitationResolveError extends Error {
-  /** Backend's 400 message, e.g. "Invitation is already resolved". */
-  constructor(message: string) {
-    super(message);
-  }
-}
+/** The backend's own 400/403 message, e.g. "This invitation is already accepted." */
+export class InvitationResolveError extends Error {}
 
 /**
  * POST /api/v1/invitations/{invitationId}/accept/
  *
  * Joins the organization as a member and marks the matching invitation
- * notification read. On 400 the backend's `error` message is wrapped in
- * InvitationResolveError so the UI can show it instead of a generic crash.
+ * notification read. A 400 (already resolved, org full, workspace cap) or
+ * 403 (not addressed to this user) carries `{errors: [...]}`; its message is
+ * wrapped in InvitationResolveError so the row can show it verbatim.
  */
 export async function acceptInvitation(
   invitationId: number,
@@ -94,12 +92,10 @@ export async function acceptInvitation(
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
   });
-  if (res.status === 400) {
-    const body = (await res.json().catch(() => null)) as {
-      error?: string;
-    } | null;
+  if (res.status === 400 || res.status === 403) {
+    const body: unknown = await res.json().catch(() => null);
     throw new InvitationResolveError(
-      body?.error ?? "Invitation could not be accepted",
+      firstErrorMessage(body) ?? "Invitation could not be accepted",
     );
   }
   if (!res.ok) throw new Error(`Failed to accept invitation (${res.status})`);
@@ -116,12 +112,10 @@ export async function declineInvitation(
     headers: { "X-CSRFToken": csrfToken },
     credentials: "include",
   });
-  if (res.status === 400) {
-    const body = (await res.json().catch(() => null)) as {
-      error?: string;
-    } | null;
+  if (res.status === 400 || res.status === 403) {
+    const body: unknown = await res.json().catch(() => null);
     throw new InvitationResolveError(
-      body?.error ?? "Invitation could not be declined",
+      firstErrorMessage(body) ?? "Invitation could not be declined",
     );
   }
   if (!res.ok) throw new Error(`Failed to decline invitation (${res.status})`);
