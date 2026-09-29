@@ -4,7 +4,18 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Category, CategoryType, Goal, Organization, Transaction, User
+from core.models import (
+    Category,
+    CategoryType,
+    Goal,
+    Membership,
+    Notification,
+    NotificationType,
+    Organization,
+    Role,
+    Transaction,
+    User,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -183,6 +194,50 @@ def test_create_transaction_rejects_invalid_payload(
     )
 
     assert response.status_code == 400
+
+
+def test_create_transaction_notifies_all_members_except_creator(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    invitee: User,
+    shared_org: Organization,
+) -> None:
+    Membership.objects.create(user=invitee, org=shared_org, role=Role.MEMBER)
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id), transaction_payload(), format="json"
+    )
+
+    assert response.status_code == 201
+    txn = Transaction.objects.get(id=response.data["id"])
+
+    assert set(Notification.objects.values_list("user_id", flat=True)) == {owner.id, invitee.id}
+    notification = Notification.objects.get(user=owner)
+    assert notification.type == NotificationType.TRANSACTION_ADDED
+    assert notification.org_id == shared_org.id
+    assert notification.is_read is False
+    assert notification.payload == {
+        "org_name": shared_org.name,
+        "added_by": member.username,
+        "transaction_id": txn.id,
+        "amount": "125.50",
+        "entry_type": "expense",
+    }
+
+
+def test_create_transaction_in_personal_budget_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(personal_org.id), transaction_payload(), format="json"
+    )
+
+    assert response.status_code == 201
+    assert not Notification.objects.exists()
 
 
 def test_member_can_delete_organization_transaction(
