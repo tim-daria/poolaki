@@ -47,7 +47,11 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
         queryset=Category.objects.all(), allow_null=True, required=False
     )
     entry_type = serializers.ChoiceField(choices=EntryType.choices)
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+    )
     description = serializers.CharField(
         max_length=1024, allow_blank=True, allow_null=True, required=False
     )
@@ -113,7 +117,12 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
     description = serializers.CharField(
         max_length=1024, allow_blank=True, allow_null=True, required=False
     )
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
+    amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+    )
     transaction_date = serializers.DateField(required=False)
     is_tax_deductible = serializers.BooleanField(required=False)
 

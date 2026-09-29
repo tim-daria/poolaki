@@ -231,6 +231,22 @@ def test_create_transaction_rejects_invalid_payload(
     assert response.status_code == 400
 
 
+def test_create_transaction_rejects_negative_amount(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(amount="-25"),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == ["Ensure this value is greater than or equal to 0."]
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
 def test_transaction_creator_can_partially_update_transaction(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
@@ -428,6 +444,30 @@ def test_non_creator_cannot_patch_transaction(
     )
 
     assert response.status_code == 404
+    transaction.refresh_from_db()
+    assert transaction.description == "Original description"
+
+
+def test_transaction_patch_rejects_negative_amount(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"amount": "-1"},
+        format="json",
+    )
+
+    assert response.status_code == 400
     transaction.refresh_from_db()
     assert transaction.description == "Original description"
 
