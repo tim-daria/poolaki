@@ -15,13 +15,13 @@ The cancellation event must be recorded in the activity log.
 
 ## Endpoint overview
 
-All endpoints are available under `/api/` and require an authenticated user.
+All endpoints are available under `/api/v1/` and require an authenticated user.
 Endpoints scoped to an organization additionally require the user to be a member
 of that organization.
 
 ### List transactions
 
-`GET /api/organizations/{org_id}/transactions/`
+`GET /api/v1/organizations/{org_id}/transactions/`
 
 Returns `200 OK` with the transactions belonging to the organization:
 
@@ -47,7 +47,7 @@ Returns `200 OK` with the transactions belonging to the organization:
 
 ### Create a transaction
 
-`POST /api/organizations/{org_id}/transactions/`
+`POST /api/v1/organizations/{org_id}/transactions/`
 
 Required request fields:
 
@@ -67,7 +67,7 @@ returns `201 Created` with the transaction representation shown above.
 
 ### Get transaction details
 
-`GET /api/organizations/{org_id}/transactions/{transaction_id}/`
+`GET /api/v1/organizations/{org_id}/transactions/{transaction_id}/`
 
 Returns `200 OK` with the transaction data:
 
@@ -92,7 +92,7 @@ Returns `200 OK` with the transaction data:
 
 ### Edit a transaction
 
-`PATCH /api/organizations/{org_id}/transactions/{transaction_id}/`
+`PATCH /api/v1/organizations/{org_id}/transactions/{transaction_id}/`
 
 Partially updates a transaction created by the authenticated user and returns
 `200 OK` with the updated transaction representation. Only fields included in
@@ -145,7 +145,7 @@ Example response:
 
 ### Delete a transaction
 
-`DELETE /api/organizations/{org_id}/transactions/{transaction_id}/`
+`DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/`
 
 Deletes the matching transaction from the organization and returns `204 No
 Content`. The current implementation does not create an activity-log entry or
@@ -155,8 +155,8 @@ perform a balance/reversal feasibility check before deletion.
 
 The URL configuration declares the following member-only routes:
 
-- `POST /api/organizations/{org_id}/goals/{goal_id}/reserve/`
-- `POST /api/organizations/{org_id}/goals/{goal_id}/release/`
+- `POST /api/v1/organizations/{org_id}/goals/{goal_id}/reserve/`
+- `POST /api/v1/organizations/{org_id}/goals/{goal_id}/release/`
 
 Their view classes are referenced by `core/urls.py`, but no corresponding view
 implementation is currently present in `core/views/`. Their request and
