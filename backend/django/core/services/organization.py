@@ -7,13 +7,13 @@ from core.models import (
     Invitation,
     InvitationStatus,
     Membership,
-    Notification,
     NotificationType,
     Organization,
     Role,
     User,
 )
 from core.services.category import create_default_categories
+from core.services.notification import notify_users
 
 MAX_MEMBERS_PER_ORG = 5
 MAX_ORGS_PER_USER = 10
@@ -66,21 +66,6 @@ def check_can_join_more_orgs(user: User) -> None:
         raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")
 
 
-def _notify_users(
-    user_ids: list[int],
-    ntype: NotificationType,
-    payload: dict[str, object],
-    *,
-    org: Organization | None = None,
-) -> None:
-    """Canonical notification fan-out; single place owning the write shape."""
-    if not user_ids:
-        return
-    Notification.objects.bulk_create(
-        Notification(user_id=uid, type=ntype, org=org, payload=payload) for uid in user_ids
-    )
-
-
 @transaction.atomic
 def leave_organization(user: User, org: Organization) -> bool:
     """
@@ -121,7 +106,7 @@ def leave_organization(user: User, org: Organization) -> bool:
             )
         )
         org.delete()
-        _notify_users(
+        notify_users(
             pending_invitee_ids,
             NotificationType.ORGANIZATION_DELETED,
             {"org_name": org_name, "last_member": user.username},
@@ -131,14 +116,14 @@ def leave_organization(user: User, org: Organization) -> bool:
         # First pair is the longest-standing remaining member.
         new_owner_user_id, new_owner_username = remaining[0]
         Membership.objects.filter(org=org, user_id=new_owner_user_id).update(role=Role.OWNER)
-        _notify_users(
+        notify_users(
             [new_owner_user_id],
             NotificationType.OWNERSHIP_TRANSFERRED,
             {"previous_owner": user.username, "org_name": org_name},
             org=org,
         )
         # The new owner already got the personal notification above.
-        _notify_users(
+        notify_users(
             [uid for uid, _ in remaining[1:]],
             NotificationType.OWNER_CHANGED,
             {
@@ -149,7 +134,7 @@ def leave_organization(user: User, org: Organization) -> bool:
             org=org,
         )
     membership.delete()
-    _notify_users(
+    notify_users(
         [uid for uid, _ in remaining],
         NotificationType.MEMBER_LEFT,
         {"user": user.username, "org_name": org_name},
@@ -175,13 +160,13 @@ def remove_member(org: Organization, user_id: int, owner: User) -> None:
     target_user = membership.user
     membership.delete()
 
-    _notify_users(
+    notify_users(
         [target_user.id],
         NotificationType.REMOVED_FROM_ORG,
         {"org_name": org.name, "removed_by": owner.username},
         org=org,
     )
-    _notify_users(
+    notify_users(
         list(Membership.objects.filter(org=org).values_list("user_id", flat=True)),
         NotificationType.MEMBER_REMOVED,
         {
