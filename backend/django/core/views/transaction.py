@@ -186,6 +186,7 @@ class TransactionGetDeleteView(APIView):
                 Transaction,
                 id=transaction_id,
                 org_id=org_id,
+                created_by=request.user,
             )
             # Check for negative organization balance after deleting transaction entry
             # org = get_object_or_404(
