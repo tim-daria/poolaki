@@ -1,10 +1,12 @@
 /**
- * @file Workspace landing page: greeting or member list, a setup checklist for
- * new workspaces, and the overview cards.
+ * @file Workspace overview: greeting or member list, a setup checklist for a
+ * new personal workspace, then the balance and month card, recent activity,
+ * top spending and the nearest goal.
  */
 
 import { useEffect, useState } from "react";
-import { Alert, Box, CircularProgress } from "@mui/material";
+import { Link as RouterLink } from "react-router";
+import { Alert, Box, CircularProgress, Paper } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useCategories } from "../../hooks/useCategories";
 import {
@@ -18,26 +20,23 @@ import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
 import { TODAY, monthName } from "../../lib/date";
-import { SEED_GOALS } from "../../lib/goals.seed";
+import { getGoals, type Goal } from "../../lib/goals";
 import {
-  closestGoal,
-  daysLeftInMonth,
+  DEFAULT_SCALE_FLOOR,
+  balanceChange,
+  columnScaleMax,
   monthSummary,
   recentTransactions,
   spendingByCategory,
 } from "../../lib/overview";
 import { fetchTransactions, type Transaction } from "../../lib/transactions";
-import { ClosestGoalCard } from "./ClosestGoalCard";
+import { HomeGoalCard } from "./HomeGoalCard";
 import { MonthlySummaryCard } from "./MonthlySummaryCard";
 import { NetBalanceCard } from "./NetBalanceCard";
-import { RecentActivityCard } from "./RecentActivityCard";
+import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
-import { SpendingCard } from "./SpendingCard";
-
-const RECENT_LIMIT = 6;
-
-/** TODO: seeded like the transaction form's goal picker until a goals API exists. */
-const GOALS = SEED_GOALS;
+import { TopSpendingCard } from "./TopSpendingCard";
+import { CARD_PADDING, DESKTOP, cardLinkSx } from "./layout";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -60,19 +59,19 @@ function readDismissed(orgId: number): boolean {
 
 type Modal = "transaction" | "goal" | "balance" | null;
 
+type Loaded = { rows: Transaction[]; balance: number; goals: Goal[] };
+
 function Home() {
   const org = useCurrentOrg();
   const categories = useCategories();
   const now = new Date();
 
-  const [rows, setRows] = useState<Transaction[] | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
+  const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Bumped after a save or delete, since either moves the balance. */
   const [version, setVersion] = useState(0);
 
   const [modal, setModal] = useState<Modal>(null);
-  const [editing, setEditing] = useState<Transaction | null>(null);
   const [setupDismissed, setSetupDismissed] = useState(() =>
     readDismissed(org.id),
   );
@@ -86,10 +85,10 @@ function Home() {
     Promise.all([
       fetchTransactions(org.id, controller.signal),
       fetchBalance(org.id, controller.signal),
+      getGoals(org.id),
     ])
-      .then(([transactions, total]) => {
-        setRows(transactions);
-        setBalance(total);
+      .then(([rows, balance, goals]) => {
+        setData({ rows, balance, goals });
         setError(null);
       })
       .catch((e: unknown) => {
@@ -136,12 +135,8 @@ function Home() {
   const modals = (
     <>
       <TransactionForm
-        open={modal === "transaction" || editing !== null}
-        transaction={editing ?? undefined}
-        onClose={() => {
-          setModal(null);
-          setEditing(null);
-        }}
+        open={modal === "transaction"}
+        onClose={() => setModal(null)}
         onSaved={refresh}
         onDeleted={refresh}
       />
@@ -154,9 +149,18 @@ function Home() {
     </>
   );
 
-  if (rows === null || balance === null) {
+  const pageSx = {
+    px: 2,
+    pb: 5,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    [DESKTOP]: { px: 3, gap: 3 },
+  } as const;
+
+  if (data === null) {
     return (
-      <Box sx={{ px: 3, pb: 5 }}>
+      <Box sx={pageSx}>
         {header}
         {error ? <Alert severity="error">{error}</Alert> : <CircularProgress />}
         {modals}
@@ -164,21 +168,21 @@ function Home() {
     );
   }
 
-  const month = monthName(TODAY);
-  const goal = closestGoal(GOALS);
+  const { rows, balance, goals } = data;
+  const summary = monthSummary(rows, TODAY);
+  const scaleMax = columnScaleMax(
+    [summary.income, summary.expenses, summary.saved],
+    DEFAULT_SCALE_FLOOR,
+  );
 
-  // Only the personal workspace has a starting-balance endpoint; a shared one
-  // sets its balance when it is created.
+  // Personal workspaces only: a shared one has its balance from creation and
+  // its members already know the app.
   const steps: SetupStep[] = [
-    ...(org.is_personal
-      ? [
-          {
-            label: "Set starting balance",
-            done: balance !== 0,
-            onClick: () => setModal("balance"),
-          },
-        ]
-      : []),
+    {
+      label: "Set starting balance",
+      done: balance !== 0,
+      onClick: () => setModal("balance"),
+    },
     {
       label: "Add your first transaction",
       done: rows.length > 0,
@@ -186,67 +190,124 @@ function Home() {
     },
     {
       label: "Create a savings goal",
-      done: GOALS.length > 0,
+      done: goals.length > 0,
       onClick: () => setModal("goal"),
     },
   ];
-  const showSetup = !setupDismissed && steps.some((s) => !s.done);
+  const showSetup =
+    org.is_personal && !setupDismissed && steps.some((s) => !s.done);
 
   return (
-    <Box
-      sx={{ px: 3, pb: 5, display: "flex", flexDirection: "column", gap: 3 }}
-    >
+    <Box sx={pageSx}>
       {header}
 
       {error && <Alert severity="error">{error}</Alert>}
 
       {showSetup && <SetupBanner steps={steps} onDismiss={dismissSetup} />}
 
-      <Box
-        sx={{
-          display: "grid",
-          gap: 3,
-          gridTemplateColumns: {
-            xs: "minmax(0, 1fr)",
-            md: "repeat(3, minmax(0, 1fr))",
+      {/* One card, two halves. Both stretch to the same height and pin their
+          caption to the bottom, so the two captions share a baseline. */}
+      <Paper
+        component={RouterLink}
+        to="reports"
+        aria-label="Balance and month, see reports"
+        elevation={0}
+        sx={[
+          cardLinkSx,
+          {
+            borderRadius: 4,
+            display: "flex",
+            flexDirection: "column",
+            [DESKTOP]: { flexDirection: "row" },
           },
-        }}
+        ]}
       >
-        <NetBalanceCard
-          balance={balance}
-          isPersonal={org.is_personal}
-          onSetStartingBalance={() => setModal("balance")}
-          onAddIncome={() => setModal("transaction")}
+        <Box
+          sx={{
+            display: "flex",
+            p: CARD_PADDING,
+            [DESKTOP]: { width: 400, flexShrink: 0 },
+          }}
+        >
+          <NetBalanceCard
+            balance={balance}
+            change={balanceChange(rows, TODAY)}
+            monthStart={`${TODAY.slice(0, 7)}-01`}
+          />
+        </Box>
+        <Box
+          aria-hidden
+          sx={{
+            // The same hairline as the activity rows' dividers.
+            borderTop: "1px solid var(--mui-palette-divider)",
+            mx: CARD_PADDING,
+            [DESKTOP]: {
+              borderTop: 0,
+              borderLeft: "1px solid var(--mui-palette-divider)",
+              mx: 0,
+              my: CARD_PADDING,
+            },
+          }}
         />
-        <MonthlySummaryCard
-          summary={monthSummary(rows, TODAY)}
-          month={month}
-          daysLeft={daysLeftInMonth(TODAY)}
-        />
-        <ClosestGoalCard goal={goal} onCreateGoal={() => setModal("goal")} />
-      </Box>
+        <Box sx={{ display: "flex", flex: 1, minWidth: 0, p: CARD_PADDING }}>
+          <MonthlySummaryCard
+            summary={summary}
+            month={monthName(TODAY)}
+            scaleMax={scaleMax}
+          />
+        </Box>
+      </Paper>
 
+      {/* Desktop: activity beside a sidebar whose content sets the row height.
+          Phones: one column, with the goal ahead of spending; the sidebar
+          dissolves (display: contents) so its cards can take their own order. */}
       <Box
         sx={{
           display: "grid",
-          gap: 3,
-          gridTemplateColumns: {
-            xs: "minmax(0, 1fr)",
-            lg: "minmax(0, 3fr) minmax(0, 2fr)",
+          gap: 2,
+          gridTemplateColumns: "minmax(0, 1fr)",
+          [DESKTOP]: {
+            gap: 3,
+            // The sidebar gives way on narrow desktops so the activity card
+            // keeps room for its rows.
+            gridTemplateColumns: "minmax(0, 1fr) min(380px, 40%)",
+            // Stretched: the sidebar matches the activity card's height, with
+            // the spending card absorbing the difference (its ring shrinks).
+            alignItems: "stretch",
           },
         }}
       >
         <RecentActivityCard
-          rows={recentTransactions(rows, RECENT_LIMIT)}
+          rows={recentTransactions(rows, RECENT_ROWS)}
           categories={categories}
           shared={!org.is_personal}
-          onOpen={setEditing}
           onAdd={() => setModal("transaction")}
         />
-        <SpendingCard
-          slices={spendingByCategory(rows, TODAY, categories)}
-          month={month}
-        />
+        <Box
+          sx={{
+            display: "contents",
+            [DESKTOP]: {
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
+              minHeight: 0,
+            },
+          }}
+        >
+          <Box
+            sx={{
+              order: 2,
+              [DESKTOP]: { order: 0, flex: 1, minHeight: 0, display: "flex" },
+            }}
+          >
+            <TopSpendingCard
+              slices={spendingByCategory(rows, TODAY, categories)}
+            />
+          </Box>
+          <Box sx={{ order: 1, [DESKTOP]: { order: 0 } }}>
+            <HomeGoalCard goals={goals} onCreateGoal={() => setModal("goal")} />
+          </Box>
+        </Box>
       </Box>
 
       {modals}
