@@ -214,11 +214,10 @@ export const theme = createTheme({
       "accent.main",
       "accent.light",
     ],
-    // Pie slices, largest first. Resolved values rather than palette paths:
-    // they are interpolated into a raw conic-gradient string, which `sx` does
-    // not resolve. The fourth is the merged "Other" slice, kept mid-tone so it
-    // separates from both neighbours.
-    chart: [primary.dark, secondary.light, primary.light, accent.light],
+    // Donut segments by rank, one lavender hue from darkest (largest) to
+    // lightest; the merged "Other" segment always takes the last. Resolved
+    // values rather than palette paths: they go into SVG stroke attributes.
+    chart: [primary.dark, accent.main, accent.light, secondary.light],
   },
   /* ---------------------------------- */
   /*             Typography             */
