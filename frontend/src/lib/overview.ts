@@ -1,11 +1,12 @@
 /**
- * @file Home page figures derived from the workspace's transactions and goals:
- * the month's totals, spending split by category, recent entries and the goal
+ * @file Overview page figures derived from the workspace's transactions and
+ * goals: the month's totals and footer, the balance change, the column scale,
+ * spending split by category with donut shares, recent entries and the goal
  * nearest completion. React-free so the arithmetic is unit-tested.
  */
 
 import { categoryById, type Category } from "./categories";
-import type { Goal } from "./goals";
+import { goalState, type Goal } from "./goals";
 import type { Transaction } from "./transactions";
 
 /** Sums of floats drift (0.1 + 0.2); every total is snapped back to cents. */
@@ -16,6 +17,13 @@ function cents(n: number): number {
 /** "2026-08" for any ISO date in August 2026. */
 function monthOf(iso: string): string {
   return iso.slice(0, 7);
+}
+
+/** "2026-07" for any ISO date in August 2026. */
+export function previousMonthOf(iso: string): string {
+  const [y, m] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 2, 1));
+  return d.toISOString().slice(0, 7);
 }
 
 /* ---------------------------------- */
@@ -33,7 +41,18 @@ export type MonthSummary = {
 
 /** Totals for the month `today` falls in. */
 export function monthSummary(rows: Transaction[], today: string): MonthSummary {
-  const month = monthOf(today);
+  return summaryFor(rows, monthOf(today));
+}
+
+/** Totals for the month before the one `today` falls in. */
+export function previousMonthSummary(
+  rows: Transaction[],
+  today: string,
+): MonthSummary {
+  return summaryFor(rows, previousMonthOf(today));
+}
+
+function summaryFor(rows: Transaction[], month: string): MonthSummary {
   const totals = { income: 0, expense: 0, contribution: 0, withdraw: 0 };
   for (const t of rows) {
     if (monthOf(t.transaction_date) === month) totals[t.entry_type] += t.amount;
@@ -43,6 +62,46 @@ export function monthSummary(rows: Transaction[], today: string): MonthSummary {
   // A withdrawal moves goal money back, so it undoes saving.
   const saved = cents(totals.contribution - totals.withdraw);
   return { income, expenses, saved, left: cents(income - expenses - saved) };
+}
+
+/** What the summary's footer says; the component formats the amount. */
+export type MonthFooter =
+  | { kind: "left"; amount: number }
+  | { kind: "over"; amount: number }
+  | { kind: "no-income"; amount: number }
+  | { kind: "empty" };
+
+export function monthFooter(s: MonthSummary): MonthFooter {
+  if (s.income > 0) {
+    return s.left >= 0
+      ? { kind: "left", amount: s.left }
+      : { kind: "over", amount: -s.left };
+  }
+  if (s.expenses > 0) return { kind: "no-income", amount: s.expenses };
+  return { kind: "empty" };
+}
+
+/** Column scale floor: a lone coffee is not a full column. */
+export const DEFAULT_SCALE_FLOOR = 1000;
+
+/** The value that fills a full-height column, never below `floor`. */
+export function columnScaleMax(values: number[], floor: number): number {
+  return Math.max(...values, floor);
+}
+
+/**
+ * Change in balance since the first of the month: what this month's rows
+ * added and removed. Null when nothing predates the month, since a change
+ * from nothing is not a change.
+ */
+export function balanceChange(
+  rows: Transaction[],
+  today: string,
+): number | null {
+  const first = `${monthOf(today)}-01`;
+  if (!rows.some((t) => t.transaction_date < first)) return null;
+  const s = monthSummary(rows, today);
+  return s.left;
 }
 
 /** Days after `today` until the month ends, so the last day reports 0. */
@@ -60,12 +119,17 @@ export function daysLeftInMonth(today: string): number {
 export type SpendingSlice = {
   label: string;
   amount: number;
+  /** Whole-number share of the total; 0 for a share under half a percent. */
   percent: number;
 };
 
 /**
- * Whole percentages that always sum to 100, by the largest remainder method.
+ * Whole percentages by the largest remainder method, so they sum to 100.
  * Plain rounding can total 99 or 101, which reads as a bug in a legend.
+ *
+ * One exception: a slice is never rounded up to 100 while another slice has
+ * an amount. "100%" beside three "<1%" rows reads as a contradiction, so
+ * the dominant slice stays at 99 and the column sums to 99 instead.
  */
 export function wholePercents(amounts: number[]): number[] {
   const total = amounts.reduce((a, b) => a + b, 0);
@@ -77,16 +141,23 @@ export function wholePercents(amounts: number[]): number[] {
   const byRemainder = exact
     .map((e, i) => ({ i, r: e - Math.floor(e) }))
     .sort((a, b) => b.r - a.r);
+  const shared = amounts.filter((a) => a > 0).length > 1;
   for (const { i } of byRemainder) {
-    if (missing-- <= 0) break;
+    if (missing <= 0) break;
+    // Everything after it in remainder order is below one percent too, so
+    // the spare point is dropped rather than handed down.
+    if (shared && result[i] === 99) break;
     result[i]++;
+    missing--;
   }
   return result;
 }
 
 /**
  * The month's expenses grouped by category, largest first. Beyond `maxSlices`
- * the tail is merged into "Other", since thin slices are unreadable in a pie.
+ * the tail is merged into "Other", since thin slices are unreadable in a
+ * chart. Equal amounts rank by the category's earliest expense, so the order
+ * does not depend on how the API happened to return the rows.
  */
 export function spendingByCategory(
   rows: Transaction[],
@@ -95,21 +166,31 @@ export function spendingByCategory(
   maxSlices = 3,
 ): SpendingSlice[] {
   const month = monthOf(today);
-  const byLabel = new Map<string, number>();
+  const byLabel = new Map<string, { amount: number; first: string }>();
   for (const t of rows) {
     if (t.entry_type !== "expense" || monthOf(t.transaction_date) !== month)
       continue;
     const label = categoryById(categories, t.category)?.name ?? "Uncategorised";
-    byLabel.set(label, (byLabel.get(label) ?? 0) + t.amount);
+    // Date then id, zero-padded so the tie-break compares as a string.
+    const key = `${t.transaction_date}:${String(t.id).padStart(12, "0")}`;
+    const seen = byLabel.get(label);
+    byLabel.set(label, {
+      amount: (seen?.amount ?? 0) + t.amount,
+      first: seen && seen.first < key ? seen.first : key,
+    });
   }
 
   const sorted = [...byLabel]
-    .map(([label, amount]) => ({ label, amount: cents(amount) }))
-    .sort((a, b) => b.amount - a.amount);
+    .map(([label, { amount, first }]) => ({
+      label,
+      amount: cents(amount),
+      first,
+    }))
+    .sort((a, b) => b.amount - a.amount || a.first.localeCompare(b.first))
+    .map(({ label, amount }) => ({ label, amount }));
 
-  // Merging a single leftover category would only rename it.
   const groups =
-    sorted.length > maxSlices + 1
+    sorted.length > maxSlices
       ? [
           ...sorted.slice(0, maxSlices),
           {
@@ -123,6 +204,29 @@ export function spendingByCategory(
 
   const percents = wholePercents(groups.map((g) => g.amount));
   return groups.map((g, i) => ({ ...g, percent: percents[i] }));
+}
+
+/** Smallest share a non-zero segment is drawn at, so it stays visible. */
+export const MIN_SEGMENT_SHARE = 3.5;
+
+/**
+ * Shares to draw each slice at, as fractions summing to 1. Every non-zero
+ * slice is lifted to MIN_SEGMENT_SHARE percent before renormalising, so a 1%
+ * category still shows as a sliver; the legend keeps the true figures.
+ */
+export function donutShares(amounts: number[]): number[] {
+  const total = amounts.reduce((a, b) => a + b, 0);
+  if (total <= 0) return amounts.map(() => 0);
+  const lifted = amounts.map((a) =>
+    a > 0 ? Math.max((a / total) * 100, MIN_SEGMENT_SHARE) : 0,
+  );
+  const liftedTotal = lifted.reduce((a, b) => a + b, 0);
+  return lifted.map((l) => l / liftedTotal);
+}
+
+/** "47%", or "<1%" for a non-zero share that rounds to nothing. */
+export function shareLabel(slice: SpendingSlice): string {
+  return slice.amount > 0 && slice.percent === 0 ? "<1%" : `${slice.percent}%`;
 }
 
 /* ---------------------------------- */
@@ -151,17 +255,17 @@ export function goalPercent(goal: Goal): number {
   );
 }
 
-/** The unfinished goal with the least left to save. */
+/** Active goals only: neither reached nor archived. */
+export function activeGoals(goals: Goal[]): Goal[] {
+  return goals.filter((g) => goalState(g) === "active");
+}
+
+/** The active goal closest to completion: the highest saved-to-target ratio. */
 export function closestGoal(goals: Goal[]): Goal | undefined {
-  return goals
-    .filter((g) => g.saved_amount < g.target_amount)
-    .reduce<Goal | undefined>(
-      (best, g) =>
-        !best ||
-        g.target_amount - g.saved_amount <
-          best.target_amount - best.saved_amount
-          ? g
-          : best,
-      undefined,
-    );
+  const ratio = (g: Goal) =>
+    g.target_amount > 0 ? g.saved_amount / g.target_amount : 0;
+  return activeGoals(goals).reduce<Goal | undefined>(
+    (best, g) => (!best || ratio(g) > ratio(best) ? g : best),
+    undefined,
+  );
 }

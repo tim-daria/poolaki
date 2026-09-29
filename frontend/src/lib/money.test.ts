@@ -2,6 +2,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  compactAmount,
+  displayFigure,
+  displayWhole,
   filterTypedAmount,
   formatAmount,
   displayAmount,
@@ -9,6 +12,7 @@ import {
   parsePastedAmount,
   parseTypedAmount,
   toMoneyString,
+  splitCents,
   toRawAmount,
   validateAmount,
   validateOpeningBalance,
@@ -173,5 +177,52 @@ describe("validation", () => {
 
   it("formats the bound in the requested locale", () => {
     expect(validateAmount("0", "us")).toBe("Amount must be at least 0.01");
+  });
+});
+
+describe("compactAmount", () => {
+  it("leaves small amounts alone", () => {
+    expect(compactAmount(999)).toBe("999");
+  });
+
+  it("abbreviates millions with one decimal in the default locale", () => {
+    expect(compactAmount(1500000)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(149206000)).toBe("149,2\u00a0Mio.");
+  });
+
+  it("rounds to one decimal", () => {
+    expect(compactAmount(1555555)).toBe("1,6\u00a0Mio.");
+  });
+
+  it("uses the locale's abbreviations", () => {
+    expect(compactAmount(149206000, "us")).toBe("149.2M");
+    expect(compactAmount(1234567890123, "us")).toBe("1.2T");
+  });
+});
+
+describe("overview figures", () => {
+  it("displayWhole drops cents and groups thousands", () => {
+    expect(displayWhole(3567)).toBe("3.567");
+    expect(displayWhole(1712.49)).toBe("1.712");
+    expect(displayWhole(1712.5)).toBe("1.713");
+  });
+
+  it("splitCents separates the decimal part for styling", () => {
+    expect(splitCents(350794)).toEqual({ whole: "350.794", cents: ",00" });
+    expect(splitCents(0.5, "us")).toEqual({ whole: "0", cents: ".50" });
+  });
+});
+
+describe("displayFigure", () => {
+  it("shows whole euros up to six digits", () => {
+    expect(displayFigure(945)).toBe("945");
+    expect(displayFigure(999999.4)).toBe("999.999");
+    // Rounds to seven digits, so it abbreviates like any seven-digit figure.
+    expect(displayFigure(999999.6)).toBe("1\u00a0Mio.");
+  });
+
+  it("abbreviates from a million", () => {
+    expect(displayFigure(1001002100498)).toBe("1 Bio.");
+    expect(displayFigure(98744927657)).toBe("98,7 Mrd.");
   });
 });
