@@ -1,33 +1,39 @@
+/**
+ * @file App shell header: budget switcher, page tabs, notifications and the
+ * account menu on one bar that aligns with the page's cards.
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  AppBar,
-  Toolbar,
-  Stack,
-  IconButton,
-  Badge,
   Avatar,
+  Badge,
+  Box,
   Divider,
-  Menu,
-  MenuItem,
+  IconButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
+  Paper,
+  Stack,
   useTheme,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
-// import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { NAV_DESKTOP } from "../navItems";
+import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
 
-/** Shell header height. Deliberately taller than the Sidebar's brand row. */
+/** Shell header height. */
 export const headerHeight = 72;
 
 /**
@@ -48,11 +54,10 @@ interface HeaderProps {
 }
 
 /**
- * App shell header. `position="static"` because it sits in AppLayout's flex
- * content column, beside the Sidebar rather than over it.
- *
- * The OrgSwitcher sits in the left slot; notifications and the account menu
- * are pushed to the right.
+ * On desktop a three-column grid whose side columns are equal, so the tabs
+ * sit on the page's centre line whatever the switcher and the controls
+ * measure; `minmax(0, 1fr)` lets a long budget name truncate instead of
+ * pushing into the tabs. On phones a plain row: hamburger, switcher, controls.
  */
 export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
   const { user } = useAuth();
@@ -67,18 +72,33 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
   const initial = initials(user?.username);
 
   return (
-    <AppBar
+    <Paper
+      component="header"
       id="header"
-      position="static"
-      color="inherit"
       elevation={0}
       sx={{
-        bgcolor: "background.paper",
-        borderBottom: 1,
-        borderColor: "divider",
+        height: headerHeight,
+        px: "20px",
+        borderRadius: 4,
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        [NAV_DESKTOP]: {
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+          gap: 2,
+        },
       }}
     >
-      <Toolbar variant="dense" sx={{ minHeight: headerHeight, gap: 1.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minWidth: 0,
+          [NAV_DESKTOP]: { justifySelf: "start" },
+        }}
+      >
         {showMenuButton && (
           <IconButton
             aria-label="Open navigation"
@@ -88,107 +108,111 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
             <MenuIcon />
           </IconButton>
         )}
-
         <OrgSwitcher />
+      </Box>
 
-        {/* ml: auto pushes the remaining controls to the right edge. */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: "center", ml: "auto" }}
+      {!showMenuButton && <NavTabs />}
+
+      <Stack
+        direction="row"
+        spacing={0}
+        sx={{
+          alignItems: "center",
+          ml: "auto",
+          [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
+        }}
+      >
+        <IconButton
+          aria-label="Notifications"
+          // Not "menu": the panel is an inbox of content with per-row
+          // actions, not a list of commands. See NotificationPanel.
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(notifAnchor)}
+          onClick={(e) => setNotifAnchor(e.currentTarget)}
+          sx={{ width: controlSize, height: controlSize }}
         >
-          <IconButton
-            aria-label="Notifications"
-            // Not "menu": the panel is an inbox of content with per-row
-            // actions, not a list of commands. See NotificationPanel.
-            aria-haspopup="dialog"
-            aria-expanded={Boolean(notifAnchor)}
-            onClick={(e) => setNotifAnchor(e.currentTarget)}
-            sx={{ width: controlSize, height: controlSize }}
+          <Badge color="error" variant="dot" invisible={unreadCount === 0}>
+            <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
+          </Badge>
+        </IconButton>
+
+        <NotificationPanel
+          anchorEl={notifAnchor}
+          onClose={() => setNotifAnchor(null)}
+        />
+
+        {/* Deliberately not "Account: <username>" — the personal workspace
+            is named after the user, so that would collide with the
+            OrgSwitcher's accessible name. */}
+        <IconButton
+          aria-label="Account menu"
+          aria-haspopup="menu"
+          aria-expanded={Boolean(accountAnchor)}
+          onClick={(e) => setAccountAnchor(e.currentTarget)}
+          sx={{ width: controlSize, height: controlSize }}
+        >
+          <Avatar
+            sx={{
+              width: avatarSize,
+              height: avatarSize,
+              fontSize: "1.1rem",
+              fontWeight: 600,
+              bgcolor: avatarColor(user?.username, theme.palette.avatar),
+            }}
           >
-            <Badge color="error" variant="dot" invisible={unreadCount === 0}>
-              <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
-            </Badge>
-          </IconButton>
+            {initial}
+          </Avatar>
+        </IconButton>
 
-          <NotificationPanel
-            anchorEl={notifAnchor}
-            onClose={() => setNotifAnchor(null)}
-          />
-
-          {/* Deliberately not "Account: <username>" — the personal workspace
-              is named after the user, so that would collide with the
-              OrgSwitcher's accessible name. */}
-          <IconButton
-            aria-label="Account menu"
-            aria-haspopup="menu"
-            aria-expanded={Boolean(accountAnchor)}
-            onClick={(e) => setAccountAnchor(e.currentTarget)}
-            sx={{ width: controlSize, height: controlSize }}
-          >
-            <Avatar
-              sx={{
-                width: avatarSize,
-                height: avatarSize,
-                fontSize: "1.1rem",
-                fontWeight: 600,
-                bgcolor: avatarColor(user?.username, theme.palette.avatar),
-              }}
-            >
-              {initial}
-            </Avatar>
-          </IconButton>
-
-          <Menu
-            anchorEl={accountAnchor}
-            open={Boolean(accountAnchor)}
-            onClose={closeAccount}
-            slotProps={{ paper: { sx: { minWidth: 200 } } }}
-          >
-            {user && (
-              <MenuItem disabled sx={{ opacity: "1 !important" }}>
-                <ListItemText
-                  primary={user.username}
-                  secondary={user.email}
-                  slotProps={{
-                    primary: { sx: { fontWeight: 600 } },
-                    secondary: { noWrap: true },
-                  }}
-                />
-              </MenuItem>
-            )}
-            {user && <Divider />}
-
-            {/* Scoped under the current workspace because the shell around
-                the page needs one; the settings themselves are account-wide. */}
-            <MenuItem
-              onClick={() => {
-                closeAccount();
-                navigate(`/o/${org.id}/settings`);
-              }}
-            >
-              <ListItemIcon>
-                <SettingsOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Settings</ListItemText>
+        <Menu
+          anchorEl={accountAnchor}
+          open={Boolean(accountAnchor)}
+          onClose={closeAccount}
+          slotProps={{ paper: { sx: { minWidth: 200 } } }}
+        >
+          {user && (
+            <MenuItem disabled sx={{ opacity: "1 !important" }}>
+              <ListItemText
+                primary={user.username}
+                secondary={user.email}
+                slotProps={{
+                  primary: { sx: { fontWeight: 600 } },
+                  secondary: { noWrap: true },
+                }}
+              />
             </MenuItem>
+          )}
+          {user && <Divider />}
 
-            <Divider />
+          {/* Scoped under the current workspace because the shell around
+              the page needs one; the settings themselves are account-wide. */}
+          <MenuItem
+            onClick={() => {
+              closeAccount();
+              navigate(`/o/${org.id}/settings`);
+            }}
+          >
+            <ListItemIcon>
+              <SettingsOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Settings</ListItemText>
+          </MenuItem>
 
-            <MenuItem
-              onClick={() => {
-                closeAccount();
-                onLogout();
-              }}
-            >
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Logout</ListItemText>
-            </MenuItem>
-          </Menu>
-        </Stack>
-      </Toolbar>
-    </AppBar>
+          <Divider />
+
+          <MenuItem
+            onClick={() => {
+              closeAccount();
+              onLogout();
+            }}
+          >
+            <ListItemIcon>
+              <LogoutIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Logout</ListItemText>
+          </MenuItem>
+        </Menu>
+      </Stack>
+    </Paper>
   );
 }
