@@ -432,6 +432,26 @@ def test_non_creator_cannot_patch_transaction(
     assert transaction.description == "Original description"
 
 
+def test_non_creator_cannot_delete_transaction(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.delete(transaction_url(shared_org.id, transaction.id))
+
+    assert response.status_code == 404
+    transaction.refresh_from_db()
+    assert transaction.description == "Original description"
+
+
 def test_member_can_delete_organization_transaction(
     api_client: APIClient, member: User, shared_org: Organization
 ) -> None:
