@@ -556,4 +556,4 @@ Backend Endpoint: NA
 
 Expected Response:
 
-> "You can ask about expenses, income, goals,transactions, and spending trends."
+> "You can ask about expenses, income, goals, and spending trends."
