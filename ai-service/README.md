@@ -19,17 +19,19 @@ The AI service doesn't replace backend business logic. Instead, it interprets us
 Example:
 
 Backend response:
+
 ```
 {
   "category": "Food",
   "amount": 850
 }
 ```
+
 AI response:
+
 ```
 "You spent €850 this month, mainly on Food."
 ```
-
 
 ## Architecture
 
@@ -38,6 +40,7 @@ The AI Service runs as an independent Docker container and communicates with the
 **note:_** `Django` integration currently uses a temporary mock client for local development and end-to-end testing. It will be replaced by the internal Django API integration.
 
 Current architecture:
+
 ```text
                          User Question
                               |
@@ -90,22 +93,19 @@ Current architecture:
                               v
                          AI Response
 ```
+
 **Components**
+
 - Intention Service: classifies the user's question into a supported financial intent.
 - Retriever: orchestrates retrieval of structured and unstructured context based on the detected intent.
 - Context Builder: combines and limits the retrieved context before sending it to the LLM.
 - Prompt Builder: loads the prompt templates and injects the user question and retrieved context.
 - LLM Client: communicates with the external LLM provider and returns the generated response.
-
-**Future AI Components:**
-
 - Vector database integration (`pgvector`)
 - Embedding generation and indexing
-- Additional retrieval strategies (optional)
 - LLM fallback and resilience mechanisms
 
 For detailed architecture documentation, see: [architecture.md](../docs/ai/architecture.md)
-
 
 ---
 
@@ -133,7 +133,6 @@ ai-service/
 └── README.md
 ```
 
-
 ---
 
 ## Requirements
@@ -153,11 +152,11 @@ Optional development environment:
 ## Environment Variables
 
 Create a local `.env` file:
+
 ```
 ai-service/
 └── .env
 ```
-
 
 Example:
 
@@ -169,6 +168,7 @@ LLM_BASE_URL=https://openrouter.ai/api/v1
 LLM_API_KEY=<your-openrouter-api-key>
 LLM_MODEL=<your-model>
 ```
+
 **Note:** include LLM provider configuration.
 
 ## Instructions
@@ -178,10 +178,13 @@ LLM_MODEL=<your-model>
 ```bash
 docker compose build ai-service
 ```
-2. **Run the service**. 
+
+2. **Run the service**.
+
 ```bash
 docker compose up ai-service
 ```
+
 The service will run inside the Docker network and will be accessible internally through:
 
 ```
@@ -219,16 +222,21 @@ docker compose exec caddy wget -qO- \
   }
 }
 ```
+
 **Note**: The chat endpoint currently supports intent classification, retrieval, context construction, prompt generation, and LLM response generation.
 
 ## API Documentation
+
 FastAPI automatically generates interactive API documentation.
 
 Swagger UI:
+
 ```
 /docs
 ```
+
 ReDoc:
+
 ```
 /redoc
 ```
@@ -236,6 +244,7 @@ ReDoc:
 For service contracts and communication details, see: [api-contract.md](docs/ai/api-contract.md)
 
 ## Development Guidelines
+
 - AI logic remains inside the AI Service.
 - Django owns business rules and user data.
 - Communication happens through API contracts.
@@ -243,6 +252,7 @@ For service contracts and communication details, see: [api-contract.md](docs/ai/
 For detailed decisions, see: [decisions.md](docs/ai/decisions.md)
 
 ## Documentation
+
 - Architecture: `docs/architecture.md`
 
 - API Contract: `docs/api-contract.md`
@@ -254,12 +264,15 @@ For detailed decisions, see: [decisions.md](docs/ai/decisions.md)
 The AI Service follows semantic versioning.
 
 Current version:
+
 ```
 0.1.0
 ```
+
 Changes are documented in: [CHANGELOG.md](CHANGELOG.md)
 
 ## Resources
+
 https://fastapi.tiangolo.com/
 https://docs.docker.com/ai/sandboxes/
 RAG tutorial: https://youtu.be/swvzKSOEluc?si=TQ8qIycFKaRhsjMy
