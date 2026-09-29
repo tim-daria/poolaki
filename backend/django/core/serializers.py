@@ -1,5 +1,7 @@
 # from typing import Any
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from core.models import (
@@ -50,7 +52,7 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     amount = serializers.DecimalField(
         max_digits=14,
         decimal_places=2,
-        min_value=0,
+        min_value=Decimal("0.01"),
     )
     description = serializers.CharField(
         max_length=1024, allow_blank=True, allow_null=True, required=False
@@ -120,7 +122,7 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
     amount = serializers.DecimalField(
         max_digits=14,
         decimal_places=2,
-        min_value=0,
+        min_value=Decimal("0.01"),
         required=False,
     )
     transaction_date = serializers.DateField(required=False)

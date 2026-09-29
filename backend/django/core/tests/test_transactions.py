@@ -298,7 +298,7 @@ def test_create_transaction_rejects_negative_amount(
     )
 
     assert response.status_code == 400
-    assert response.data["amount"] == ["Ensure this value is greater than or equal to 0."]
+    assert response.data["amount"] == ["Ensure this value is greater than or equal to 0.01."]
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
@@ -319,7 +319,7 @@ def test_transaction_creator_can_partially_update_transaction(
     response = api_client.patch(
         transaction_url(shared_org.id, transaction.id),
         {
-            "amount": "0.00",
+            "amount": "0.01",
             "description": "",
             "transaction_date": "2026-08-12",
             "is_tax_deductible": False,
@@ -329,7 +329,7 @@ def test_transaction_creator_can_partially_update_transaction(
 
     assert response.status_code == 200
     transaction.refresh_from_db()
-    assert transaction.amount == Decimal("0.00")
+    assert transaction.amount == Decimal("0.01")
     assert transaction.description == ""
     assert str(transaction.transaction_date) == "2026-08-12"
     assert transaction.is_tax_deductible is False
