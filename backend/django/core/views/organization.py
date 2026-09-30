@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -8,10 +7,18 @@ from rest_framework.views import APIView
 
 from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember, IsOrgOwner
-from core.serializers import InitialBalanceSerializer
+from core.serializers import (
+    InitialBalanceSerializer,
+    OrganizationCreateSerializer,
+    OrganizationNameSerializer,
+)
 from core.services.balance import calculate_org_balance, set_initial_balance
-from core.services.exceptions import PersonalOrganizationMissingError
-from core.services.organization import create_shared_organization, remove_member
+from core.services.organization import (
+    create_shared_organization,
+    leave_organization,
+    remove_member,
+    rename_organization,
+)
 
 
 class SetInitialBalanceView(APIView):
@@ -40,13 +47,7 @@ class SetInitialBalanceView(APIView):
 
         initial_balance = serializer.validated_data["initial_balance"]
 
-        try:
-            org = set_initial_balance(request.user, initial_balance)
-        except PersonalOrganizationMissingError:
-            return Response(
-                {"error": "Personal organization is missing"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        org = set_initial_balance(request.user, initial_balance)
         return Response({"initial_balance": str(org.initial_balance)}, status=status.HTTP_200_OK)
 
     def post(self, request: Request) -> Response:
@@ -72,6 +73,8 @@ class OrganizationListCreateView(APIView):
 
     Returns:
     - 201 Created with the created organization.
+    - 400 Bad Request if the user has no name, invalid balance, or has
+      reached the per-user organization limit.
     """
 
     permission_classes = [IsAuthenticated]
@@ -102,14 +105,12 @@ class OrganizationListCreateView(APIView):
 
     def post(self, request: Request) -> Response:
         assert isinstance(request.user, User)
-        name = request.data.get("name", "").strip()
-        if not name:
-            return Response({"error": "name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = InitialBalanceSerializer(data=request.data)
+        serializer = OrganizationCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        name = serializer.validated_data["name"]
         initial_balance = serializer.validated_data["initial_balance"]
         org = create_shared_organization(name, initial_balance, request.user)
 
@@ -122,6 +123,38 @@ class OrganizationListCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class OrganizationUpdateView(APIView):
+    """
+    Rename an organization.
+
+    Only the organization owner may rename it, and a user's personal
+    budget cannot be renamed.
+
+    PATCH:
+    Request body:
+    - name (string, 1-100 chars, whitespace-trimmed): the new organization name.
+
+    Returns:
+    - 200 OK with the updated organization id and name.
+    - 400 Bad Request if the name is missing, empty, or longer than 100
+      characters, or if the organization is a personal budget.
+    - 403 Forbidden if the requester is not the organization owner.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgOwner]
+
+    def patch(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        org = get_object_or_404(Organization, id=org_id)
+        serializer = OrganizationNameSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        rename_organization(org, serializer.validated_data["name"])
+        return Response({"id": org.id, "name": org.name}, status=status.HTTP_200_OK)
 
 
 class OrganizationMembersView(APIView):
@@ -158,6 +191,31 @@ class OrganizationMembersView(APIView):
         )
 
 
+class OrganizationLeaveView(APIView):
+    """
+    Leave an organization you are a member of.
+
+    Owner departure transfers ownership to the longest-standing remaining
+    member; leaving as the last member deletes the organization.
+
+    - 200 OK on success.
+    - 400 Bad Request if this is your personal budget.
+    - 403 Forbidden if you are not a member of the organization.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def post(self, request: Request, org_id: int) -> Response:
+        assert isinstance(request.user, User)
+
+        org = get_object_or_404(
+            Organization,
+            id=org_id,
+        )
+        organization_deleted = leave_organization(request.user, org)
+        return Response({"organization_deleted": organization_deleted}, status=status.HTTP_200_OK)
+
+
 class OrganizationMemberRemoveView(APIView):
     """
     Remove a member from the organization.
@@ -179,10 +237,7 @@ class OrganizationMemberRemoveView(APIView):
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, id=org_id)
 
-        try:
-            remove_member(org, user_id, request.user)
-        except ValidationError as e:
-            return Response({"errors": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        remove_member(org, user_id, request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

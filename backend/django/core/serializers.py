@@ -1,5 +1,7 @@
 # from typing import Any
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from core.models import (
@@ -22,6 +24,18 @@ class InitialBalanceSerializer(serializers.Serializer[Organization]):
     )
 
 
+class OrganizationNameSerializer(serializers.Serializer[Organization]):
+    name = serializers.CharField(max_length=100, allow_blank=False, trim_whitespace=True)
+
+
+class OrganizationCreateSerializer(OrganizationNameSerializer):
+    initial_balance = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+    )
+
+
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
 
@@ -35,7 +49,11 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
         queryset=Category.objects.all(), allow_null=True, required=False
     )
     entry_type = serializers.ChoiceField(choices=EntryType.choices)
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
     description = serializers.CharField(
         max_length=1024, allow_blank=True, allow_null=True, required=False
     )
@@ -44,6 +62,17 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     goal_id = serializers.PrimaryKeyRelatedField(
         queryset=Goal.objects.all(), allow_null=True, required=False
     )
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        category = attrs.get("category_id")
+        entry_type = attrs["entry_type"]
+
+        if isinstance(category, Category) and category.type != entry_type:
+            raise serializers.ValidationError(
+                {"category_id": ("Category type must match transaction entry type.")}
+            )
+
+        return attrs
 
     def validate_goal_id(self, goal: Goal | None) -> Goal | None:
         org_id = self.context.get("org_id")
@@ -81,6 +110,42 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
             "created_by",
             "created_at",
         )
+
+
+class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), allow_null=True, required=False
+    )
+    description = serializers.CharField(
+        max_length=1024, allow_blank=True, allow_null=True, required=False
+    )
+    amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+    transaction_date = serializers.DateField(required=False)
+    is_tax_deductible = serializers.BooleanField(required=False)
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        category = attrs.get("category_id")
+        transaction = self.context["transaction"]
+
+        if isinstance(category, Category) and category.type != transaction.entry_type:
+            raise serializers.ValidationError(
+                {"category_id": ("Category type must match transaction entry type.")}
+            )
+
+        return attrs
+
+    def validate_category_id(self, category: Category | None) -> Category | None:
+        org_id = self.context.get("org_id")
+
+        if category is not None and category.org_id != org_id:
+            raise serializers.ValidationError("Category does not belong to this organization.")
+
+        return category
 
 
 # class CategoryCreateSerializer(serializers.Serializer[Category]):
