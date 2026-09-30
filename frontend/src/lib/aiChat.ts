@@ -33,7 +33,9 @@ const SIMULATED_REPLIES = [
 ];
 
 function simulatedReply(): string {
-  return SIMULATED_REPLIES[Math.floor(Math.random() * SIMULATED_REPLIES.length)];
+  return SIMULATED_REPLIES[
+    Math.floor(Math.random() * SIMULATED_REPLIES.length)
+  ];
 }
 
 /**
@@ -49,6 +51,7 @@ export async function askAssistant(
   csrfToken: string,
 ): Promise<string> {
   void org_id;
+  void question;
   void csrfToken;
 
   // Simulated network delay, so the "thinking" state is visible in the UI.
@@ -60,7 +63,10 @@ export async function askAssistant(
 /** First string found in a DRF error body — reused once the real call lands. */
 export function chatErrorMessage(status: number, body: unknown): string {
   if (status === 503) return ASSISTANT_UNAVAILABLE;
-  return firstErrorMessage(body) ?? "Could not reach the assistant. Please try again.";
+  return (
+    firstErrorMessage(body) ??
+    "Could not reach the assistant. Please try again."
+  );
 }
 
 /** Generous enough for a real question, small enough to protect the request
