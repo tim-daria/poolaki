@@ -12,12 +12,17 @@ from core.models import Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
+    TransactionListQuerySerializer,
     TransactionResponseSerializer,
     TransactionUpdateSerializer,
 )
 
 # from core.services.balance import calculate_org_balance
-from core.services.transaction import create_transaction_entry
+from core.services.transaction import (
+    TransactionFilters,
+    build_transaction_queryset,
+    create_transaction_entry,
+)
 
 
 class TransactionListCreateView(APIView):
@@ -25,10 +30,21 @@ class TransactionListCreateView(APIView):
     Manage transactions for the authenticated user.
 
     GET
-    Returns a list of transactions for current organization where the current user is a member.
+    Returns a page of transactions for current organization where the current
+    user is a member.
+
+    Query parameters (all optional):
+    - entry_type: "all" (default), "income", "expense" or "contribution".
+    - date_from / date_to: inclusive ISO date bounds on transaction_date.
+    - category_id: ID of a category belonging to the organization.
+    - goal_id: ID of a goal belonging to the organization.
+    - tax_deductible: "true" keeps only tax-deductible rows.
+    - sort: "newest" (default) or "oldest".
+    - page / page_size: 1-based paging, page_size capped at 100.
 
     Returns:
-    - 200 OK with a list of transactions for GET requests.
+    - 200 OK with {transactions, total, page, page_size, page_count}.
+    - 400 Bad Request on malformed query parameters.
 
     POST
     Create a new transaction for the authenticated user in current organization.
@@ -52,15 +68,39 @@ class TransactionListCreateView(APIView):
 
     def get(self, request: Request, org_id: int) -> Response:
         assert isinstance(request.user, User)
-        # Newest first, the order the page shows by default; id breaks ties
-        # within a day.
-        transactions = (
-            Transaction.objects.filter(org_id=org_id)
-            .select_related("category", "created_by", "goal")
-            .order_by("-transaction_date", "-id")
+        params = TransactionListQuerySerializer(
+            data=request.query_params, context={"org_id": org_id}
         )
+        params.is_valid(raise_exception=True)
+        data = params.validated_data
+
+        entry_type = data["entry_type"]
+        filters = TransactionFilters(
+            date_from=data.get("date_from"),
+            date_to=data.get("date_to"),
+            category_id=data.get("category_id"),
+            goal_id=data.get("goal_id"),
+            tax_deductible=data["tax_deductible"],
+            entry_type=None if entry_type == "all" else entry_type,
+            sort=data["sort"],
+        )
+        listed = build_transaction_queryset(org_id, filters)
+
+        total = listed.count()
+        page = data["page"]
+        page_size = data["page_size"]
+        start = (page - 1) * page_size
+
         return Response(
-            {"transactions": TransactionResponseSerializer(transactions, many=True).data},
+            {
+                "transactions": TransactionResponseSerializer(
+                    listed[start : start + page_size], many=True
+                ).data,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "page_count": max(1, (total + page_size - 1) // page_size),
+            },
             status=status.HTTP_200_OK,
         )
 
