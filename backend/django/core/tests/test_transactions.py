@@ -138,6 +138,47 @@ def test_create_transaction_rejects_goal_from_another_organization(
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
+def test_create_transaction_accepts_goal_on_expense(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id), transaction_payload(goal_id=goal.id), format="json"
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).goal_id == goal.id
+
+
+def test_create_transaction_rejects_goal_on_income(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="income", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["goal_id"] == ["Goal cannot be set on an income transaction."]
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
 def test_create_transaction_rejects_category_from_another_organization(
     api_client: APIClient,
     owner: User,
