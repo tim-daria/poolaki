@@ -51,7 +51,7 @@ test.describe.serial("AI assistant chat", () => {
   });
 
   test("behaves the same on another page", async () => {
-    await page.getByRole("link", { name: "Goals" }).click();
+    await page.getByRole("link", { name: "Savings" }).click();
     await page.getByRole("button", { name: "AI Assistant" }).click();
     await expect(page.getByText("Ask AI")).toBeVisible();
 
