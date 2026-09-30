@@ -3,9 +3,11 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Count
 from django.db.models.query import QuerySet
 
 from core.models import (
+    EntryType,
     Membership,
     NotificationType,
     Organization,
@@ -47,6 +49,14 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.
     return qs.order_by("-transaction_date", "-id")
+
+
+def count_by_entry_type(qs: QuerySet[Transaction]) -> dict[str, int]:
+    """Per-tab counts; run on the queryset without the entry_type filter."""
+    counts: dict[str, int] = dict.fromkeys(EntryType.values, 0)
+    counts.update(qs.order_by().values_list("entry_type").annotate(Count("id")))
+    counts["all"] = sum(counts.values())
+    return counts
 
 
 @transaction.atomic
