@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -21,6 +23,7 @@ from core.serializers import (
 from core.services.transaction import (
     TransactionFilters,
     build_transaction_queryset,
+    count_by_entry_type,
     create_transaction_entry,
 )
 
@@ -43,7 +46,8 @@ class TransactionListCreateView(APIView):
     - page / page_size: 1-based paging, page_size capped at 100.
 
     Returns:
-    - 200 OK with {transactions, total, page, page_size, page_count}.
+    - 200 OK with {transactions, total, page, page_size, page_count, counts};
+      counts are per-entry-type totals over every filter except entry_type.
     - 400 Bad Request on malformed query parameters.
 
     POST
@@ -84,7 +88,11 @@ class TransactionListCreateView(APIView):
             entry_type=None if entry_type == "all" else entry_type,
             sort=data["sort"],
         )
-        listed = build_transaction_queryset(org_id, filters)
+        # Tab badges cover every type at once, so the base query drops the
+        # selected tab; the table is that same base sliced by entry type.
+        base = build_transaction_queryset(org_id, replace(filters, entry_type=None))
+        counts = count_by_entry_type(base)
+        listed = base if filters.entry_type is None else base.filter(entry_type=filters.entry_type)
 
         total = listed.count()
         page = data["page"]
@@ -100,6 +108,7 @@ class TransactionListCreateView(APIView):
                 "page": page,
                 "page_size": page_size,
                 "page_count": max(1, (total + page_size - 1) // page_size),
+                "counts": counts,
             },
             status=status.HTTP_200_OK,
         )
