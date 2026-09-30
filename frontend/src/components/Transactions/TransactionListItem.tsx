@@ -118,14 +118,15 @@ export function TransactionListItem({
           {shortDate(t.transaction_date)}
         </Typography>
       </Box>
-      {/* Neutral for every category: green is reserved for money in. */}
+      {/* Coloured by entry type, the same as the Transactions table. */}
       <Box sx={[hidden, shown]}>
         {category && (
           <Chip
             label={category}
             sx={{
-              bgcolor: "action.selected",
-              color: "text.primary",
+              bgcolor: style.chipBg,
+              color: style.color,
+              fontWeight: 500,
               maxWidth: "100%",
             }}
           />

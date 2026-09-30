@@ -48,7 +48,7 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
 
   return (
     <HomeCard
-      title="Goal"
+      title="Almost there"
       to="savings"
       action={
         <HomeCardAction>

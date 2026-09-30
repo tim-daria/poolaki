@@ -36,7 +36,7 @@ import { NetBalanceCard } from "./NetBalanceCard";
 import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
-import { CARD_PADDING, DESKTOP, cardLinkSx } from "./layout";
+import { DESKTOP } from "./layout";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -211,11 +211,11 @@ function Home() {
         component={RouterLink}
         to="reports"
         aria-label="Balance and month, see reports"
-        elevation={0}
+        variant="clickableCard"
         sx={[
-          cardLinkSx,
           {
-            borderRadius: 4,
+            // The halves carry the padding, so the divider can run full height.
+            p: 0,
             display: "flex",
             flexDirection: "column",
             [DESKTOP]: { flexDirection: "row" },
@@ -225,7 +225,7 @@ function Home() {
         <Box
           sx={{
             display: "flex",
-            p: CARD_PADDING,
+            p: "var(--card-padding)",
             [DESKTOP]: { width: 400, flexShrink: 0 },
           }}
         >
@@ -240,16 +240,23 @@ function Home() {
           sx={{
             // The same hairline as the activity rows' dividers.
             borderTop: "1px solid var(--mui-palette-divider)",
-            mx: CARD_PADDING,
+            mx: "var(--card-padding)",
             [DESKTOP]: {
               borderTop: 0,
               borderLeft: "1px solid var(--mui-palette-divider)",
               mx: 0,
-              my: CARD_PADDING,
+              my: "var(--card-padding)",
             },
           }}
         />
-        <Box sx={{ display: "flex", flex: 1, minWidth: 0, p: CARD_PADDING }}>
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            minWidth: 0,
+            p: "var(--card-padding)",
+          }}
+        >
           <MonthlySummaryCard
             summary={summary}
             month={monthName(TODAY)}

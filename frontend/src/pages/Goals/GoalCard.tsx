@@ -23,7 +23,6 @@ import { displayAmount } from "../../lib/money";
 import { monthYear } from "../../lib/date";
 import { GoalProgressBar } from "../../components/Goals/GoalProgressBar";
 import { GoalStatusAvatar } from "./GoalStatusAvatar";
-import { cardFrameSx } from "./styles";
 
 interface Props {
   goal: Goal;
@@ -111,7 +110,7 @@ export function GoalCard({ goal, onContribute, onInfo }: Props) {
   return (
     <>
       <Paper
-        variant="outlined"
+        variant="clickableCard"
         role="group"
         aria-label={goal.name}
         tabIndex={0}
@@ -122,7 +121,12 @@ export function GoalCard({ goal, onContribute, onInfo }: Props) {
           e.preventDefault();
           open();
         }}
-        sx={[cardFrameSx, { color: look.text }]}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+          color: look.text,
+        }}
       >
         <Box
           sx={{

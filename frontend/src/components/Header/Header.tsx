@@ -75,11 +75,11 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
     <Paper
       component="header"
       id="header"
-      elevation={0}
+      variant="card"
       sx={{
         height: headerHeight,
+        py: 0,
         px: "20px",
-        borderRadius: 4,
         display: "flex",
         alignItems: "center",
         gap: 1.5,
