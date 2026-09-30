@@ -36,6 +36,7 @@ test.describe.serial("AI assistant chat", () => {
     await expect(
       page.getByText(/placeholder answer|assistant|approach/i),
     ).toBeVisible();
+    await page.getByRole("button", { name: "Close assistant" }).click();
   });
 
   test("closing and reopening starts a fresh conversation", async () => {
