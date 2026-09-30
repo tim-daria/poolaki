@@ -34,7 +34,10 @@ export function useAiChat() {
 
     const question = cleaned.trim();
     setError("");
-    setMessages((m) => [...m, { id: messageId(), role: "user", content: question }]);
+    setMessages((m) => [
+      ...m,
+      { id: messageId(), role: "user", content: question },
+    ]);
     setSending(true);
     try {
       const answer = await askAssistant(org.id, question, getCsrfToken());

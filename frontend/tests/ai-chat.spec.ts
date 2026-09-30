@@ -29,17 +29,25 @@ test.describe.serial("AI assistant chat", () => {
     await page.getByRole("button", { name: "AI Assistant" }).click();
     await expect(page.getByText("Ask AI")).toBeVisible();
 
-    await page.getByPlaceholder("Ask a question…").fill("How much did I save this month?");
+    await page
+      .getByPlaceholder("Ask a question…")
+      .fill("How much did I save this month?");
     await page.getByRole("button", { name: "Send" }).click();
 
-    await expect(page.getByText("How much did I save this month?")).toBeVisible();
-    await expect(page.getByText(/placeholder answer|assistant|approach/i)).toBeVisible();
+    await expect(
+      page.getByText("How much did I save this month?"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/placeholder answer|assistant|approach/i),
+    ).toBeVisible();
   });
 
   test("closing and reopening starts a fresh conversation", async () => {
     await page.getByRole("button", { name: "Close assistant" }).click();
     await page.getByRole("button", { name: "AI Assistant" }).click();
-    await expect(page.getByText("How much did I save this month?")).not.toBeVisible();
+    await expect(
+      page.getByText("How much did I save this month?"),
+    ).not.toBeVisible();
   });
 
   test("behaves the same on another page", async () => {
@@ -47,7 +55,9 @@ test.describe.serial("AI assistant chat", () => {
     await page.getByRole("button", { name: "AI Assistant" }).click();
     await expect(page.getByText("Ask AI")).toBeVisible();
 
-    await page.getByPlaceholder("Ask a question…").fill("Which goal is overdue?");
+    await page
+      .getByPlaceholder("Ask a question…")
+      .fill("Which goal is overdue?");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByText("Which goal is overdue?")).toBeVisible();
   });

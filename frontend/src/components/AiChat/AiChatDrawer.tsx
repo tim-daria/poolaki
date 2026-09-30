@@ -77,12 +77,26 @@ export function AiChatDrawer({ open, onClose }: Props) {
             <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
             <Typography sx={{ fontWeight: 700 }}>Ask AI</Typography>
           </Box>
-          <IconButton aria-label="Close assistant" onClick={handleClose} size="small">
+          <IconButton
+            aria-label="Close assistant"
+            onClick={handleClose}
+            size="small"
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
 
-        <Box sx={{ flex: 1, overflowY: "auto", px: 2, py: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            py: 2,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+          }}
+        >
           {messages.length === 0 && (
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
               Ask about your transactions, goals or budget.
@@ -108,7 +122,15 @@ export function AiChatDrawer({ open, onClose }: Props) {
           </Alert>
         )}
 
-        <Box sx={{ display: "flex", gap: 1, p: 2, borderTop: "1px solid", borderColor: "divider" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            p: 2,
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
           <TextField
             inputRef={inputRef}
             fullWidth
@@ -119,7 +141,12 @@ export function AiChatDrawer({ open, onClose }: Props) {
             onKeyDown={onKeyDown}
             disabled={sending}
           />
-          <IconButton aria-label="Send" onClick={submit} disabled={sending} color="primary">
+          <IconButton
+            aria-label="Send"
+            onClick={submit}
+            disabled={sending}
+            color="primary"
+          >
             <SendIcon />
           </IconButton>
         </Box>

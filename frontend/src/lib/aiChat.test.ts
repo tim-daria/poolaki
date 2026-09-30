@@ -15,7 +15,9 @@ describe("validateQuestion", () => {
   });
 
   it("rejects a question over the max length", () => {
-    expect(validateQuestion("a".repeat(MAX_QUESTION_LENGTH + 1))).toContain("Keep it under");
+    expect(validateQuestion("a".repeat(MAX_QUESTION_LENGTH + 1))).toContain(
+      "Keep it under",
+    );
   });
 
   it("accepts a normal question", () => {
@@ -35,7 +37,9 @@ describe("chatErrorMessage", () => {
   });
 
   it("falls back to a generic message when the body has no known shape", () => {
-    expect(chatErrorMessage(400, {})).toBe("Could not reach the assistant. Please try again.");
+    expect(chatErrorMessage(400, {})).toBe(
+      "Could not reach the assistant. Please try again.",
+    );
   });
 });
 

@@ -6,7 +6,12 @@ import type { ChatMessage } from "../../lib/aiChat";
 export function AiChatMessage({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return (
-    <Box sx={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: isUser ? "flex-end" : "flex-start",
+      }}
+    >
       <Paper
         variant={isUser ? "elevation" : "outlined"}
         elevation={isUser ? 0 : 0}
