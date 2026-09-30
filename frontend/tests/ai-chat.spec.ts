@@ -18,8 +18,24 @@ test.describe.serial("AI assistant chat", () => {
   });
 
   test.afterAll(async () => {
-    await page.close();
+    await page?.close();
   });
+
+  const openAssistant = async () => {
+    await page.getByRole("button", { name: "AI Assistant" }).click();
+    await expect(page.getByText("Ask AI")).toBeVisible();
+  };
+
+  const closeAssistant = async () => {
+    await page.getByRole("button", { name: "Close assistant" }).click();
+    await expect(page.getByText("Ask AI")).toBeHidden();
+  };
+
+  const ask = async (question: string) => {
+    await page.getByPlaceholder("Ask a question…").fill(question);
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText(question)).toBeVisible();
+  };
 
   test("opens from the header, sends a question, shows a reply", async () => {
     await page.getByRole("button", { name: "AI Assistant" }).click();
@@ -40,22 +56,21 @@ test.describe.serial("AI assistant chat", () => {
   });
 
   test("closing and reopening starts a fresh conversation", async () => {
-    await page.getByRole("button", { name: "Close assistant" }).click();
-    await page.getByRole("button", { name: "AI Assistant" }).click();
+    await openAssistant();
+    await ask("Fresh conversation check");
+    await closeAssistant();
+    await openAssistant();
+    await expect(page.getByText("Fresh conversation check")).toBeHidden();
     await expect(
-      page.getByText("How much did I save this month?"),
-    ).not.toBeVisible();
+      page.getByText("Ask about your transactions, goals or budget."),
+    ).toBeVisible();
+    await closeAssistant();
   });
 
   test("behaves the same on another page", async () => {
     await page.getByRole("link", { name: "Savings" }).click();
-    await page.getByRole("button", { name: "AI Assistant" }).click();
-    await expect(page.getByText("Ask AI")).toBeVisible();
-
-    await page
-      .getByPlaceholder("Ask a question…")
-      .fill("Which goal is overdue?");
-    await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByText("Which goal is overdue?")).toBeVisible();
+    await openAssistant();
+    await ask("Which goal is overdue?");
+    await closeAssistant();
   });
 });
