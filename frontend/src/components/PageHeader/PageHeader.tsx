@@ -23,8 +23,8 @@ import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
-/** Matches the height of `PageActionButton` so the two sit on one line. */
-const assistantButtonSize = 36.5;
+/** See the assistant button: the height MUI gives a medium Button. */
+const ACTION_BUTTON_HEIGHT = "calc(0.875rem * 1.75 + 12px)";
 
 interface PageHeaderProps {
   children: ReactNode;
@@ -72,8 +72,13 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
                 aria-label="AI Assistant"
                 onClick={onAssistantClick}
                 sx={{
-                  width: assistantButtonSize,
-                  height: assistantButtonSize,
+                  // The action button's height, in its own terms: MUI's medium
+                  // Button is 0.875rem text at 1.75 line height plus 6px padding
+                  // top and bottom. In rem, so the two track the root font size
+                  // together (it is 18px on wide screens, 16px at 1024px and
+                  // below).
+                  width: ACTION_BUTTON_HEIGHT,
+                  height: ACTION_BUTTON_HEIGHT,
                   color: "primary.dark",
                   bgcolor: "primary.contrastText",
                   border: "1px solid",

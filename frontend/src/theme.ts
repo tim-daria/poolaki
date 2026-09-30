@@ -52,6 +52,31 @@ declare module "@mui/material/Typography" {
   }
 }
 
+declare module "@mui/material/Paper" {
+  interface PaperPropsVariantOverrides {
+    card: true;
+    clickableCard: true;
+  }
+}
+
+/** The soft lift every card has at rest. */
+const CARD_SHADOW = "0 8px 24px -16px var(--mui-palette-shadow-main)";
+
+/**
+ * Radius, padding and lift shared by both card variants. The padding goes
+ * through a variable: the media query changes only the variable, so
+ * `padding` itself is one plain declaration that any `p` in `sx` overrides
+ * at every width. A card that lays out its own halves can read
+ * `var(--card-padding)` for them.
+ */
+const cardStyle = {
+  "--card-padding": "20px",
+  "@media (min-width:600px)": { "--card-padding": "24px" },
+  borderRadius: 24,
+  padding: "var(--card-padding)",
+  boxShadow: CARD_SHADOW,
+};
+
 export const theme = createTheme({
   /* ---------------------------------- */
   /*         Component overrides        */
@@ -78,6 +103,38 @@ export const theme = createTheme({
           backgroundColor: "var(--mui-palette-primary-light)",
         },
       },
+    },
+    MuiPaper: {
+      // The shell is flat. Dialog (24) and Menu/Popover (8) pass their own
+      // elevation, so overlays keep their shadows.
+      defaultProps: { elevation: 0 },
+      // The one card look. Cards say `variant="card"`; a card that is a link
+      // or a button says `variant="clickableCard"` and gets the lilac ring on
+      // hover, the outline on keyboard focus, and its header cue darkening
+      // (the `.HomeCard-action` span). Components add only their content
+      // layout.
+      variants: [
+        { props: { variant: "card" }, style: cardStyle },
+        {
+          props: { variant: "clickableCard" },
+          style: {
+            ...cardStyle,
+            cursor: "pointer",
+            textDecoration: "none",
+            color: "inherit",
+            "&:hover": {
+              // Kept together with the lift: box-shadow replaces, not adds.
+              boxShadow: `0 0 5px 2px var(--mui-palette-secondary-light), ${CARD_SHADOW}`,
+            },
+            "&:focus-visible": {
+              outline: "2px solid var(--mui-palette-primary-main)",
+            },
+            "&:hover .HomeCard-action, &:focus-visible .HomeCard-action": {
+              color: "var(--mui-palette-text-primary)",
+            },
+          },
+        },
+      ],
     },
     MuiButton: {
       // The app shell is flat (elevation 0); a shadowed contained button would
@@ -185,6 +242,8 @@ export const theme = createTheme({
   palette: {
     primary,
     secondary,
+    // Soft drop shadows (the auth card): the text colour at 35%.
+    shadow: { main: "rgba(28, 26, 32, 0.35)" },
     success: {
       main: "#5b9778", // --income-color
       light: "#d8f8e8", // --bg-income

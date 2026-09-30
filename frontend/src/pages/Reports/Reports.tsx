@@ -7,7 +7,7 @@ function Reports() {
   return (
     <Box sx={{ px: 3, pb: 5 }}>
       <PageTitle />
-      <Paper elevation={0} sx={{ borderRadius: 4, p: { xs: 2.5, sm: 3 } }}>
+      <Paper variant="card">
         <Typography sx={{ color: "text.secondary" }}>
           Reports are coming soon.
         </Typography>
