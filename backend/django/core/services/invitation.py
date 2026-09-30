@@ -12,6 +12,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.notification import notify_users
 from core.services.organization import (
     check_can_add_member,
     check_can_join_more_orgs,
@@ -63,16 +64,16 @@ def create_invitation(org: Organization, invited_username: str, invited_by: User
         org=org, invited_user=invited_user, invited_by=invited_by, status=InvitationStatus.PENDING
     )
 
-    Notification.objects.create(
-        user=invited_user,
-        type=NotificationType.INVITATION,
-        org=org,
-        payload={
+    notify_users(
+        [invited_user.id],
+        NotificationType.INVITATION,
+        {
             "invitation_id": invitation.id,
             "org_id": org.id,
             "org_name": org.name,
             "invited_by": invited_by.username,
         },
+        org=org,
     )
     return invitation
 
