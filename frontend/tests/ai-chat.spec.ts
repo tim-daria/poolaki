@@ -21,10 +21,6 @@ test.describe.serial("AI assistant chat", () => {
     await page.close();
   });
 
-  test.afterAll(async () => {
-    await page.close();
-  });
-
   test("opens from the header, sends a question, shows a reply", async () => {
     await page.getByRole("button", { name: "AI Assistant" }).click();
     await expect(page.getByText("Ask AI")).toBeVisible();
