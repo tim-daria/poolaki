@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AiChatDrawer } from "./AiChat/AiChatDrawer";
 import { Outlet, useParams } from "react-router";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLogout } from "../context/useLogout";
@@ -63,6 +64,8 @@ export function AppLayout() {
     }
   }, [collapsed]);
 
+  const [chatOpen, setChatOpen] = useState(false);
+
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
       <Sidebar
@@ -95,10 +98,11 @@ export function AppLayout() {
               mx: "auto",
             }}
           >
-            <PageHeader>
+            <PageHeader onAssistantClick={() => setChatOpen(true)}>
               <Outlet />
             </PageHeader>
           </Box>
+          <AiChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
         </Box>
       </Box>
     </Box>
