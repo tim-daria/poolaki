@@ -54,10 +54,6 @@ export async function askAssistant(
   // Simulated network delay, so the "thinking" state is visible in the UI.
   await new Promise((resolve) => setTimeout(resolve, 700));
 
-  if (!question.trim()) {
-    throw new AiChatError("Ask something first.");
-  }
-
   return simulatedReply();
 }
 
@@ -65,4 +61,28 @@ export async function askAssistant(
 export function chatErrorMessage(status: number, body: unknown): string {
   if (status === 503) return ASSISTANT_UNAVAILABLE;
   return firstErrorMessage(body) ?? "Could not reach the assistant. Please try again.";
+}
+
+/** Generous enough for a real question, small enough to protect the request
+ * payload and the LLM's token budget. */
+export const MAX_QUESTION_LENGTH = 1000;
+
+/**
+ * Validates a question before sending it. Returns an error message or null.
+ * Strips control characters (non-printable bytes from paste/autofill) rather
+ * than rejecting them outright — a user did not type those on purpose.
+ */
+export function validateQuestion(raw: string): string | null {
+  const question = raw.trim();
+  if (!question) return "Ask something first.";
+  if (question.length > MAX_QUESTION_LENGTH) {
+    return `Keep it under ${MAX_QUESTION_LENGTH} characters.`;
+  }
+  return null;
+}
+
+/** Removes non-printable control characters, keeping newlines and tabs. */
+export function sanitizeQuestion(raw: string): string {
+  // eslint-disable-next-line no-control-regex -- intentional: strips control chars
+  return raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
 }
