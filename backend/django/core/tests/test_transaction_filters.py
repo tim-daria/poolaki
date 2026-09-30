@@ -58,11 +58,18 @@ def test_list_transactions_returns_paged_envelope(
         "page",
         "page_size",
         "page_count",
+        "counts",
     }
     assert response.data["total"] == 2
     assert response.data["page"] == 1
     assert response.data["page_size"] == 15
     assert response.data["page_count"] == 1
+    assert response.data["counts"] == {
+        "all": 2,
+        "income": 1,
+        "expense": 1,
+        "contribution": 0,
+    }
 
 
 def test_list_transactions_filters_by_entry_type(
@@ -77,6 +84,13 @@ def test_list_transactions_filters_by_entry_type(
 
     assert [item["id"] for item in response.data["transactions"]] == [expense.id]
     assert response.data["total"] == 1
+    # Counts ignore the tab itself, so the other tabs stay populated.
+    assert response.data["counts"] == {
+        "all": 3,
+        "income": 1,
+        "expense": 1,
+        "contribution": 1,
+    }
 
 
 def test_list_transactions_filters_by_inclusive_date_range(
@@ -117,6 +131,13 @@ def test_list_transactions_filters_by_category_id(
 
     assert {item["id"] for item in response.data["transactions"]} == {food_a.id, food_b.id}
     assert response.data["total"] == 2
+    # Tab counts respect the selected category.
+    assert response.data["counts"] == {
+        "all": 2,
+        "income": 0,
+        "expense": 2,
+        "contribution": 0,
+    }
 
 
 def test_list_transactions_filters_by_goal_id(
@@ -190,6 +211,24 @@ def test_list_transactions_paginates(
     sized = api_client.get(transactions_url(shared_org.id), {"page_size": 5})
     assert sized.data["page_size"] == 5
     assert sized.data["page_count"] == 4
+
+
+def test_list_transaction_counts_respect_other_filters(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    make_transaction(shared_org, entry_type="expense", transaction_date="2026-08-01")
+    make_transaction(shared_org, entry_type="income", transaction_date="2026-08-01")
+    make_transaction(shared_org, entry_type="income", transaction_date="2026-09-01")
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(transactions_url(shared_org.id), {"date_to": "2026-08-31"})
+
+    assert response.data["counts"] == {
+        "all": 2,
+        "income": 1,
+        "expense": 1,
+        "contribution": 0,
+    }
 
 
 @pytest.mark.parametrize(
