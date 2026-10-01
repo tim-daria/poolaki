@@ -81,13 +81,13 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     def validate_goal_id(self, goal: Goal | None) -> Goal | None:
         org_id = self.context.get("org_id")
         if goal is not None and goal.org_id != org_id:
-            raise serializers.ValidationError("Goal does not belong to this organization.")
+            raise serializers.ValidationError(["Goal does not belong to this organization."])
         return goal
 
     def validate_category_id(self, category: Category | None) -> Category | None:
         org_id = self.context.get("org_id")
         if category is not None and category.org_id != org_id:
-            raise serializers.ValidationError("Category does not belong to this organization.")
+            raise serializers.ValidationError(["Category does not belong to this organization."])
         return category
 
 
@@ -189,7 +189,7 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
         org_id = self.context.get("org_id")
 
         if category is not None and category.org_id != org_id:
-            raise serializers.ValidationError("Category does not belong to this organization.")
+            raise serializers.ValidationError(["Category does not belong to this organization."])
 
         return category
 
