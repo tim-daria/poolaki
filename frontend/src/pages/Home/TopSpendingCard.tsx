@@ -9,42 +9,34 @@ import {
   type SpendingSlice,
 } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
-import { DESKTOP } from "./layout";
+import { TABLET } from "./layout";
 
 interface Props {
   slices: SpendingSlice[];
 }
 
-/**
- * The ring's size on phones, and its ceiling on desktop. There the card is
- * held to the row's height, so the ring takes whatever the legend leaves and
- * shrinks as the legend grows.
- */
-const SIZE = 200;
+/** The ring is this size everywhere; the legend takes what is left. */
+const SIZE = 112;
 /** In viewBox units of 100; the stroke is ~13% of the box. */
 const STROKE = 13;
 const RADIUS = 50 - STROKE / 2;
-/** A half ring: the segments share the top 180 degrees, left to right. */
-const ARC = Math.PI * RADIUS;
-const CIRCUMFERENCE = 2 * ARC;
-/** The box holds the arc and its stroke, nothing below the centre line. */
-const VIEW = { width: 100, height: 50 + STROKE / 2 + 1 };
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 /** Gap between segments, as a share of the ring; only with two or more. */
 const GAP = 0.02;
 
-/** Room for the centre figure inside the hole, in viewBox units, at the height it sits. */
-const HOLE_WIDTH = 64;
+/** Below this much content width the ring stacks over the legend. */
+const STACKED = "@container spending-card (max-width: 259px)";
+
+/** Room for the centre figure inside the hole, in viewBox units. */
+const HOLE_WIDTH = 66;
 /** Width of one glyph in the mono font, as a fraction of the font size. */
 const GLYPH_EM = 0.62;
-const FIGURE_MAX_SIZE = 12;
+const FIGURE_MAX_SIZE = 14;
 
 /** The largest size at which `text` fits the hole, capped so short figures keep the usual size. */
 function figureFontSize(text: string): number {
   return Math.min(FIGURE_MAX_SIZE, HOLE_WIDTH / (text.length * GLYPH_EM));
 }
-
-/** A card wider than this lays the arc beside the legend instead of above it. */
-const WIDE_CARD = "@container spending-card (min-width: 461px)";
 
 export function TopSpendingCard({ slices }: Props) {
   const theme = useTheme();
@@ -60,8 +52,8 @@ export function TopSpendingCard({ slices }: Props) {
 
   let offset = 0;
   const segments = slices.map((s, i) => {
-    const length = Math.max(0, shares[i] - gap) * ARC;
-    const start = (offset + gap / 2) * ARC;
+    const length = Math.max(0, shares[i] - gap) * CIRCUMFERENCE;
+    const start = (offset + gap / 2) * CIRCUMFERENCE;
     offset += shares[i];
     return { key: s.label, color: color(s, i), length, start };
   });
@@ -87,55 +79,32 @@ export function TopSpendingCard({ slices }: Props) {
       sx={{
         containerType: "inline-size",
         containerName: "spending-card",
-        [DESKTOP]: { flex: 1, minHeight: 0 },
+        // Beside a taller card it grows to match; the ring and legend stay
+        // centred in the extra room.
+        [TABLET]: { flex: 1 },
       }}
     >
-      {/* Arc over legend. On desktop the arc is the flexible part: it takes
-          the height the legend leaves, and its width follows. In a wide
-          card the arc sits beside the legend at its full size instead. */}
-      {/* `gap`, not Stack spacing: spacing is a margin on the column axis and
-          would stay when the container query turns this into a row. */}
+      {/* Ring beside legend; a narrow card stacks them. `gap`, not Stack
+          spacing, since spacing is a margin on one axis. */}
       <Stack
         sx={{
+          flexDirection: "row",
           alignItems: "center",
-          gap: 2.5,
-          [DESKTOP]: { flex: 1, minHeight: 0 },
-          [WIDE_CARD]: { flexDirection: "row", gap: 8 },
+          gap: 3,
+          [TABLET]: { flex: 1 },
+          [STACKED]: { flexDirection: "column", gap: 2.5 },
         }}
       >
         <Box
           role="img"
           aria-label={description}
-          sx={{
-            flexShrink: 0,
-            width: SIZE,
-            aspectRatio: `${VIEW.width} / ${VIEW.height}`,
-            // Stacked on desktop: the arc takes at least 40% of the card's
-            // height, more when the legend needs less, and its width follows.
-            [DESKTOP]: {
-              flex: "1 1 40%",
-              minHeight: 0,
-              width: "auto",
-              height: "auto",
-              maxWidth: "100%",
-            },
-            // Side by side: the arc takes 40% of the card's width instead.
-            [WIDE_CARD]: {
-              flex: "0 0 40%",
-              width: "auto",
-              maxWidth: "none",
-              height: "auto",
-            },
-          }}
+          sx={{ flexShrink: 0, width: SIZE, height: SIZE }}
         >
-          {/* The centre figure is SVG text, so it scales with the ring. */}
-          <svg
-            viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
-            width="100%"
-            height="100%"
-          >
-            {/* Rotated so the arc runs from 9 o'clock over the top to 3. */}
-            <g transform="rotate(180 50 50)">
+          {/* The centre figure is SVG text, sized by its length so a long
+              total stays inside the hole. */}
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            {/* Rotated so the first segment starts at 12 o'clock. */}
+            <g transform="rotate(-90 50 50)">
               {empty ? (
                 <circle
                   cx="50"
@@ -144,7 +113,6 @@ export function TopSpendingCard({ slices }: Props) {
                   fill="none"
                   stroke="var(--mui-palette-divider)"
                   strokeWidth={STROKE}
-                  strokeDasharray={`${ARC} ${ARC}`}
                 />
               ) : (
                 segments.map((seg) => (
@@ -162,10 +130,9 @@ export function TopSpendingCard({ slices }: Props) {
                 ))
               )}
             </g>
-            {/* Sized by length so a long figure stays inside the arc. */}
             <text
               x="50"
-              y="40"
+              y="48"
               textAnchor="middle"
               fontSize={centreSize}
               fontWeight="600"
@@ -180,9 +147,9 @@ export function TopSpendingCard({ slices }: Props) {
             </text>
             <text
               x="50"
-              y="51"
+              y="60"
               textAnchor="middle"
-              fontSize={centreSize * 0.625}
+              fontSize={centreSize * 0.55}
               fill="var(--mui-palette-text-secondary)"
             >
               spent
@@ -191,7 +158,7 @@ export function TopSpendingCard({ slices }: Props) {
         </Box>
 
         {empty ? (
-          <Typography sx={{ color: "text.secondary", textAlign: "center" }}>
+          <Typography sx={{ color: "text.secondary" }}>
             No spending yet. Categories appear here as you add expenses.
           </Typography>
         ) : (
@@ -202,18 +169,10 @@ export function TopSpendingCard({ slices }: Props) {
               m: 0,
               p: 0,
               gap: 1,
+              flex: 1,
+              minWidth: 0,
               alignSelf: "stretch",
-              // A size container, so the rows can size their text to the
-              // height the arc leaves them.
-              // Its natural height (rows at 1rem plus gaps), capped at 60% of
-              // the card; past the cap the rows' text shrinks to fit.
-              [DESKTOP]: {
-                flex: "0 1 auto",
-                height: `min(${slices.length * 24 + (slices.length - 1) * 8}px, 60%)`,
-                containerType: "size",
-                containerName: "legend",
-              },
-              [WIDE_CARD]: { flex: "1 1 0", minWidth: 0, alignSelf: "center" },
+              justifyContent: "center",
             }}
           >
             {slices.map((s, i) => (
@@ -222,21 +181,7 @@ export function TopSpendingCard({ slices }: Props) {
                 key={s.label}
                 direction="row"
                 spacing={1.5}
-                sx={{
-                  alignItems: "center",
-                  // The rows at 1.5 line height plus their 8px gaps must fit the
-                  // legend's height; the text shrinks from 1rem to do so.
-                  [DESKTOP]: {
-                    fontSize: `min(1rem, calc((100cqh - ${(slices.length - 1) * 8}px) / ${slices.length * 1.5}))`,
-                  },
-                  // Beside the arc the rows grow to span its height: the arc is
-                  // 40% of the card wide and 0.575 as tall as it is wide, so
-                  // its height is 23cqw of the card. Capped at the card title's
-                  // size so the legend never outweighs it.
-                  [WIDE_CARD]: {
-                    fontSize: `clamp(1rem, calc((23cqw - ${(slices.length - 1) * 8}px) / ${slices.length * 1.5}), 1.15rem)`,
-                  },
-                }}
+                sx={{ alignItems: "center" }}
               >
                 <Box
                   sx={{
@@ -247,13 +192,14 @@ export function TopSpendingCard({ slices }: Props) {
                     bgcolor: color(s, i),
                   }}
                 />
+                {/* Smaller than body text: the ring is the card's subject. */}
                 <Typography
                   noWrap
-                  sx={{ flex: 1, minWidth: 0, fontSize: "inherit" }}
+                  sx={{ flex: 1, minWidth: 0, fontSize: "0.875rem" }}
                 >
                   {s.label}
                 </Typography>
-                <Money sx={{ fontSize: "0.9em", color: "text.secondary" }}>
+                <Money sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
                   {slices.length === 1
                     ? `€${displayFigure(s.amount)}`
                     : shareLabel(s)}
