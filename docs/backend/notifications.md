@@ -11,7 +11,7 @@ All endpoints require authentication.
 | `type`               | Meaning                                                                  | Currently created by                                    |
 |----------------------|--------------------------------------------------------------------------|---------------------------------------------------------|
 | `invitation`         | "You have been invited to an organization"                               | `POST /api/v1/organizations/{org_id}/invitations/`         |
-| `transaction_added`  | "A new transaction was added"                                            | reserved (will be created when transactions go multi-org) |
+| `transaction_added`  | "A new transaction was added"                                            | `POST /api/v1/organizations/{org_id}/transactions/` (sent to every member except the creator) |
 | `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
 | `member_left`        | "A member left the organization"                                         | `POST /api/v1/organizations/{org_id}/leave/` |
 | `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
@@ -81,6 +81,20 @@ The leave endpoint (`POST /api/v1/organizations/{org_id}/leave/`) produces:
   }
   ```
 
+The transaction-creation endpoint (`POST /api/v1/organizations/{org_id}/transactions/`) produces `transaction_added` for every member of the organization **except the creator**; personal budgets never produce it:
+
+```json
+{
+  "org_name": "Trip",
+  "added_by": "bob",
+  "transaction_id": 9,
+  "amount": "125.50",
+  "entry_type": "expense"
+}
+```
+
+`amount` is a string; `transaction_id` points to the created transaction row.
+
 Other types may add their own fields later; treat `payload` as type-specific.
 
 ## Endpoints
@@ -145,7 +159,13 @@ Response example:
     {
       "id": 11,
       "type": "transaction_added",
-      "payload": {},
+      "payload": {
+        "org_name": "Trip",
+        "added_by": "bob",
+        "transaction_id": 9,
+        "amount": "20.00",
+        "entry_type": "expense"
+      },
       "is_read": true,
       "created_at": "2026-08-18T21:02:11Z"
     }
@@ -258,8 +278,8 @@ There is no push channel, so the frontend should poll.
 | `invitation`        | Text like "bob invited you to **Trip**", buttons **Accept** / **Decline** (see below).            |
 | `transaction_added` | Text like "bob added a new €20 transaction to **Family Account**"                                 |
 | `goal_completed`    | Info text.                                                                                        |
-| `member_left`       | Info text .                                                                                       |
-| `member_removed`    | Info text, e.g. "**alice** was removed from **Trip**"                                          |
+| `member_left`       | Text like "**alice** left **Trip**" organization.
+| `member_removed`    | Text like "**alice** was removed from **Trip** organization"                                          |
 | `removed_from_org`  | Text like "you were removed from **Trip** by bob"    |
 | `ownership_transferred` | Text like "you are now the owner of **Trip**" (sent to the new owner)  |
 | `owner_changed`       | Text like "**Daria** replaced **Ivan** as the owner of **Trip**" (sent to remaining members) |

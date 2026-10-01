@@ -4,7 +4,18 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Category, CategoryType, Goal, Organization, Transaction, User
+from core.models import (
+    Category,
+    CategoryType,
+    Goal,
+    Membership,
+    Notification,
+    NotificationType,
+    Organization,
+    Role,
+    Transaction,
+    User,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -150,6 +161,52 @@ def test_create_transaction_rejects_category_from_another_organization(
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
+def test_create_transaction_accepts_category_matching_entry_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=shared_org,
+        name="Groceries",
+        type=CategoryType.EXPENSE,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    transaction = Transaction.objects.get(id=response.data["id"])
+    assert transaction.category_id == category.id
+
+
+def test_create_transaction_rejects_category_with_different_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=shared_org,
+        name="Salary",
+        type=CategoryType.INCOME,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["category_id"] == ["Category type must match transaction entry type."]
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
 @pytest.mark.parametrize("method", ["get", "post"])
 def test_transactions_require_organization_membership(
     api_client: APIClient, stranger: User, personal_org: Organization, method: str
@@ -183,6 +240,311 @@ def test_create_transaction_rejects_invalid_payload(
     )
 
     assert response.status_code == 400
+
+
+def test_create_transaction_notifies_all_members_except_creator(
+    api_client: APIClient,
+    owner: User,
+    member: User,
+    invitee: User,
+    shared_org: Organization,
+) -> None:
+    Membership.objects.create(user=invitee, org=shared_org, role=Role.MEMBER)
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id), transaction_payload(), format="json"
+    )
+
+    assert response.status_code == 201
+    txn = Transaction.objects.get(id=response.data["id"])
+
+    assert set(Notification.objects.values_list("user_id", flat=True)) == {owner.id, invitee.id}
+    notification = Notification.objects.get(user=owner)
+    assert notification.type == NotificationType.TRANSACTION_ADDED
+    assert notification.org_id == shared_org.id
+    assert notification.is_read is False
+    assert notification.payload == {
+        "org_name": shared_org.name,
+        "added_by": member.username,
+        "transaction_id": txn.id,
+        "amount": "125.50",
+        "entry_type": "expense",
+    }
+
+
+def test_create_transaction_in_personal_budget_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(personal_org.id), transaction_payload(), format="json"
+    )
+
+    assert response.status_code == 201
+    assert not Notification.objects.exists()
+
+
+def test_create_transaction_rejects_negative_amount(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(amount="-25"),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == ["Ensure this value is greater than or equal to 0.01."]
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
+def test_transaction_creator_can_partially_update_transaction(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+        is_tax_deductible=True,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {
+            "amount": "0.01",
+            "description": "",
+            "transaction_date": "2026-08-12",
+            "is_tax_deductible": False,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    transaction.refresh_from_db()
+    assert transaction.amount == Decimal("0.01")
+    assert transaction.description == ""
+    assert str(transaction.transaction_date) == "2026-08-12"
+    assert transaction.is_tax_deductible is False
+
+
+def test_transaction_patch_preserves_omitted_fields(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+        is_tax_deductible=True,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"description": "Updated description"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    transaction.refresh_from_db()
+    assert transaction.amount == Decimal("25.00")
+    assert transaction.description == "Updated description"
+    assert str(transaction.transaction_date) == "2026-08-10"
+    assert transaction.is_tax_deductible is True
+
+
+def test_transaction_creator_can_clear_nullable_description(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"description": None},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    transaction.refresh_from_db()
+    assert transaction.description is None
+
+
+def test_transaction_patch_rejects_category_from_another_organization(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    personal_org: Organization,
+) -> None:
+    category = Category.objects.create(
+        org=personal_org,
+        name="Private",
+        type=CategoryType.EXPENSE,
+    )
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": category.id},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    transaction.refresh_from_db()
+    assert transaction.category_id is None
+
+
+def test_transaction_patch_accepts_category_matching_entry_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    category = Category.objects.create(
+        org=shared_org,
+        name="Groceries",
+        type=CategoryType.EXPENSE,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": category.id},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    transaction.refresh_from_db()
+    assert transaction.category_id == category.id
+
+
+def test_transaction_patch_rejects_category_with_different_type(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    category = Category.objects.create(
+        org=shared_org,
+        name="Salary",
+        type=CategoryType.INCOME,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": category.id},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["category_id"] == ["Category type must match transaction entry type."]
+    transaction.refresh_from_db()
+    assert transaction.category_id is None
+
+
+def test_non_creator_cannot_patch_transaction(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"description": "Unauthorized update"},
+        format="json",
+    )
+
+    assert response.status_code == 404
+    transaction.refresh_from_db()
+    assert transaction.description == "Original description"
+
+
+def test_transaction_patch_rejects_negative_amount(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"amount": "-1"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    transaction.refresh_from_db()
+    assert transaction.description == "Original description"
+
+
+def test_non_creator_cannot_delete_transaction(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Original description",
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.delete(transaction_url(shared_org.id, transaction.id))
+
+    assert response.status_code == 404
+    transaction.refresh_from_db()
+    assert transaction.description == "Original description"
 
 
 def test_member_can_delete_organization_transaction(
