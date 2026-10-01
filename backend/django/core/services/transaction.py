@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from django.db import transaction
 from django.db.models import Count
@@ -26,8 +27,8 @@ class TransactionFilters:
     category_id: int | None = None
     goal_id: int | None = None
     tax_deductible: bool = False
-    entry_type: str | None = None
-    sort: str = "newest"
+    entry_type: EntryType | None = None
+    sort: Literal["newest", "oldest"] = "newest"
 
 
 def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> QuerySet[Transaction]:
