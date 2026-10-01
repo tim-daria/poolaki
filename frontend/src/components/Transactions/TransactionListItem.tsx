@@ -17,7 +17,7 @@ import { shortDate } from "../../lib/date";
 import { ENTRY_STYLE, entryCategoryLabel } from "../../lib/entryDisplay";
 import { displayAmount } from "../../lib/money";
 import type { Transaction } from "../../lib/transactions";
-import { DESKTOP } from "../../pages/Home/layout";
+import { TABLET } from "../../pages/Home/layout";
 
 /** Space between rows; the hairline sits halfway down it. */
 export const ROW_GAP = 24;
@@ -28,7 +28,7 @@ const WIDE_WITH_PERSON = "@container transaction-list (min-width: 600px)";
 
 /** Styles under both conditions at once: nested at-rules are valid CSS. */
 function whenWide(withPerson: boolean | undefined, styles: object) {
-  return { [DESKTOP]: { [withPerson ? WIDE_WITH_PERSON : WIDE]: styles } };
+  return { [TABLET]: { [withPerson ? WIDE_WITH_PERSON : WIDE]: styles } };
 }
 
 interface ListProps {
@@ -42,30 +42,34 @@ export function TransactionList({ withPerson, children, sx }: ListProps) {
   return (
     // The wrapper is the query container: a grid cannot query its own width.
     <Box
-      sx={[
-        { containerType: "inline-size", containerName: "transaction-list" },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
+      sx={{
+        containerType: "inline-size",
+        containerName: "transaction-list",
+        height: "100%",
+      }}
     >
       <Box
         component="ul"
-        sx={{
-          listStyle: "none",
-          m: 0,
-          p: 0,
-          display: "grid",
-          rowGap: `${ROW_GAP}px`,
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          // Priority when room runs out: the amount is never shortened, the
-          // name keeps a floor, and the chip and person share what is left
-          // and truncate first. With room to spare the name takes 1.5 shares
-          // to their one each.
-          ...whenWide(withPerson, {
-            gridTemplateColumns: withPerson
-              ? "minmax(120px, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) max-content"
-              : "minmax(120px, 1.5fr) minmax(0, 1fr) max-content",
-          }),
-        }}
+        sx={[
+          {
+            listStyle: "none",
+            m: 0,
+            p: 0,
+            display: "grid",
+            rowGap: `${ROW_GAP}px`,
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            // Priority when room runs out: the amount is never shortened, the
+            // name keeps a floor, and the chip and person share what is left
+            // and truncate first. With room to spare the name takes 1.5 shares
+            // to their one each.
+            ...whenWide(withPerson, {
+              gridTemplateColumns: withPerson
+                ? "minmax(120px, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) max-content"
+                : "minmax(120px, 1.5fr) minmax(0, 1fr) max-content",
+            }),
+          },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
       >
         {children}
       </Box>

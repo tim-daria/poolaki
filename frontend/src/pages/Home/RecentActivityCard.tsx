@@ -1,4 +1,4 @@
-/** @file Recent activity card: the latest entries, sized for six rows on desktop. */
+/** @file Recent activity card: the latest entries, sized for five rows on desktop. */
 
 import { Box, Button, Stack, Typography } from "@mui/material";
 import {
@@ -20,17 +20,20 @@ interface Props {
   onAdd: () => void;
 }
 
-export const RECENT_ROWS = 6;
+export const RECENT_ROWS = 5;
 
 /** A row's height: its two lines of text. */
 const ROW_HEIGHT = 44;
 
 /**
- * On desktop the list keeps the room of a full six rows whatever it holds,
- * so the card is one height across workspaces. A phone card fits its rows.
+ * On desktop the list keeps the room of a full five rows whatever it holds,
+ * and grows with the card when the sidebar beside it is taller: a full list
+ * then spreads its rows into that room, a short one keeps its rhythm. A
+ * phone card fits its rows.
  */
 const listSx = {
   [DESKTOP]: {
+    flex: 1,
     minHeight: RECENT_ROWS * ROW_HEIGHT + (RECENT_ROWS - 1) * ROW_GAP,
   },
 } as const;
@@ -80,7 +83,14 @@ export function RecentActivityCard({ rows, categories, shared, onAdd }: Props) {
       action={<HomeCardAction>See all</HomeCardAction>}
     >
       <Box sx={listSx}>
-        <TransactionList withPerson={shared}>
+        <TransactionList
+          withPerson={shared}
+          sx={{
+            height: "100%",
+            alignContent:
+              rows.length >= RECENT_ROWS ? "space-between" : "start",
+          }}
+        >
           {rows.slice(0, RECENT_ROWS).map((t) => (
             <TransactionListItem
               key={t.id}
