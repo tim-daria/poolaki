@@ -10,7 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Organization, Transaction, User
+from core.models import EntryType, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -85,7 +85,7 @@ class TransactionListCreateView(APIView):
             category_id=data.get("category_id"),
             goal_id=data.get("goal_id"),
             tax_deductible=data["tax_deductible"],
-            entry_type=None if entry_type == "all" else entry_type,
+            entry_type=None if entry_type == "all" else EntryType(entry_type),
             sort=data["sort"],
         )
         # Tab badges cover every type at once, so the base query drops the

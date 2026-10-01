@@ -202,11 +202,11 @@ SITE_ID = 1
 HEADLESS_ONLY = True
 
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "https://poolaki.localhost/auth/verify-email/{key}",
-    "account_reset_password": "https://poolaki.localhost/auth/reset-password",
-    "account_reset_password_from_key": "https://poolaki.localhost/auth/reset-password/{key}",
-    "account_signup": "http://poolaki.localhost:8080/register",
-    "socialaccount_login_error": "http://poolaki.lde/login",
+    "account_confirm_email": "http://poolaki.de/auth/verify-email/{key}",
+    "account_reset_password": "http://poolaki.de/auth/reset-password",
+    "account_reset_password_from_key": "http://poolaki.de/auth/reset-password/{key}",
+    "account_signup": "http://poolaki.de/register",
+    "socialaccount_login_error": "http://poolaki.de/login",
     "socialaccount_login": "http://poolaki.de/oauth-callback",
 }
 
