@@ -88,8 +88,7 @@ class TransactionListCreateView(APIView):
             entry_type=None if entry_type == "all" else EntryType(entry_type),
             sort=data["sort"],
         )
-        # Tab badges cover every type at once, so the base query drops the
-        # selected tab; the table is that same base sliced by entry type.
+
         base = build_transaction_queryset(org_id, replace(filters, entry_type=None))
         counts = count_by_entry_type(base)
         listed = base if filters.entry_type is None else base.filter(entry_type=filters.entry_type)
