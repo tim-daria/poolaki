@@ -488,8 +488,8 @@ test.describe.serial("Transactions", () => {
 
     // Today is in September 2026; the fixtures end in August.
     await panel.getByRole("button", { name: "Last month" }).click();
-    await expect(page).toHaveURL(/from=2026-08-01/);
-    await expect(page).toHaveURL(/to=2026-08-31/);
+    await expect(page).toHaveURL(/from=2026-09-01/);
+    await expect(page).toHaveURL(/to=2026-09-30/);
     await expect(
       panel.getByRole("button", { name: "Last month" }),
     ).toHaveAttribute("aria-pressed", "true");
