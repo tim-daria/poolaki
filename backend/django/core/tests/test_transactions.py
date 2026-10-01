@@ -134,6 +134,7 @@ def test_create_transaction_rejects_goal_from_another_organization(
     )
 
     assert response.status_code == 400
+    assert response.data["goal_id"] == ["Goal does not belong to this organization."]
 
     assert not Transaction.objects.filter(org=shared_org).exists()
 
@@ -199,6 +200,7 @@ def test_create_transaction_rejects_category_from_another_organization(
     )
 
     assert response.status_code == 400
+    assert response.data["category_id"] == ["Category does not belong to this organization."]
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
@@ -455,6 +457,7 @@ def test_transaction_patch_rejects_category_from_another_organization(
     )
 
     assert response.status_code == 400
+    assert response.data["category_id"] == ["Category does not belong to this organization."]
     transaction.refresh_from_db()
     assert transaction.category_id is None
 
