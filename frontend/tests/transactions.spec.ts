@@ -5,7 +5,7 @@
  * add/edit modal, against rows posted through the real API.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { makeUsers, registerUser, toOrgId } from "./helpers.js";
+import { freezeClock, makeUsers, registerUser, toOrgId } from "./helpers.js";
 
 type OrganizationCategory = {
   id: number;
@@ -40,7 +40,8 @@ async function getOrganizationCategories(
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
  * 3 transfers, 3 tax refundable, 15 per page. Category names match the
- * defaults created for the registered organization.
+ * defaults created for the registered organization. The date presets and the
+ * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
 type Fixture = [
   date: string,
@@ -195,6 +196,7 @@ test.describe.serial("Transactions", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
+    await freezeClock(page);
     const workspace = await registerUser(page, user);
     const orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
@@ -486,7 +488,7 @@ test.describe.serial("Transactions", () => {
       .getByRole("presentation")
       .filter({ hasText: "Categories" });
 
-    // Today is in September 2026; the fixtures end in August.
+    // Today is frozen at 15 Sep 2026; the fixtures end in August.
     await panel.getByRole("button", { name: "Last month" }).click();
     await expect(page).toHaveURL(/from=2026-08-01/);
     await expect(page).toHaveURL(/to=2026-08-31/);
@@ -510,6 +512,10 @@ test.describe.serial("Transactions", () => {
       .first()
       .click();
     await page.keyboard.type("31082026");
+    // From must have landed in the URL before To is typed: To is validated
+    // against the committed From, and the popover re-anchors as the badge
+    // changes, so a mistyped From would otherwise fail later and unclearly.
+    await expect(page).toHaveURL(/from=2026-08-31/);
     await panel
       .getByRole("group", { name: "To" })
       .getByRole("spinbutton")
