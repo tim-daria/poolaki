@@ -86,6 +86,45 @@ export async function createSharedWorkspace(
   return new URL(page.url()).pathname;
 }
 
+/**
+ * Fixed "today" for specs whose expectations depend on the calendar: the
+ * transactions date presets, the year-less "5 Aug" formatting and the goal
+ * overdue flags. Mid-month, after the last transaction fixture (Aug 2026) and
+ * before the earliest active goal deadline (Dec 2026). Only the browser clock
+ * is frozen; Node's Date.now() keeps the usernames above unique.
+ */
+export const FROZEN_TODAY = "2026-09-15";
+
+/**
+ * Pins the page's Date at noon on `iso` for every navigation. Call before the
+ * first one: lib/date.ts captures TODAY and the current year at module load.
+ * Noon keeps toISOString() on the same day in any timezone.
+ *
+ * Deliberately not page.clock.setFixedTime(): that installs Playwright's fake
+ * clock, which also takes over performance.now() and the timer queue, and the
+ * dialog fade-out / focus-restore sequence then runs in a different order
+ * (the aria-hidden spy in transactions.spec.ts catches it). Only Date is
+ * replaced here, so timers, transitions and React's scheduler are untouched.
+ */
+export async function freezeClock(page: Page, iso = FROZEN_TODAY) {
+  await page.addInitScript(
+    (fixed: number) => {
+      const RealDate = Date;
+      class FixedDate extends RealDate {
+        constructor(...args: unknown[]) {
+          // No-arg `new Date()` is "now"; any explicit argument passes through.
+          super(...((args.length === 0 ? [fixed] : args) as [number]));
+        }
+        static override now() {
+          return fixed;
+        }
+      }
+      (window as unknown as { Date: unknown }).Date = FixedDate;
+    },
+    new Date(`${iso}T12:00:00`).getTime(),
+  );
+}
+
 /** "/o/42" → 42 (accepts a pathname, as the helpers return). */
 export function toOrgId(workspacePathname: string): number {
   return Number(workspacePathname.split("/").pop());
