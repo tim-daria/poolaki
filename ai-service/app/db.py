@@ -1,8 +1,8 @@
+
 import asyncpg
-from typing import Optional
 
 # Global variable to store the connection pool
-_db_pool: Optional[asyncpg.Pool] = None
+_db_pool: asyncpg.Pool | None = None
 
 
 async def init_db_pool(database_url: str) -> None:
