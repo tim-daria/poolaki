@@ -1,6 +1,8 @@
 from unittest.mock import AsyncMock, patch
-from fastapi import FastAPI
+
 import pytest
+from fastapi import FastAPI
+
 from app.main import lifespan
 
 
