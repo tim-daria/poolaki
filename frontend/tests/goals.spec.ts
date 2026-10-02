@@ -8,20 +8,19 @@
  * never pulls app source into the node tsconfig project.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { freezeClock, makeUsers, registerUser } from "./helpers.js";
+import { freezeClock, openAsSharedOwner } from "./helpers.js";
 
 test.describe.serial("Goals", () => {
   let page: Page;
   let goalsUrl: string;
 
-  const [user] = makeUsers("goal", "goal_unused");
-
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
+    // Nothing here is saved, so the shared owner's workspace is safe to use.
+    const owner = await openAsSharedOwner(browser);
+    page = owner.page;
     // Overdue is derived from the seed deadlines against today, so pin today.
     await freezeClock(page);
-    const workspace = await registerUser(page, user);
-    goalsUrl = `${workspace}/savings`;
+    goalsUrl = `${owner.personalUrl}/savings`;
   });
 
   test.afterAll(async () => {

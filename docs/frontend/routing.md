@@ -142,6 +142,13 @@ the new workspace without remounting. They are not fixed when the sidebar is cre
   real address that leads nowhere.
 - **Keep the providers inside `ProtectedRoute`**, so logging out unmounts them and one
   user's list can't survive into the next user's session.
+- **Order the list refresh around navigation by which side would lose the workspace.**
+  After *creating* one, refresh the org list, then navigate (`CreateOrgForm`): `OrgLayout`
+  resolves the org out of the list, so navigating first shows `NoAccessScreen` for the
+  workspace just made. After *leaving or deleting* one, navigate first, then refresh
+  (`OrgSettings.tsx`): refreshing first drops the org from the list and the page still
+  showing it, or the whole `/o/:orgId` branch when it is the current workspace, falls
+  into `NoAccessScreen` before the navigation lands.
 
 ---
 
