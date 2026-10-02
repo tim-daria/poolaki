@@ -223,6 +223,12 @@ jobs:
           SMTP_FROM_ADDRESS=
           TUNNEL_TOKEN=
           TZ=Europe/Berlin
+          LLM_MODEL=AI
+          LLM_API_KEY=123abc
+          LLM_BASE_URL=www.llm.com
+          DJANGO_BASE_URL=http://django:8000
+          LOG_LEVEL=Warning
+          LLM_TIMEOUT=30
           EOF
 
       - name: Create optional AI service env for CI
