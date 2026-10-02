@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.chat import router as chat_router
@@ -8,6 +9,7 @@ from app.clients.django import MockDjangoClient
 from app.clients.llm import LLMClient
 from app.db import init_db_pool, close_db_pool
 from app.config.logging import configure_logging
+from app.db import close_db_pool, init_db_pool
 from app.services.context_builder import ContextBuilder
 from app.services.intention import IntentionService
 from app.services.llm import LLMService

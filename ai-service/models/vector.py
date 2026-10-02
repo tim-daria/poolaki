@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -10,8 +11,8 @@ class ChunkCreate(BaseModel):
 
 
 class ChunkUpdate(BaseModel):
-    content: Optional[str] = None
-    embedding: Optional[list[float]] = None
+    content: str | None = None
+    embedding: list[float] | None = None
 
 
 class ChunkResponse(BaseModel):
@@ -19,4 +20,4 @@ class ChunkResponse(BaseModel):
     document_id: str
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
-    similarity: Optional[float] = None
+    similarity: float | None = None

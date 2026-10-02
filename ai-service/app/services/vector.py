@@ -1,4 +1,5 @@
-from typing import Any, List, Optional
+from typing import Any
+
 import asyncpg
 
 
@@ -12,8 +13,8 @@ class VectorRepository:
         self,
         document_id: str,
         content: str,
-        embedding: List[float],
-        metadata: Optional[dict[str, Any]] = None,
+        embedding: list[float],
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Saves a text chunk along with its vector embedding and optional metadata into the database."""
         query = """
@@ -34,9 +35,9 @@ class VectorRepository:
 
     async def query_similar_chunks(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         limit: int = 5,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Searches for the most similar chunks to the query embedding using pgvector and returns a list with their similarity score."""
         # similarity measures how close the vectors are; higher values indicate greater semantic match.
         query = """
@@ -67,8 +68,8 @@ class VectorRepository:
     async def update_chunk(
         self,
         chunk_id: str,
-        content: Optional[str] = None,
-        embedding: Optional[List[float]] = None,
+        content: str | None = None,
+        embedding: list[float] | None = None,
     ) -> bool:
         """Conditionally updates the text content or vector embedding of an existing chunk."""
         async with self._pool.acquire() as connection:
