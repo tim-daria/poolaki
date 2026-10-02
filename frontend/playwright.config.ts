@@ -17,6 +17,8 @@ export default defineConfig({
     baseURL: process.env.BASE_URL ?? "http://poolaki.localhost:8080",
     // Keeps the Caddy TLS cert from blocking local runs
     ignoreHTTPSErrors: true,
+    // Dates are asserted as literals; the runner's zone must not shift them.
+    timezoneId: "Europe/Berlin",
     // Records a trace on the first retry so you can inspect failing tests
     trace: "on-first-retry",
     // Screenshots on failure — visible in the HTML report

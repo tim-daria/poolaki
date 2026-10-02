@@ -6,12 +6,15 @@ from app.api.chat import router as chat_router
 from app.api.health import router as health_router
 from app.clients.django import MockDjangoClient
 from app.clients.llm import LLMClient
+from app.config.logging import configure_logging
 from app.db import init_db_pool, close_db_pool
 from app.services.context_builder import ContextBuilder
 from app.services.intention import IntentionService
 from app.services.llm import LLMService
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import MockDocumentRepository, MockRetriever
+
+configure_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
