@@ -333,7 +333,7 @@ services:
     environment:
       - PYTHONPATH=.
       - DATABASE_URL=${DATABASE_URL}
-    volumes:
+    volumes: #remove for production
       - ./ai-service:/app
     networks:
       - backend_net
