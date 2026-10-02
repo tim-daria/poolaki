@@ -1,7 +1,7 @@
 
 COMPOSE_FILE=./docker-compose.yml
 
-.PHONY: up re prod re-prod down stop start build status status_all logs clean fclean rmVolumes \
+.PHONY: up re prod re-prod down stop start start-prod stop-prod build status status_all logs clean fclean rmVolumes \
 		Tcaddy Tdjango Tdb Tnode Tvault Tvault_agent Tdb_backup Tai \
 		readVault wafLog auditLog
 
@@ -22,10 +22,20 @@ re-prod:
 down:
 	@docker compose -f "$(COMPOSE_FILE)" --profile prod down
 
+# stop the dev-stack
 stop: 
+	@docker compose -f "$(COMPOSE_FILE)" stop
+
+# start the dev-stack
+start:
+	@docker compose -f "$(COMPOSE_FILE)" start
+
+# stop the prod-stack
+stop-prod: 
 	@docker compose -f "$(COMPOSE_FILE)" --profile prod stop
 
-start: 
+# start the prod-stack
+start-prod:
 	@docker compose -f "$(COMPOSE_FILE)" --profile prod start
 
 build:
