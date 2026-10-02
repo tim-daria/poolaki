@@ -41,6 +41,3 @@ blob-report/
 
 # Certificates
 *.pem
-
-# Docker
-.dockerignore
