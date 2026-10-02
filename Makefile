@@ -3,8 +3,7 @@ COMPOSE_FILE=./docker-compose.yml
 
 .PHONY: up re prod re-prod down stop start build status status_all logs clean fclean rmVolumes \
 		Tcaddy Tdjango Tdb Tnode Tvault Tvault_agent Tdb_backup Tai \
-		caddy backend db frontend cloudflared prometheus grafana postgres_exporter \
-		cadvisor db_backup ai_service vault vault_agent
+		readVault wafLog auditLog
 
 all: up
 
@@ -24,10 +23,10 @@ down:
 	@docker compose -f "$(COMPOSE_FILE)" --profile prod down
 
 stop: 
-	@docker compose -f "$(COMPOSE_FILE)" stop
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod stop
 
 start: 
-	@docker compose -f "$(COMPOSE_FILE)" start
+	@docker compose -f "$(COMPOSE_FILE)" --profile prod start
 
 build:
 	@docker compose -f "$(COMPOSE_FILE)" build
@@ -89,3 +88,9 @@ rmVolumes:
 
 readVault:
 	@./vault/read_vault.sh
+
+wafLog:
+	@docker exec caddy cat  /coraza/logs/audit.log | tail -1 | jq
+
+auditLog:
+	@docker exec caddy cat  /coraza/logs/audit.log | jq > ./audit.log
