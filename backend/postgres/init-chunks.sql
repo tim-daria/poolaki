@@ -7,4 +7,5 @@ CREATE TABLE IF NOT EXISTS chunks (
     embedding vector(1536), -- Adapt to the model e.g. OpenAI uses 1536 dimensions
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
