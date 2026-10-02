@@ -24,7 +24,7 @@ export async function fetchNotifications(
   signal?: AbortSignal,
 ): Promise<{ notifications: Notification[]; unreadCount: number }> {
   const url =
-    isRead === undefined
+    isRead === false
       ? "/api/v1/notifications/"
       : `/api/v1/notifications/?is_read=${isRead}`;
   const res = await fetch(url, { credentials: "include", signal });
