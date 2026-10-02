@@ -86,9 +86,11 @@ test.describe.serial("Workspaces", () => {
 
     // Switching is a lookup in the already-loaded list, not a request. This is
     // what the design buys: no round trip, so no loading state to design for.
+    // Only the list endpoint counts: the new workspace's own data (categories
+    // for the transaction form on Home) is fetched per workspace by design.
     const orgCalls: string[] = [];
     const record = (req: { url: () => string }) => {
-      if (req.url().includes("/api/v1/organizations/"))
+      if (new URL(req.url()).pathname === "/api/v1/organizations/")
         orgCalls.push(req.url());
     };
     page.on("request", record);
