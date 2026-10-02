@@ -332,6 +332,7 @@ services:
       - ./ai-service/.env
     environment:
       - PYTHONPATH=.
+      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./ai-service:/app
     networks:
