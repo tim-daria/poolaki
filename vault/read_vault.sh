@@ -11,17 +11,25 @@ VAULT_ROOT=$($DOCKER_SHELL jq -r '.root_token' /vault/secure/vault-init.json)
 $DOCKER_SHELL vault login $VAULT_ROOT > /dev/null
 
 # read kv credentials
-echo
-$DOCKER_SHELL vault kv list -format=json secret/django/ | jq -r '.[]' | while read path; do
-  echo "=== $path ==="
+$DOCKER_SHELL vault kv list -format=json secret/django | jq -r '.[]' | while read path; do
   echo
-  $DOCKER_SHELL vault kv get secret/django/"$path"
+  echo "=== $path ==="
+  $DOCKER_SHELL vault kv get -format=json secret/django/"$path" | jq '.data.data'
+
 done
+
+echo
+echo "=== grafana ==="
+ $DOCKER_SHELL vault kv get -format=json secret/grafana/"$path" | jq '.data.data'
+
+echo
+echo "=== cloudflare ==="
+$DOCKER_SHELL vault kv get -format=json secret/cloudflare/"$path" | jq '.data.data'
 
 # read database credentials
 echo
 echo "=== Database credentials ==="
-$DOCKER_SHELL vault read database/creds/db_role
+$DOCKER_SHELL vault read  database/creds/db_role
 
 # read vault root token for vault UI
 echo
