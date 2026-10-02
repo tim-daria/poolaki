@@ -13,7 +13,8 @@ export default defineConfig({
   // 'list' prints results inline in the terminal (useful locally and in CI logs)
   reporter: process.env.CI ? [["html"], ["list"]] : "list",
   use: {
-    // Local dev uses Caddy (https), CI uses Vite directly (http) — no TLS issues
+    // Both local dev and CI go through Caddy on plain HTTP, so the WAF in
+    // front of the app is exercised rather than bypassed.
     baseURL: process.env.BASE_URL ?? "http://poolaki.localhost:8080",
     // Keeps the Caddy TLS cert from blocking local runs
     ignoreHTTPSErrors: true,
