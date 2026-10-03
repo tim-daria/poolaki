@@ -1,11 +1,9 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
-from app.services.embedding import EmbeddingService, get_embedding_service
 
 from app.main import app
-
 
 client = TestClient(app)
 
