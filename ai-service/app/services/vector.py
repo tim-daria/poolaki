@@ -26,7 +26,7 @@ class VectorRepository:
         meta_value = metadata if metadata is not None else {}
         # vector_str converts the list of floats (embedding) into a vector text format compatible with pgvector.
         vector_str = "[" + ",".join(map(str, embedding)) + "]"
-        
+
         async with self._pool.acquire() as connection:
             chunk_id = await connection.fetchval(
                 query, document_id, content, vector_str, meta_value
@@ -48,10 +48,10 @@ class VectorRepository:
             LIMIT $2;
         """
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
-        
+
         async with self._pool.acquire() as connection:
             rows = await connection.fetch(query, vector_str, limit)
-            
+
             results = []
             for row in rows:
                 results.append(
@@ -79,7 +79,7 @@ class VectorRepository:
                     content,
                     chunk_id,
                 )
-            
+
             if embedding is not None:
                 vector_str = "[" + ",".join(map(str, embedding)) + "]"
                 await connection.execute(
@@ -87,5 +87,5 @@ class VectorRepository:
                     vector_str,
                     chunk_id,
                 )
-            
+
             return True

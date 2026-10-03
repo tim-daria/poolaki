@@ -1,4 +1,3 @@
-
 import asyncpg
 
 # Global variable to store the connection pool
