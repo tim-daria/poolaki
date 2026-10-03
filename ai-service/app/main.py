@@ -17,12 +17,16 @@ from app.services.retrieval import MockDocumentRepository, MockRetriever
 
 configure_logging()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    database_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
+    database_url = os.getenv(
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres"
+    )
     await init_db_pool(database_url)
     yield
     await close_db_pool()
+
 
 llm_client = LLMClient()
 
