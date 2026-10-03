@@ -1,3 +1,4 @@
+from app.services.embedding import EmbeddingService, get_embedding_service
 import time
 import logging
 from fastapi import APIRouter, HTTPException, Depends
@@ -23,7 +24,7 @@ def get_vector_repository() -> VectorRepository:
 
 @router.post("/ingest")
 async def ingest_document(
-    request: IngestRequest,
+    payload: dict,
     embed_service: EmbeddingService = Depends(get_embedding_service),
     vector_repo: VectorRepository = Depends(get_vector_repository)
 ):
@@ -31,16 +32,16 @@ async def ingest_document(
     
     # 1. Embedding measures timing
     start_embed = time.perf_counter()
-    vector = await embed_service.generate_embedding(request.text)
+    vector = await embed_service.generate_embedding(payload["text"])
     embed_time = time.perf_counter() - start_embed
     
     # 2. Saving time measure pgvector
     start_db = time.perf_counter()
     chunk_id = await vector_repo.save_chunk(
-        document_id=request.document_id,
-        content=request.text,
+        document_id=payload.document_id,
+        content=payload.text,
         embedding=vector,
-        metadata=request.metadata
+        metadata=payload.metadata
     )
     db_time = time.perf_counter() - start_db
     
