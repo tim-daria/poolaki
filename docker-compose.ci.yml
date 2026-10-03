@@ -27,6 +27,12 @@ services:
   ai-service:
     profiles: [donotstart]
 
+  postgres_db:
+    environment:
+      POSTGRES_USER: ci_user
+      POSTGRES_PASSWORD: ci_password
+      POSTGRES_DB: ci_db
+
   frontend:
     ports:
       - "5173:5173"
