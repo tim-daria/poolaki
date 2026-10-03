@@ -27,7 +27,7 @@ services:
   ai-service:
     profiles: [donotstart]
 
-  postgres_db:
+  db:
     environment:
       POSTGRES_USER: ci_user
       POSTGRES_PASSWORD: ci_password
