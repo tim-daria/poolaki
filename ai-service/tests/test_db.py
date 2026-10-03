@@ -1,5 +1,7 @@
 from unittest.mock import AsyncMock, patch
+
 import pytest
+
 from app.db import close_db_pool, get_db_pool, init_db_pool
 
 
