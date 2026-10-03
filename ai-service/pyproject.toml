@@ -42,3 +42,7 @@ plugins = ["pydantic.mypy"]
 
 [tool.ruff.lint]
 ignore = ["B008"]
+
+[[tool.mypy.overrides]]
+module = "asyncpg.*"
+ignore_missing_imports = true
