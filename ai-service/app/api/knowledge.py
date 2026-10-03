@@ -17,11 +17,6 @@ class IngestRequest(BaseModel):
     metadata: dict = {}
 
 
-# Inject dependencies
-def get_embedding_service() -> EmbeddingService:
-    return EmbeddingService()
-
-
 def get_vector_repository() -> VectorRepository:
     return VectorRepository()
 

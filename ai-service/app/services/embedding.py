@@ -4,6 +4,10 @@ from abc import ABC, abstractmethod
 from fastapi import HTTPException
 
 
+class EmbeddingProviderError(Exception):
+    """Personalized exception per provider"""
+
+
 # Base interface
 class EmbeddingProvider(ABC):
     @abstractmethod
@@ -17,29 +21,35 @@ class GoogleEmbeddingProvider(EmbeddingProvider):
         self.model = model
         try:
             from google import genai
+            from google.genai import errors
 
+            self.genai_errors = errors
             self.client = genai.Client(api_key=api_key)
         except ImportError:
             raise HTTPException(
                 status_code=500,
-                detail="Install 'google-genai' para usar Google Embeddings",
+                detail="Install 'google-genai' to use this provider",
             )
 
     async def generate_embedding(self, text: str) -> list[float]:
-        response = await self.client.aio.embeddings.create(
-            model=self.model, inputs=[text]
-        )
-        return response.embeddings[0].values
+        try:
+            response = await self.client.aio.models.embed_content(
+                model=self.model, contents=text
+            )
+            return response.embeddings.values
+        except self.genai_errors.APIError as e:
+            raise EmbeddingProviderError(f"Google API Error: {e.message}") from e
 
 
 class OpenAICompatibleProvider(EmbeddingProvider):
     """Works para OpenAI, Nvidia y Jina AI"""
 
-    def __init__(self, api_key: str, model: str, base_url: str = None):
+    def __init__(self, api_key: str, model: str, base_url: str | None = None):
         self.model = model
         try:
             import openai
 
+            self.openai_errors = openai.OpenAIError
             self.client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
         except ImportError:
             raise HTTPException(
@@ -47,8 +57,11 @@ class OpenAICompatibleProvider(EmbeddingProvider):
             )
 
     async def generate_embedding(self, text: str) -> list[float]:
-        response = await self.client.embeddings.create(model=self.model, input=text)
-        return response.data[0].embedding
+        try:
+            response = await self.client.embeddings.create(model=self.model, input=text)
+            return response.data[0].embedding
+        except self.openai_errors as e:
+            raise EmbeddingProviderError(f"Embedding API Error: {e.message}") from e
 
 
 class VoyageEmbeddingProvider(EmbeddingProvider):
@@ -56,7 +69,9 @@ class VoyageEmbeddingProvider(EmbeddingProvider):
         self.model = model
         try:
             import voyageai
+            from voyageai.error import VoyageError
 
+            self.voyage_error = VoyageError
             self.client = voyageai.AsyncClient(api_key=api_key)
         except ImportError:
             raise HTTPException(
@@ -64,9 +79,12 @@ class VoyageEmbeddingProvider(EmbeddingProvider):
             )
 
     async def generate_embedding(self, text: str) -> list[float]:
-        # Voyage received a list of texts and returns a list of embeddings
-        response = await self.client.embed(texts=[text], model=self.model)
-        return response.embeddings[0]
+        try:
+            # Voyage received a list of texts and returns a list of embeddings
+            response = await self.client.embed(texts=[text], model=self.model)
+            return response.embeddings[0]
+        except self.voyage_error as e:  # Captura específica de Voyage
+            raise EmbeddingProviderError(f"Voyage API Error: {e.message}") from e
 
 
 # Main service
@@ -76,16 +94,11 @@ class EmbeddingService:
 
     async def generate_embedding(self, text: str) -> list[float]:
         if not text or not text.strip():
-            raise HTTPException(
-                status_code=400, detail="El texto para embedding no puede estar vacío."
-            )
+            raise HTTPException(status_code=400, detail="The text can't be empty")
         try:
             return await self.provider.generate_embedding(text)
-        except Exception as e:
-            # Atrapa cualquier error de la API (timeout, token inválido, etc.)
-            raise HTTPException(
-                status_code=502, detail=f"Error en la API de embeddings: {e!s}"
-            )
+        except EmbeddingProviderError as e:
+            raise HTTPException(status_code=502, detail=f"API embedding error: {e!s}")
 
 
 def get_embedding_service() -> EmbeddingService:
@@ -97,7 +110,7 @@ def get_embedding_service() -> EmbeddingService:
     if not provider_name or not api_key or not model_name:
         raise HTTPException(
             status_code=500,
-            detail="Faltan variables en .env: EMBEDDING_PROVIDER, EMBEDDING_API_KEY o EMBEDDING_MODEL",
+            detail="Missing embedding variable",
         )
 
     match provider_name:
@@ -106,18 +119,14 @@ def get_embedding_service() -> EmbeddingService:
         case "openai":
             provider = OpenAICompatibleProvider(api_key, model_name)
         case "nvidia":
-            provider = OpenAICompatibleProvider(
-                api_key, model_name, base_url="https://integrate.api.nvidia.com/v1"
-            )
+            provider = OpenAICompatibleProvider(api_key, model_name, base_url=base_url)
         case "jina":
-            provider = OpenAICompatibleProvider(
-                api_key, model_name, base_url="https://api.jina.ai/v1"
-            )
+            provider = OpenAICompatibleProvider(api_key, model_name, base_url=base_url)
         case "voyage":
             provider = VoyageEmbeddingProvider(api_key, model_name)
         case _:
             raise HTTPException(
-                status_code=500, detail=f"Proveedor no soportado: {provider_name}"
+                status_code=500, detail=f"Provider not supported: {provider_name}"
             )
 
     return EmbeddingService(provider)
