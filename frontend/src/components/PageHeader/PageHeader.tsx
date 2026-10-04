@@ -4,10 +4,12 @@
  */
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Link as RouterLink } from "react-router";
 import {
   Box,
   Button,
   IconButton,
+  Link,
   Stack,
   Tooltip,
   Typography,
@@ -15,6 +17,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
 
@@ -38,6 +41,7 @@ interface PageHeaderProps {
 export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
+  const showAssistant = useRouteMeta()?.assistant ?? true;
 
   return (
     <PageHeaderContext.Provider value={{ titleSlot, actionSlot }}>
@@ -62,23 +66,25 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
         >
           <Box ref={setActionSlot} sx={{ display: "contents" }} />
 
-          <Tooltip title="Ask AI">
-            <IconButton
-              aria-label="AI Assistant"
-              onClick={onAssistantClick}
-              sx={{
-                width: assistantButtonSize,
-                height: assistantButtonSize,
-                color: "primary.dark",
-                bgcolor: "primary.contrastText",
-                border: "1px solid",
-                borderColor: "primary.main",
-                "&:hover": { bgcolor: "primary.light" },
-              }}
-            >
-              <AutoAwesomeOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {showAssistant && (
+            <Tooltip title="Ask AI">
+              <IconButton
+                aria-label="AI Assistant"
+                onClick={onAssistantClick}
+                sx={{
+                  width: assistantButtonSize,
+                  height: assistantButtonSize,
+                  color: "primary.dark",
+                  bgcolor: "primary.contrastText",
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  "&:hover": { bgcolor: "primary.light" },
+                }}
+              >
+                <AutoAwesomeOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
       </Box>
 
@@ -92,6 +98,8 @@ interface PageTitleProps {
   title?: ReactNode;
   /** Defaults to the route's `handle` subtitle. */
   subtitle?: ReactNode;
+  /** Link to the parent page, shown above the title on nested pages. */
+  back?: { to: string; label: string };
 }
 
 /**
@@ -106,13 +114,30 @@ export function PageHeading({ children }: { children: ReactNode }) {
 }
 
 /** Standard heading: a title with an optional subtitle. */
-export function PageTitle({ title, subtitle }: PageTitleProps) {
+export function PageTitle({ title, subtitle, back }: PageTitleProps) {
   const meta = useRouteMeta();
   const heading = title ?? meta?.title;
   const sub = subtitle ?? meta?.subtitle;
 
   return (
     <PageHeading>
+      {back && (
+        <Link
+          component={RouterLink}
+          to={back.to}
+          underline="hover"
+          sx={{
+            color: "text.secondary",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            mb: 0.5,
+          }}
+        >
+          <ChevronLeftIcon fontSize="small" />
+          {back.label}
+        </Link>
+      )}
       <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
         {heading}
       </Typography>
