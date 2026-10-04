@@ -1,5 +1,6 @@
 # from typing import Any
 
+from datetime import date
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -9,11 +10,13 @@ from core.models import (
     # CategoryType,
     EntryType,
     Goal,
+    GoalStatus,
     Invitation,
     Notification,
     Organization,
     Transaction,
 )
+from core.services.balance import calculate_goal_balance
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
@@ -34,6 +37,114 @@ class OrganizationCreateSerializer(OrganizationNameSerializer):
         decimal_places=2,
         min_value=0,
     )
+
+
+class GoalCreateSerializer(serializers.Serializer[Goal]):
+    name = serializers.CharField(max_length=100, trim_whitespace=True)
+    target_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+    target_date = serializers.DateField()
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        org_id = self.context.get("org_id")
+        name = attrs["name"]
+
+        if Goal.objects.filter(org_id=org_id, name=name).exists():
+            raise serializers.ValidationError(
+                {"name": "A goal with this name already exists in this organization."}
+            )
+
+        target_date = attrs["target_date"]
+        if not isinstance(target_date, date):
+            raise serializers.ValidationError({"target_date": "Invalid target date."})
+        if target_date < date.today():
+            raise serializers.ValidationError(
+                {"target_date": "Target date must be today or in the future."}
+            )
+
+        return attrs
+
+
+class GoalUpdateSerializer(serializers.Serializer[Goal]):
+    name = serializers.CharField(max_length=100, trim_whitespace=True, required=False)
+    target_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+    target_date = serializers.DateField(required=False)
+    status = serializers.ChoiceField(choices=GoalStatus.choices, required=False)
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        goal = self.context["goal"]
+
+        if not attrs:
+            raise serializers.ValidationError("At least one field must be provided.")
+
+        target_date = attrs.get("target_date")
+        if target_date is not None and not isinstance(target_date, date):
+            raise serializers.ValidationError({"target_date": "Invalid target date."})
+        if target_date is not None and target_date < date.today():
+            raise serializers.ValidationError(
+                {"target_date": "Target date must be today or in the future."}
+            )
+
+        if "status" in attrs:
+            new_status = attrs["status"]
+            if goal.status == GoalStatus.ARCHIVED and new_status != GoalStatus.ARCHIVED:
+                raise serializers.ValidationError(
+                    {"status": "Archived goals cannot be changed back to an active state."}
+                )
+            if goal.status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
+                raise serializers.ValidationError(
+                    {"status": "Completed goals cannot be moved back to active."}
+                )
+            if goal.status == GoalStatus.ACTIVE and new_status not in {
+                GoalStatus.ACTIVE,
+                GoalStatus.COMPLETED,
+                GoalStatus.ARCHIVED,
+            }:
+                raise serializers.ValidationError({"status": "Invalid status transition."})
+            if goal.status == GoalStatus.COMPLETED and new_status not in {
+                GoalStatus.COMPLETED,
+                GoalStatus.ARCHIVED,
+            }:
+                raise serializers.ValidationError({"status": "Invalid status transition."})
+            if goal.status == GoalStatus.ARCHIVED and new_status != GoalStatus.ARCHIVED:
+                raise serializers.ValidationError({"status": "Invalid status transition."})
+
+        return attrs
+
+
+class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
+    org = serializers.IntegerField(source="org_id", read_only=True)
+    created_by = serializers.CharField(
+        source="created_by.username",
+        allow_null=True,
+        read_only=True,
+    )
+    saved_amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Goal
+        fields = (
+            "id",
+            "org",
+            "name",
+            "target_amount",
+            "target_date",
+            "status",
+            "created_by",
+            "created_at",
+            "saved_amount",
+        )
+
+    def get_saved_amount(self, goal: Goal) -> str:
+        return str(calculate_goal_balance(goal.org, goal))
 
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):

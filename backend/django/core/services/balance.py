@@ -33,13 +33,18 @@ def calculate_org_balance(org: Organization) -> Decimal:
             Sum("amount", filter=Q(entry_type=EntryType.CONTRIBUTION)),
             Decimal("0"),
         ),
+        withdraw=Coalesce(
+            Sum("amount", filter=Q(entry_type=EntryType.WITHDRAW)),
+            Decimal("0"),
+        ),
     )
 
     income = cast(Decimal, totals["income"])
     expense = cast(Decimal, totals["expense"])
     contribution = cast(Decimal, totals["contribution"])
+    withdraw = cast(Decimal, totals["withdraw"])
 
-    return org.initial_balance + income - expense - contribution
+    return org.initial_balance + income - expense - contribution + withdraw
 
 
 def calculate_goal_balance(org: Organization, goal: Goal) -> Decimal:
@@ -48,8 +53,18 @@ def calculate_goal_balance(org: Organization, goal: Goal) -> Decimal:
             Sum("amount", filter=Q(entry_type=EntryType.CONTRIBUTION)),
             Decimal("0"),
         ),
+        withdraw=Coalesce(
+            Sum("amount", filter=Q(entry_type=EntryType.WITHDRAW)),
+            Decimal("0"),
+        ),
+        expense=Coalesce(
+            Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)),
+            Decimal("0"),
+        ),
     )
 
     contribution = cast(Decimal, totals["contribution"])
+    withdraw = cast(Decimal, totals["withdraw"])
+    expense = cast(Decimal, totals["expense"])
 
-    return contribution
+    return contribution - withdraw - expense
