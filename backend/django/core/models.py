@@ -127,6 +127,7 @@ class EntryType(models.TextChoices):
     INCOME = "income", "Income"
     EXPENSE = "expense", "Expense"
     CONTRIBUTION = "contribution", "Contribution"
+    WITHDRAW = "withdraw", "Withdraw"
 
 
 class Transaction(models.Model):
