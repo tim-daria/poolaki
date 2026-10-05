@@ -1,6 +1,12 @@
 // @ts-check
 import { test, expect, type Page } from "@playwright/test";
-import { makeUsers, registerUser, createSharedWorkspace } from "./helpers.js";
+import {
+  makeUsers,
+  registerUser,
+  createSharedWorkspace,
+  openAsSharedOwner,
+  toOrgId,
+} from "./helpers.js";
 
 /**
  * The member row and the invite dialog.
@@ -21,7 +27,8 @@ test.describe.serial("Workspace members", () => {
 
   // Different first letters: initials() takes the first character, and the
   // tests tell the owner's avatar from the guest's by exactly that.
-  const [ownerUser, guestUser] = makeUsers("ownr", "gst");
+  // The owner is the shared one (initial "O"); only the guest signs up here.
+  const [guestUser] = makeUsers("gst", "gst_unused");
   const sharedName = `Crew ${Date.now()}`;
   const unknownUsername = `nobody_${Date.now()}`;
 
@@ -42,15 +49,15 @@ test.describe.serial("Workspace members", () => {
   }
 
   test.beforeAll(async ({ browser }) => {
-    owner = await browser.newPage();
+    const shared = await openAsSharedOwner(browser);
+    owner = shared.page;
+    ownerPersonalUrl = shared.personalUrl;
     guest = await browser.newPage();
-
-    ownerPersonalUrl = await registerUser(owner, ownerUser);
     await registerUser(guest, guestUser);
 
     sharedUrl = await createSharedWorkspace(
       owner,
-      ownerUser.username,
+      shared.user.username,
       sharedName,
     );
   });
@@ -238,5 +245,50 @@ test.describe.serial("Workspace members", () => {
     ).toBeHidden();
 
     await owner.unrouteAll({ behavior: "ignoreErrors" });
+  });
+
+  test("the owner removes a member, and the server drops them for real", async () => {
+    // Removal is the only DELETE the member UI sends, and DELETE is absent
+    // from the OWASP CRS default method policy, so this request is the one a
+    // firewall misconfiguration silently eats. confirmRemove() reports failure
+    // only through a toast and refetches either way, which means a UI-only
+    // assertion can pass while the member is still in the workspace.
+    const sharedId = toOrgId(sharedUrl);
+    await owner.goto(`${ownerPersonalUrl}/settings/workspaces/${sharedId}`);
+
+    const removed = owner.waitForResponse(
+      (res) =>
+        res.url().includes(`/api/v1/organizations/${sharedId}/members/`) &&
+        res.request().method() === "DELETE",
+    );
+
+    await owner
+      .getByRole("button", { name: `Manage ${guestUser.username}` })
+      .click();
+    await owner
+      .getByRole("menuitem", { name: /remove from workspace/i })
+      .click();
+
+    const confirmation = owner.getByRole("dialog").filter({
+      hasText: /remove member/i,
+    });
+    await expect(confirmation).toBeVisible();
+    await confirmation
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+
+    expect((await removed).status()).toBe(204);
+    await expect(
+      owner.getByText(new RegExp(`${guestUser.username} removed`)),
+    ).toBeVisible();
+    await expect(confirmation).toBeHidden();
+
+    // The owner's own list refetches, so check the person who lost access.
+    // A workspace they are no longer in is indistinguishable from one that
+    // never existed, and both land on the terminal screen.
+    await guest.goto(sharedUrl);
+    await expect(
+      guest.getByRole("heading", { name: /workspace unavailable/i }),
+    ).toBeVisible();
   });
 });

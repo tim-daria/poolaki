@@ -15,6 +15,13 @@ const SITE_NAME = "Poolaki";
 export interface RouteMeta {
   title: string;
   subtitle?: string;
+  /** Set false to hide the header's Ask AI button. Defaults to shown. */
+  assistant?: boolean;
+  /**
+   * "narrow" caps the header and content together, so a centred column of
+   * cards shares its left edge with the title.
+   */
+  width?: "narrow";
 }
 
 /**
