@@ -7,10 +7,28 @@ All endpoints in this document require authentication.
 Goals are organization-level savings targets. Each goal has a name, target amount, target date, creation metadata, and one of three statuses:
 
 - **Active** — the goal is still in progress.
-- **Completed** — the goal is reached or the target has been fulfilled.
-- **Archived** — the goal has been closed and its remaining balance is no longer active.
+- **Completed** — the target has manually marked as finished by the user.
+- **Archived** — the goal has been closed and its remaining balance moved to the organization balance.
 
-A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data, while only the owner and the goal creator can modify restricted fields such as status or withdrawals.
+A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data, while only the organization owner and the goal creator can modify restricted fields such as status or withdrawals.
+
+## Available operations
+
+For all organization members:
+
+- **List goals**
+- **Create a goal**
+- **Get goal details**
+- **Get goal balance**
+- **Make contribution**
+- **Get goal transactions**
+
+Only for the organization owner and the goal creator:
+
+- **Update goal**
+- **Change goal status**
+- **Make withdrawal**
+- **Make expense**
 
 ## Goals endpoints
 
@@ -328,12 +346,16 @@ Response example:
   "transactions": [
     {
       "id": 12,
-      "goal": 1,
+      "org_id": 2,
+      "goal_id": 1,
+      "category_id": 4,
       "entry_type": "contribution",
       "amount": "250.00",
       "description": "Monthly savings",
       "transaction_date": "2026-08-18",
-      "created_by": "alice"
+      "is_tax_deductible": false,
+      "created_by": "alice",
+      "created_at": "2026-08-18T10:40:28.139486+02:00"
     }
   ]
 }
