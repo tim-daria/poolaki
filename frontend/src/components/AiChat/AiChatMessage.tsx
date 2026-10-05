@@ -14,7 +14,6 @@ export function AiChatMessage({ message }: { message: ChatMessage }) {
     >
       <Paper
         variant={isUser ? "elevation" : "outlined"}
-        elevation={isUser ? 0 : 0}
         sx={{
           maxWidth: "80%",
           px: 1.5,

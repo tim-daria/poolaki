@@ -102,9 +102,13 @@ export function AppLayout() {
               <Outlet />
             </PageHeader>
           </Box>
-          <AiChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
         </Box>
       </Box>
+      <AiChatDrawer
+        key={orgId}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+      />
     </Box>
   );
 }

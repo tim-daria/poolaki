@@ -5,8 +5,7 @@ import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { getCsrfToken } from "../../lib/csrf";
 import {
   askAssistant,
-  sanitizeQuestion,
-  validateQuestion,
+  prepareQuestion,
   AiChatError,
   type ChatMessage,
 } from "../../lib/aiChat";
@@ -22,23 +21,26 @@ export function useAiChat() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
-  async function send(raw: string) {
-    if (sending) return;
+  function send(raw: string): boolean {
+    if (sending) return false;
 
-    const cleaned = sanitizeQuestion(raw);
-    const problem = validateQuestion(cleaned);
-    if (problem) {
-      setError(problem);
-      return;
+    const { question, error } = prepareQuestion(raw);
+    if (error !== null) {
+      setError(error);
+      return false;
     }
 
-    const question = cleaned.trim();
     setError("");
     setMessages((m) => [
       ...m,
       { id: messageId(), role: "user", content: question },
     ]);
     setSending(true);
+    void deliver(question);
+    return true;
+  }
+
+  async function deliver(question: string): Promise<void> {
     try {
       const answer = await askAssistant(org.id, question, getCsrfToken());
       setMessages((m) => [
@@ -56,7 +58,7 @@ export function useAiChat() {
     }
   }
 
-  /** Clears the conversation, e.g. when the drawer closes or the org changes. */
+  /** Clears the conversation when the drawer closes. */
   function reset() {
     setMessages([]);
     setError("");

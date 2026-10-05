@@ -78,17 +78,23 @@ export const MAX_QUESTION_LENGTH = 1000;
  * Strips control characters (non-printable bytes from paste/autofill) rather
  * than rejecting them outright — a user did not type those on purpose.
  */
-export function validateQuestion(raw: string): string | null {
-  const question = raw.trim();
-  if (!question) return "Ask something first.";
-  if (question.length > MAX_QUESTION_LENGTH) {
-    return `Keep it under ${MAX_QUESTION_LENGTH} characters.`;
-  }
-  return null;
+
+export type PreparedQuestion =
+  { question: string; error: null } | { question: null; error: string };
+
+export function prepareQuestion(raw: string): PreparedQuestion {
+  const question = sanitizeQuestion(raw).trim();
+  if (!question) return { question: null, error: "Ask something first." };
+  if (question.length > MAX_QUESTION_LENGTH)
+    return {
+      question: null,
+      error: `Keep it under ${MAX_QUESTION_LENGTH} characters.`,
+    };
+  return { question, error: null };
 }
 
 /** Removes non-printable control characters, keeping newlines and tabs. */
-export function sanitizeQuestion(raw: string): string {
+function sanitizeQuestion(raw: string): string {
   // eslint-disable-next-line no-control-regex -- intentional: strips control chars
   return raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
 }

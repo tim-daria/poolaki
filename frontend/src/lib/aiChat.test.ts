@@ -4,30 +4,36 @@ import { describe, expect, it } from "vitest";
 import {
   askAssistant,
   chatErrorMessage,
-  sanitizeQuestion,
-  validateQuestion,
+  prepareQuestion,
   MAX_QUESTION_LENGTH,
 } from "./aiChat";
 
-describe("validateQuestion", () => {
+describe("prepareQuestion", () => {
   it("rejects empty or whitespace-only input", () => {
-    expect(validateQuestion("   ")).toBe("Ask something first.");
+    expect(prepareQuestion("   ")).toEqual({
+      question: null,
+      error: "Ask something first.",
+    });
   });
 
   it("rejects a question over the max length", () => {
-    expect(validateQuestion("a".repeat(MAX_QUESTION_LENGTH + 1))).toContain(
-      "Keep it under",
-    );
+    expect(
+      prepareQuestion("a".repeat(MAX_QUESTION_LENGTH + 1)).error,
+    ).toContain("Keep it under");
+  });
+
+  it("strips control characters, keeps newlines and trims", () => {
+    expect(prepareQuestion("hi\x00there\nfriend ")).toEqual({
+      question: "hithere\nfriend",
+      error: null,
+    });
   });
 
   it("accepts a normal question", () => {
-    expect(validateQuestion("How much did I spend?")).toBeNull();
-  });
-});
-
-describe("sanitizeQuestion", () => {
-  it("strips control characters but keeps newlines", () => {
-    expect(sanitizeQuestion("hi\x00there\nfriend")).toBe("hithere\nfriend");
+    expect(prepareQuestion("How much did I spend?")).toEqual({
+      question: "How much did I spend?",
+      error: null,
+    });
   });
 });
 
