@@ -6,29 +6,54 @@ All endpoints in this document require authentication.
 
 Goals are organization-level savings targets. Each goal has a name, target amount, target date, creation metadata, and one of three statuses:
 
-- **Active** — the goal is still in progress.
+- **Active** — the goal is still in progress. 
 - **Completed** — the target has manually marked as finished by the user.
 - **Archived** — the goal has been closed and its remaining balance moved to the organization balance.
 
 A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data, while only the organization owner and the goal creator can modify restricted fields such as status or withdrawals.
 
+Goals without a `target_date` are permanent. User can make expense transactions for permanent goals with `active` status.
+
 ## Available operations
 
 For all organization members:
 
-- **List goals**
-- **Create a goal**
-- **Get goal details**
-- **Get goal balance**
-- **Make contribution**
-- **Get goal transactions**
+- **List goals** — View the organization's goals, optionally filtered by status.
+- **Create a goal** — Define a new active goal with a target amount and date.
+- **Get goal details** — View the metadata and current status of a specific goal.
+- **Get goal balance** — View the balance accumulated toward a goal's target.
+- **Get goal transactions** — View a goal's transactions, optionally filtered by type.
+- **Make contribution** — Add a contribution transaction to an active goal.
 
 Only for the organization owner and the goal creator:
 
+- **Update goal** — Change a goal's name, target amount, or target date.
+- **Change goal status** — Complete or archive a goal according to its lifecycle.
+- **Make withdrawal** — Remove funds from an active goal.
+- **Make expense** — Record spending against a completed goal.
+
+Operations available for **All** goals:
+
+- **Get goal details**
+- **Get goal balance**
+- **Get goal transactions**
+
+Operations available for **Active** goals:
+
 - **Update goal**
-- **Change goal status**
+- **Change goal status** (to `completed` and `archived`)
+- **Make contribution**
 - **Make withdrawal**
+- **Make expense** (only for permanent goals?)
+
+Operations available for **Completed** goals:
+
+- **Change goal status** (to `archived` and `active`(?))
 - **Make expense**
+
+Operations available for **Archived** goals:
+- only common operations
+
 
 ## Goals endpoints
 
