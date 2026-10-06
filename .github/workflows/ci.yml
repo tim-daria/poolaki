@@ -223,6 +223,12 @@ jobs:
           SMTP_FROM_ADDRESS=
           TUNNEL_TOKEN=
           TZ=Europe/Berlin
+          LLM_MODEL=AI
+          LLM_API_KEY=123abc
+          LLM_BASE_URL=www.llm.com
+          DJANGO_BASE_URL=http://django:8000
+          LOG_LEVEL=Warning
+          LLM_TIMEOUT=30
           EOF
 
       - name: Create optional AI service env for CI
@@ -231,15 +237,18 @@ jobs:
           mkdir -p ai-service
           touch ai-service/.env
 
+      # Chromium and curl both need the hostname Caddy serves. Runners do not
+      # resolve *.localhost, so point it at the loopback explicitly.
+      - name: Resolve the Caddy hostname
+        run: echo "127.0.0.1 poolaki.localhost" | sudo tee -a /etc/hosts
+
       # ── Playwright: e2e tests (full stack via docker compose) ──────────────
-      # E2e tests need the real app running. We use docker compose to spin up
-      # both services (frontend on 5173, backend on 3000) directly — bypassing
-      # Caddy entirely. This avoids the self-signed TLS cert problem that would
-      # cause Playwright/Chromium to reject https://poolaki.localhost in CI.
+      # E2e tests need the real app running, and they run through Caddy, the
+      # same front door as production. Caddy serves plain HTTP here
+      # (auto_https is off in the Caddyfile), so there is no self-signed
+      # certificate for Chromium to reject — the reason this job used to skip
+      # it. Going direct to Vite hid a WAF rule that rejected every DELETE.
       #
-      # In playwright.config.ts, set:
-      #   baseURL: process.env.BASE_URL ?? 'https://poolaki.localhost'
-      # so local dev still uses Caddy while CI uses the direct ports.
       # The backend entrypoint sources DB credentials from Vault agent files
       # and applies migrations itself before /health/ responds, so no extra
       # `docker compose exec ... migrate` is needed (and it would fail: an
@@ -254,10 +263,41 @@ jobs:
           timeout 180 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
           echo "Waiting for backend..."
           timeout 180 bash -c 'until curl -sf http://localhost:8000/health/; do sleep 2; done'
+          echo "Waiting for Caddy..."
+          timeout 180 bash -c 'until curl -sf http://poolaki.localhost:8080 >/dev/null; do sleep 2; done'
+
+      # Fails in seconds when a rule change starts eating a method the app
+      # uses, instead of leaving it to be found in production. Caddy sets
+      # X-Blocked on anything the WAF refuses, so that header is the signal.
+      # The status is not: Django answers 401 or 403 to these unauthenticated
+      # probes, and that is a pass as far as this check is concerned.
+      #
+      # POST and PATCH carry a JSON body because CRS rejects a body-less POST
+      # on its own protocol rules, and GET and DELETE must not carry one for
+      # the same reason. The point is the method policy, not those rules.
+      - name: WAF allows the methods the app uses
+        run: |
+          set -e
+          check() {
+            method="$1"
+            shift
+            blocked=$(curl -s -o /dev/null -D - -X "$method" "$@" \
+              http://poolaki.localhost:8080/api/v1/organizations/ \
+              | grep -ci '^x-blocked:' || true)
+            if [ "$blocked" != "0" ]; then
+              echo "::error::$method is refused by the WAF before reaching Django"
+              exit 1
+            fi
+            echo "$method reached the application"
+          }
+          check GET
+          check DELETE
+          check POST -H 'Content-Type: application/json' -d '{}'
+          check PATCH -H 'Content-Type: application/json' -d '{}'
 
       - name: Playwright e2e tests
         env:
-          BASE_URL: http://localhost:5173
+          BASE_URL: http://poolaki.localhost:8080
           BACKEND_URL: http://localhost:8000 # optional, if your tests call the API directly
         run: npm run test:e2e
 
@@ -270,6 +310,9 @@ jobs:
           docker compose ps
           docker compose logs vault
           docker compose logs backend
+          # Caddy's log names the rule id behind any WAF refusal, which is the
+          # only place a blocked request is explained.
+          docker compose logs caddy
 
       - name: Upload Playwright report
         # Always upload the HTML report so you can inspect failures even when

@@ -17,6 +17,7 @@ RUN chmod +x /entrypoint.sh && \
 	./agent/secrets/django \
 	./agent/secrets/grafana \
 	./agent/secrets/cloudflare \
+	./agent/secrets/ai-service \
 	./agent/templates && \
 	chown -R vault:vault /vault
 

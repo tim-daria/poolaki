@@ -54,3 +54,9 @@ template {
   destination = "/vault/agent/secrets/cloudflare/cloudflare-creds.env"
   perms       = "0444"
 }
+
+template {
+  source      = "/vault/agent/templates/ai-creds.tpl"
+  destination = "/vault/agent/secrets/ai-service/ai-creds.env"
+  perms       = "0444"
+}

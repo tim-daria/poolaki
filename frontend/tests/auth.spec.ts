@@ -106,11 +106,33 @@ test.describe.serial("User authentication", () => {
   test("logout success", async () => {
     await page.goto("/");
 
+    // The DELETE is the logout. useLogout never checks its status: it clears
+    // the client state and navigates whatever comes back, so asserting on the
+    // URL alone passes even when the session survives on the server. That is
+    // the exact shape of the Coraza outage, where the method policy in front
+    // of Django answered 403 and every reload signed the user back in.
+    const sessionDeleted = page.waitForResponse(
+      (res) =>
+        res.url().includes("/_allauth/browser/v1/auth/session") &&
+        res.request().method() === "DELETE",
+    );
+
     // Logout lives behind the header's avatar menu.
     await page.getByRole("button", { name: /account menu/i }).click();
     await page.getByRole("menuitem", { name: /log\s*out/i }).click();
-    await page.waitForURL("/login");
 
+    // allauth answers a successful logout with its unauthenticated session
+    // payload, which is a 401 — anything else means the session is still live.
+    expect((await sessionDeleted).status()).toBe(401);
+
+    await page.waitForURL("/login");
+    await expect(loginButton()).toBeVisible();
+
+    // The cookie is what logout exists to kill, so prove it is gone rather
+    // than trusting the cleared React state: a live session would send
+    // GuestRoute straight back to the workspace.
+    await page.goto("/");
+    await page.waitForURL("/login");
     await expect(loginButton()).toBeVisible();
   });
 
