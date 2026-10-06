@@ -21,13 +21,14 @@ class ReportView(APIView):
     totals, a 12-month distribution (zero-filled), and the per-category
     breakdown for the selected year.
 
-    Query parameters (validated by ReportQuerySerializer):
-    - year (optional, integer 1..9999): calendar year to report on.
+    Query parameters:
+    - year (optional, integer 2000..2100): calendar year to report on.
         Defaults to the server's current year.
 
     Returns:
     - 200 OK with the report payload.
     - 400 Bad Request when `year` is not an integer or out of range.
+    - 403 Forbidden if you are not a member of the organization.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -36,7 +37,6 @@ class ReportView(APIView):
         assert isinstance(request.user, User)
         org = get_object_or_404(Organization, pk=org_id)
 
-        # absent or empty `year` means the current year
         query = ReportQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         year: int = query.validated_data.get("year") or timezone.now().year
