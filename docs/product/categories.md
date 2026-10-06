@@ -47,7 +47,7 @@ _Categories available for incomes:_
 
 **Home Page:** Displays the top 3 most used categories for "today", allowing users to quickly identify daily spending concentrations.
 
-**Reports Page:** Visualizes all categories in a chart showing the number of transactions per category, helping users analyze spending frequency, spot patterns, and manage budgets effectively.
+**Reports Page:** Visualizes all categories in a chart, showing the total amount spent per category and its percentage of the total for the selected transactions type, helping users analyze spending, patterns, and manage budgets effectively.
 
 ## Related Concepts
 
