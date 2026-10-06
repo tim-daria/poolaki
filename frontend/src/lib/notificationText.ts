@@ -66,12 +66,18 @@ export function isOrganizationDeletedPayload(
   return typeof p.org_name === "string" && typeof p.last_member === "string";
 }
 
-export function isTransactionAddedPayload(p: Payload): p is TransactionAddedPayload {
-  return typeof p.user === "string" && typeof p.org_name === "string";
+export function isTransactionAddedPayload(
+  p: Payload,
+): p is TransactionAddedPayload {
+  return typeof p.added_by === "string" && typeof p.org_name === "string";
 }
 
 export function isGoalCompletedPayload(p: Payload): p is GoalCompletedPayload {
-  return typeof p.user === "string" && typeof p.org_name === "string" && typeof p.goal_name === "string";
+  return (
+    typeof p.user === "string" &&
+    typeof p.org_name === "string" &&
+    typeof p.goal_name === "string"
+  );
 }
 
 /**
@@ -87,15 +93,13 @@ export function typeText(type: NotificationType, p: Payload): string {
         : "You have a new invitation";
     case "transaction_added":
       return isTransactionAddedPayload(p)
-        ? `${p.user} added a transaction in ${p.org_name}`
+        ? `${p.added_by} added a transaction in ${p.org_name}`
         : "A new transaction was added";
-  
     case "goal_completed":
       if (isGoalCompletedPayload(p)) {
         return `${p.user} completed the goal "${p.goal_name}" in ${p.org_name}`;
       }
       return "A spending goal has been achieved";
-
     case "member_left":
       return isMemberLeftPayload(p)
         ? `${p.user} left ${p.org_name}`
@@ -110,7 +114,7 @@ export function typeText(type: NotificationType, p: Payload): string {
         : "You were removed from a workspace";
     case "ownership_transferred":
       return isOwnershipTransferredPayload(p)
-        ? `You're now the owner of ${p.org_name}`
+        ? `Ownership of ${p.org_name} was passed to you`
         : "You're now the owner of a workspace";
     case "owner_changed":
       return isOwnerChangedPayload(p)
@@ -143,7 +147,7 @@ export function actorName(type: NotificationType, p: Payload): string {
     case "organization_deleted":
       return isOrganizationDeletedPayload(p) ? p.last_member : UNKNOWN_ACTOR;
     case "transaction_added":
-      return isTransactionAddedPayload(p) ? p.user : UNKNOWN_ACTOR;
+      return isTransactionAddedPayload(p) ? p.added_by : UNKNOWN_ACTOR;
     case "goal_completed":
       return isGoalCompletedPayload(p) ? p.user : UNKNOWN_ACTOR;
     default:

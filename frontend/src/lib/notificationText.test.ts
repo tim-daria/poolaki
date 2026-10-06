@@ -10,6 +10,8 @@ import {
   isOwnerChangedPayload,
   isOwnershipTransferredPayload,
   isRemovedFromOrgPayload,
+  isTransactionAddedPayload,
+  isGoalCompletedPayload,
   typeText,
 } from "./notificationText";
 
@@ -29,6 +31,8 @@ const memberLeft = { user: "carol", org_name: "Trip" };
 const ownershipTransferred = { previous_owner: "bob", org_name: "Trip" };
 const ownerChanged = { ...ownershipTransferred, new_owner: "dana" };
 const organizationDeleted = { org_name: "Trip", last_member: "bob" };
+const transactionAdded = { added_by: "alice", org_name: "Trip" };
+const goalCompleted = { user: "alice", org_name: "Trip", goal_name: "Laptop" };
 
 describe("isInvitationPayload", () => {
   it("accepts the invitation payload", () => {
@@ -88,6 +92,18 @@ describe("leave-related payload guards", () => {
   });
 });
 
+describe("isTransactionAddedPayload", () => {
+  it("accepts the payload", () => {
+    expect(isTransactionAddedPayload(transactionAdded)).toBe(true);
+  });
+});
+
+describe("isGoalCompletedPayload", () => {
+  it("accepts the payload", () => {
+    expect(isGoalCompletedPayload(goalCompleted)).toBe(true);
+  });
+});
+
 describe("typeText", () => {
   it.each([
     ["invitation", invitation, "bob invited you to Trip workspace"],
@@ -103,7 +119,17 @@ describe("typeText", () => {
     [
       "ownership_transferred",
       ownershipTransferred,
-      "bob left Trip — you're now the owner",
+      "Ownership was transferred and you're now the owner of Trip",
+    ],
+    [
+      "transaction_added",
+      transactionAdded,
+      "alice added a transaction in Trip",
+    ],
+    [
+      "goal_completed",
+      goalCompleted,
+      'alice completed the goal "Laptop" in Trip',
     ],
     ["ownership_transferred", {}, "You're now the owner of a workspace"],
     ["owner_changed", ownerChanged, "bob left Trip — dana is now the owner"],
@@ -143,5 +169,10 @@ describe("actorName", () => {
     expect(actorName("member_removed", {})).toBe("User");
     expect(actorName("member_left", {})).toBe("User");
     expect(actorName("goal_completed", {})).toBe("User");
+  });
+
+  it("attributes actions to the user who performed them", () => {
+    expect(actorName("transaction_added", transactionAdded)).toBe("alice");
+    expect(actorName("goal_completed", goalCompleted)).toBe("alice");
   });
 });

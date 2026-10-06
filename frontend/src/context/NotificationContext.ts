@@ -65,7 +65,7 @@ export type OrganizationDeletedPayload = {
 
 /** Sent when a new transaction is added. */
 export type TransactionAddedPayload = {
-  user: string;
+  added_by: string;
   org_name: string;
 };
 
