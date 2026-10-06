@@ -21,11 +21,12 @@ import {
   declineInvitation,
   InvitationResolveError,
 } from "../../lib/notifications";
-import type {
-  InvitationPayload,
-  Notification,
-  NotificationType,
-} from "../../context/NotificationContext";
+import {
+  actorName,
+  isInvitationPayload,
+  typeText,
+} from "../../lib/notificationText";
+import type { Notification } from "../../context/NotificationContext";
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
@@ -41,31 +42,6 @@ function timeAgo(iso: string): string {
   const hours = minutes / 60;
   if (hours < 24) return `${Math.round(hours)}h ago`;
   return `${Math.round(hours / 24)}d ago`;
-}
-
-function isInvitationPayload(
-  p: Record<string, unknown>,
-): p is InvitationPayload {
-  return (
-    typeof p.invitation_id === "number" && typeof p.invited_by === "string"
-  );
-}
-
-function typeText(type: NotificationType, p: Record<string, unknown>): string {
-  switch (type) {
-    case "invitation":
-      return isInvitationPayload(p)
-        ? `${p.invited_by} invited you to ${p.org_name} workspace`
-        : "You have a new invitation";
-    case "transaction_added":
-      return "A new transaction was added";
-    case "goal_completed":
-      return "A spending goal has been achieved";
-    case "member_left":
-      return "A member left the organization";
-    default:
-      return "Notification";
-  }
 }
 
 /**
@@ -342,9 +318,7 @@ export function NotificationPanel({
           {filteredNotifications.map((n) => {
             const isInvitation = n.type === "invitation";
             const payload = n.payload;
-            const userName = isInvitationPayload(payload)
-              ? payload.invited_by
-              : "User";
+            const userName = actorName(n.type, payload);
 
             const isBusy = Boolean(busyIds[n.id]);
             const errorMessage = errors[n.id];

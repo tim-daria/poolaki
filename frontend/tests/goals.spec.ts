@@ -8,18 +8,19 @@
  * never pulls app source into the node tsconfig project.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { makeUsers, registerUser } from "./helpers.js";
+import { freezeClock, openAsSharedOwner } from "./helpers.js";
 
 test.describe.serial("Goals", () => {
   let page: Page;
   let goalsUrl: string;
 
-  const [user] = makeUsers("goal", "goal_unused");
-
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    const workspace = await registerUser(page, user);
-    goalsUrl = `${workspace}/savings`;
+    // Nothing here is saved, so the shared owner's workspace is safe to use.
+    const owner = await openAsSharedOwner(browser);
+    page = owner.page;
+    // Overdue is derived from the seed deadlines against today, so pin today.
+    await freezeClock(page);
+    goalsUrl = `${owner.personalUrl}/savings`;
   });
 
   test.afterAll(async () => {
@@ -133,7 +134,9 @@ test.describe.serial("Goals", () => {
       "Snowboarding equipment",
     ]);
 
-    // Overdue: exactly one flag, and only that card's deadline is red.
+    // Overdue: exactly one flag, and only that card's deadline is red. With
+    // the clock frozen at Sep 2026, New laptop (Dec 2025) is past its deadline
+    // and House downpayment (Dec 2026) is not.
     await expect(active.getByText("Overdue", { exact: true })).toHaveCount(1);
     await expect(active.getByText("By Dec 2025")).toHaveCSS("color", red);
     // Scoped to a card: Cat mansion shares the Dec 2026 deadline.
