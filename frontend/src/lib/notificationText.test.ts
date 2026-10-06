@@ -119,7 +119,7 @@ describe("typeText", () => {
     [
       "ownership_transferred",
       ownershipTransferred,
-      "Ownership was transferred and you're now the owner of Trip",
+      "Ownership of Trip was passed to you",
     ],
     [
       "transaction_added",
