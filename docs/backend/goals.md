@@ -14,6 +14,8 @@ A goal belongs to an organization and tracks transactions that contribute to, wi
 
 Goals without a `target_date` are permanent. User can make expense transactions for permanent goals with `active` status.
 
+If a user wants to make an expense that exceeds goal balance, we can offer to deduct the remaining amount from the organization's main balance.
+
 ## Available operations
 
 For all organization members:
@@ -52,8 +54,11 @@ Operations available for **Completed** goals:
 - **Make expense**
 
 Operations available for **Archived** goals:
-- only common operations
+- only common GET operations
 
+## Backend models update
+
+To implement goal withdraw functionality we need to add `WITHDRAW` entry type for Transaction model.
 
 ## Goals endpoints
 
