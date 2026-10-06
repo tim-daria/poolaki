@@ -1,12 +1,11 @@
-# from typing import Any
-
 from decimal import Decimal
+from typing import Any
 
 from rest_framework import serializers
 
 from core.models import (
     Category,
-    # CategoryType,
+    CategoryType,
     EntryType,
     Goal,
     Invitation,
@@ -233,3 +232,36 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
             "name",
             "type",
         )
+
+
+class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
+    income = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
+    contribution = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
+    month = serializers.IntegerField()
+    income = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
+    contribution = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
+    category_id = serializers.IntegerField(allow_null=True)
+    name = serializers.CharField()
+    type = serializers.ChoiceField(choices=CategoryType.choices)
+    total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    share_percent = serializers.FloatField()
+
+
+class ReportQuerySerializer(serializers.Serializer[dict[str, Any]]):
+    # Bounds match the valid year range of a Postgres date column
+    year = serializers.IntegerField(required=False, min_value=1, max_value=9999)
+
+
+class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField()
+    totals = ReportAmountsSerializer()
+    monthly = ReportMonthlySerializer(many=True)
+    categories = ReportCategorySerializer(many=True)
