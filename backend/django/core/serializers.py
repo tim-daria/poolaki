@@ -253,11 +253,18 @@ class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     type = serializers.ChoiceField(choices=CategoryType.choices)
     total = serializers.DecimalField(max_digits=14, decimal_places=2)
     share_percent = serializers.FloatField()
+    # 12 slots, index 0 = January; same amount string convention as `total`
+    monthly = serializers.ListField(
+        child=serializers.DecimalField(max_digits=14, decimal_places=2),
+        min_length=12,
+        max_length=12,
+    )
 
 
 class ReportQuerySerializer(serializers.Serializer[dict[str, Any]]):
-    # Bounds match the valid year range of a Postgres date column
-    year = serializers.IntegerField(required=False, min_value=1, max_value=9999)
+    # Plausibility window for budget data, not a data constraint;
+    # in-range years without transactions still return zeros
+    year = serializers.IntegerField(required=False, min_value=2000, max_value=2100)
 
 
 class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
