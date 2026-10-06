@@ -146,8 +146,8 @@ def test_year_out_of_range_returns_400(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
-    assert report_client.get(report_url(org.id), {"year": 0}).status_code == 400
-    assert report_client.get(report_url(org.id), {"year": 10_000}).status_code == 400
+    assert report_client.get(report_url(org.id), {"year": 1999}).status_code == 400
+    assert report_client.get(report_url(org.id), {"year": 2101}).status_code == 400
 
 
 # ------------------------------------ #
@@ -225,7 +225,7 @@ def test_monthly_sums_each_entry_type_separately(
 # ------------------------------------ #
 
 
-def test_categories_grouped_and_sorted_desc(
+def test_categories_grouped_by_type_then_sorted_desc(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
@@ -240,30 +240,34 @@ def test_categories_grouped_and_sorted_desc(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
+    # type blocks: income, expense, contribution; total desc within a block
     categories = data["categories"]
     assert [(c["name"], c["type"], c["total"]) for c in categories] == [
         ("Salary", "income", "500.00"),
         ("Food", "expense", "300.00"),
-        ("Contribution", "contribution", "200.00"),
         ("Transport", "expense", "100.00"),
+        ("Contribution", "contribution", "200.00"),
     ]
-    assert [c["category_id"] for c in categories] == [salary.pk, food.pk, goal.pk, transport.pk]
+    assert [c["category_id"] for c in categories] == [salary.pk, food.pk, transport.pk, goal.pk]
 
 
-def test_category_share_percent_is_relative_to_type_total(
+def test_categories_carry_zero_filled_monthly_series(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
     food = Category.objects.create(org=org, name="Food", type="expense")
-    transport = Category.objects.create(org=org, name="Transport", type="expense")
-    add_transaction(org, "expense", "244.10", "2025-01-11", category=food)
-    add_transaction(org, "expense", "755.90", "2025-01-12", category=transport)
+    add_transaction(org, "expense", "30.00", "2025-01-11", category=food)
+    add_transaction(org, "expense", "20.00", "2025-03-15", category=food)
+    add_transaction(org, "expense", "10.00", "2025-03-20")
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    shares = {c["name"]: c["share_percent"] for c in data["categories"]}
-    assert shares["Food"] == pytest.approx(24.41)
-    assert shares["Transport"] == pytest.approx(75.59)
+    by_name = {c["name"]: c for c in data["categories"]}
+    assert by_name["Food"]["monthly"] == ["30.00", "0.00", "20.00"] + ["0.00"] * 9
+    assert by_name["Uncategorized"]["monthly"] == ["0.00", "0.00", "10.00"] + ["0.00"] * 9
+    # invariant: the monthly series partitions the yearly total per category
+    for category in data["categories"]:
+        assert sum(Decimal(value) for value in category["monthly"]) == Decimal(category["total"])
 
 
 def test_uncategorized_bucket_per_entry_type(

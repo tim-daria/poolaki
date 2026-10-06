@@ -4,14 +4,13 @@ Backend contract and implementation plan for the reporting page: yearly
 finance aggregates for an organization — annual totals, monthly distribution,
 and per-category breakdown.
 
-Status: **planned — not implemented**.
-
 ## Scope
 
 - One read-only endpoint returning all yearly aggregates for an organization:
   - yearly totals for income, expenses, contributions;
   - monthly distribution of income, expenses, contributions;
-  - category breakdown for the selected year.
+  - category breakdown for the selected year, each category carrying its
+    own 12-month series.
 - Aggregates are computed from `Transaction` rows only.
 - `Organization.initial_balance` is an opening balance, not income; it is
   excluded from all report metrics.
@@ -29,9 +28,11 @@ Requires authentication. Access: organization members
 
 Query parameters:
 
-- `year` (optional, integer). Defaults to the server's current calendar year
-  (`timezone.now().year`). Non-integer value → `400 Bad Request`.
-  No range restriction; years without data simply return zeros.
+- `year` (optional, integer, 2000..2100). Defaults to the server's current
+  calendar year (`timezone.now().year`). Non-integer value or a year outside
+  the plausibility window → `400 Bad Request` (the window guards against
+  typos, not against empty data). Years within the window without data simply
+  return zeros.
 
 Response `200 OK`:
 
@@ -48,11 +49,16 @@ Response `200 OK`:
     { "month": 2, "income": "0.00", "expenses": "120.50", "contribution": "0.00" }
   ],
   "categories": [
-    { "category_id": 8, "name": "Salary", "type": "income", "total": "12000.00", "share_percent": 100.0 },
-    { "category_id": 1, "name": "Food", "type": "expense", "total": "2100.25", "share_percent": 24.41 },
-    { "category_id": 4, "name": "Entertainment", "type": "expense", "total": "1900.25", "share_percent": 22.62 },
-    { "category_id": 10, "name": "Contribution", "type": "contribution", "total": "1500.00", "share_percent": 100.0 },
-    { "category_id": null, "name": "Uncategorized", "type": "expense", "total": "100.00", "share_percent": 1.19 }
+    { "category_id": 8, "name": "Salary", "type": "income", "total": "12000.00",
+      "monthly": ["1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00", "1000.00"] },
+    { "category_id": 1, "name": "Food", "type": "expense", "total": "2100.25",
+      "monthly": ["180.50", "170.25", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "1750.00"] },
+    { "category_id": 4, "name": "Entertainment", "type": "expense", "total": "1900.25",
+      "monthly": ["0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"] },
+    { "category_id": null, "name": "Uncategorized", "type": "expense", "total": "100.00",
+      "monthly": ["0.00", "0.00", "100.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"] },
+    { "category_id": 10, "name": "Contribution", "type": "contribution", "total": "1500.00",
+      "monthly": ["125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00", "125.00"] }
   ]
 }
 ```
@@ -69,14 +75,20 @@ Conventions:
   date, so no extra fields are needed.
 - Amounts are strings with exactly 2 decimal places (existing API convention).
 - `categories` is a flat list, one entry per category that has transactions in
-  the year, plus `Uncategorized` buckets. Sorted by `total` descending.
-  Each entry carries its `type` (`income` / `expense` / `contribution`) so the
-  page filter is a client-side filter on this field.
-- `share_percent` is the category's share of its own type total for the year
-  (income categories vs total income, etc.), rounded to 2 decimals. `0.0` when
-  the type total is 0. Percentages may not sum to exactly 100 due to rounding;
-  this is expected — each bar renders against its own type total, so nothing
-  is visually missing (unlike a pie chart).
+  the year, plus `Uncategorized` buckets. Grouped by `type` — `income`, then
+  `expense`, then `contribution` — and sorted by `total` descending within each
+  block, so every block reads as that type's top categories. Each entry carries
+  its `type` so the page filter stays a client-side filter on this field.
+- `monthly` inside a category entry is a zero-filled 12-slot series
+  (index 0 = January) of that category's monthly totals, using the same
+  amount-string convention. Its sum equals the entry's `total` — the same
+  partition invariant as `categories` vs `totals`, at the monthly level.
+- The payload carries raw aggregates only; no derived percentages. Shares are
+  client-side derivations from fields in the same response:
+  yearly — `categories[].total` / `totals[<type metric>]`,
+  per month — `categories[].monthly[i]` / `monthly[i][<type metric>]`.
+  Guard a zero denominator (an empty month has no categories of that type).
+  Each share renders against its own type total, so bars need not sum to 100.
 - Transactions with `category_id = null` are reported as `Uncategorized`
   buckets with `category_id: null`, one per `entry_type` present. `null`
   occurs only for rows orphaned by a category deletion
@@ -88,10 +100,10 @@ Conventions:
 Status codes:
 
 - `200 OK` on success
-- `400 Bad Request` for a non-integer `year`
-- `401 Unauthorized` when not authenticated
-- `403 Forbidden` when the user is not a member of the organization
-- `404 Not Found` when the organization does not exist
+- `400 Bad Request` for a non-integer `year` or a year outside 2000..2100
+- `403 Forbidden` when the request is unauthenticated or the user is not a
+  member of the organization (a missing organization is indistinguishable and
+  also returns 403, matching the other org-scoped endpoints)
 
 ## Design decisions
 
@@ -101,11 +113,13 @@ Status codes:
    year filter changes the whole page, so the frontend re-fetches everything
    once per year change. Chart series switching and the category type filter
    are client-side over this payload.
-3. **Aggregation in SQL.** At most three aggregate queries per request
-   (monthly, category totals, uncategorized bucket), each scoped to one org
-   and one year. No application-level iteration over transactions.
-4. **`share_percent` computed server-side** so the progress bars bind
-   directly to the value.
+3. **Aggregation in SQL.** Five aggregate queries per request (yearly totals,
+   monthly totals, category totals, uncategorized bucket, per-category
+   monthly), each scoped to one org and one year. No application-level
+   iteration over transactions.
+4. **No derived percentages in the payload.** Yearly and monthly shares are
+   both derivable from the aggregates above, so the service does not precompute
+   any of them; each client computes the shares for the views it renders.
 
 ## Implementation plan
 
@@ -123,11 +137,16 @@ All paths relative to `backend/django/`.
   then zero-fill into a 12-slot list in Python.
 - **Categories:**
   - grouped: `filter(..., category__isnull=False).values("category_id", "category__name", "category__type").annotate(total=Sum("amount"))`,
-    sort desc, compute `share_percent` per type.
+    sorted into type blocks (income, expense, contribution), total desc within a block.
   - uncategorized: `filter(..., category__isnull=True).values("entry_type").annotate(total=Sum("amount"))`
     → one `Uncategorized` row per entry type, `type` taken from `entry_type`.
+  - per-category monthly: `annotate(month=ExtractMonth(...)).values("category_id", "month").annotate(total=Sum("amount"))`
+    → zero-filled into a 12-slot `monthly` series on each category entry
+    (the null `category_id` group feeds the `Uncategorized` buckets).
 
-All `Decimal` values quantized to 2 places before leaving the service.
+Money values are the 2-place Decimals computed by `SUM` over `numeric(14,2)`;
+string rendering (exactly 2 decimals) is the serializer's job. The service
+performs no rounding.
 
 ### 2. Serializer — `core/serializers.py`
 
@@ -170,16 +189,17 @@ Year-range scans per org are the report hot path.
 Reuse `api_client`, `shared_org`, `owner`, `member`, `personal_user` fixtures.
 Helper to create transactions with explicit dates.
 
-- Auth & access: anonymous → 401; stranger (non-member) → 403; non-owner
-  member → 200 (read access, not owner-only).
+- Auth & access: anonymous → 403 (app convention); stranger (non-member) →
+  403; unknown org → 403 (permission runs first); non-owner member → 200
+  (read access, not owner-only).
 - Year handling: no param → current year in response; `year` filter excludes
   other years; `year=abc` → 400; year without data → zeros.
 - Totals: correct sums for each of income / expense / contribution;
   `initial_balance` excluded; empty org → all zeros.
 - Monthly: exactly 12 entries in order; zero-filled months; per-month sums
   for all three series.
-- Categories: grouping per category; `type` field correct; sorted desc;
-  contribution categories included; `share_percent` values and rounding;
+- Categories: grouping per category; `type` field correct; grouped by type,
+  total desc within a block; contribution categories included;
   `Uncategorized` bucket per entry type; removed-category rows land in
   `Uncategorized`.
 - Isolation: transactions of another org do not leak in.
