@@ -63,6 +63,19 @@ export type OrganizationDeletedPayload = {
   last_member: string;
 };
 
+/** Sent when a new transaction is added. */
+export type TransactionAddedPayload = {
+  user: string;
+  org_name: string;
+};
+
+/** Sent when a goal is marked as completed. */
+export type GoalCompletedPayload = {
+  user: string;
+  org_name: string;
+  goal_name: string;
+};
+
 export type Notification = {
   id: number;
   type: NotificationType;
