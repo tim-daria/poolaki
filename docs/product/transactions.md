@@ -22,7 +22,7 @@ Transactions represent financial movements in Poolaki and are divided into three
 
 - All members of the account can view all transactions.
 
-- Any member can create new transactions, as well as edit any existing transaction regardless of who originally created it.
+- Only the member who originally created a transaction is able to edit or delete it.
 
 - Once a new transaction is created will be notify to all members.
 
