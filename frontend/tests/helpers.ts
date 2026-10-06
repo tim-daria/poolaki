@@ -1,5 +1,7 @@
 // @ts-check
-import { expect, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { expect, type Browser, type Page } from "@playwright/test";
 
 /**
  * Shared e2e steps, factored out of the specs that need two users talking to
@@ -86,6 +88,45 @@ export async function createSharedWorkspace(
   return new URL(page.url()).pathname;
 }
 
+/**
+ * Fixed "today" for specs whose expectations depend on the calendar: the
+ * transactions date presets, the year-less "5 Aug" formatting and the goal
+ * overdue flags. Mid-month, after the last transaction fixture (Aug 2026) and
+ * before the earliest active goal deadline (Dec 2026). Only the browser clock
+ * is frozen; Node's Date.now() keeps the usernames above unique.
+ */
+export const FROZEN_TODAY = "2026-09-15";
+
+/**
+ * Pins the page's Date at noon on `iso` for every navigation. Call before the
+ * first one: lib/date.ts captures TODAY and the current year at module load.
+ * Noon keeps toISOString() on the same day in any timezone.
+ *
+ * Deliberately not page.clock.setFixedTime(): that installs Playwright's fake
+ * clock, which also takes over performance.now() and the timer queue, and the
+ * dialog fade-out / focus-restore sequence then runs in a different order
+ * (the aria-hidden spy in transactions.spec.ts catches it). Only Date is
+ * replaced here, so timers, transitions and React's scheduler are untouched.
+ */
+export async function freezeClock(page: Page, iso = FROZEN_TODAY) {
+  await page.addInitScript(
+    (fixed: number) => {
+      const RealDate = Date;
+      class FixedDate extends RealDate {
+        constructor(...args: unknown[]) {
+          // No-arg `new Date()` is "now"; any explicit argument passes through.
+          super(...((args.length === 0 ? [fixed] : args) as [number]));
+        }
+        static override now() {
+          return fixed;
+        }
+      }
+      (window as unknown as { Date: unknown }).Date = FixedDate;
+    },
+    new Date(`${iso}T12:00:00`).getTime(),
+  );
+}
+
 /** "/o/42" → 42 (accepts a pathname, as the helpers return). */
 export function toOrgId(workspacePathname: string): number {
   return Number(workspacePathname.split("/").pop());
@@ -122,4 +163,66 @@ export async function inviteMember(
     );
   }
   return res.json();
+}
+
+/* ---------------------------------- */
+/*            Shared owner            */
+/* ---------------------------------- */
+
+/**
+ * allauth limits signups to 20 per minute per IP, and a full parallel run used
+ * to register a dozen users within seconds, so back-to-back runs failed in
+ * setup. Specs whose user only *creates* things (workspaces, invitations,
+ * transactions in a workspace of its own) share one owner registered by
+ * shared-owner.setup.ts.
+ *
+ * Anything that depends on a user's own state still registers its own user:
+ * invitees (notification and banner counts), password changes (they end the
+ * user's other sessions), and the auth and registration specs themselves.
+ */
+const AUTH_DIR = fileURLToPath(
+  new URL("../playwright/.auth/", import.meta.url),
+);
+export const OWNER_STATE = `${AUTH_DIR}owner.json`;
+export const OWNER_INFO = `${AUTH_DIR}owner-info.json`;
+
+export type SharedOwner = { user: TestUser; personalUrl: string };
+
+/**
+ * Opens a page signed in as the shared owner, on their personal workspace.
+ * Read at call time, not import time: spec files are loaded before the setup
+ * project has run.
+ */
+export async function openAsSharedOwner(
+  browser: Browser,
+): Promise<SharedOwner & { page: Page }> {
+  const owner: SharedOwner = JSON.parse(readFileSync(OWNER_INFO, "utf8"));
+  const page = await browser.newPage({ storageState: OWNER_STATE });
+  // Helpers such as createSharedWorkspace start from the current workspace.
+  await page.goto(owner.personalUrl);
+  return { ...owner, page };
+}
+
+/**
+ * Creates a shared workspace through the API, without switching to it.
+ * @returns the new workspace's URL ("/o/:id").
+ */
+export async function createWorkspaceViaApi(
+  page: Page,
+  name: string,
+): Promise<string> {
+  const csrftoken =
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? "";
+  const res = await page.request.post("/api/v1/organizations/", {
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+    data: { name, initial_balance: 0 },
+  });
+  if (res.status() !== 201) {
+    throw new Error(
+      `workspace POST failed: ${res.status()} ${await res.text()}`,
+    );
+  }
+  const { id } = await res.json();
+  return `/o/${id}`;
 }

@@ -100,6 +100,29 @@ export const router = createBrowserRouter([
                         },
                         lazy: () => import("./pages/Goals/Goals"),
                       },
+                      {
+                        path: "settings",
+                        handle: {
+                          title: "Settings",
+                          subtitle:
+                            "Manage security settings and active workspaces",
+                          assistant: false,
+                          width: "narrow",
+                        },
+                        lazy: () => import("./pages/Settings/Settings"),
+                      },
+                      {
+                        // :workspaceId, not :orgId — the parent already owns
+                        // that name, and the workspace being edited need not
+                        // be the one the shell is showing.
+                        path: "settings/workspaces/:workspaceId",
+                        handle: {
+                          title: "Workspace settings",
+                          assistant: false,
+                          width: "narrow",
+                        },
+                        lazy: () => import("./pages/Settings/OrgSettings"),
+                      },
                     ],
                   },
                 ],

@@ -22,3 +22,8 @@ path "secret/data/grafana" {
 path "secret/data/cloudflare" {
 	capabilities = ["read"]
 }
+
+# read static ai-service credentials
+path "secret/data/ai-service" {
+	capabilities = ["read"]
+}

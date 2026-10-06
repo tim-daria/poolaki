@@ -22,12 +22,16 @@
 		load_owasp_crs
 		directives `
 		Include /etc/caddy/coraza.conf
-        Include /etc/caddy/coraza/crs-setup.conf
-        Include /etc/caddy/coraza/rules/*.conf
+		Include /etc/caddy/coraza/crs-setup.conf
+
+		SecRule REQUEST_URI "@rx ^/api/v1/organizations(/.*)?$" "id:1000,phase:1,pass,nolog,ctl:ruleRemoveById=911100"
+		SecRule REQUEST_URI "@rx ^/_allauth/browser/v1/auth/session(/.*)?$" "id:1001,phase:1,pass,nolog,ctl:ruleRemoveById=911100"
+		SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,deny,status:403"
+
+		Include /etc/caddy/coraza/rules/*.conf
 		SecDefaultAction "phase:3,log,auditlog,pass"
 		SecDefaultAction "phase:4,log,auditlog,pass"
 		SecDefaultAction "phase:5,log,auditlog,pass"
-		SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,deny,status:403"
 		`
 	}
 
