@@ -107,6 +107,18 @@ Current architecture:
 
 For detailed architecture documentation, see: [architecture.md](../docs/ai/architecture.md)
 
+### LLM Resilience and Error Handling
+
+The LLM Client implements retry and fallback mechanisms for transient failures.
+
+- Retryable errors: HTTP 429, 502, 503, and request timeouts.
+- Non-retryable errors: HTTP 400, 401, and 403.
+- Retryable errors are retried according to `LLM_MAX_RETRIES`.
+- If all attempts with the primary model fail, the configured fallback model is attempted.
+- If all attempts fail, the service raises `LLMClientError` and the chat endpoint returns HTTP 503.
+
+LLM request timing, model, attempt number, and HTTP status codes are logged for observability and future performance analysis.
+
 ---
 
 ## Tech Stack

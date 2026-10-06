@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.5.0] - 2026-09-30
 
 ### Added
 
@@ -22,6 +22,16 @@ All notable changes to this project will be documented in this file.
 
 - Added dedicated database credentials for global knowledge document access.
 - Restricted direct vector database access to global knowledge documents.
+
+## [0.4.0] - 2026-09-23
+
+### Added
+
+- Added configurable LLM retry and fallback mechanisms.
+- Added configurable LLM request timeout and retry attempts.
+- Added LLM HTTP error handling and `LLMClientError`.
+- Added structured logging for LLM requests, attempts, models, errors, and response timing.
+- Made the fallback LLM model optional.
 
 ## [0.3.0] = 2026-09-07
 
