@@ -1,5 +1,3 @@
-from dataclasses import replace
-
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -22,9 +20,8 @@ from core.serializers import (
 # from core.services.balance import calculate_org_balance
 from core.services.transaction import (
     TransactionFilters,
-    build_transaction_queryset,
-    count_by_entry_type,
     create_transaction_entry,
+    list_transactions,
 )
 
 
@@ -90,26 +87,16 @@ class TransactionListCreateView(APIView):
             entry_type=None if entry_type == "all" else EntryType(entry_type),
             sort=data["sort"],
         )
-
-        base = build_transaction_queryset(org_id, replace(filters, entry_type=None))
-        counts = count_by_entry_type(base)
-        listed = base if filters.entry_type is None else base.filter(entry_type=filters.entry_type)
-
-        total = listed.count()
-        page = data["page"]
-        page_size = data["page_size"]
-        start = (page - 1) * page_size
+        result = list_transactions(org_id, filters, data["page"], data["page_size"])
 
         return Response(
             {
-                "transactions": TransactionResponseSerializer(
-                    listed[start : start + page_size], many=True
-                ).data,
-                "total": total,
-                "page": page,
-                "page_size": page_size,
-                "page_count": max(1, (total + page_size - 1) // page_size),
-                "counts": counts,
+                "transactions": TransactionResponseSerializer(result.rows, many=True).data,
+                "total": result.total,
+                "page": result.page,
+                "page_size": result.page_size,
+                "page_count": result.page_count,
+                "counts": result.counts,
             },
             status=status.HTTP_200_OK,
         )

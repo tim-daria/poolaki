@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
+from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
 from django.db.models import Count
 from django.db.models.query import QuerySet
@@ -31,8 +32,20 @@ class TransactionFilters:
     sort: Literal["newest", "oldest"] = "newest"
 
 
+@dataclass(frozen=True)
+class TransactionPage:
+    """One list page; `counts` span all tabs, `rows` and `total` respect the selected one."""
+
+    rows: list[Transaction]
+    total: int
+    page: int
+    page_size: int
+    page_count: int
+    counts: dict[str, int]
+
+
 def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> QuerySet[Transaction]:
-    """The list query with all given filters applied; ordering is last."""
+    """All filters except entry_type (the tab), with ordering applied last."""
     qs = Transaction.objects.filter(org_id=org_id).select_related("category", "created_by", "goal")
     if filters.date_from is not None:
         qs = qs.filter(transaction_date__gte=filters.date_from)
@@ -44,12 +57,33 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         qs = qs.filter(goal_id=filters.goal_id)
     if filters.tax_deductible:
         qs = qs.filter(is_tax_deductible=True)
-    if filters.entry_type is not None:
-        qs = qs.filter(entry_type=filters.entry_type)
     if filters.sort == "oldest":
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.
     return qs.order_by("-transaction_date", "-id")
+
+
+def list_transactions(
+    org_id: int, filters: TransactionFilters, page: int, page_size: int
+) -> TransactionPage:
+    """The entry-type tab filters the table only; tab counts ignore it."""
+    base = build_transaction_queryset(org_id, filters)
+    counts = count_by_entry_type(base)
+    listed = base if filters.entry_type is None else base.filter(entry_type=filters.entry_type)
+    paginator = Paginator(listed, page_size)
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        # A page past the last one is an empty page, not an error (API contract).
+        return TransactionPage([], paginator.count, page, page_size, paginator.num_pages, counts)
+    return TransactionPage(
+        list(page_obj.object_list),
+        paginator.count,
+        page,
+        page_size,
+        paginator.num_pages,
+        counts,
+    )
 
 
 def count_by_entry_type(qs: QuerySet[Transaction]) -> dict[str, int]:
