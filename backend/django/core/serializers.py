@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from rest_framework import serializers
 
@@ -13,6 +14,24 @@ from core.models import (
     Organization,
     Transaction,
 )
+
+
+class IntListField(serializers.Field[list[int], object, list[int], Any]):
+    """A single positive int or a comma-separated list of them: "5,7,12"."""
+
+    default_error_messages = {
+        "required": "This field is required.",
+        "invalid": "Enter a positive integer or a comma-separated list of integers.",
+    }
+
+    def to_internal_value(self, value: object) -> list[int]:
+        ids: list[int] = []
+        for part in str(value).split(","):
+            part = part.strip()
+            if not part.isdigit() or int(part) < 1:
+                self.fail("invalid")
+            ids.append(int(part))
+        return ids
 
 
 class InitialBalanceSerializer(serializers.Serializer[Organization]):
@@ -120,7 +139,8 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     """GET /organizations/{org_id}/transactions/ query parameters.
 
     `entry_type="all"` is the unfiltered sentinel; `goal_id` and `category_id`
-    must belong to `context["org_id"]`. Dates are inclusive bounds.
+    must belong to `context["org_id"]`. `category_id` accepts one ID or a
+    comma-separated list; dates are inclusive bounds.
     """
 
     entry_type = serializers.ChoiceField(
@@ -128,7 +148,7 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     )
     date_from = serializers.DateField(required=False)
     date_to = serializers.DateField(required=False)
-    category_id = serializers.IntegerField(required=False, min_value=1)
+    category_id = IntListField(required=False)
     goal_id = serializers.IntegerField(required=False)
     tax_deductible = serializers.BooleanField(required=False, default=False)
     sort = serializers.ChoiceField(choices=["newest", "oldest"], required=False, default="newest")
@@ -142,10 +162,10 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
             raise serializers.ValidationError(
                 {"goal_id": ["Goal does not belong to this organization."]}
             )
-        category_id = attrs.get("category_id")
-        if (
-            isinstance(category_id, int)
-            and not Category.objects.filter(pk=category_id, org_id=org_id).exists()
+        category_ids = attrs.get("category_id")
+        if isinstance(category_ids, list) and (
+            Category.objects.filter(pk__in=category_ids, org_id=org_id).count()
+            < len(set(category_ids))
         ):
             raise serializers.ValidationError(
                 {"category_id": ["Category does not belong to this organization."]}

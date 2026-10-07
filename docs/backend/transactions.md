@@ -20,7 +20,9 @@ Query parameters (all optional):
 - `entry_type`: `all` (default), `income`, `expense`, or `contribution` —
   the selected tab/column; every other parameter keeps working with it
 - `date_from` / `date_to`: inclusive ISO date bounds on `transaction_date`
-- `category_id`: ID of a category belonging to the organization
+- `category_id`: one category ID or a comma-separated list of them (e.g.
+  `3,7`); rows in any listed category are returned, rows without a category
+  are excluded
 - `goal_id`: ID of a goal belonging to the organization; matches both its
   contributions and its expenses
 - `tax_deductible`: `true` keeps only tax-deductible rows

@@ -39,7 +39,8 @@ class TransactionListCreateView(APIView):
     Query parameters (all optional):
     - entry_type: "all" (default), "income", "expense" or "contribution".
     - date_from / date_to: inclusive ISO date bounds on transaction_date.
-    - category_id: ID of a category belonging to the organization.
+    - category_id: one category ID or a comma-separated list (e.g. "3,7");
+      rows in any listed category are returned. All must belong to the org.
     - goal_id: ID of a goal belonging to the organization.
     - tax_deductible: "true" keeps only tax-deductible rows.
     - sort: "newest" (default) or "oldest".
@@ -79,10 +80,11 @@ class TransactionListCreateView(APIView):
         data = params.validated_data
 
         entry_type = data["entry_type"]
+        category_ids = data.get("category_id")
         filters = TransactionFilters(
             date_from=data.get("date_from"),
             date_to=data.get("date_to"),
-            category_id=data.get("category_id"),
+            category_ids=tuple(category_ids) if category_ids else None,
             goal_id=data.get("goal_id"),
             tax_deductible=data["tax_deductible"],
             entry_type=None if entry_type == "all" else EntryType(entry_type),

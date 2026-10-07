@@ -140,6 +140,38 @@ def test_list_transactions_filters_by_category_id(
     }
 
 
+def test_list_transactions_filters_by_multiple_category_ids(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    food = Category.objects.create(org=shared_org, name="Food", type=CategoryType.EXPENSE)
+    rent = Category.objects.create(org=shared_org, name="Rent", type=CategoryType.EXPENSE)
+    salary = Category.objects.create(org=shared_org, name="Salary", type=CategoryType.INCOME)
+    food_row = make_transaction(shared_org, category=food, entry_type="expense")
+    rent_row = make_transaction(shared_org, category=rent, entry_type="expense")
+    make_transaction(shared_org, category=salary, entry_type="income")
+    make_transaction(shared_org, entry_type="expense")
+    api_client.force_authenticate(user=owner)
+
+    # OR semantics: rows of any listed category come back; the unlisted
+    # category and rows without one do not.
+    response = api_client.get(
+        transactions_url(shared_org.id),
+        {"category_id": f"{food.id},{rent.id}"},
+    )
+
+    assert {item["id"] for item in response.data["transactions"]} == {
+        food_row.id,
+        rent_row.id,
+    }
+    assert response.data["total"] == 2
+    assert response.data["counts"] == {
+        "all": 2,
+        "income": 0,
+        "expense": 2,
+        "contribution": 0,
+    }
+
+
 def test_list_transactions_filters_by_goal_id(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
@@ -240,6 +272,8 @@ def test_list_transaction_counts_respect_other_filters(
         {"page": "0"},
         {"page_size": "101"},
         {"category_id": "abc"},
+        {"category_id": "1,abc"},
+        {"category_id": "0"},
         {"date_from": "2026-08-10", "date_to": "2026-08-01"},
     ],
 )
@@ -272,6 +306,21 @@ def test_list_transactions_rejects_category_from_another_organization(
     api_client.force_authenticate(user=owner)
 
     response = api_client.get(transactions_url(shared_org.id), {"category_id": category.id})
+
+    assert response.status_code == 400
+    assert response.data["category_id"] == ["Category does not belong to this organization."]
+
+
+def test_list_transactions_rejects_category_list_with_foreign_category(
+    api_client: APIClient, owner: User, shared_org: Organization, personal_org: Organization
+) -> None:
+    own = Category.objects.create(org=shared_org, name="Food", type=CategoryType.EXPENSE)
+    foreign = Category.objects.create(org=personal_org, name="Private", type=CategoryType.EXPENSE)
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(
+        transactions_url(shared_org.id), {"category_id": f"{own.id},{foreign.id}"}
+    )
 
     assert response.status_code == 400
     assert response.data["category_id"] == ["Category does not belong to this organization."]

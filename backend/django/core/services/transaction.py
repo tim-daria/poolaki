@@ -24,7 +24,7 @@ class TransactionFilters:
 
     date_from: date | None = None
     date_to: date | None = None
-    category_id: int | None = None
+    category_ids: tuple[int, ...] | None = None
     goal_id: int | None = None
     tax_deductible: bool = False
     entry_type: EntryType | None = None
@@ -38,8 +38,8 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         qs = qs.filter(transaction_date__gte=filters.date_from)
     if filters.date_to is not None:
         qs = qs.filter(transaction_date__lte=filters.date_to)
-    if filters.category_id is not None:
-        qs = qs.filter(category_id=filters.category_id)
+    if filters.category_ids:
+        qs = qs.filter(category_id__in=filters.category_ids)
     if filters.goal_id is not None:
         qs = qs.filter(goal_id=filters.goal_id)
     if filters.tax_deductible:
