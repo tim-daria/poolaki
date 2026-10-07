@@ -23,7 +23,15 @@ of that organization.
 
 `GET /api/v1/organizations/{org_id}/transactions/`
 
-Returns `200 OK` with the transactions belonging to the organization:
+Server-side filtered and paginated. Query parameters: `entry_type`
+(`all` / `income` / `expense` / `contribution`), `date_from` / `date_to`
+(inclusive), `category_id`, `goal_id`, `tax_deductible`, `sort`
+(`newest` / `oldest`), `page`, `page_size` (default 15, max 100). The full
+contract, including 400 cases, is documented in
+[backend/transactions.md](../backend/transactions.md).
+
+Returns `200 OK` with one page of matching rows plus the paging metadata and
+the per-type counts:
 
 ```json
 {
@@ -41,9 +49,18 @@ Returns `200 OK` with the transactions belonging to the organization:
       "created_by": "username",
       "created_at": "2026-08-24T12:00:00Z"
     }
-  ]
+  ],
+  "total": 42,
+  "page": 1,
+  "page_size": 15,
+  "page_count": 3,
+  "counts": { "all": 42, "income": 5, "expense": 30, "contribution": 7 }
 }
 ```
+
+`counts` is the filtered set split by entry type (one number per toggle);
+the selected toggle picks its part for the table — `total` is that part's
+size, `transactions` one page of it.
 
 ### Create a transaction
 
@@ -57,13 +74,16 @@ Required request fields:
 
 Optional request fields:
 
-- `goal_id`: ID of a goal belonging to the organization
-- `category_id`: ID of a category
+- `goal_id`: ID of a goal belonging to the organization; cannot be set on an
+  `income` transaction
+- `category_id`: ID of a category belonging to the organization; its type
+  must match `entry_type`
 - `description`: text up to 1024 characters
 - `is_tax_deductible`: boolean, defaults to `false`
 
 The transaction is created with the authenticated user as `created_by` and
 returns `201 Created` with the transaction representation shown above.
+Violating the goal or category rules returns `400 Bad Request`.
 
 ### Get transaction details
 
@@ -183,6 +203,8 @@ response contracts therefore cannot yet be documented as implemented behavior.
   - Main ledger table.
   - Stores every financial event as a row.
   - Serves as the source of truth for balance calculation.
+  - Indexed on `(org, transaction_date)` to keep the
+    list endpoint's date and goal filters fast as the table grows.
 
 ---
 
