@@ -8,16 +8,21 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Organization, Transaction, User
+from core.models import EntryType, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
+    TransactionListQuerySerializer,
     TransactionResponseSerializer,
     TransactionUpdateSerializer,
 )
 
 # from core.services.balance import calculate_org_balance
-from core.services.transaction import create_transaction_entry
+from core.services.transaction import (
+    TransactionFilters,
+    create_transaction_entry,
+    list_transactions,
+)
 
 
 class TransactionListCreateView(APIView):
@@ -25,10 +30,23 @@ class TransactionListCreateView(APIView):
     Manage transactions for the authenticated user.
 
     GET
-    Returns a list of transactions for current organization where the current user is a member.
+    Returns a page of transactions for current organization where the current
+    user is a member.
+
+    Query parameters (all optional):
+    - entry_type: "all" (default), "income", "expense" or "contribution".
+    - date_from / date_to: inclusive ISO date bounds on transaction_date.
+    - category_id: one category ID or a comma-separated list (e.g. "3,7");
+      rows in any listed category are returned. All must belong to the org.
+    - goal_id: ID of a goal belonging to the organization.
+    - tax_deductible: "true" keeps only tax-deductible rows.
+    - sort: "newest" (default) or "oldest".
+    - page / page_size: 1-based paging, page_size capped at 100.
 
     Returns:
-    - 200 OK with a list of transactions for GET requests.
+    - 200 OK with {transactions, total, page, page_size, page_count, counts};
+      counts are per-entry-type totals over every filter except entry_type.
+    - 400 Bad Request on malformed query parameters.
 
     POST
     Create a new transaction for the authenticated user in current organization.
@@ -52,15 +70,34 @@ class TransactionListCreateView(APIView):
 
     def get(self, request: Request, org_id: int) -> Response:
         assert isinstance(request.user, User)
-        # Newest first, the order the page shows by default; id breaks ties
-        # within a day.
-        transactions = (
-            Transaction.objects.filter(org_id=org_id)
-            .select_related("category", "created_by", "goal")
-            .order_by("-transaction_date", "-id")
+        params = TransactionListQuerySerializer(
+            data=request.query_params, context={"org_id": org_id}
         )
+        params.is_valid(raise_exception=True)
+        data = params.validated_data
+
+        entry_type = data["entry_type"]
+        category_ids = data.get("category_id")
+        filters = TransactionFilters(
+            date_from=data.get("date_from"),
+            date_to=data.get("date_to"),
+            category_ids=tuple(category_ids) if category_ids else None,
+            goal_id=data.get("goal_id"),
+            tax_deductible=data["tax_deductible"],
+            entry_type=None if entry_type == "all" else EntryType(entry_type),
+            sort=data["sort"],
+        )
+        result = list_transactions(org_id, filters, data["page"], data["page_size"])
+
         return Response(
-            {"transactions": TransactionResponseSerializer(transactions, many=True).data},
+            {
+                "transactions": TransactionResponseSerializer(result.rows, many=True).data,
+                "total": result.total,
+                "page": result.page,
+                "page_size": result.page_size,
+                "page_count": result.page_count,
+                "counts": result.counts,
+            },
             status=status.HTTP_200_OK,
         )
 
