@@ -84,6 +84,11 @@ Status:
 - **`monthly` always has 12 entries** (months 1–12, in order), zero-filled,
   so charts need no gap handling. For the current (incomplete) year the
   not-yet-arrived months are plain zeros.
+- **The response shape is the same for any year.** A year without income or
+  expense transactions returns zero `totals`, 12 zero `monthly` entries, and
+  an empty `categories` array — never `null` or missing keys. The frontend
+  can use `categories.length === 0` as its "no data" signal, since every
+  reported row is categorized.
 - **No "uncategorized" bucket.** The API requires a category for income and
   expense and rejects clearing it on update, so every reported row has a
   category: `sum(categories[].total)` equals `totals` per type.
