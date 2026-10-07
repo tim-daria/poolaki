@@ -65,7 +65,7 @@ Status:
   report. A "total contributions" number alone would be misleading once the
   planned `withdraw` type exists — savings only make sense net of
   withdrawals (contributions minus withdrawals). Savings metrics will be
-  designed together with `withdraw` and added to this endpoint later.
+  designed together with `withdraw` and added to this endpoint or separate endpoint later.
 - **Opening balance is not income.** `Organization.initial_balance` is the
   money the organization started with, not money earned this year, so it is
   excluded from every metric.
@@ -80,8 +80,8 @@ Status:
 - **`monthly` always has 12 entries** (months 1–12, in order), zero-filled,
   so charts need no gap handling. For the current (incomplete) year the
   not-yet-arrived months are plain zeros.
-- **No "uncategorized" bucket.** Categories cannot be deleted, and the form
-  requires a category for income/expense, so every reported row has a
+- **No "uncategorized" bucket.** The API requires a category for income and
+  expense and rejects clearing it on update, so every reported row has a
   category: `sum(categories[].total)` equals `totals` per type.
 - **Categories are grouped by type** — income first, then expenses — sorted
   by `total` descending inside each group. Every category also carries its

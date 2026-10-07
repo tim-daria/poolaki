@@ -26,13 +26,14 @@ The app also exposes the following project-level routes:
 | Authentication | signup / login / logout / session / CSRF / 42 OAuth | [docs/backend/authentication.md](../docs/backend/authentication.md) |
 | Organization | list / create / personal initial balance / members | [docs/backend/organizations.md](../docs/backend/organizations.md) |
 | Invitations | list / invite / cancel (owner-only) + accept / decline / my-invitations (invited user) | [docs/backend/organizations.md](../docs/backend/organizations.md) |
+| Transactions | list / create / details / delete | [docs/backend/transactions.md](../docs/backend/transactions.md) |
+| Categories | list (filter by type) | [docs/backend/categories.md](../docs/backend/categories.md) |
+| Reports | yearly income/expense report per organization | [docs/backend/reports.md](../docs/backend/reports.md) |
 | Notifications | list my notifications / unread badge count / clear-all (mark shown notifications as read) | [docs/backend/notifications.md](../docs/backend/notifications.md) |
 | Health | `GET /health/` returns `{"status": "ok"}` (used by Docker healthchecks and CI) | — |
 | Metrics | `GET /metrics` for Prometheus | [docs/backend/monitoring.md](../docs/backend/monitoring.md) |
 
-Proposed (not yet implemented) endpoints for transactions, categories, goals,
-and recurring transactions are documented as a suggested contract in
-[docs/backend/proposed-api.md](../docs/backend/proposed-api.md).
+Goals and recurring transactions are not implemented yet.
 
 ## Error handling conventions
 
