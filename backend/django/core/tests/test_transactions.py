@@ -131,10 +131,13 @@ def test_create_transaction_rejects_goal_from_another_organization(
         target_amount=Decimal("1000.00"),
         target_date="2026-12-31",
     )
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(goal_id=goal.id), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(goal_id=goal.id, category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 400
@@ -152,10 +155,13 @@ def test_create_transaction_accepts_goal_on_expense(
         target_amount=Decimal("1000.00"),
         target_date="2026-12-31",
     )
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(goal_id=goal.id), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(goal_id=goal.id, category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 201
@@ -171,11 +177,12 @@ def test_create_transaction_rejects_goal_on_income(
         target_amount=Decimal("1000.00"),
         target_date="2026-12-31",
     )
+    category = Category.objects.create(org=shared_org, name="Salary", type=CategoryType.INCOME)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
         transactions_url(shared_org.id),
-        transaction_payload(entry_type="income", goal_id=goal.id),
+        transaction_payload(entry_type="income", goal_id=goal.id, category_id=category.id),
         format="json",
     )
 
