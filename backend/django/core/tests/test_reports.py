@@ -170,18 +170,21 @@ def test_contribution_transactions_excluded_from_all_sections(
     # Savings analytics are deferred until the `withdraw` entry type exists,
     # so contribution rows must not leak into any report section.
     _, org = personal_user
+    salary = Category.objects.create(org=org, name="Salary", type="income")
+    food = Category.objects.create(org=org, name="Food", type="expense")
     goal = Category.objects.create(org=org, name="Contribution", type="contribution")
-    add_transaction(org, "income", "100.00", "2025-01-05")
-    add_transaction(org, "expense", "30.00", "2025-01-06")
+    add_transaction(org, "income", "100.00", "2025-01-05", category=salary)
+    add_transaction(org, "expense", "30.00", "2025-01-06", category=food)
     add_transaction(org, "contribution", "25.00", "2025-02-07", category=goal)
-    add_transaction(org, "contribution", "10.00", "2025-03-08")  # uncategorized
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
     assert data["totals"] == {"income": "100.00", "expenses": "30.00"}
     assert data["monthly"][1] == month_row(2)
-    assert data["monthly"][2] == month_row(3)
-    assert all(category["type"] in ("income", "expense") for category in data["categories"])
+    assert [(c["name"], c["type"]) for c in data["categories"]] == [
+        ("Salary", "income"),
+        ("Food", "expense"),
+    ]
 
 
 def test_amounts_are_two_decimal_strings(
@@ -266,58 +269,34 @@ def test_categories_carry_zero_filled_monthly_series(
     food = Category.objects.create(org=org, name="Food", type="expense")
     add_transaction(org, "expense", "30.00", "2025-01-11", category=food)
     add_transaction(org, "expense", "20.00", "2025-03-15", category=food)
-    add_transaction(org, "expense", "10.00", "2025-03-20")
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    by_name = {c["name"]: c for c in data["categories"]}
-    assert by_name["Food"]["monthly"] == ["30.00", "0.00", "20.00"] + ["0.00"] * 9
-    assert by_name["Uncategorized"]["monthly"] == ["0.00", "0.00", "10.00"] + ["0.00"] * 9
+    assert data["categories"][0]["monthly"] == ["30.00", "0.00", "20.00"] + ["0.00"] * 9
     # invariant: the monthly series partitions the yearly total per category
     for category in data["categories"]:
         assert sum(Decimal(value) for value in category["monthly"]) == Decimal(category["total"])
 
 
-def test_uncategorized_bucket_per_entry_type(
+def test_category_rows_partition_yearly_totals_per_type(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
+    salary = Category.objects.create(org=org, name="Salary", type="income")
     food = Category.objects.create(org=org, name="Food", type="expense")
-    add_transaction(org, "income", "30.00", "2025-01-11")
-    add_transaction(org, "expense", "10.00", "2025-01-12")
-    add_transaction(org, "expense", "90.00", "2025-01-13", category=food)
+    transport = Category.objects.create(org=org, name="Transport", type="expense")
+    add_transaction(org, "income", "30.00", "2025-01-11", category=salary)
+    add_transaction(org, "expense", "10.00", "2025-01-12", category=food)
+    add_transaction(org, "expense", "90.00", "2025-01-13", category=transport)
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    uncategorized = [c for c in data["categories"] if c["category_id"] is None]
-    assert [(c["type"], c["total"]) for c in uncategorized] == [
-        ("income", "30.00"),
-        ("expense", "10.00"),
-    ]
-    assert all(c["name"] == "Uncategorized" for c in uncategorized)
     # invariant: category rows partition the yearly totals per type
     totals = data["totals"]
     for entry_type in ("income", "expense"):
         key = "expenses" if entry_type == "expense" else entry_type
         bucket = sum(Decimal(c["total"]) for c in data["categories"] if c["type"] == entry_type)
         assert bucket == Decimal(totals[key])
-
-
-def test_deleted_category_rows_land_in_uncategorized(
-    report_client: APIClient, personal_user: tuple[User, Organization]
-) -> None:
-    _, org = personal_user
-    food = Category.objects.create(org=org, name="Food", type="expense")
-    add_transaction(org, "expense", "42.00", "2025-01-11", category=food)
-    food.delete()  # Transaction.category is SET_NULL
-
-    data = report_client.get(report_url(org.id), {"year": 2025}).json()
-
-    categories = data["categories"]
-    assert len(categories) == 1
-    assert categories[0]["category_id"] is None
-    assert categories[0]["name"] == "Uncategorized"
-    assert categories[0]["total"] == "42.00"
 
 
 def test_report_excludes_other_organizations(

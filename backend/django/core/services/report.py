@@ -54,8 +54,8 @@ def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
 
 def _monthly_totals_by_category(
     base: QuerySet[Transaction],
-) -> dict[tuple[int | None, int], Decimal]:
-    """(category_id, month) -> total; category_id None is the uncategorized bucket."""
+) -> dict[tuple[int, int], Decimal]:
+    """(category_id, month) -> total."""
     rows = (
         base.annotate(month=ExtractMonth("transaction_date"))
         .values("category_id", "month")
@@ -65,45 +65,33 @@ def _monthly_totals_by_category(
 
 
 def _category_breakdown(
-    base: QuerySet[Transaction], monthly_by_category: dict[tuple[int | None, int], Decimal]
+    base: QuerySet[Transaction], monthly_by_category: dict[tuple[int, int], Decimal]
 ) -> list[dict[str, Any]]:
     """Per-category rows with a zero-filled 12-slot monthly series (index 0 =
     January); grouped by type, total desc. Shares are client-side derivations.
     """
-    # Python sort below is authoritative; no DB ordering needed
+
     categorized = (
         base.filter(category__isnull=False)
         .values("category_id", "category__name", "category__type")
         .annotate(total=Sum("amount"))
     )
-    uncategorized = (
-        base.filter(category__isnull=True).values("entry_type").annotate(total=Sum("amount"))
-    )
 
-    entries: list[dict[str, Any]] = [
-        {
-            "category_id": row["category_id"],
-            "name": row["category__name"],
-            "type": row["category__type"],
-            "total": row["total"],
-            "monthly": [
-                monthly_by_category.get((row["category_id"], m), _ZERO) for m in range(1, 13)
-            ],
-        }
-        for row in categorized
-    ]
-    entries.extend(
-        {
-            "category_id": None,
-            "name": "Uncategorized",
-            "type": row["entry_type"],
-            "total": row["total"],
-            "monthly": [monthly_by_category.get((None, m), _ZERO) for m in range(1, 13)],
-        }
-        for row in uncategorized
+    return sorted(
+        (
+            {
+                "category_id": row["category_id"],
+                "name": row["category__name"],
+                "type": row["category__type"],
+                "total": row["total"],
+                "monthly": [
+                    monthly_by_category.get((row["category_id"], m), _ZERO) for m in range(1, 13)
+                ],
+            }
+            for row in categorized
+        ),
+        key=lambda entry: (_TYPE_ORDER[entry["type"]], -entry["total"], entry["name"]),
     )
-    entries.sort(key=lambda entry: (_TYPE_ORDER[entry["type"]], -entry["total"], entry["name"]))
-    return entries
 
 
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:

@@ -246,7 +246,7 @@ class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
-    category_id = serializers.IntegerField(allow_null=True)
+    category_id = serializers.IntegerField()
     name = serializers.CharField()
     type = serializers.ChoiceField(choices=CategoryType.choices)
     total = serializers.DecimalField(max_digits=14, decimal_places=2)
