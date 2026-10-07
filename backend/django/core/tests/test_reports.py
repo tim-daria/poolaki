@@ -41,6 +41,16 @@ def report_client(api_client: APIClient, personal_user: tuple[User, Organization
     return api_client
 
 
+@pytest.fixture
+def report_categories(personal_user: tuple[User, Organization]) -> dict[str, Category]:
+    """Income/expense categories: every reported row must be categorized."""
+    _, org = personal_user
+    return {
+        "income": Category.objects.create(org=org, name="Salary", type="income"),
+        "expense": Category.objects.create(org=org, name="Food", type="expense"),
+    }
+
+
 # ------------------------------------ #
 #              Auth & access           #
 # ------------------------------------ #
@@ -84,11 +94,13 @@ def test_report_unknown_org_returns_403(api_client: APIClient, owner: User) -> N
 
 
 def test_default_year_is_current_year(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
     year = timezone.now().year
-    add_transaction(org, "income", "100.00", f"{year}-06-15")
+    add_transaction(org, "income", "100.00", f"{year}-06-15", category=report_categories["income"])
 
     response = report_client.get(report_url(org.id))
 
@@ -99,11 +111,14 @@ def test_default_year_is_current_year(
 
 
 def test_year_filter_excludes_other_years(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
-    add_transaction(org, "income", "100.00", "2024-03-10")
-    add_transaction(org, "income", "50.00", "2025-03-10")
+    salary = report_categories["income"]
+    add_transaction(org, "income", "100.00", "2024-03-10", category=salary)
+    add_transaction(org, "income", "50.00", "2025-03-10", category=salary)
 
     data_2024 = report_client.get(report_url(org.id), {"year": 2024}).json()
     data_2025 = report_client.get(report_url(org.id), {"year": 2025}).json()
@@ -115,10 +130,12 @@ def test_year_filter_excludes_other_years(
 
 
 def test_year_without_data_returns_zeros(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
-    add_transaction(org, "income", "100.00", "2025-03-10")
+    add_transaction(org, "income", "100.00", "2025-03-10", category=report_categories["income"])
 
     data = report_client.get(report_url(org.id), {"year": 2001}).json()
 
@@ -150,14 +167,16 @@ def test_year_out_of_range_returns_400(
 
 
 def test_totals_sum_income_and_expense_and_ignore_initial_balance(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
     org.initial_balance = Decimal("500.00")
     org.save(update_fields=["initial_balance"])
-    add_transaction(org, "income", "100.10", "2025-01-05")
-    add_transaction(org, "income", "20.00", "2025-02-05")
-    add_transaction(org, "expense", "40.50", "2025-01-06")
+    add_transaction(org, "income", "100.10", "2025-01-05", category=report_categories["income"])
+    add_transaction(org, "income", "20.00", "2025-02-05", category=report_categories["income"])
+    add_transaction(org, "expense", "40.50", "2025-01-06", category=report_categories["expense"])
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
@@ -188,10 +207,12 @@ def test_contribution_transactions_excluded_from_all_sections(
 
 
 def test_amounts_are_two_decimal_strings(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
-    add_transaction(org, "income", "100.5", "2025-01-05")
+    add_transaction(org, "income", "100.5", "2025-01-05", category=report_categories["income"])
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
@@ -205,11 +226,13 @@ def test_amounts_are_two_decimal_strings(
 
 
 def test_monthly_returns_twelve_zero_filled_entries(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
-    add_transaction(org, "income", "10.00", "2025-02-01")
-    add_transaction(org, "expense", "7.25", "2025-11-30")
+    add_transaction(org, "income", "10.00", "2025-02-01", category=report_categories["income"])
+    add_transaction(org, "expense", "7.25", "2025-11-30", category=report_categories["expense"])
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
@@ -222,12 +245,14 @@ def test_monthly_returns_twelve_zero_filled_entries(
 
 
 def test_monthly_sums_each_entry_type_separately(
-    report_client: APIClient, personal_user: tuple[User, Organization]
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
 ) -> None:
     _, org = personal_user
-    add_transaction(org, "income", "60.00", "2025-01-10")
-    add_transaction(org, "income", "40.00", "2025-01-20")
-    add_transaction(org, "expense", "40.00", "2025-01-15")
+    add_transaction(org, "income", "60.00", "2025-01-10", category=report_categories["income"])
+    add_transaction(org, "income", "40.00", "2025-01-20", category=report_categories["income"])
+    add_transaction(org, "expense", "40.00", "2025-01-15", category=report_categories["expense"])
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
@@ -304,7 +329,8 @@ def test_report_excludes_other_organizations(
 ) -> None:
     _, org = personal_user
     other_org = Organization.objects.create(name="Other budget", initial_balance=Decimal("0"))
-    add_transaction(other_org, "income", "9999.00", "2025-01-11")
+    other_salary = Category.objects.create(org=other_org, name="Salary", type="income")
+    add_transaction(other_org, "income", "9999.00", "2025-01-11", category=other_salary)
     salary = Category.objects.create(org=org, name="Salary", type="income")
     add_transaction(org, "income", "10.00", "2025-01-11", category=salary)
 

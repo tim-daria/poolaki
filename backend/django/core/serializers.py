@@ -66,6 +66,13 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
         category = attrs.get("category_id")
         entry_type = attrs["entry_type"]
 
+        # Income/expense must always be categorized: the report partitions
+        # totals per category and has no "uncategorized" bucket.
+        if entry_type in (EntryType.INCOME, EntryType.EXPENSE) and category is None:
+            raise serializers.ValidationError(
+                {"category_id": ("A category is required for income and expense transactions.")}
+            )
+
         if isinstance(category, Category) and category.type != entry_type:
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
@@ -130,6 +137,16 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         category = attrs.get("category_id")
         transaction = self.context["transaction"]
+
+        # An explicit null clears the category; income/expense must keep theirs.
+        if (
+            "category_id" in attrs
+            and category is None
+            and transaction.entry_type in (EntryType.INCOME, EntryType.EXPENSE)
+        ):
+            raise serializers.ValidationError(
+                {"category_id": ("Income and expense transactions cannot be uncategorized.")}
+            )
 
         if isinstance(category, Category) and category.type != transaction.entry_type:
             raise serializers.ValidationError(
