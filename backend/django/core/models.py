@@ -118,6 +118,7 @@ class Goal(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_goals"
     )
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    completed_at = models.DateField(null=True, default=None)
 
     def __str__(self) -> str:
         return self.name
