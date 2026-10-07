@@ -10,9 +10,9 @@ Goals are organization-level savings targets. Each goal has a name, target amoun
 - **Completed** — the target has manually marked as finished by the user.
 - **Archived** — the goal has been closed and its remaining balance moved to the organization balance.
 
-A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data, while only the organization owner and the goal creator can modify restricted fields such as status or withdrawals.
+Goals without a `target_date` parameter are called permanent. User can make expense transactions for permanent goals with `active` status.
 
-Goals without a `target_date` are permanent. User can make expense transactions for permanent goals with `active` status.
+A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data and make expenses for complete or permanent goals, while only the organization owner and the goal creator can modify restricted fields such as status or withdrawals.
 
 If a user wants to make an expense that exceeds goal balance, we can offer to deduct the remaining amount from the organization's main balance if that's possible.
 
@@ -26,13 +26,13 @@ For all organization members:
 - **Get goal balance** — View the balance accumulated toward a goal's target.
 - **Get goal transactions** — View a goal's transactions, optionally filtered by type.
 - **Make contribution** — Add a contribution transaction to an active goal.
+- **Make expense** — Record spending against a completed or permanent goal.
 
 Only for the organization owner and the goal creator:
 
 - **Update goal** — Change a goal's name, target amount, or target date.
 - **Change goal status** — Complete or archive a goal according to its lifecycle.
 - **Make withdrawal** — Remove funds from an active goal.
-- **Make expense** — Record spending against a completed goal.
 
 Operations available for **All** goals:
 
@@ -43,23 +43,47 @@ Operations available for **All** goals:
 Operations available for **Active** goals:
 
 - **Update goal**
-- **Change goal status** (to `completed` and `archived`)
+- **Change goal status** (to `completed` or `archived`)
 - **Make contribution**
 - **Make withdrawal**
-- **Make expense** (only for permanent goals?)
+- **Make expense** (only for permanent goals)
 
 Operations available for **Completed** goals:
 
-- **Change goal status** (to `archived` and `active`(?))
+- **Change goal status** (to `active` or `archived`)
 - **Make expense**
 
 Operations available for **Archived** goals:
 - only common GET operations
 
+## Information about the goal returned in response to a GET request
+
+```json
+{
+  "id": 1,
+  "org": 2,
+  "name": "Laptop",
+  "target_amount": "500.00",
+  "target_date": "2026-08-25",
+  "status": "active",
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00",
+  "completed_at": "null",
+  "balance": "250.00",
+  "progress": "0.50",
+  "overdue": "false",
+  "spendable": "false"
+}
+```
+`balance` - shows current balance for the goal.
+`progress` - shows the percentage of the goal achieved.
+`overdue` - indicates whether the goal is overdue.
+`spendable` - indicates whether expense transactions can be made under this goal.
+
 ## Backend models update
 
-To implement goal withdraw functionality we need to add `WITHDRAW` entry type for Transaction model.
-This change and the introduction of the expense for goals will result in a change to the rules for calculating the balance for organizations.
+To implement goal withdraw functionality we need to add `WITHDRAW` entry type for the Transaction model. This change and the introduction of the expense for goals will result in a change to the rules for calculating the balance for organizations.
+To find out whether a goal was completed and exactly when, add a date field to the Goal model that allows a null value: `completed_at = models.DateField(null=True, default=null)`.
 
 ## Features for analytics
 
@@ -79,6 +103,7 @@ GET /api/v1/organizations/{org_id}/goals/
 Query parameters:
 
 - `status` (optional, one of `active`, `completed`, `archived`)
+- `spendable` (optional, one of `true`, `false`)
 
 The filter is exact: only goals with the matching status are returned. An unsupported value or a wrong enum value returns an empty list.
 
@@ -92,10 +117,15 @@ Response example:
       "org": 2,
       "name": "Laptop",
       "target_amount": "500.00",
-      "target_date": "2026-08-12",
+      "target_date": "2026-08-25",
       "status": "active",
       "created_by": "alice",
-      "created_at": "2026-08-20T10:40:28.139486+02:00"
+      "created_at": "2026-08-20T10:40:28.139486+02:00",
+      "completed_at": "null",
+      "balance": "250.00"  ,
+      "progress": "0.50",
+      "overdue": "false",
+      "spendable": "false"
     }
   ]
 }
@@ -128,7 +158,7 @@ Request body:
 {
   "name": "Laptop",
   "target_amount": "500.00",
-  "target_date": "2026-08-12"
+  "target_date": "2026-08-25"
 }
 ```
 
@@ -140,10 +170,15 @@ Response example:
   "org": 2,
   "name": "Laptop",
   "target_amount": "500.00",
-  "target_date": "2026-08-12",
+  "target_date": "2026-08-25",
   "status": "active",
   "created_by": "alice",
-  "created_at": "2026-08-20T10:40:28.139486+02:00"
+  "created_at": "2026-08-20T10:40:28.139486+02:00",
+  "completed_at": "null",
+  "balance": "0.00",
+  "progress": "0.00",
+  "overdue": "false",
+  "spendable": "false"
 }
 ```
 
@@ -170,10 +205,15 @@ Response example:
     "org": 2,
     "name": "Laptop",
     "target_amount": "500.00",
-    "target_date": "2026-08-12",
+    "target_date": "2026-08-25",
     "status": "active",
     "created_by": "alice",
-    "created_at": "2026-08-20T10:40:28.139486+02:00"
+    "created_at": "2026-08-20T10:40:28.139486+02:00",
+    "completed_at": "null",
+    "balance": "250.00",
+    "progress": "0.50",
+    "overdue": "false",
+    "spendable": "false"
   }
 }
 ```
@@ -214,7 +254,12 @@ Response example:
     "target_date": "2026-09-01",
     "status": "active",
     "created_by": "alice",
-    "created_at": "2026-08-20T10:40:28.139486+02:00"
+    "created_at": "2026-08-20T10:40:28.139486+02:00",
+    "completed_at": "null",
+    "balance": "250.00",
+    "progress": "0.125",
+    "overdue": "false",
+    "spendable": "false"
   }
 }
 ```
@@ -269,7 +314,7 @@ Request body:
 }
 ```
 
-Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
+Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, from `completed` to `active`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
 
 When a goal is archived, any remaining goal balance is transferred back to the organization balance.
 
@@ -342,7 +387,7 @@ Status:
 POST /api/v1/organizations/{org_id}/goals/{goal_id}/expense/
 ```
 
-Creates a transaction with `entry_type` set to `expense` and links it to the goal. Expenses are allowed only for `completed` goals.
+Creates a transaction with `entry_type` set to `expense` and links it to the goal. Expenses are allowed only for `completed` or permanent goals.
 
 Request body:
 
@@ -354,7 +399,7 @@ Request body:
 }
 ```
 
-Only the organization owner and the goal creator can make an expense against a goal.
+All organization members can make an expense against a goal.
 
 Status:
 
