@@ -274,6 +274,8 @@ def test_list_transaction_counts_respect_other_filters(
         {"category_id": "abc"},
         {"category_id": "1,abc"},
         {"category_id": "0"},
+        {"goal_id": "0"},
+        {"goal_id": "-1"},
         {"date_from": "2026-08-10", "date_to": "2026-08-01"},
     ],
 )

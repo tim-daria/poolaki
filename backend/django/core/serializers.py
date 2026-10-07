@@ -149,27 +149,13 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     date_from = serializers.DateField(required=False)
     date_to = serializers.DateField(required=False)
     category_id = IntListField(required=False)
-    goal_id = serializers.IntegerField(required=False)
+    goal_id = serializers.IntegerField(required=False, min_value=1)
     tax_deductible = serializers.BooleanField(required=False, default=False)
     sort = serializers.ChoiceField(choices=["newest", "oldest"], required=False, default="newest")
     page = serializers.IntegerField(required=False, default=1, min_value=1)
     page_size = serializers.IntegerField(required=False, default=15, min_value=1, max_value=100)
 
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
-        org_id = self.context.get("org_id")
-        goal_id = attrs.get("goal_id")
-        if isinstance(goal_id, int) and not Goal.objects.filter(pk=goal_id, org_id=org_id).exists():
-            raise serializers.ValidationError(
-                {"goal_id": ["Goal does not belong to this organization."]}
-            )
-        category_ids = attrs.get("category_id")
-        if isinstance(category_ids, list) and (
-            Category.objects.filter(pk__in=category_ids, org_id=org_id).count()
-            < len(set(category_ids))
-        ):
-            raise serializers.ValidationError(
-                {"category_id": ["Category does not belong to this organization."]}
-            )
         date_from = attrs.get("date_from")
         date_to = attrs.get("date_to")
         if isinstance(date_from, date) and isinstance(date_to, date) and date_from > date_to:
@@ -177,6 +163,18 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
                 {"date_to": ["date_to must not be earlier than date_from."]}
             )
         return attrs
+
+    def validate_goal_id(self, goal_id: int) -> int:
+        if not Goal.objects.filter(pk=goal_id, org_id=self.context.get("org_id")).exists():
+            raise serializers.ValidationError(["Goal does not belong to this organization."])
+        return goal_id
+
+    def validate_category_id(self, category_ids: list[int]) -> list[int]:
+        if Category.objects.filter(
+            pk__in=category_ids, org_id=self.context.get("org_id")
+        ).count() < len(set(category_ids)):
+            raise serializers.ValidationError(["Category does not belong to this organization."])
+        return category_ids
 
 
 class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
