@@ -274,10 +274,12 @@ export async function fetchTransactions(
   org_id: number,
   signal?: AbortSignal,
 ): Promise<Transaction[]> {
-  const res = await fetch(`/api/v1/organizations/${org_id}/transactions/`, {
-    credentials: "include",
-    signal,
-  });
+  // Stopgap until this fetch goes server-driven: client-side filtering and
+  // tab counts need the full set, so request the API's largest page.
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/transactions/?page_size=100`,
+    { credentials: "include", signal },
+  );
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
   const data: { transactions: TransactionDTO[] } = await res.json();
   return data.transactions.map(fromDTO);
