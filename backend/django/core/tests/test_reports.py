@@ -10,10 +10,8 @@ from core.models import Category, Organization, Transaction, User
 pytestmark = pytest.mark.django_db
 
 
-def month_row(
-    month: int, income: str = "0.00", expenses: str = "0.00", contribution: str = "0.00"
-) -> dict[str, int | str]:
-    return {"month": month, "income": income, "expenses": expenses, "contribution": contribution}
+def month_row(month: int, income: str = "0.00", expenses: str = "0.00") -> dict[str, int | str]:
+    return {"month": month, "income": income, "expenses": expenses}
 
 
 def add_transaction(
@@ -124,13 +122,9 @@ def test_year_without_data_returns_zeros(
 
     data = report_client.get(report_url(org.id), {"year": 2001}).json()
 
-    assert data["totals"] == {"income": "0.00", "expenses": "0.00", "contribution": "0.00"}
+    assert data["totals"] == {"income": "0.00", "expenses": "0.00"}
     assert [entry["month"] for entry in data["monthly"]] == list(range(1, 13))
-    assert all(
-        row[key] == "0.00"
-        for row in data["monthly"]
-        for key in ("income", "expenses", "contribution")
-    )
+    assert all(row[key] == "0.00" for row in data["monthly"] for key in ("income", "expenses"))
     assert data["categories"] == []
 
 
@@ -155,7 +149,7 @@ def test_year_out_of_range_returns_400(
 # ------------------------------------ #
 
 
-def test_totals_sum_all_entry_types_and_ignore_initial_balance(
+def test_totals_sum_income_and_expense_and_ignore_initial_balance(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
@@ -164,11 +158,30 @@ def test_totals_sum_all_entry_types_and_ignore_initial_balance(
     add_transaction(org, "income", "100.10", "2025-01-05")
     add_transaction(org, "income", "20.00", "2025-02-05")
     add_transaction(org, "expense", "40.50", "2025-01-06")
-    add_transaction(org, "contribution", "25.00", "2025-01-07")
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["totals"] == {"income": "120.10", "expenses": "40.50", "contribution": "25.00"}
+    assert data["totals"] == {"income": "120.10", "expenses": "40.50"}
+
+
+def test_contribution_transactions_excluded_from_all_sections(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    # Savings analytics are deferred until the `withdraw` entry type exists,
+    # so contribution rows must not leak into any report section.
+    _, org = personal_user
+    goal = Category.objects.create(org=org, name="Contribution", type="contribution")
+    add_transaction(org, "income", "100.00", "2025-01-05")
+    add_transaction(org, "expense", "30.00", "2025-01-06")
+    add_transaction(org, "contribution", "25.00", "2025-02-07", category=goal)
+    add_transaction(org, "contribution", "10.00", "2025-03-08")  # uncategorized
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["totals"] == {"income": "100.00", "expenses": "30.00"}
+    assert data["monthly"][1] == month_row(2)
+    assert data["monthly"][2] == month_row(3)
+    assert all(category["type"] in ("income", "expense") for category in data["categories"])
 
 
 def test_amounts_are_two_decimal_strings(
@@ -212,12 +225,10 @@ def test_monthly_sums_each_entry_type_separately(
     add_transaction(org, "income", "60.00", "2025-01-10")
     add_transaction(org, "income", "40.00", "2025-01-20")
     add_transaction(org, "expense", "40.00", "2025-01-15")
-    add_transaction(org, "contribution", "20.00", "2025-12-01")
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
     assert data["monthly"][0] == month_row(1, income="100.00", expenses="40.00")
-    assert data["monthly"][11] == month_row(12, contribution="20.00")
 
 
 # ------------------------------------ #
@@ -232,23 +243,20 @@ def test_categories_grouped_by_type_then_sorted_desc(
     salary = Category.objects.create(org=org, name="Salary", type="income")
     food = Category.objects.create(org=org, name="Food", type="expense")
     transport = Category.objects.create(org=org, name="Transport", type="expense")
-    goal = Category.objects.create(org=org, name="Contribution", type="contribution")
     add_transaction(org, "income", "500.00", "2025-01-10", category=salary)
     add_transaction(org, "expense", "300.00", "2025-01-11", category=food)
-    add_transaction(org, "contribution", "200.00", "2025-01-12", category=goal)
     add_transaction(org, "expense", "100.00", "2025-01-13", category=transport)
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    # type blocks: income, expense, contribution; total desc within a block
+    # type blocks: income, expense; total desc within a block
     categories = data["categories"]
     assert [(c["name"], c["type"], c["total"]) for c in categories] == [
         ("Salary", "income", "500.00"),
         ("Food", "expense", "300.00"),
         ("Transport", "expense", "100.00"),
-        ("Contribution", "contribution", "200.00"),
     ]
-    assert [c["category_id"] for c in categories] == [salary.pk, food.pk, transport.pk, goal.pk]
+    assert [c["category_id"] for c in categories] == [salary.pk, food.pk, transport.pk]
 
 
 def test_categories_carry_zero_filled_monthly_series(

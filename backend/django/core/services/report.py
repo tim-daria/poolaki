@@ -8,11 +8,13 @@ from core.models import EntryType, Organization, Transaction
 
 _ZERO = Decimal("0")
 
-# response key -> EntryType value; order matches the documented contract
+# Contributions are out of the report until the planned `withdraw` entry
+# type exists: savings metrics only make sense net of withdrawals, so
+# contribution and withdraw must be designed together. Any entry type not
+# listed here is ignored by every report section.
 _METRICS = (
     ("income", EntryType.INCOME),
     ("expenses", EntryType.EXPENSE),
-    ("contribution", EntryType.CONTRIBUTION),
 )
 
 # category list order: type blocks in metric order, total desc within a block
@@ -27,7 +29,7 @@ def _metric_sums() -> dict[str, Any]:
 
 
 def _metric_totals(base: QuerySet[Transaction]) -> dict[str, Decimal]:
-    """Yearly income/expenses/contribution totals."""
+    """Yearly income/expense totals."""
     return base.aggregate(**_metric_sums())
 
 
@@ -105,8 +107,13 @@ def _category_breakdown(
 
 
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:
-    """Build the yearly report payload"""
-    base = Transaction.objects.filter(org=org, transaction_date__year=year)
+    """Build the yearly report payload; every section is computed only from
+    the reported entry types (contribution rows are excluded by design)."""
+    base = Transaction.objects.filter(
+        org=org,
+        transaction_date__year=year,
+        entry_type__in=[entry_type for _, entry_type in _METRICS],
+    )
     totals = _metric_totals(base)
     return {
         "year": year,

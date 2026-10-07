@@ -237,14 +237,12 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
     income = serializers.DecimalField(max_digits=14, decimal_places=2)
     expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
-    contribution = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
     income = serializers.DecimalField(max_digits=14, decimal_places=2)
     expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
-    contribution = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):

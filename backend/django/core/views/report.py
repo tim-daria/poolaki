@@ -17,9 +17,10 @@ class ReportView(APIView):
     Yearly finance report for the reporting page.
 
     GET
-    Returns yearly aggregates for the organization: income/expense/contribution
-    totals, a 12-month distribution (zero-filled), and the per-category
-    breakdown for the selected year.
+    Returns yearly aggregates for the organization: income/expense totals,
+    a 12-month distribution (zero-filled), and the per-category breakdown
+    for the selected year. Contribution rows are excluded from every section
+    (savings analytics are deferred until the `withdraw` entry type exists).
 
     Query parameters:
     - year (optional, integer 2000..2100): calendar year to report on.
