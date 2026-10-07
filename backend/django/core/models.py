@@ -146,9 +146,7 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     class Meta:
-        indexes = [
-            models.Index(fields=["org_id", "transaction_date"]),
-        ]
+        indexes = [models.Index(fields=["org", "transaction_date"], name="idx_txn_org_date")]
 
     def __str__(self) -> str:
         return f"{self.entry_type} {self.amount} ({self.transaction_date})"
