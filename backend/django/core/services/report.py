@@ -52,44 +52,36 @@ def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
     return monthly
 
 
-def _monthly_totals_by_category(
-    base: QuerySet[Transaction],
-) -> dict[tuple[int, int], Decimal]:
-    """(category_id, month) -> total."""
+def _category_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
+    """Per-category rows with a zero-filled 12-slot monthly series (index 0 =
+    January); grouped by type, total desc. The yearly total is the sum of the
+    monthly series, so the two cannot drift apart. Shares are client-side
+    derivations.
+    """
     rows = (
         base.annotate(month=ExtractMonth("transaction_date"))
-        .values("category_id", "month")
-        .annotate(total=Sum("amount"))
-    )
-    return {(row["category_id"], row["month"]): row["total"] for row in rows}
-
-
-def _category_breakdown(
-    base: QuerySet[Transaction], monthly_by_category: dict[tuple[int, int], Decimal]
-) -> list[dict[str, Any]]:
-    """Per-category rows with a zero-filled 12-slot monthly series (index 0 =
-    January); grouped by type, total desc. Shares are client-side derivations.
-    """
-
-    categorized = (
-        base.filter(category__isnull=False)
-        .values("category_id", "category__name", "category__type")
+        .values("category_id", "category__name", "category__type", "month")
         .annotate(total=Sum("amount"))
     )
 
-    return sorted(
-        (
+    categories: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        entry = categories.setdefault(
+            row["category_id"],
             {
                 "category_id": row["category_id"],
                 "name": row["category__name"],
                 "type": row["category__type"],
-                "total": row["total"],
-                "monthly": [
-                    monthly_by_category.get((row["category_id"], m), _ZERO) for m in range(1, 13)
-                ],
-            }
-            for row in categorized
-        ),
+                "monthly": [_ZERO] * 12,
+            },
+        )
+        entry["monthly"][row["month"] - 1] = row["total"]
+
+    for entry in categories.values():
+        entry["total"] = sum(entry["monthly"], _ZERO)
+
+    return sorted(
+        categories.values(),
         key=lambda entry: (_TYPE_ORDER[entry["type"]], -entry["total"], entry["name"]),
     )
 
@@ -102,10 +94,9 @@ def get_org_report(org: Organization, year: int) -> dict[str, Any]:
         transaction_date__year=year,
         entry_type__in=[entry_type for _, entry_type in _METRICS],
     )
-    totals = _metric_totals(base)
     return {
         "year": year,
-        "totals": totals,
+        "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
-        "categories": _category_breakdown(base, _monthly_totals_by_category(base)),
+        "categories": _category_breakdown(base),
     }
