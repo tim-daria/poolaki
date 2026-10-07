@@ -10,8 +10,8 @@ from core.models import Category, Organization, Transaction, User
 pytestmark = pytest.mark.django_db
 
 
-def month_row(month: int, income: str = "0.00", expenses: str = "0.00") -> dict[str, int | str]:
-    return {"month": month, "income": income, "expenses": expenses}
+def month_row(month: int, income: str = "0.00", expense: str = "0.00") -> dict[str, int | str]:
+    return {"month": month, "income": income, "expense": expense}
 
 
 def add_transaction(
@@ -139,9 +139,9 @@ def test_year_without_data_returns_zeros(
 
     data = report_client.get(report_url(org.id), {"year": 2001}).json()
 
-    assert data["totals"] == {"income": "0.00", "expenses": "0.00"}
+    assert data["totals"] == {"income": "0.00", "expense": "0.00"}
     assert [entry["month"] for entry in data["monthly"]] == list(range(1, 13))
-    assert all(row[key] == "0.00" for row in data["monthly"] for key in ("income", "expenses"))
+    assert all(entry[key] == "0.00" for entry in data["monthly"] for key in ("income", "expense"))
     assert data["categories"] == []
 
 
@@ -180,7 +180,7 @@ def test_totals_sum_income_and_expense_and_ignore_initial_balance(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["totals"] == {"income": "120.10", "expenses": "40.50"}
+    assert data["totals"] == {"income": "120.10", "expense": "40.50"}
 
 
 def test_contribution_transactions_excluded_from_all_sections(
@@ -198,7 +198,7 @@ def test_contribution_transactions_excluded_from_all_sections(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["totals"] == {"income": "100.00", "expenses": "30.00"}
+    assert data["totals"] == {"income": "100.00", "expense": "30.00"}
     assert data["monthly"][1] == month_row(2)
     assert [(c["name"], c["type"]) for c in data["categories"]] == [
         ("Salary", "income"),
@@ -239,7 +239,7 @@ def test_monthly_returns_twelve_zero_filled_entries(
     monthly = data["monthly"]
     assert [entry["month"] for entry in monthly] == list(range(1, 13))
     assert monthly[1] == month_row(2, income="10.00")
-    assert monthly[10] == month_row(11, expenses="7.25")
+    assert monthly[10] == month_row(11, expense="7.25")
     assert monthly[0] == month_row(1)
     assert monthly[11] == month_row(12)
 
@@ -256,7 +256,7 @@ def test_monthly_sums_each_entry_type_separately(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["monthly"][0] == month_row(1, income="100.00", expenses="40.00")
+    assert data["monthly"][0] == month_row(1, income="100.00", expense="40.00")
 
 
 # ------------------------------------ #
@@ -319,9 +319,8 @@ def test_category_rows_partition_yearly_totals_per_type(
     # invariant: category rows partition the yearly totals per type
     totals = data["totals"]
     for entry_type in ("income", "expense"):
-        key = "expenses" if entry_type == "expense" else entry_type
         bucket = sum(Decimal(c["total"]) for c in data["categories"] if c["type"] == entry_type)
-        assert bucket == Decimal(totals[key])
+        assert bucket == Decimal(totals[entry_type])
 
 
 def test_report_excludes_other_organizations(

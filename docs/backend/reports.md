@@ -27,12 +27,12 @@ Response example:
   "year": 2025,
   "totals": {
     "income": "12000.00",
-    "expenses": "8400.50"
+    "expense": "8400.50"
   },
   "monthly": [
-    { "month": 1, "income": "1000.00", "expenses": "700.00" },
-    { "month": 2, "income": "0.00", "expenses": "120.50" },
-    { "month": 3, "income": "0.00", "expenses": "0.00" }
+    { "month": 1, "income": "1000.00", "expense": "700.00" },
+    { "month": 2, "income": "0.00", "expense": "120.50" },
+    { "month": 3, "income": "0.00", "expense": "0.00" }
   ],
   "categories": [
     {
@@ -53,6 +53,9 @@ Response example:
 }
 ```
 
+(The `monthly` array above is abbreviated for readability — it always has
+exactly 12 entries.)
+
 Status:
 
 - `200 OK` on success
@@ -65,7 +68,8 @@ Status:
   report. A "total contributions" number alone would be misleading once the
   planned `withdraw` type exists — savings only make sense net of
   withdrawals (contributions minus withdrawals). Savings metrics will be
-  designed together with `withdraw` and added to this endpoint or separate endpoint later.
+  designed together with `withdraw` and added later, either to this endpoint
+  or a new one.
 - **Opening balance is not income.** `Organization.initial_balance` is the
   money the organization started with, not money earned this year, so it is
   excluded from every metric.

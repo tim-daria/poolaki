@@ -12,19 +12,17 @@ _ZERO = Decimal("0")
 # type exists: savings metrics only make sense net of withdrawals, so
 # contribution and withdraw must be designed together. Any entry type not
 # listed here is ignored by every report section.
-_METRICS = (
-    ("income", EntryType.INCOME),
-    ("expenses", EntryType.EXPENSE),
-)
+
+_REPORTED_TYPES = (EntryType.INCOME, EntryType.EXPENSE)
 
 # category list order: type blocks in metric order, total desc within a block
-_TYPE_ORDER = {entry_type: idx for idx, (_, entry_type) in enumerate(_METRICS)}
+_TYPE_ORDER = {entry_type.value: idx for idx, entry_type in enumerate(_REPORTED_TYPES)}
 
 
 def _metric_sums() -> dict[str, Any]:
     return {
-        key: Coalesce(Sum("amount", filter=Q(entry_type=entry_type)), _ZERO)
-        for key, entry_type in _METRICS
+        entry_type.value: Coalesce(Sum("amount", filter=Q(entry_type=entry_type)), _ZERO)
+        for entry_type in _REPORTED_TYPES
     }
 
 
@@ -46,7 +44,8 @@ def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
     for month in range(1, 13):
         row = rows_by_month.get(month)
         entry: dict[str, Any] = {"month": month}
-        for key, _ in _METRICS:
+        for entry_type in _REPORTED_TYPES:
+            key = entry_type.value
             entry[key] = row[key] if row is not None else _ZERO
         monthly.append(entry)
     return monthly
@@ -92,7 +91,7 @@ def get_org_report(org: Organization, year: int) -> dict[str, Any]:
     base = Transaction.objects.filter(
         org=org,
         transaction_date__year=year,
-        entry_type__in=[entry_type for _, entry_type in _METRICS],
+        entry_type__in=_REPORTED_TYPES,
     )
     return {
         "year": year,

@@ -40,7 +40,7 @@ class ReportView(APIView):
 
         query = ReportQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        year: int = query.validated_data.get("year") or timezone.now().year
+        year = query.validated_data.get("year", timezone.now().year)
 
         report = get_org_report(org, year)
         return Response(ReportResponseSerializer(report).data, status=status.HTTP_200_OK)

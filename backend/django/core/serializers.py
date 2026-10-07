@@ -253,19 +253,20 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
 
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
     income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
     income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     category_id = serializers.IntegerField()
     name = serializers.CharField()
-    type = serializers.ChoiceField(choices=CategoryType.choices)
+    # Contribution rows are excluded from the report for now
+    type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
     total = serializers.DecimalField(max_digits=14, decimal_places=2)
     monthly = serializers.ListField(
         child=serializers.DecimalField(max_digits=14, decimal_places=2),
