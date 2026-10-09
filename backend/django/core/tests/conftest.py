@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 
 import pytest
@@ -13,6 +14,9 @@ from core.models import (
     Role,
     User,
 )
+
+os.environ.setdefault("AI_SERVICE_URL", "http://ai-service:8000")
+os.environ.setdefault("AI_SERVICE_TIMEOUT", "90")
 
 
 @pytest.fixture
