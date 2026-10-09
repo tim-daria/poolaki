@@ -61,6 +61,10 @@ jobs:
       DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
+      # Read at import time by core/services/ai_chat.py (strict env contract);
+      # manage.py check/migrate/runserver all load the chat view.
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_TIMEOUT: "90"
     steps:
       - uses: actions/checkout@v4
 
