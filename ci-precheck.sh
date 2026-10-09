@@ -134,4 +134,7 @@ npm run test:e2e
 
 cd ..
 
+printf "\n🐳 Stopping dev stack...\n"
+docker compose down
+
 printf "\n✅ All checks done!\n"
