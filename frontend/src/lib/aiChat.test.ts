@@ -9,6 +9,7 @@ import {
   ASSISTANT_UNAVAILABLE,
   TOO_MANY_REQUESTS,
   INVALID_QUESTION,
+  ACCESS_DENIED,
   MAX_QUESTION_LENGTH,
 } from "./aiChat";
 
@@ -63,8 +64,16 @@ describe("chatErrorMessage", () => {
     ).toBe(INVALID_QUESTION);
   });
 
-  it("falls back to a generic message when the body has no known shape", () => {
-    // 500 is a realistic unhandled status here (e.g. PersonalOrganizationMissingError).
+  it("uses a fixed access message on 403, ignoring the DRF body", () => {
+    expect(
+      chatErrorMessage(403, {
+        detail: "Authentication credentials were not provided.",
+      }),
+    ).toBe(ACCESS_DENIED);
+  });
+
+  it("falls back to a generic message for unexpected statuses with no known body shape", () => {
+    // 500 here means an unhandled server error; our mapped errors never reach the chat path as 500.
     expect(chatErrorMessage(500, {})).toBe(
       "Could not reach the assistant. Please try again.",
     );
@@ -130,6 +139,17 @@ describe("askAssistant", () => {
     const promise = askAssistant(1, "q", "t");
     await expect(promise).rejects.toBeInstanceOf(AiChatError);
     await expect(promise).rejects.toThrow(INVALID_QUESTION);
+  });
+
+  it("throws AiChatError with the access message on 403", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse(403, {
+        detail: "You are not a member of this organization.",
+      }),
+    );
+    const promise = askAssistant(1, "q", "t");
+    await expect(promise).rejects.toBeInstanceOf(AiChatError);
+    await expect(promise).rejects.toThrow(ACCESS_DENIED);
   });
 
   it("treats a 200 without a usable answer as unavailable", async () => {

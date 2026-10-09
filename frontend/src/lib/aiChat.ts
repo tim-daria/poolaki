@@ -27,6 +27,10 @@ export const TOO_MANY_REQUESTS =
 export const INVALID_QUESTION =
   "Your question could not be processed. Please check it and try again.";
 
+/** Fixed 403 copy covering both causes: expired session or revoked membership.*/
+export const ACCESS_DENIED =
+  "You don't have access to the assistant here. Please check that you are signed in and a member of this organization.";
+
 /**
  * POST /api/v1/organizations/${org_id}/chat/ with { question }; expects
  * { answer, metadata: { intent } }. intent is dropped: the drawer shows text.
@@ -73,6 +77,7 @@ export function chatErrorMessage(status: number, body: unknown): string {
   // detail is server-side wording, not user copy.
   if (status === 429) return TOO_MANY_REQUESTS;
   if (status === 400) return INVALID_QUESTION;
+  if (status === 403) return ACCESS_DENIED;
   return (
     firstErrorMessage(body) ??
     "Could not reach the assistant. Please try again."
