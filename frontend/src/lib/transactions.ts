@@ -9,6 +9,11 @@
 import { TODAY } from "./date";
 import { parseMoney, toMoneyString, validateAmount } from "./money";
 import { formatName } from "./text";
+import {
+  PAGE_SIZE,
+  type Tab,
+  type TransactionFilters,
+} from "./transactionFilters";
 
 /** "contribution" is a transfer to a goal: it carries a goal and "Savings" category by default. */
 export type EntryType = "income" | "expense" | "contribution";
@@ -48,6 +53,16 @@ type TransactionDTO = {
   /** Username, not an ID. */
   created_by: string | null;
   created_at: string;
+};
+
+/** Mirrors the GET response in TransactionListCreateView */
+export type TransactionPage = {
+  /** transactions -> rows */
+  rows: Transaction[];
+  total: number;
+  page: number;
+  page_count: number;
+  counts: Record<Tab, number>;
 };
 
 /**
@@ -369,4 +384,45 @@ export async function deleteTransaction(
     );
   }
   if (!res.ok) throw new Error(`Failed to delete transaction (${res.status})`);
+}
+
+/** GET /api/v1/organizations/${org_id}/transactions/?… */
+export async function fetchTransactionPage(
+  org_id: number,
+  f: TransactionFilters,
+  signal?: AbortSignal,
+): Promise<TransactionPage> {
+  const params = new URLSearchParams();
+  // only set what differs from the backend's own defaults — keeps URLs short
+  // and means a backend default change doesn't need a frontend release
+  if (f.tab !== "all") params.set("entry_type", f.tab);
+  if (f.q) params.set("q", f.q);
+  if (f.sort !== "newest") params.set("sort", f.sort);
+  if (f.from) params.set("date_from", f.from);
+  if (f.to) params.set("date_to", f.to);
+  if (f.categories.length) params.set("category_id", f.categories.join(","));
+  if (f.taxDeductible) params.set("tax_deductible", "true");
+  if (f.page > 1) params.set("page_size", String(PAGE_SIZE));
+
+  const res = await fetch(
+    `/api/v1/organisations/${org_id}/transactions/?${params}`,
+    { credentials: "include", signal },
+  );
+  if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
+
+  const data: {
+    transactions: TransactionDTO[];
+    total: number;
+    page: number;
+    page_count: number;
+    counts: Record<Tab, number>;
+  } = await res.json();
+
+  return {
+    rows: data.transactions.map(fromDTO),
+    total: data.total,
+    page: data.page,
+    page_count: data.page_count,
+    counts: data.counts,
+  };
 }
