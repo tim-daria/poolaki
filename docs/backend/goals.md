@@ -330,20 +330,49 @@ Status:
 ### Make contribution
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/contribution/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
-Creates a transaction with `entry_type` set to `contribution` and links it to the current goal. Contributions are allowed only for `active` goals.
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`contribution`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD current system date)
+
+Generated parameters:
+
+- `description` ("Contribution to the goal <goal_name>")
+- 'transaction_date' (YYYY-MM-DD current system date)
 
 Request body:
 
 ```json
 {
+  "goal_id": 1,
+  "entry_type": "contribution",
   "amount": "250.00",
-  "description": "Monthly savings",
-  "transaction_date": "2026-08-18"
+  "description": "Contribution to the goal savings",
+  "transaction_date": "2026-08-12",
 }
 ```
+
+Response example:
+
+```json
+{
+  "id": 1,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": null,
+  "entry_type": "contribution",
+  "amount": "250.00",
+  "description": "Contribution to the goal savings",
+  "transaction_date": "2026-08-12",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
+}
 
 All organization members can make contributions.
 
@@ -357,18 +386,48 @@ Status:
 ### Make withdrawal
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/withdraw/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
-Creates a transaction with `entry_type` set to `withdraw` and links it to the goal. Withdrawals are allowed only for `active` goals.
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`withdraw`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD) (current system time)
+
+Generated parameters:
+
+- `description` ("Withdrawal from the goal <goal_name>")
+- 'transaction_date' (current system time)
 
 Request body:
 
 ```json
 {
-  "amount": "100.00",
-  "description": "Emergency withdrawal",
-  "transaction_date": "2026-08-19"
+  "goal_id": 1,
+  "entry_type": "withdraw",
+  "amount": "250.00",
+  "description": "Withdrawal from the goal savings",
+  "transaction_date": "2026-08-20"
+}
+```
+
+Response example:
+
+```json
+{
+  "id": 2,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": null,
+  "entry_type": "withdraw",
+  "amount": "250.00",
+  "description": "Withdrawal from the goal savings",
+  "transaction_date": "2026-08-20",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
 }
 ```
 
@@ -384,18 +443,45 @@ Status:
 ### Make expense
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/expense/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
 Creates a transaction with `entry_type` set to `expense` and links it to the goal. Expenses are allowed only for `completed` or permanent goals.
+
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`expense`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD)
 
 Request body:
 
 ```json
 {
-  "amount": "200.00",
-  "description": "Purchase for the goal",
-  "transaction_date": "2026-08-21"
+  "goal_id": 1
+  "entry_type": "expense",
+  "amount": "250.00",
+  "description": "New bike",
+  "transaction_date": "2026-08-20",
+}
+```
+
+Response example:
+
+```json
+{
+  "id": 3,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": null,
+  "entry_type": "expense",
+  "amount": "250.00",
+  "description": "New bike",
+  "transaction_date": "2026-08-15",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
 }
 ```
 
@@ -410,15 +496,17 @@ Status:
 
 ### Get goal transactions
 
+Use `List transactions` endpoint with `goal_id` query parameter
+
 ```http
-GET /api/v1/organizations/{org_id}/goals/{goal_id}/transactions/
+GET /api/v1/organizations/{org_id}/transactions/?goal_id={goal_id}
 ```
 
 Query parameters:
 
-- `entry_type` (optional, one of `contribution`, `withdraw`, `expense`)
+- `goal_id` (`contribution`, `withdraw`, `expense`)
 
-Returns the list of transactions that belong to the current goal and optionally match the requested entry type.
+Returns the list of transactions that belong to the current goal.
 
 Response example:
 
@@ -426,19 +514,24 @@ Response example:
 {
   "transactions": [
     {
-      "id": 12,
+      "id": 1,
       "org_id": 2,
       "goal_id": 1,
-      "category_id": 4,
+      "category_id": null,
       "entry_type": "contribution",
       "amount": "250.00",
-      "description": "Monthly savings",
-      "transaction_date": "2026-08-18",
+      "description": "Contribution to the goal savings",
+      "transaction_date": "2026-08-12",
       "is_tax_deductible": false,
       "created_by": "alice",
-      "created_at": "2026-08-18T10:40:28.139486+02:00"
+      "created_at": "2026-08-20T10:40:28.139486+02:00"
     }
-  ]
+  ],
+  "total": 42,
+  "page": 1,
+  "page_size": 15,
+  "page_count": 3,
+  "counts": { "all": 42, "income": 5, "expense": 30, "contribution": 7 }
 }
 ```
 
@@ -447,5 +540,5 @@ All organization members can list goal transactions.
 Status:
 
 - `200 OK` on success
+- `400 Bad Request` for malformed parameters
 - `403 Forbidden` when the user is not a member of the organization
-- `404 Not Found` when the goal does not exist in the organization
