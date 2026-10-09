@@ -151,6 +151,7 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     category_id = IntListField(required=False)
     goal_id = serializers.IntegerField(required=False, min_value=1)
     tax_deductible = serializers.BooleanField(required=False, default=False)
+    q = serializers.CharField(required=False, allow_blank=True, max_length=100)
     sort = serializers.ChoiceField(choices=["newest", "oldest"], required=False, default="newest")
     page = serializers.IntegerField(required=False, default=1, min_value=1)
     page_size = serializers.IntegerField(required=False, default=15, min_value=1, max_value=100)
