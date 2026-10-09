@@ -69,6 +69,7 @@ def test_list_transactions_returns_all_organization_transactions(
     assert response.status_code == 200
     assert {item["id"] for item in response.data["transactions"]} == {first.id, second.id}
 
+
 def test_list_transactions_search_matches_description_case_insensitively(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
@@ -128,6 +129,7 @@ def test_list_transactions_search_matches_category_name(
 
     assert response.status_code == 200
     assert [item["id"] for item in response.data["transactions"]] == [in_groceries.id]
+
 
 def test_list_transactions_returns_empty_list(
     api_client: APIClient, owner: User, shared_org: Organization

@@ -59,9 +59,7 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
     if filters.tax_deductible:
         qs = qs.filter(is_tax_deductible=True)
     if filters.q:
-        qs = qs.filter(
-          Q(description__icontains=filters.q) | Q(category__name__icontains=filters.q)
-        )
+        qs = qs.filter(Q(description__icontains=filters.q) | Q(category__name__icontains=filters.q))
     if filters.sort == "oldest":
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.
