@@ -6,11 +6,89 @@ All endpoints in this document require authentication.
 
 Goals are organization-level savings targets. Each goal has a name, target amount, target date, creation metadata, and one of three statuses:
 
-- **Active** — the goal is still in progress.
-- **Completed** — the goal is reached or the target has been fulfilled.
-- **Archived** — the goal has been closed and its remaining balance is no longer active.
+- **Active** — the goal is still in progress. 
+- **Completed** — the target has manually marked as finished by the user.
+- **Archived** — the goal has been closed and its remaining balance moved to the organization balance.
 
-A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data, while only the owner and the goal creator can modify restricted fields such as status or withdrawals.
+Goals without a `target_date` parameter are called permanent. User can make expense transactions for permanent goals with `active` status.
+
+A goal belongs to an organization and tracks transactions that contribute to, withdraw from, or spend against that target. Any organization member can view goal data and make expenses for complete or permanent goals, while only the organization owner and the goal creator can modify restricted fields such as status or withdrawals.
+
+If a user wants to make an expense that exceeds goal balance, we can offer to deduct the remaining amount from the organization's main balance if that's possible.
+
+## Available operations
+
+For all organization members:
+
+- **List goals** — View the organization's goals, optionally filtered by status.
+- **Create a goal** — Define a new active goal with a target amount and date.
+- **Get goal details** — View the metadata and current status of a specific goal.
+- **Get goal balance** — View the balance accumulated toward a goal's target.
+- **Get goal transactions** — View a goal's transactions, optionally filtered by type.
+- **Make contribution** — Add a contribution transaction to an active goal.
+- **Make expense** — Record spending against a completed or permanent goal.
+
+Only for the organization owner and the goal creator:
+
+- **Update goal** — Change a goal's name, target amount, or target date.
+- **Change goal status** — Complete or archive a goal according to its lifecycle.
+- **Make withdrawal** — Remove funds from an active goal.
+
+Operations available for **All** goals:
+
+- **Get goal details**
+- **Get goal balance**
+- **Get goal transactions**
+
+Operations available for **Active** goals:
+
+- **Update goal**
+- **Change goal status** (to `completed` or `archived`)
+- **Make contribution**
+- **Make withdrawal**
+- **Make expense** (only for permanent goals)
+
+Operations available for **Completed** goals:
+
+- **Change goal status** (to `active` or `archived`)
+- **Make expense**
+
+Operations available for **Archived** goals:
+- only common GET operations
+
+## Information about the goal returned in response to a GET request
+
+```json
+{
+  "id": 1,
+  "org": 2,
+  "name": "Laptop",
+  "target_amount": "500.00",
+  "target_date": "2026-08-25",
+  "status": "active",
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00",
+  "completed_at": "null",
+  "balance": "250.00",
+  "progress": "0.50",
+  "overdue": "false",
+  "spendable": "false"
+}
+```
+`balance` - shows current balance for the goal.
+`progress` - shows the percentage of the goal achieved.
+`overdue` - indicates whether the goal is overdue.
+`spendable` - indicates whether expense transactions can be made under this goal.
+
+## Backend models update
+
+To implement goal withdraw functionality we need to add `WITHDRAW` entry type for the Transaction model. This change and the introduction of the expense for goals will result in a change to the rules for calculating the balance for organizations.
+To find out whether a goal was completed and exactly when, add a date field to the Goal model that allows a null value: `completed_at = models.DateField(null=True, default=null)`.
+
+## Features for analytics
+
+TODO
+Information about endpoints, filters, and query parameters required to generate the analytics page and the AI assistant.
 
 ## Goals endpoints
 
@@ -25,6 +103,7 @@ GET /api/v1/organizations/{org_id}/goals/
 Query parameters:
 
 - `status` (optional, one of `active`, `completed`, `archived`)
+- `spendable` (optional, one of `true`, `false`)
 
 The filter is exact: only goals with the matching status are returned. An unsupported value or a wrong enum value returns an empty list.
 
@@ -38,10 +117,15 @@ Response example:
       "org": 2,
       "name": "Laptop",
       "target_amount": "500.00",
-      "target_date": "2026-08-12",
+      "target_date": "2026-08-25",
       "status": "active",
       "created_by": "alice",
-      "created_at": "2026-08-20T10:40:28.139486+02:00"
+      "created_at": "2026-08-20T10:40:28.139486+02:00",
+      "completed_at": "null",
+      "balance": "250.00"  ,
+      "progress": "0.50",
+      "overdue": "false",
+      "spendable": "false"
     }
   ]
 }
@@ -74,7 +158,7 @@ Request body:
 {
   "name": "Laptop",
   "target_amount": "500.00",
-  "target_date": "2026-08-12"
+  "target_date": "2026-08-25"
 }
 ```
 
@@ -86,10 +170,15 @@ Response example:
   "org": 2,
   "name": "Laptop",
   "target_amount": "500.00",
-  "target_date": "2026-08-12",
+  "target_date": "2026-08-25",
   "status": "active",
   "created_by": "alice",
-  "created_at": "2026-08-20T10:40:28.139486+02:00"
+  "created_at": "2026-08-20T10:40:28.139486+02:00",
+  "completed_at": "null",
+  "balance": "0.00",
+  "progress": "0.00",
+  "overdue": "false",
+  "spendable": "false"
 }
 ```
 
@@ -116,10 +205,15 @@ Response example:
     "org": 2,
     "name": "Laptop",
     "target_amount": "500.00",
-    "target_date": "2026-08-12",
+    "target_date": "2026-08-25",
     "status": "active",
     "created_by": "alice",
-    "created_at": "2026-08-20T10:40:28.139486+02:00"
+    "created_at": "2026-08-20T10:40:28.139486+02:00",
+    "completed_at": "null",
+    "balance": "250.00",
+    "progress": "0.50",
+    "overdue": "false",
+    "spendable": "false"
   }
 }
 ```
@@ -160,7 +254,12 @@ Response example:
     "target_date": "2026-09-01",
     "status": "active",
     "created_by": "alice",
-    "created_at": "2026-08-20T10:40:28.139486+02:00"
+    "created_at": "2026-08-20T10:40:28.139486+02:00",
+    "completed_at": "null",
+    "balance": "250.00",
+    "progress": "0.125",
+    "overdue": "false",
+    "spendable": "false"
   }
 }
 ```
@@ -215,7 +314,7 @@ Request body:
 }
 ```
 
-Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
+Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, from `completed` to `active`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
 
 When a goal is archived, any remaining goal balance is transferred back to the organization balance.
 
@@ -231,20 +330,49 @@ Status:
 ### Make contribution
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/contribution/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
-Creates a transaction with `entry_type` set to `contribution` and links it to the current goal. Contributions are allowed only for `active` goals.
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`contribution`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD current system date)
+
+Generated parameters:
+
+- `description` ("Contribution to the goal <goal_name>")
+- 'transaction_date' (YYYY-MM-DD current system date)
 
 Request body:
 
 ```json
 {
+  "goal_id": 1,
+  "entry_type": "contribution",
   "amount": "250.00",
-  "description": "Monthly savings",
-  "transaction_date": "2026-08-18"
+  "description": "Contribution to the goal savings",
+  "transaction_date": "2026-08-12",
 }
 ```
+
+Response example:
+
+```json
+{
+  "id": 1,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": null,
+  "entry_type": "contribution",
+  "amount": "250.00",
+  "description": "Contribution to the goal savings",
+  "transaction_date": "2026-08-12",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
+}
 
 All organization members can make contributions.
 
@@ -258,22 +386,55 @@ Status:
 ### Make withdrawal
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/withdraw/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
-Creates a transaction with `entry_type` set to `withdraw` and links it to the goal. Withdrawals are allowed only for `active` goals.
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`withdraw`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD) (current system time)
+
+Generated parameters:
+
+- `description` ("Withdrawal from the goal <goal_name>")
+- 'transaction_date' (current system time)
 
 Request body:
 
 ```json
 {
-  "amount": "100.00",
-  "description": "Emergency withdrawal",
-  "transaction_date": "2026-08-19"
+  "goal_id": 1,
+  "entry_type": "withdraw",
+  "amount": "250.00",
+  "description": "Withdrawal from the goal savings",
+  "transaction_date": "2026-08-20"
 }
 ```
 
-Only the organization owner and the goal creator can make a withdrawal.
+Response example:
+
+```json
+{
+  "id": 2,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": null,
+  "entry_type": "withdraw",
+  "amount": "250.00",
+  "description": "Withdrawal from the goal savings",
+  "transaction_date": "2026-08-20",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
+}
+```
+All organization members can make a withdrawal.
+
+TODO:
+    Only the organization owner and the goal creator can make a withdrawal.
+    Add access rights check to `Make transaction` endpoint for requests with "entry_type": "withdraw"
 
 Status:
 
@@ -285,22 +446,50 @@ Status:
 ### Make expense
 
 ```http
-POST /api/v1/organizations/{org_id}/goals/{goal_id}/expense/
+POST /api/v1/organizations/{org_id}/transactions/
 ```
 
-Creates a transaction with `entry_type` set to `expense` and links it to the goal. Expenses are allowed only for `completed` goals.
+Creates a transaction with `entry_type` set to `expense` and links it to the goal. Expenses are allowed only for `completed` or permanent goals.
+
+Mandatory parameters:
+
+- `goal_id`
+- `entry_type` (`expense`)
+- `amount`
+- `transaction_date` (YYYY-MM-DD)
 
 Request body:
 
 ```json
 {
-  "amount": "200.00",
-  "description": "Purchase for the goal",
-  "transaction_date": "2026-08-21"
+  "goal_id": 1,
+  "category_id": 2,
+  "entry_type": "expense",
+  "amount": "250.00",
+  "description": "New bike",
+  "transaction_date": "2026-08-20",
 }
 ```
 
-Only the organization owner and the goal creator can make an expense against a goal.
+Response example:
+
+```json
+{
+  "id": 3,
+  "org_id": 2,
+  "goal_id": 1,
+  "category_id": 2,
+  "entry_type": "expense",
+  "amount": "250.00",
+  "description": "New bike",
+  "transaction_date": "2026-08-15",
+  "is_tax_deductible": false,
+  "created_by": "alice",
+  "created_at": "2026-08-20T10:40:28.139486+02:00"
+}
+```
+
+All organization members can make an expense against a goal.
 
 Status:
 
@@ -311,15 +500,17 @@ Status:
 
 ### Get goal transactions
 
+Use `List transactions` endpoint with `goal_id` query parameter
+
 ```http
-GET /api/v1/organizations/{org_id}/goals/{goal_id}/transactions/
+GET /api/v1/organizations/{org_id}/transactions/?goal_id={goal_id}
 ```
 
 Query parameters:
 
-- `entry_type` (optional, one of `contribution`, `withdraw`, `expense`)
+- `goal_id` (`contribution`, `withdraw`, `expense`)
 
-Returns the list of transactions that belong to the current goal and optionally match the requested entry type.
+Returns the list of transactions that belong to the current goal.
 
 Response example:
 
@@ -327,15 +518,24 @@ Response example:
 {
   "transactions": [
     {
-      "id": 12,
-      "goal": 1,
+      "id": 1,
+      "org_id": 2,
+      "goal_id": 1,
+      "category_id": null,
       "entry_type": "contribution",
       "amount": "250.00",
-      "description": "Monthly savings",
-      "transaction_date": "2026-08-18",
-      "created_by": "alice"
+      "description": "Contribution to the goal savings",
+      "transaction_date": "2026-08-12",
+      "is_tax_deductible": false,
+      "created_by": "alice",
+      "created_at": "2026-08-20T10:40:28.139486+02:00"
     }
-  ]
+  ],
+  "total": 42,
+  "page": 1,
+  "page_size": 15,
+  "page_count": 3,
+  "counts": { "all": 42, "income": 5, "expense": 30, "contribution": 7 }
 }
 ```
 
@@ -344,5 +544,5 @@ All organization members can list goal transactions.
 Status:
 
 - `200 OK` on success
+- `400 Bad Request` for malformed parameters
 - `403 Forbidden` when the user is not a member of the organization
-- `404 Not Found` when the goal does not exist in the organization
