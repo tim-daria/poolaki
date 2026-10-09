@@ -103,8 +103,10 @@ def test_list_transactions_search_matches_description_case_insensitively(
 def test_list_transactions_search_matches_category_name(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
-    groceries = Category.objects.create(name="Groceries", type=CategoryType.EXPENSE)
-    eating_out = Category.objects.create(name="Eating out", type=CategoryType.EXPENSE)
+    groceries = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
+    eating_out = Category.objects.create(
+        org=shared_org, name="Eating out", type=CategoryType.EXPENSE
+    )
     in_groceries = Transaction.objects.create(
         org=shared_org,
         created_by=owner,
