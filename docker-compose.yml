@@ -330,7 +330,6 @@ services:
     expose:
       - "8000"
     environment:
-<<<<<<< HEAD
       PYTHONPATH: .
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
@@ -338,10 +337,6 @@ services:
       LOG_LEVEL: ${LOG_LEVEL}
       LLM_TIMEOUT: ${LLM_TIMEOUT}
       TZ: Europe/Berlin
-=======
-      - PYTHONPATH=.
-      - DATABASE_URL=${DATABASE_URL}
->>>>>>> b87fd3b (feat(vectors): include postgress URL env into ai-service)
     volumes:
       - ./ai-service:/app
       - type: volume
