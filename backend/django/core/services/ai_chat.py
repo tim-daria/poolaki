@@ -33,12 +33,15 @@ def send_question(user_id: int, organization_id: int, question: str) -> tuple[st
 
     try:
         data = response.json()
-        answer = str(data["answer"])
-        intent = str(data["metadata"]["intent"])
+        answer = data["answer"]
+        intent = data["metadata"]["intent"]
     except (ValueError, KeyError, TypeError) as exc:
         raise AiServiceUnavailableError() from exc
 
-    if not answer:
+    # str() coercion would turn null/numbers into user-visible "None" text.
+    if not isinstance(answer, str) or not answer:
+        raise AiServiceUnavailableError()
+    if not isinstance(intent, str):
         raise AiServiceUnavailableError()
 
     return answer, intent

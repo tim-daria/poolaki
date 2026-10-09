@@ -134,6 +134,8 @@ def test_chat_returns_503_when_ai_answers_with_error(
         None,  # not JSON
         {},  # missing keys
         {"answer": "", "metadata": {"intent": "x"}},  # empty answer
+        {"answer": None, "metadata": {"intent": "x"}},  # null answer
+        {"answer": 42, "metadata": {"intent": "x"}},  # non-string answer
         {"answer": "ok"},  # missing metadata
     ],
 )
