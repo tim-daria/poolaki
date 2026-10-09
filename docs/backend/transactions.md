@@ -17,7 +17,7 @@ server-side.
 
 Query parameters (all optional):
 
-- `entry_type`: `all` (default), `income`, `expense`, or `contribution` —
+- `entry_type`: `all` (default), `income`, `expense`, `contribution` or `withdraw` —
   the selected tab/column; every other parameter keeps working with it
 - `date_from` / `date_to`: inclusive ISO date bounds on `transaction_date`
 - `category_id`: one category ID or a comma-separated list of them (e.g.
@@ -78,7 +78,7 @@ POST /api/v1/organizations/{org_id}/transactions/
 
 Mandatory parameters:
 
-- `entry_type` (`income`, `expense`, `contribution`)
+- `entry_type` (`income`, `expense`, `contribution`, `withdraw`)
 - `amount`
 - `transaction_date` (YYYY-MM-DD)
 - `category_id` — required for `income` and `expense`; `contribution` may be
