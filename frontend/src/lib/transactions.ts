@@ -3,7 +3,6 @@
  *
  * `fromDTO` and `toPayload` convert foreign key IDs (category_id, goal_id)
  * and string amounts to internal client models.
- * `updateTransaction` waits on a backend PATCH route; see CAN_EDIT_TRANSACTIONS.
  */
 
 import { TODAY } from "./date";
@@ -205,6 +204,17 @@ function toPayload(draft: TransactionDraft, fallbackDescription = "") {
   };
 }
 
+/** The subset of the request body that PATCH accepts: everything but the fixed entry_type and goal_id. */
+function editableFields(p: ReturnType<typeof toPayload>) {
+  return {
+    category_id: p.category_id,
+    description: p.description,
+    amount: p.amount,
+    transaction_date: p.transaction_date,
+    is_tax_deductible: p.is_tax_deductible,
+  };
+}
+
 /* ---------------------------------- */
 /*                HTTP                */
 /* ---------------------------------- */
@@ -324,16 +334,11 @@ export async function createTransaction(
 }
 
 /**
- * Flip once core/views/transaction.py grows a `patch`. Until then the form
- * opens existing rows read-only with Save disabled, so nothing pretends to
- * persist an edit.
- */
-export const CAN_EDIT_TRANSACTIONS = true;
-
-/**
  * PATCH /api/v1/organizations/${org_id}/transactions/${id}/
  *
- * Only called once CAN_EDIT_TRANSACTIONS is true.
+ * Partial update of the editable fields. `entry_type` and `goal_id` are fixed
+ * once a row exists (the backend ignores them on PATCH), so they are left out
+ * of the body rather than sent and silently dropped.
  */
 export async function updateTransaction(
   org_id: number,
@@ -348,7 +353,9 @@ export async function updateTransaction(
       method: "PATCH",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
       credentials: "include",
-      body: JSON.stringify(toPayload(draft, fallbackDescription)),
+      body: JSON.stringify(
+        editableFields(toPayload(draft, fallbackDescription)),
+      ),
     },
   );
   if (res.status === 400) {
