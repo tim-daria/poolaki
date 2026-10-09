@@ -403,7 +403,10 @@ export async function fetchTransactionPage(
   if (f.to) params.set("date_to", f.to);
   if (f.categories.length) params.set("category_id", f.categories.join(","));
   if (f.taxDeductible) params.set("tax_deductible", "true");
-  if (f.page > 1) params.set("page_size", String(PAGE_SIZE));
+  if (f.page > 1) {
+    params.set("page", String(f.page));
+    params.set("page_size", String(PAGE_SIZE));
+  }
 
   const res = await fetch(
     `/api/v1/organizations/${org_id}/transactions/?${params}`,

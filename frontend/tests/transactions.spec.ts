@@ -2,7 +2,7 @@
 /// <reference lib="dom" />
 /**
  * @file Transactions page e2e: tabs, search, sort, filters, pagination and the
- * add/edit modal, against rows posted through the real API.
+ * add/edit/delete modal, against rows posted through the real API.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import {
@@ -419,7 +419,7 @@ test.describe.serial("Transactions", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("clicking a row opens it read-only, prefilled, with Delete", async () => {
+  test("clicking a row opens it prefilled, with Save off until a change", async () => {
     await rows().filter({ hasText: "Ristorante Baldi" }).click();
     const dialog = page.getByRole("dialog");
 
@@ -433,11 +433,7 @@ test.describe.serial("Transactions", () => {
     await expect(dialog.getByLabel("Category")).toHaveText("Food");
     await expect(dialog.getByRole("button", { name: "Delete" })).toBeVisible();
 
-    // No PATCH route yet: fields are locked and Save stays off.
-    await expect(
-      dialog.getByText("Editing is not available yet"),
-    ).toBeVisible();
-    await expect(dialog.getByLabel("Description")).toBeDisabled();
+    await expect(dialog.getByLabel("Description")).toBeEnabled();
     await expect(
       dialog.getByRole("button", { name: "Save changes" }),
     ).toBeDisabled();
@@ -456,7 +452,7 @@ test.describe.serial("Transactions", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("the modal creates and deletes a transaction for real", async () => {
+  test("the modal creates, edits and deletes a transaction for real", async () => {
     await page.getByRole("button", { name: "Add transaction" }).click();
     const dialog = page.getByRole("dialog");
 
@@ -474,6 +470,16 @@ test.describe.serial("Transactions", () => {
     await expect(rows().first()).toContainText("-€12,50");
     await expect(tab("All")).toContainText("25");
 
+    // Edit the row just added, so no fixture row changes for later tests.
+    await rows().first().click();
+    await dialog.getByLabel("Description").fill("Bus ticket");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Transaction updated")).toBeVisible();
+    await expect(rows().first()).toContainText("Bus ticket");
+    await expect(rows().first()).toContainText("-€12,50");
+    await expect(tab("All")).toContainText("25");
+
     await rows().first().click();
     await dialog.getByRole("button", { name: "Delete" }).click();
     await page
@@ -483,7 +489,7 @@ test.describe.serial("Transactions", () => {
     await expect(dialog).toBeHidden();
     await expect(page.getByText("Transaction deleted")).toBeVisible();
 
-    await expect(rows().filter({ hasText: "Tram ticket" })).toHaveCount(0);
+    await expect(rows().filter({ hasText: "Bus ticket" })).toHaveCount(0);
     await expect(tab("All")).toContainText("24");
   });
 
