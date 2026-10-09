@@ -140,6 +140,14 @@ describe("updateTransaction", () => {
     });
   });
 
+  it("leaves the fixed entry_type and goal_id out of the body", async () => {
+    const fetch = stubFetch({ transaction: DTO });
+    await updateTransaction(ORG, ID, draft(), "tok");
+    const body = JSON.parse(fetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty("entry_type");
+    expect(body).not.toHaveProperty("goal_id");
+  });
+
   it("reads the row from the response's transaction key", async () => {
     stubFetch({ transaction: DTO });
 

@@ -438,6 +438,14 @@ test.describe.serial("Transactions", () => {
       dialog.getByRole("button", { name: "Save changes" }),
     ).toBeDisabled();
 
+    // A row keeps its type for life: the switch is off and says why.
+    for (const name of ["Expense", "Income", "Saving"]) {
+      await expect(dialog.getByRole("button", { name })).toBeDisabled();
+    }
+    await expect(
+      dialog.getByText("cannot be edited after creation", { exact: false }),
+    ).toBeVisible();
+
     // Untouched, so Cancel closes without asking.
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
