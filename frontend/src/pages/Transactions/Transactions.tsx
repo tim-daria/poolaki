@@ -13,6 +13,7 @@ import {
   InputAdornment,
   MenuItem,
   Pagination,
+  Paper,
   Stack,
   Tab,
   Table,
@@ -31,12 +32,15 @@ import {
   PageActionButton,
   PageTitle,
 } from "../../components/PageHeader/PageHeader";
-import { fetchTransactions, type Transaction } from "../../lib/transactions";
+import {
+  fetchTransactionPage,
+  type Transaction,
+  type TransactionPage,
+} from "../../lib/transactions";
 import { categoryById } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
 import {
   PAGE_SIZE,
-  applyFilters,
   type Sort,
   type Tab as TabValue,
 } from "../../lib/transactionFilters";
@@ -88,13 +92,20 @@ const activeChipSx = { bgcolor: "primary.light", fontWeight: 500 } as const;
 function Transactions() {
   const org = useCurrentOrg();
   const categories = useCategories();
-  const [rows, setRows] = useState<Transaction[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  type Loaded =
+    { data: TransactionPage; error: null } | { data: null; error: string };
+  const [result, setResult] = useState<Loaded | null>(null);
+  const data = result?.data ?? null;
+  const error = result?.error ?? null;
+  const [version, setVersion] = useState(0);
   const filtersApi = useTransactionFilters();
   const { filters, update, toggleCategory, clear, activeCount } = filtersApi;
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const requestKey = JSON.stringify(filters) + version;
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [loadedKey, setLoadedKey] = useState("");
+  const loading = loadedKey !== requestKey;
 
   /**
    * No reset on a workspace switch: AppLayout keys <main> by orgId, so this
@@ -103,42 +114,23 @@ function Transactions() {
    */
   useEffect(() => {
     const controller = new AbortController();
-    fetchTransactions(org.id, controller.signal)
-      .then(setRows)
+    fetchTransactionPage(org.id, filters, controller.signal)
+      .then((data) => {
+        setResult({ data, error: null });
+        setLoadedKey(requestKey);
+      })
       .catch((e: unknown) => {
         // Aborts come from unmount or org switch, not from a failed request.
         if (controller.signal.aborted) return;
-        setError(
-          e instanceof Error ? e.message : "Failed to load transactions",
-        );
+        setResult({
+          data: null,
+          error: e instanceof Error ? e.message : "Failed to load transactions",
+        });
       });
     return () => controller.abort();
-  }, [org.id]);
+  }, [org.id, filters, version, requestKey]);
 
-  // Filtering runs over every row on the client: the endpoint returns the
-  // workspace's full history and takes no query params yet.
-  const result = rows ? applyFilters(rows, filters, categories) : null;
-
-  /**
-   * The page number is clamped when rows drop below it, so the control has to
-   * follow `result`, not `filters.page`, or it would point past the last page.
-   */
-  const currentPage = result ? Math.min(filters.page, result.pageCount) : 1;
-
-  /** A new row goes on top; an edited one is swapped in place. */
-  function handleSaved(t: Transaction) {
-    setRows((rs) => {
-      // Unreachable while loading: the form only opens once rows exist.
-      if (!rs) return rs;
-      return rs.some((r) => r.id === t.id)
-        ? rs.map((r) => (r.id === t.id ? t : r))
-        : [t, ...rs];
-    });
-  }
-
-  function handleDeleted(id: number) {
-    setRows((rs) => rs?.filter((r) => r.id !== id) ?? rs);
-  }
+  const refresh = () => setVersion((v) => v + 1);
 
   return (
     <Box sx={{ px: 3, pb: 5 }}>
@@ -154,23 +146,18 @@ function Transactions() {
           setAdding(false);
           setEditing(null);
         }}
-        onSaved={handleSaved}
-        onDeleted={handleDeleted}
+        onSaved={refresh}
+        onDeleted={refresh}
       />
 
       {error && <Alert severity="error">{error}</Alert>}
-      {!rows && !error && <CircularProgress />}
+      {!data && !error && <CircularProgress />}
 
-      {result && (
-        <Box
-          sx={{
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            border: "1px solid",
-            borderColor: "divider",
-            overflow: "hidden",
-          }}
-        >
+      {data && (
+        // A container card, no role: the tabs and table inside carry their
+        // own semantics, and the page heading above names it. Zero padding
+        // because the tabs and toolbar pad themselves.
+        <Paper variant="card" sx={{ p: 0, overflow: "hidden" }}>
           {/* -------- Type tabs -------- */}
           <Tabs
             value={filters.tab}
@@ -213,7 +200,7 @@ function Transactions() {
                     {/* Muted pill: the count is secondary to the label and
                         must not read as the selected state. */}
                     <Chip
-                      label={result.counts[t.value]}
+                      label={data.counts[t.value]}
                       size="small"
                       sx={{
                         height: 22,
@@ -337,13 +324,19 @@ function Transactions() {
               categories={categories}
               anchor={filterAnchor}
               onClose={() => setFilterAnchor(null)}
-              matchCount={result.total}
+              matchCount={data.total}
               {...filtersApi}
             />
 
             {/* -------- Table -------- */}
             <Box sx={{ overflowX: "auto" }}>
-              <Table sx={{ minWidth: 560 }}>
+              <Table
+                sx={{
+                  minWidth: 560,
+                  opacity: loading ? 0.6 : 1,
+                  transition: "opacity 150ms",
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell sx={[headCellSx, { width: 120 }]}>
@@ -359,7 +352,7 @@ function Transactions() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {result.page.map((t) => (
+                  {data.rows.map((t) => (
                     <TransactionRow
                       categories={categories}
                       key={t.id}
@@ -374,19 +367,19 @@ function Transactions() {
             {/* Distinguishes an empty workspace from filters that match
                 nothing: the second is the user's own doing and is undone by
                 clearing. */}
-            {result.total === 0 && (
+            {data.total === 0 && (
               <Typography
                 color="text.secondary"
                 sx={{ textAlign: "center", py: 4 }}
               >
-                {rows?.length
-                  ? "No transactions match these filters."
-                  : "No transactions yet."}
+                {activeCount === 0 && filters.q === "" && data.counts.all === 0
+                  ? "No transactions yet."
+                  : "No transactions match these filters."}
               </Typography>
             )}
 
             {/* -------- Footer -------- */}
-            {result.total > 0 && (
+            {data.total > 0 && (
               <Stack
                 direction="row"
                 sx={{
@@ -398,12 +391,12 @@ function Transactions() {
                 }}
               >
                 <Typography color="text.secondary">
-                  Showing {result.page.length} of {result.total}
+                  Showing {data.rows.length} of {data.total}
                 </Typography>
-                {result.total > PAGE_SIZE && (
+                {data.total > PAGE_SIZE && (
                   <Pagination
-                    count={result.pageCount}
-                    page={currentPage}
+                    count={data.page_count}
+                    page={data.page}
                     onChange={(_, page) => update({ page })}
                     shape="rounded"
                     sx={{
@@ -427,7 +420,7 @@ function Transactions() {
               </Stack>
             )}
           </Stack>
-        </Box>
+        </Paper>
       )}
     </Box>
   );

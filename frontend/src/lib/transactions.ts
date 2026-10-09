@@ -328,12 +328,12 @@ export async function createTransaction(
  * opens existing rows read-only with Save disabled, so nothing pretends to
  * persist an edit.
  */
-export const CAN_EDIT_TRANSACTIONS = false;
+export const CAN_EDIT_TRANSACTIONS = true;
 
 /**
  * PATCH /api/v1/organizations/${org_id}/transactions/${id}/
  *
- * Not routed yet: only called once CAN_EDIT_TRANSACTIONS is true.
+ * Only called once CAN_EDIT_TRANSACTIONS is true.
  */
 export async function updateTransaction(
   org_id: number,
@@ -358,7 +358,8 @@ export async function updateTransaction(
     );
   }
   if (!res.ok) throw new Error(`Failed to update transaction (${res.status})`);
-  return fromDTO(await res.json());
+  const body: { transaction: TransactionDTO } = await res.json();
+  return fromDTO(body.transaction);
 }
 
 /** DELETE /api/v1/organizations/${org_id}/transactions/${id}/ */
@@ -405,7 +406,7 @@ export async function fetchTransactionPage(
   if (f.page > 1) params.set("page_size", String(PAGE_SIZE));
 
   const res = await fetch(
-    `/api/v1/organisations/${org_id}/transactions/?${params}`,
+    `/api/v1/organizations/${org_id}/transactions/?${params}`,
     { credentials: "include", signal },
   );
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
