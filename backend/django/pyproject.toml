@@ -12,7 +12,7 @@ dependencies = [
     "requests>=2.32.0",
     "django-prometheus==2.5.0",
     "prometheus-client==0.25.0",
-	"python-dotenv>=1.2.3",
+    "python-dotenv>=1.2.3",
 ]
 
 [dependency-groups]
@@ -24,6 +24,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-django>=4.12.0",
     "ruff>=0.15.20",
+    "types-requests>=2.33.0.20261006",
 ]
 
 [tool.ruff]

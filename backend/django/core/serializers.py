@@ -297,3 +297,7 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
             "name",
             "type",
         )
+
+
+class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
+    question = serializers.CharField(min_length=1, max_length=1000, trim_whitespace=True)
