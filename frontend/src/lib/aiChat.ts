@@ -11,16 +11,21 @@ export type ChatMessage = {
   content: string;
 };
 
-/** A 400 whose message belongs in the chat, as opposed to a network failure. */
+/** HTTP failure with a user-facing message, as opposed to a network failure. */
 export class AiChatError extends Error {}
 
 /** Shown when the assistant itself is down (ai-service's 503), not a bad request. */
 export const ASSISTANT_UNAVAILABLE =
   "The assistant is unavailable right now. Please try again in a moment.";
 
-/** 429 fallback when Django's throttle body carries no usable message. */
-const TOO_MANY_REQUESTS =
+/** Fixed 429 copy; DRF's throttle detail is server-side wording. */
+export const TOO_MANY_REQUESTS =
   "You are asking the assistant too fast. Wait a moment and try again.";
+
+/** Fixed 400 copy; Django's field wording ("This field may not be blank.")
+ * is meaningless in a chat bubble, and the client pre-checks the same rules. */
+export const INVALID_QUESTION =
+  "Your question could not be processed. Please check it and try again.";
 
 /**
  * POST /api/v1/organizations/${org_id}/chat/ with { question }; expects
@@ -64,7 +69,10 @@ export async function askAssistant(
 /** Maps a failed chat response to a user-facing message. */
 export function chatErrorMessage(status: number, body: unknown): string {
   if (status === 503) return ASSISTANT_UNAVAILABLE;
-  if (status === 429) return firstErrorMessage(body) ?? TOO_MANY_REQUESTS;
+  // 429 deliberately ignores the body: DRF's default "Request was throttled."
+  // detail is server-side wording, not user copy.
+  if (status === 429) return TOO_MANY_REQUESTS;
+  if (status === 400) return INVALID_QUESTION;
   return (
     firstErrorMessage(body) ??
     "Could not reach the assistant. Please try again."
