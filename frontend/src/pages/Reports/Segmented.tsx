@@ -6,7 +6,11 @@ type SegmentedProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: SegmentedProps<T>) {
   return (
     <ToggleButtonGroup
       exclusive
@@ -16,7 +20,11 @@ export function Segmented<T extends string>({ options, value, onChange }: Segmen
       sx={{ "@media print": { display: "none" } }}
     >
       {options.map((o) => (
-        <ToggleButton key={o.value} value={o.value} sx={{ textTransform: "none", px: 1.5, py: 0.5 }}>
+        <ToggleButton
+          key={o.value}
+          value={o.value}
+          sx={{ textTransform: "none", px: 1.5, py: 0.5 }}
+        >
           {o.label}
         </ToggleButton>
       ))}

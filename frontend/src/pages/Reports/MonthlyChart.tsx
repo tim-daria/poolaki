@@ -23,7 +23,12 @@ type MonthlyChartProps = {
   sx?: object; // lets the parent control spacing (e.g. mb) without this file knowing the layout
 };
 
-export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChartProps) {
+export function MonthlyChart({
+  monthly,
+  year,
+  savingsByMonth,
+  sx,
+}: MonthlyChartProps) {
   const [view, setView] = useState<MonthView>("IncomeExpenses");
 
   // Null for past years, where every month is "complete"
@@ -49,7 +54,9 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
   }));
 
   // Axis maximum computed from the data instead of a fixed number
-  const axisMax = niceMax(Math.max(0, ...bars.flatMap((b) => b.values.map((v) => v.value))));
+  const axisMax = niceMax(
+    Math.max(0, ...bars.flatMap((b) => b.values.map((v) => v.value))),
+  );
   const axisTicks = [axisMax, axisMax / 2, 0];
 
   // Average line: Savings tab only, and only over months already elapsed
@@ -79,7 +86,14 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
         ...sx,
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
         <Typography variant="h6" sx={{ fontWeight: "bold" }}>
           By month
         </Typography>
@@ -95,9 +109,21 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
 
       <Box sx={{ display: "flex", gap: 1 }}>
         {/* Y axis labels */}
-        <Box sx={{ height: 200, display: "flex", flexDirection: "column", justifyContent: "space-between", width: 72 }}>
+        <Box
+          sx={{
+            height: 200,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            width: 72,
+          }}
+        >
           {axisTicks.map((tick) => (
-            <Typography key={tick} variant="caption" sx={{ color: "text.secondary", lineHeight: 1 }}>
+            <Typography
+              key={tick}
+              variant="caption"
+              sx={{ color: "text.secondary", lineHeight: 1 }}
+            >
               {tick === 0 ? "0" : eur(tick)}
             </Typography>
           ))}
@@ -110,7 +136,14 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
             {[0, 50, 100].map((pos) => (
               <Box
                 key={pos}
-                sx={{ position: "absolute", left: 0, right: 0, top: `${pos}%`, borderTop: "1px solid", borderColor: "divider" }}
+                sx={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: `${pos}%`,
+                  borderTop: "1px solid",
+                  borderColor: "divider",
+                }}
               />
             ))}
 
@@ -126,13 +159,29 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
                   borderColor: "text.secondary",
                 }}
               >
-                <Typography variant="caption" sx={{ position: "absolute", right: 0, bottom: 2, color: "text.secondary" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: "absolute",
+                    right: 0,
+                    bottom: 2,
+                    color: "text.secondary",
+                  }}
+                >
                   avg {eur(Math.round(average))}
                 </Typography>
               </Box>
             )}
 
-            <Box sx={{ position: "relative", height: "100%", display: "flex", alignItems: "flex-end", gap: 2 }}>
+            <Box
+              sx={{
+                position: "relative",
+                height: "100%",
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 2,
+              }}
+            >
               {bars.map((b) => {
                 const isCurrent = b.month === currentMonth;
                 const tallest = Math.max(...b.values.map((v) => v.value));
@@ -191,11 +240,16 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
                 sx={{
                   flex: 1,
                   textAlign: "center",
-                  color: b.month === currentMonth ? "text.primary" : "text.secondary",
+                  color:
+                    b.month === currentMonth
+                      ? "text.primary"
+                      : "text.secondary",
                   fontWeight: b.month === currentMonth ? "bold" : "normal",
                 }}
               >
-                {new Date(year, b.month - 1).toLocaleString("en", { month: "short" })}
+                {new Date(year, b.month - 1).toLocaleString("en", {
+                  month: "short",
+                })}
               </Typography>
             ))}
           </Box>
@@ -203,8 +257,18 @@ export function MonthlyChart({ monthly, year, savingsByMonth, sx }: MonthlyChart
           {/* Legend */}
           <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
             {legend.map((item) => (
-              <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: item.color }} />
+              <Box
+                key={item.label}
+                sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: item.color,
+                  }}
+                />
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
                   {item.label}
                 </Typography>

@@ -37,10 +37,10 @@ export async function fetchYearlyReport(
       signal,
     },
   );
-  
+
   if (!res.ok) {
     throw new Error(`Failed to load yearly report (${res.status})`);
   }
-  
+
   return res.json();
 }
