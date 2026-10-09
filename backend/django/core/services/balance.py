@@ -26,7 +26,10 @@ def calculate_org_balance(org: Organization) -> Decimal:
             Decimal("0"),
         ),
         expense=Coalesce(
-            Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)),
+            Sum(
+                "amount",
+                filter=Q(entry_type=EntryType.EXPENSE, goal__isnull=True),
+            ),
             Decimal("0"),
         ),
         contribution=Coalesce(
