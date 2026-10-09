@@ -177,11 +177,12 @@ Status:
 
 ## Frontend integration notes
 
-The list endpoint is the only one whose contract changed; the frontend
-consumes it through `fetchTransactions` (`frontend/src/lib/transactions.ts`)
-and, while it filters, counts, and pages client-side, with a stopgap:
+The Transactions page consumes the list endpoint through
+`fetchTransactionPage` (`frontend/src/lib/transactions.ts`): it sends the
+active filters (`entry_type`, `q`, `date_from`, `date_to`, `category_id`,
+`tax_deductible`, `sort`) and `page` / `page_size` as query parameters,
+renders the pager from `total` / `page_count`, and takes the tab badges from
+`counts`. Only parameters that differ from the backend defaults are sent.
 
-- planned migration: send the active filters (`entry_type`, `date_from`,
-  `date_to`, `category_id`, `goal_id`, `tax_deductible`, `sort`) and
-  `page` / `page_size` as query parameters, render the pager from
-  `total` / `page_count`, and take the tab badges from `counts`
+The Home page still loads a workspace's history unfiltered through
+`fetchTransactions` in the same module.
