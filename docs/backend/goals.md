@@ -430,8 +430,11 @@ Response example:
   "created_at": "2026-08-20T10:40:28.139486+02:00"
 }
 ```
+All organization members can make a withdrawal.
 
-Only the organization owner and the goal creator can make a withdrawal.
+TODO:
+    Only the organization owner and the goal creator can make a withdrawal.
+    Add access rights check to `Make transaction` endpoint for requests with "entry_type": "withdraw"
 
 Status:
 
@@ -459,7 +462,8 @@ Request body:
 
 ```json
 {
-  "goal_id": 1
+  "goal_id": 1,
+  "category_id": 2,
   "entry_type": "expense",
   "amount": "250.00",
   "description": "New bike",
@@ -474,7 +478,7 @@ Response example:
   "id": 3,
   "org_id": 2,
   "goal_id": 1,
-  "category_id": null,
+  "category_id": 2,
   "entry_type": "expense",
   "amount": "250.00",
   "description": "New bike",
