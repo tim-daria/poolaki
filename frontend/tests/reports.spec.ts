@@ -38,7 +38,9 @@ test.describe.serial("Reports", () => {
 
   test("shows an empty state when there are no categories", async () => {
     await expect(page.getByText(/Share of all expenses/)).toBeVisible();
-    await expect(page.getByText("No data available for this view.")).toBeVisible();
+    await expect(
+      page.getByText("No data available for this view."),
+    ).toBeVisible();
   });
 
   test("switches the Categories tab between Expenses, Income and Savings", async () => {
@@ -56,7 +58,10 @@ test.describe.serial("Reports", () => {
   });
 
   test("switches the By month tab to Savings", async () => {
-    await page.getByRole("button", { name: "Savings", exact: true }).first().click();
+    await page
+      .getByRole("button", { name: "Savings", exact: true })
+      .first()
+      .click();
     await expect(page.getByText("Saved per month")).toBeVisible();
   });
 });
