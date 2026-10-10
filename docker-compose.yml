@@ -73,6 +73,8 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      AI_SERVICE_TIMEOUT: ${AI_SERVICE_TIMEOUT}
     volumes:
       - ./backend/django:/app
       - type: volume
@@ -400,7 +402,7 @@ services:
     - vault_init:/vault/secure/
     - vault_id:/vault/secure/id
     - vault_agent:/vault/agent/secrets
-    env_file: 
+    env_file:
     - .env
     environment:
       TZ: Europe/Berlin

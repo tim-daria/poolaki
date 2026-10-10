@@ -27,6 +27,7 @@ The app also exposes the following project-level routes:
 | Organization | list / create / personal initial balance / members | [docs/backend/organizations.md](../docs/backend/organizations.md) |
 | Invitations | list / invite / cancel (owner-only) + accept / decline / my-invitations (invited user) | [docs/backend/organizations.md](../docs/backend/organizations.md) |
 | Notifications | list my notifications / unread badge count / clear-all (mark shown notifications as read) | [docs/backend/notifications.md](../docs/backend/notifications.md) |
+| AI chat | `POST /organizations/{org_id}/chat/` — ask the assistant a question about this organization's data | — |
 | Health | `GET /health/` returns `{"status": "ok"}` (used by Docker healthchecks and CI) | — |
 | Metrics | `GET /metrics` for Prometheus | [docs/backend/monitoring.md](../docs/backend/monitoring.md) |
 
@@ -42,13 +43,15 @@ The API generally returns:
 - `201 Created` for successful creation
 - `400 Bad Request` for invalid input or business-rule violations
 - `403 Forbidden` for permission errors
+- `429 Too Many Requests` when a rate limit is exceeded (AI chat: 5 requests/minute per user)
 - `500 Internal Server Error` for unexpected backend failures
+- `503 Service Unavailable` when the AI assistant cannot answer (AI service down, timeout, or malformed response)
 
-Typical error object:
+Application-level errors use this shape:
 
 ```json
 {
-  "error": "Some descriptive message"
+  "errors": ["Some descriptive message"]
 }
 ```
 
@@ -61,6 +64,10 @@ Typical error object:
 - `core/models.py` — database models for users, organizations, memberships, invitations, transactions, goals, and notifications
 - `core/serializers.py` — input validation for request payloads
 - `core/urls.py` — API routing
+
+### AI service configuration
+
+`core/services/ai_chat.py` reads `AI_SERVICE_URL` and `AI_SERVICE_TIMEOUT` from the environment at import time; without them the app fails to start.
 
 ## Monitoring
 

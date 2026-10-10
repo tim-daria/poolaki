@@ -61,6 +61,10 @@ jobs:
       DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
+      # Read at import time by core/services/ai_chat.py (strict env contract);
+      # manage.py check/migrate/runserver all load the chat view.
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_TIMEOUT: "90"
     steps:
       - uses: actions/checkout@v4
 
@@ -204,7 +208,7 @@ jobs:
       - name: Create .env for CI
         working-directory: .
         run: |
-          cat > .env << EOF 
+          cat > .env << EOF
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
@@ -229,6 +233,8 @@ jobs:
           DJANGO_BASE_URL=http://django:8000
           LOG_LEVEL=Warning
           LLM_TIMEOUT=30
+          AI_SERVICE_URL: http://ai-service:8000
+          AI_SERVICE_TIMEOUT: "90"
           EOF
 
       - name: Create optional AI service env for CI

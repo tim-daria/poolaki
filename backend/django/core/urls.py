@@ -1,5 +1,6 @@
 from django.urls import path
 
+from core.views.ai_chat import AiChatView
 from core.views.category import (
     CategoryListCreateView,
     CategoryReadUpdateDeleteView,
@@ -125,5 +126,11 @@ urlpatterns = [
         "notifications/clear-all/",
         MarkAllNotificationsReadView.as_view(),
         name="notification-clear-all",
+    ),
+    # Chat
+    path(
+        "organizations/<int:org_id>/chat/",
+        AiChatView.as_view(),
+        name="ai-chat",
     ),
 ]
