@@ -81,6 +81,8 @@ Mandatory parameters:
 - `entry_type` (`income`, `expense`, `contribution`, `withdraw`)
 - `amount`
 - `transaction_date` (YYYY-MM-DD)
+- `category_id` — required for `income` and `expense`; `contribution` may be
+  uncategorized
 
 Request body:
 
