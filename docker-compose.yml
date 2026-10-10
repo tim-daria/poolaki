@@ -100,7 +100,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
     container_name: postgres_db
     restart: unless-stopped
     volumes:
@@ -331,6 +331,7 @@ services:
       - "8000"
     environment:
       PYTHONPATH: .
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
       DJANGO_BASE_URL: ${DJANGO_BASE_URL}
