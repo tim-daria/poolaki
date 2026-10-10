@@ -2,8 +2,8 @@
 
 The project includes Prometheus monitoring infrastructure, and the service is typically available via:
 
-- Prometheus: `https://prometheus.localhost`
-- Grafana: `https://grafana.localhost`
+- Prometheus: `http://prometheus.localhost`
+- Grafana: `http://grafana.localhost`
 
 along with related local monitoring endpoints defined in the stack configuration.
 
