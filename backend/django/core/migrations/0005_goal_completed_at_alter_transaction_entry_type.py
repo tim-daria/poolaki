@@ -20,4 +20,9 @@ class Migration(migrations.Migration):
             name='entry_type',
             field=models.CharField(choices=[('income', 'Income'), ('expense', 'Expense'), ('contribution', 'Contribution'), ('withdraw', 'Withdraw')], max_length=20),
         ),
+        migrations.AlterField(
+            model_name='goal',
+            name='target_date',
+            field=models.DateField(default=None, null=True),
+        ),
     ]
