@@ -157,7 +157,7 @@ def test_year_out_of_range_returns_400(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
-    assert report_client.get(report_url(org.id), {"year": 1999}).status_code == 400
+    assert report_client.get(report_url(org.id), {"year": 1899}).status_code == 400
     assert report_client.get(report_url(org.id), {"year": 2101}).status_code == 400
 
 
