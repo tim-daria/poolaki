@@ -100,7 +100,7 @@ def test_owner_can_archive_goal_and_return_remaining_balance(
         entry_type="withdraw",
         amount=Decimal("125.50"),
     ).exists()
-    assert response.data["goal"]["saved_amount"] == "0.00"
+    assert response.data["goal"]["balance"] == "0.00"
 
 
 def test_goal_update_requires_owner_or_creator(
@@ -172,3 +172,60 @@ def test_goal_balance_uses_contribution_transactions(
 
     assert response.status_code == 200
     assert response.data["balance"] == "75.00"
+
+
+def test_goal_response_includes_progress_overdue_and_spendable(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("150.00"),
+        target_date=date(2026, 10, 9),
+        status=GoalStatus.ACTIVE,
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        entry_type="contribution",
+        amount=Decimal("75.00"),
+        transaction_date=date(2026, 10, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(goal_url(shared_org.id, goal.id))
+
+    assert response.status_code == 200
+    assert response.data["goal"]["progress"] == "0.50"
+    assert response.data["goal"]["overdue"] is True
+    assert response.data["goal"]["spendable"] is False
+
+
+def test_completed_or_undated_active_goals_are_spendable(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    completed_goal = Goal.objects.create(
+        org=shared_org,
+        name="Completed",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        status=GoalStatus.COMPLETED,
+        created_by=owner,
+    )
+    undated_goal = Goal.objects.create(
+        org=shared_org,
+        name="Flexible",
+        target_amount=Decimal("100.00"),
+        target_date=None,
+        status=GoalStatus.ACTIVE,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    completed_response = api_client.get(goal_url(shared_org.id, completed_goal.id))
+    undated_response = api_client.get(goal_url(shared_org.id, undated_goal.id))
+
+    assert completed_response.data["goal"]["spendable"] is True
+    assert undated_response.data["goal"]["spendable"] is True
