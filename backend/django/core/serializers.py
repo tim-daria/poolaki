@@ -224,16 +224,40 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         category = attrs.get("category_id")
         entry_type = attrs["entry_type"]
+        goal = attrs.get("goal_id")
 
         if isinstance(category, Category) and category.type != entry_type:
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
             )
 
-        if attrs.get("goal_id") is not None and entry_type == EntryType.INCOME:
+        if goal is not None and entry_type == EntryType.INCOME:
             raise serializers.ValidationError(
                 {"goal_id": ("Goal cannot be set on an income transaction.")}
             )
+
+        goal_entry_types = {EntryType.CONTRIBUTION, EntryType.WITHDRAW}
+        if entry_type in goal_entry_types and goal is None:
+            raise serializers.ValidationError(
+                {"goal_id": ("A goal is required for this transaction type.")}
+            )
+
+        if isinstance(goal, Goal):
+            if entry_type == EntryType.CONTRIBUTION and goal.status != GoalStatus.ACTIVE:
+                raise serializers.ValidationError(
+                    {"goal_id": ("Contributions can only be made to active goals.")}
+                )
+            if entry_type == EntryType.WITHDRAW and goal.status != GoalStatus.ACTIVE:
+                raise serializers.ValidationError(
+                    {"goal_id": ("Withdrawals can only be made from active goals.")}
+                )
+            if entry_type == EntryType.EXPENSE and not (
+                goal.status == GoalStatus.COMPLETED
+                or (goal.status == GoalStatus.ACTIVE and goal.target_date is None)
+            ):
+                raise serializers.ValidationError(
+                    {"goal_id": ("Expenses can only be made against completed or permanent goals.")}
+                )
 
         return attrs
 

@@ -8,6 +8,7 @@ from core.models import (
     Category,
     CategoryType,
     Goal,
+    GoalStatus,
     Membership,
     Notification,
     NotificationType,
@@ -146,7 +147,7 @@ def test_create_transaction_accepts_goal_on_expense(
         org=shared_org,
         name="Trip",
         target_amount=Decimal("1000.00"),
-        target_date="2026-12-31",
+        target_date=None,
     )
     api_client.force_authenticate(user=owner)
 
@@ -156,6 +157,105 @@ def test_create_transaction_accepts_goal_on_expense(
 
     assert response.status_code == 201
     assert Transaction.objects.get(id=response.data["id"]).goal_id == goal.id
+
+
+def test_member_can_make_contribution_to_active_goal(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="contribution", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).entry_type == "contribution"
+
+
+def test_member_can_make_withdrawal_from_active_goal(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="withdraw", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).entry_type == "withdraw"
+
+
+@pytest.mark.parametrize(
+    ("entry_type", "status", "target_date"),
+    [
+        ("contribution", GoalStatus.COMPLETED, "2026-12-31"),
+        ("withdraw", GoalStatus.COMPLETED, "2026-12-31"),
+        ("expense", GoalStatus.ACTIVE, "2026-12-31"),
+        ("expense", GoalStatus.ARCHIVED, None),
+    ],
+)
+def test_goal_transaction_rejects_invalid_goal_state(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    entry_type: str,
+    status: str,
+    target_date: str | None,
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date=target_date,
+        status=status,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type=entry_type, goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
+@pytest.mark.parametrize("entry_type", ["contribution", "withdraw"])
+def test_goal_transaction_requires_goal(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    entry_type: str,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type=entry_type, goal_id=None),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["goal_id"] == ["A goal is required for this transaction type."]
 
 
 def test_create_transaction_rejects_goal_on_income(

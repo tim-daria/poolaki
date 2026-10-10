@@ -31,8 +31,7 @@ For all organization members:
 Only for the organization owner and the goal creator:
 
 - **Update goal** — Change a goal's name, target amount, or target date.
-- **Change goal status** — Complete or archive a goal according to its lifecycle.
-- **Make withdrawal** — Remove funds from an active goal.
+- **Change goal status** — Complete or archive a goal according to its lifecycle. Any organization member can make a withdrawal.
 
 Operations available for **All** goals:
 
@@ -373,6 +372,7 @@ Response example:
   "created_by": "alice",
   "created_at": "2026-08-20T10:40:28.139486+02:00"
 }
+```
 
 All organization members can make contributions.
 
@@ -431,10 +431,6 @@ Response example:
 }
 ```
 All organization members can make a withdrawal.
-
-TODO:
-    Only the organization owner and the goal creator can make a withdrawal.
-    Add access rights check to `Make transaction` endpoint for requests with "entry_type": "withdraw"
 
 Status:
 
