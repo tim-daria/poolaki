@@ -64,3 +64,19 @@ To add or change fields, run on of the commands *<u>with the complete set of key
 - Select Save.
 
 The UI creates a new version when you save changes to an existing KV v2 secret.
+
+## Read the vault values
+(Only for test and debugging)
+
+To read your credentials you can login to the vault UI under
+
+`http://localhost:8200/ui/vault/auth`
+
+Choose "Token" as login method and use the value you get with the following command.
+
+```
+docker compose exec vault jq -r '.root_token' /vault/secure/vault-init.json
+```
+
+Or you can use the script to read all credentials with `./vault/read_vault.sh`
+It will show the status of the vault, all stored credentials and the root token in your terminal.
