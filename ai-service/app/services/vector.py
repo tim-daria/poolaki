@@ -1,7 +1,6 @@
 from typing import Any
 
 import asyncpg
-from fastapi import HTTPException
 
 
 class VectorRepository:
@@ -18,17 +17,6 @@ class VectorRepository:
         metadata: dict[str, Any] | None = None,
     ) -> str:
         """Saves a text chunk along with its vector embedding and optional metadata into the database."""
-
-        if not content or not content.strip():
-            raise HTTPException(
-                status_code=400, detail="Chunk content cannot be empty or blank."
-            )
-
-        if not embedding:
-            raise HTTPException(
-                status_code=400, detail="Embedding vector cannot be empty."
-            )
-
         query = """
             INSERT INTO chunks (document_id, content, embedding, metadata)
             VALUES ($1, $2, $3::vector, $4)
@@ -38,17 +26,6 @@ class VectorRepository:
         meta_value = metadata if metadata is not None else {}
         # vector_str converts the list of floats (embedding) into a vector text format compatible with pgvector.
         vector_str = "[" + ",".join(map(str, embedding)) + "]"
-
-        try:
-            async with self._pool.acquire() as connection:
-                chunk_id = await connection.fetchval(
-                    query, document_id, content, vector_str, meta_value
-                )
-                return str(chunk_id)
-        except asyncpg.PostgresError as e:
-            raise HTTPException(
-                status_code=500, detail=f"Database error while saving chunk: {e}"
-            )
 
         async with self._pool.acquire() as connection:
             chunk_id = await connection.fetchval(
@@ -62,12 +39,6 @@ class VectorRepository:
         limit: int = 5,
     ) -> list[dict[str, Any]]:
         """Searches for the most similar chunks to the query embedding using pgvector and returns a list with their similarity score."""
-
-        if not query_embedding:
-            raise HTTPException(
-                status_code=400, detail="Query embedding vector cannot be empty."
-            )
-
         # similarity measures how close the vectors are; higher values indicate greater semantic match.
         query = """
             SELECT id, document_id, content, metadata,
@@ -77,27 +48,6 @@ class VectorRepository:
             LIMIT $2;
         """
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
-
-        try:
-            async with self._pool.acquire() as connection:
-                rows = await connection.fetch(query, vector_str, limit)
-
-                results = []
-                for row in rows:
-                    results.append(
-                        {
-                            "id": str(row["id"]),
-                            "document_id": row["document_id"],
-                            "content": row["content"],
-                            "metadata": row["metadata"],
-                            "similarity": row["similarity"],
-                        }
-                    )
-                return results
-        except asyncpg.PostgresError as e:
-            raise HTTPException(
-                status_code=500, detail=f"Database error during similarity search: {e}"
-            )
 
         async with self._pool.acquire() as connection:
             rows = await connection.fetch(query, vector_str, limit)
@@ -122,13 +72,6 @@ class VectorRepository:
         embedding: list[float] | None = None,
     ) -> bool:
         """Conditionally updates the text content or vector embedding of an existing chunk."""
-
-        if content is None and embedding is None:
-            raise HTTPException(
-                status_code=400,
-                detail="At least one field (content or embedding) must be provided for update.",
-            )
-
         async with self._pool.acquire() as connection:
             if content is not None:
                 await connection.execute(

@@ -1,12 +1,16 @@
-# CI override — strips Caddy and monitoring, exposes ports to the host.
+# CI override — strips monitoring and the tunnel, exposes ports to the host.
 # Used via COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml
+#
+# Caddy stays up. It carries the Coraza WAF, and a rule there can break the
+# app without any application code changing: the OWASP CRS default method
+# policy once rejected every DELETE, which killed logout and member removal
+# while the tests — running straight against Vite — stayed green. The base
+# file already publishes it on 8080, and it serves plain HTTP (auto_https is
+# off), so there is no certificate for Chromium to reject.
 
 services:
 
   cloudflared:
-    profiles: [donotstart]
-
-  caddy:
     profiles: [donotstart]
 
   prometheus:
@@ -23,15 +27,6 @@ services:
 
   db_backup:
     profiles: [donotstart]
-
-  ai-service:
-    profiles: [donotstart]
-
-  db:
-    environment:
-      POSTGRES_USER: ci_user
-      POSTGRES_PASSWORD: ci_password
-      POSTGRES_DB: ci_db
 
   frontend:
     ports:

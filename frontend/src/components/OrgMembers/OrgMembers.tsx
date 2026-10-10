@@ -3,8 +3,10 @@
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { useEffect, useState } from "react";
 import {
+  MAX_MEMBERS,
   type Member,
   type PendingInvitation,
+  byRoleThenJoined,
   fetchMembers,
   fetchPendingInvitations,
 } from "../../lib/organizations";
@@ -21,25 +23,6 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
-
-/**
- * Mirrors MAX_MEMBERS_PER_ORG in core/services/organization.py. Duplicated
- * rather than fetched: the backend enforces it regardless, so the worst a
- * drift can do here is offer an invite that comes back rejected.
- */
-const MAX_MEMBERS = 5;
-
-/**
- * Owners first, then by join date.
- *
- * The endpoint returns memberships in no particular order, and AvatarGroup
- * hides everything past `max` behind a surplus counter — without this the
- * owner can be the one that gets hidden.
- */
-function byRoleThenJoined(a: Member, b: Member): number {
-  if (a.role !== b.role) return a.role === "owner" ? -1 : 1;
-  return a.joined_at.localeCompare(b.joined_at);
-}
 
 export function OrgMembers() {
   const org = useCurrentOrg();
