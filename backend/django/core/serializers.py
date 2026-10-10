@@ -63,7 +63,11 @@ class GoalCreateSerializer(serializers.Serializer[Goal]):
         decimal_places=2,
         min_value=Decimal("0.01"),
     )
-    target_date = serializers.DateField()
+    target_date = serializers.DateField(
+        required=False,
+        allow_null=True,
+        default=None,
+    )
 
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         org_id = self.context.get("org_id")
@@ -75,12 +79,13 @@ class GoalCreateSerializer(serializers.Serializer[Goal]):
             )
 
         target_date = attrs["target_date"]
-        if not isinstance(target_date, date):
-            raise serializers.ValidationError({"target_date": "Invalid target date."})
-        if target_date < date.today():
-            raise serializers.ValidationError(
-                {"target_date": "Target date must be today or in the future."}
-            )
+        if target_date is not None:
+            if not isinstance(target_date, date):
+                raise serializers.ValidationError({"target_date": "Invalid target date."})
+            if target_date < date.today():
+                raise serializers.ValidationError(
+                    {"target_date": "Target date must be today or in the future."}
+                )
 
         return attrs
 
@@ -144,7 +149,10 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
         allow_null=True,
         read_only=True,
     )
-    saved_amount = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+    overdue = serializers.SerializerMethodField()
+    spendable = serializers.SerializerMethodField()
 
     class Meta:
         model = Goal
@@ -157,11 +165,33 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
             "status",
             "created_by",
             "created_at",
-            "saved_amount",
+            "balance",
+            "progress",
+            "overdue",
+            "spendable",
         )
 
-    def get_saved_amount(self, goal: Goal) -> str:
-        return str(calculate_goal_balance(goal.org, goal))
+    def _get_goal_balance(self, goal: Goal) -> Decimal:
+        cache = getattr(self, "_goal_balance_cache", {})
+        if goal.pk not in cache:
+            cache[goal.pk] = calculate_goal_balance(goal.org, goal)
+            self._goal_balance_cache = cache
+        return Decimal(cache[goal.pk])
+
+    def get_balance(self, goal: Goal) -> str:
+        return str(self._get_goal_balance(goal))
+
+    def get_progress(self, goal: Goal) -> str:
+        progress = self._get_goal_balance(goal) / goal.target_amount
+        return str(progress.quantize(Decimal("0.01")))
+
+    def get_overdue(self, goal: Goal) -> bool:
+        return goal.target_date is not None and date.today() > goal.target_date
+
+    def get_spendable(self, goal: Goal) -> bool:
+        return goal.status == GoalStatus.COMPLETED or (
+            goal.status == GoalStatus.ACTIVE and goal.target_date is None
+        )
 
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):

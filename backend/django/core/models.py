@@ -112,7 +112,7 @@ class Goal(models.Model):
     org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="goals")
     name = models.CharField(max_length=100)
     target_amount = models.DecimalField(max_digits=14, decimal_places=2)
-    target_date = models.DateField()
+    target_date = models.DateField(null=True)
     status = models.CharField(max_length=20, choices=GoalStatus.choices, default=GoalStatus.ACTIVE)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_goals"
