@@ -1,7 +1,7 @@
 from typing import Any
-from fastapi import HTTPException
 
 import asyncpg
+from fastapi import HTTPException
 
 
 class VectorRepository:
