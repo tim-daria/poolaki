@@ -1,4 +1,5 @@
 from typing import Any
+from fastapi import HTTPException
 
 import asyncpg
 
@@ -16,6 +17,11 @@ class VectorRepository:
         embedding: list[float],
         metadata: dict[str, Any] | None = None,
     ) -> str:
+        if not content or not content.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Chunk content cannot be empty",
+        )
         """Saves a text chunk along with its vector embedding and optional metadata into the database."""
         query = """
             INSERT INTO chunks (document_id, content, embedding, metadata)
