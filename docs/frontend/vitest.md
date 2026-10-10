@@ -78,8 +78,7 @@ mapping. Current coverage:
 | Module | Under test |
 | --- | --- |
 | `lib/money` | typed and pasted amount parsing, display, validation |
-| `lib/transactionFilters` | `matchesFilters`, `countByTab`, `sortTransactions`, `applyFilters` |
-| `lib/transactions` | `toDraft`, `changeType`, `validateDraft`, `describeProblem`, wire format |
+| `lib/transactions` | `toDraft`, `changeType`, `validateDraft`, `describeProblem`, wire format, `fetchTransactionPage` and `updateTransaction` against a stubbed `fetch` |
 | `lib/goals` | `goalById`, `validateGoalDraft` |
 | `lib/authErrors` | `authErrorMessage`, `redirectErrorMessage` |
 | `lib/categories`, `lib/date`, `lib/initials`, `lib/text`, `lib/avatarColor` | lookup and formatting helpers |

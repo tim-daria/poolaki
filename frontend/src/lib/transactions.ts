@@ -3,12 +3,16 @@
  *
  * `fromDTO` and `toPayload` convert foreign key IDs (category_id, goal_id)
  * and string amounts to internal client models.
- * `updateTransaction` waits on a backend PATCH route; see CAN_EDIT_TRANSACTIONS.
  */
 
 import { TODAY } from "./date";
 import { parseMoney, toMoneyString, validateAmount } from "./money";
 import { formatName } from "./text";
+import {
+  PAGE_SIZE,
+  type Tab,
+  type TransactionFilters,
+} from "./transactionFilters";
 
 /** "contribution" is a transfer to a goal: it carries a goal and "Savings" category by default. */
 export type EntryType = "income" | "expense" | "contribution";
@@ -48,6 +52,16 @@ type TransactionDTO = {
   /** Username, not an ID. */
   created_by: string | null;
   created_at: string;
+};
+
+/** Mirrors the GET response in TransactionListCreateView */
+export type TransactionPage = {
+  /** transactions -> rows */
+  rows: Transaction[];
+  total: number;
+  page: number;
+  page_count: number;
+  counts: Record<Tab, number>;
 };
 
 /**
@@ -190,6 +204,17 @@ function toPayload(draft: TransactionDraft, fallbackDescription = "") {
   };
 }
 
+/** The subset of the request body that PATCH accepts: everything but the fixed entry_type and goal_id. */
+function editableFields(p: ReturnType<typeof toPayload>) {
+  return {
+    category_id: p.category_id,
+    description: p.description,
+    amount: p.amount,
+    transaction_date: p.transaction_date,
+    is_tax_deductible: p.is_tax_deductible,
+  };
+}
+
 /* ---------------------------------- */
 /*                HTTP                */
 /* ---------------------------------- */
@@ -309,16 +334,11 @@ export async function createTransaction(
 }
 
 /**
- * Flip once core/views/transaction.py grows a `patch`. Until then the form
- * opens existing rows read-only with Save disabled, so nothing pretends to
- * persist an edit.
- */
-export const CAN_EDIT_TRANSACTIONS = false;
-
-/**
  * PATCH /api/v1/organizations/${org_id}/transactions/${id}/
  *
- * Not routed yet: only called once CAN_EDIT_TRANSACTIONS is true.
+ * Partial update of the editable fields. `entry_type` and `goal_id` are fixed
+ * once a row exists (the backend ignores them on PATCH), so they are left out
+ * of the body rather than sent and silently dropped.
  */
 export async function updateTransaction(
   org_id: number,
@@ -333,7 +353,9 @@ export async function updateTransaction(
       method: "PATCH",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
       credentials: "include",
-      body: JSON.stringify(toPayload(draft, fallbackDescription)),
+      body: JSON.stringify(
+        editableFields(toPayload(draft, fallbackDescription)),
+      ),
     },
   );
   if (res.status === 400) {
@@ -343,7 +365,8 @@ export async function updateTransaction(
     );
   }
   if (!res.ok) throw new Error(`Failed to update transaction (${res.status})`);
-  return fromDTO(await res.json());
+  const body: { transaction: TransactionDTO } = await res.json();
+  return fromDTO(body.transaction);
 }
 
 /** DELETE /api/v1/organizations/${org_id}/transactions/${id}/ */
@@ -369,4 +392,48 @@ export async function deleteTransaction(
     );
   }
   if (!res.ok) throw new Error(`Failed to delete transaction (${res.status})`);
+}
+
+/** GET /api/v1/organizations/${org_id}/transactions/?… */
+export async function fetchTransactionPage(
+  org_id: number,
+  f: TransactionFilters,
+  signal?: AbortSignal,
+): Promise<TransactionPage> {
+  const params = new URLSearchParams();
+  // only set what differs from the backend's own defaults — keeps URLs short
+  // and means a backend default change doesn't need a frontend release
+  if (f.tab !== "all") params.set("entry_type", f.tab);
+  if (f.q) params.set("q", f.q);
+  if (f.sort !== "newest") params.set("sort", f.sort);
+  if (f.from) params.set("date_from", f.from);
+  if (f.to) params.set("date_to", f.to);
+  if (f.categories.length) params.set("category_id", f.categories.join(","));
+  if (f.taxDeductible) params.set("tax_deductible", "true");
+  if (f.page > 1) {
+    params.set("page", String(f.page));
+    params.set("page_size", String(PAGE_SIZE));
+  }
+
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/transactions/?${params}`,
+    { credentials: "include", signal },
+  );
+  if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
+
+  const data: {
+    transactions: TransactionDTO[];
+    total: number;
+    page: number;
+    page_count: number;
+    counts: Record<Tab, number>;
+  } = await res.json();
+
+  return {
+    rows: data.transactions.map(fromDTO),
+    total: data.total,
+    page: data.page,
+    page_count: data.page_count,
+    counts: data.counts,
+  };
 }

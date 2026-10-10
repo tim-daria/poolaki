@@ -1,15 +1,19 @@
-/** @file Draft state transitions, submit validation and 400-body rewriting for transactions. */
+/** @file Draft state transitions, submit validation, 400-body rewriting and the list/update fetchers for transactions. */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   changeType,
   describeProblem,
   emptyDraft,
   toDraft,
   validateDraft,
+  fetchTransactionPage,
+  updateTransaction,
+  TransactionError,
   type Transaction,
   type TransactionDraft,
 } from "./transactions";
+import { DEFAULT_FILTERS, type TransactionFilters } from "./transactionFilters";
 
 function draft(overrides: Partial<TransactionDraft> = {}): TransactionDraft {
   return {
@@ -21,6 +25,158 @@ function draft(overrides: Partial<TransactionDraft> = {}): TransactionDraft {
     ...overrides,
   };
 }
+
+function stubFetch(body: unknown, status = 200) {
+  const fn = vi
+    .fn()
+    .mockResolvedValue(new Response(JSON.stringify(body), { status }));
+  vi.stubGlobal("fetch", fn);
+  return fn;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+const ORG = 1;
+
+/** One row as TransactionResponseSerializer emits it. */
+const DTO = {
+  id: 7,
+  org_id: 1,
+  goal_id: null,
+  category_id: 3,
+  entry_type: "expense",
+  amount: "52.00",
+  description: "Ristorante Baldi",
+  transaction_date: "2026-03-10",
+  is_tax_deductible: false,
+  created_by: "pavel",
+  created_at: "2026-03-10T12:00:00Z",
+} as const;
+
+/** The list endpoint's response for an empty workspace. */
+const EMPTY_PAGE = {
+  transactions: [],
+  total: 0,
+  page: 1,
+  page_count: 1,
+  counts: { all: 0, income: 0, expense: 0, contribution: 0 },
+};
+
+describe("fetchTransactionPage", () => {
+  it("sends no params for the default filters", async () => {
+    const fetch = stubFetch(EMPTY_PAGE);
+    await fetchTransactionPage(ORG, DEFAULT_FILTERS);
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("/api/v1/organizations/1/transactions/?");
+    expect(init.credentials).toBe("include");
+  });
+
+  it.each<[Partial<TransactionFilters>, string]>([
+    [{ tab: "income" }, "entry_type=income"],
+    [{ q: "rewe" }, "q=rewe"],
+    [{ sort: "oldest" }, "sort=oldest"],
+    [{ from: "2026-01-01" }, "date_from=2026-01-01"],
+    [{ categories: [3, 7] }, "category_id=3%2C7"],
+    [{ taxDeductible: true }, "tax_deductible=true"],
+    [{ page: 2 }, "page=2&page_size=15"],
+  ])("encodes %j as %s", async (override, expected) => {
+    const fetch = stubFetch(EMPTY_PAGE);
+    await fetchTransactionPage(ORG, { ...DEFAULT_FILTERS, ...override });
+    expect(fetch.mock.calls[0][0]).toContain(`?${expected}`);
+  });
+
+  it("maps the rows and passes the paging fields through", async () => {
+    const counts = { all: 1, income: 0, expense: 1, contribution: 0 };
+    stubFetch({
+      transactions: [{ ...DTO, description: null }],
+      total: 1,
+      page: 2,
+      page_count: 3,
+      counts,
+    });
+
+    const result = await fetchTransactionPage(ORG, DEFAULT_FILTERS);
+
+    expect(result.rows).toEqual([
+      {
+        id: 7,
+        entry_type: "expense",
+        category: 3,
+        description: "",
+        amount: 52,
+        transaction_date: "2026-03-10",
+        is_tax_deductible: false,
+        goal: null,
+        created_by: "pavel",
+      },
+    ]);
+    expect(result).toMatchObject({ total: 1, page: 2, page_count: 3, counts });
+  });
+
+  it("rejects with the status on a failed request", async () => {
+    stubFetch({}, 500);
+    await expect(fetchTransactionPage(ORG, DEFAULT_FILTERS)).rejects.toThrow(
+      "Failed to load transactions (500)",
+    );
+  });
+});
+
+describe("updateTransaction", () => {
+  const ID = 7;
+
+  it("PATCHes the draft as JSON with the CSRF token", async () => {
+    const fetch = stubFetch({ transaction: DTO });
+    await updateTransaction(ORG, ID, draft(), "tok");
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("/api/v1/organizations/1/transactions/7/");
+    expect(init.method).toBe("PATCH");
+    expect(init.headers["X-CSRFToken"]).toBe("tok");
+    expect(JSON.parse(init.body)).toMatchObject({
+      amount: "3.50",
+      category_id: 1,
+    });
+  });
+
+  it("leaves the fixed entry_type and goal_id out of the body", async () => {
+    const fetch = stubFetch({ transaction: DTO });
+    await updateTransaction(ORG, ID, draft(), "tok");
+    const body = JSON.parse(fetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty("entry_type");
+    expect(body).not.toHaveProperty("goal_id");
+  });
+
+  it("reads the row from the response's transaction key", async () => {
+    stubFetch({ transaction: DTO });
+
+    const saved = await updateTransaction(ORG, ID, draft(), "tok");
+
+    expect(saved).toMatchObject({ id: ID, amount: 52, category: 3 });
+  });
+
+  it("turns a 400 into a TransactionError", async () => {
+    stubFetch({ detail: "Not enough balance." }, 400);
+    await expect(
+      updateTransaction(ORG, ID, draft(), "tok"),
+    ).rejects.toBeInstanceOf(TransactionError);
+  });
+
+  it("carries the backend's message on a 400", async () => {
+    stubFetch({ detail: "Not enough balance." }, 400);
+    await expect(updateTransaction(ORG, ID, draft(), "tok")).rejects.toThrow(
+      "Not enough balance.",
+    );
+  });
+
+  it("rejects with the status on any other failure", async () => {
+    stubFetch({}, 500);
+    await expect(updateTransaction(ORG, ID, draft(), "tok")).rejects.toThrow(
+      "Failed to update transaction (500)",
+    );
+  });
+});
 
 describe("toDraft", () => {
   it("renders the amount as a canonical two-decimal string", () => {

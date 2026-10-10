@@ -84,6 +84,7 @@ class TransactionListCreateView(APIView):
             category_ids=tuple(category_ids) if category_ids else None,
             goal_id=data.get("goal_id"),
             tax_deductible=data["tax_deductible"],
+            q=data.get("q", "").strip(),
             entry_type=None if entry_type == "all" else EntryType(entry_type),
             sort=data["sort"],
         )
