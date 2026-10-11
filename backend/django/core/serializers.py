@@ -6,7 +6,6 @@ from rest_framework import serializers
 
 from core.models import (
     Category,
-    # CategoryType,
     EntryType,
     Goal,
     GoalStatus,
@@ -16,6 +15,7 @@ from core.models import (
     Transaction,
 )
 from core.services.balance import calculate_goal_balance
+from core.services.goal import goal_status_transition_error
 
 
 class IntListField(serializers.Field[list[int], object, list[int], Any]):
@@ -117,27 +117,11 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
 
         if "status" in attrs:
             new_status = attrs["status"]
-            if goal.status == GoalStatus.ARCHIVED and new_status != GoalStatus.ARCHIVED:
-                raise serializers.ValidationError(
-                    {"status": "Archived goals cannot be changed back to an active state."}
-                )
-            if goal.status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
-                raise serializers.ValidationError(
-                    {"status": "Completed goals cannot be moved back to active."}
-                )
-            if goal.status == GoalStatus.ACTIVE and new_status not in {
-                GoalStatus.ACTIVE,
-                GoalStatus.COMPLETED,
-                GoalStatus.ARCHIVED,
-            }:
+            if not isinstance(new_status, str):
                 raise serializers.ValidationError({"status": "Invalid status transition."})
-            if goal.status == GoalStatus.COMPLETED and new_status not in {
-                GoalStatus.COMPLETED,
-                GoalStatus.ARCHIVED,
-            }:
-                raise serializers.ValidationError({"status": "Invalid status transition."})
-            if goal.status == GoalStatus.ARCHIVED and new_status != GoalStatus.ARCHIVED:
-                raise serializers.ValidationError({"status": "Invalid status transition."})
+            error = goal_status_transition_error(goal.status, new_status)
+            if error is not None:
+                raise serializers.ValidationError({"status": error})
 
         return attrs
 
@@ -172,6 +156,9 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
         )
 
     def _get_goal_balance(self, goal: Goal) -> Decimal:
+        annotated_balance = getattr(goal, "_goal_balance", None)
+        if annotated_balance is not None:
+            return Decimal(annotated_balance)
         cache = getattr(self, "_goal_balance_cache", {})
         if goal.pk not in cache:
             cache[goal.pk] = calculate_goal_balance(goal.org, goal)

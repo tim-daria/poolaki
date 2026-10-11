@@ -1,3 +1,5 @@
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from datetime import date
 from decimal import Decimal
 
@@ -6,6 +8,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from core.models import Goal, GoalStatus, Organization, Transaction, User
+from core.serializers import GoalResponseSerializer
+from core.services.balance import annotate_goal_balance
 
 pytestmark = pytest.mark.django_db
 
@@ -102,6 +106,108 @@ def test_owner_can_archive_goal_and_return_remaining_balance(
     )
     assert archived_transaction.description == "Goal Laptop archived"
     assert response.data["goal"]["balance"] == "0.00"
+
+
+def test_archiving_negative_goal_balance_is_rolled_back(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Overdrawn",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        entry_type="withdraw",
+        amount=Decimal("25.00"),
+        transaction_date=date(2026, 9, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"status": "archived"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    goal.refresh_from_db()
+    assert goal.status == GoalStatus.ACTIVE
+    assert not Transaction.objects.filter(
+        goal=goal, entry_type="withdraw", description="Goal Overdrawn archived"
+    ).exists()
+
+
+def test_completed_goal_cannot_return_to_active(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Completed",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        status=GoalStatus.COMPLETED,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"status": "active"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["status"] == ["Completed goals cannot be moved back to active."]
+
+
+def test_goal_list_serializes_balances_with_one_query(
+    owner: User,
+    shared_org: Organization,
+    django_assert_num_queries: Callable[[int], AbstractContextManager[None]],
+) -> None:
+    first_goal = Goal.objects.create(
+        org=shared_org,
+        name="First",
+        target_amount=Decimal("100.00"),
+        target_date=None,
+        created_by=owner,
+    )
+    second_goal = Goal.objects.create(
+        org=shared_org,
+        name="Second",
+        target_amount=Decimal("200.00"),
+        target_date=None,
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=first_goal,
+        entry_type="contribution",
+        amount=Decimal("25.00"),
+        transaction_date=date(2026, 9, 1),
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=second_goal,
+        entry_type="contribution",
+        amount=Decimal("50.00"),
+        transaction_date=date(2026, 9, 1),
+        created_by=owner,
+    )
+
+    queryset = annotate_goal_balance(
+        Goal.objects.filter(org=shared_org).select_related("created_by")
+    ).order_by("id")
+    with django_assert_num_queries(1):
+        data = GoalResponseSerializer(queryset, many=True).data
+
+    assert [item["balance"] for item in data] == ["25.00", "50.00"]
 
 
 def test_goal_update_requires_owner_or_creator(

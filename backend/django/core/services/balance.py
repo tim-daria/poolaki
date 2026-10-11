@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import cast
 
-from django.db.models import Q, Sum
+from django.db.models import DecimalField, ExpressionWrapper, Q, QuerySet, Sum
 from django.db.models.functions import Coalesce
 
 from core.models import EntryType, Goal, Membership, Organization, Transaction, User
@@ -71,3 +71,38 @@ def calculate_goal_balance(org: Organization, goal: Goal) -> Decimal:
     expense = cast(Decimal, totals["expense"])
 
     return contribution - withdraw - expense
+
+
+def annotate_goal_balance(queryset: QuerySet[Goal]) -> QuerySet[Goal]:
+    """Add each goal's balance to a queryset using one aggregate query."""
+    zero = Decimal("0")
+    amount_field = DecimalField(max_digits=14, decimal_places=2)
+    return queryset.annotate(
+        _goal_balance=ExpressionWrapper(
+            Coalesce(
+                Sum(
+                    "transactions__amount",
+                    filter=Q(transactions__entry_type=EntryType.CONTRIBUTION),
+                ),
+                zero,
+                output_field=amount_field,
+            )
+            - Coalesce(
+                Sum(
+                    "transactions__amount",
+                    filter=Q(transactions__entry_type=EntryType.WITHDRAW),
+                ),
+                zero,
+                output_field=amount_field,
+            )
+            - Coalesce(
+                Sum(
+                    "transactions__amount",
+                    filter=Q(transactions__entry_type=EntryType.EXPENSE),
+                ),
+                zero,
+                output_field=amount_field,
+            ),
+            output_field=amount_field,
+        )
+    )

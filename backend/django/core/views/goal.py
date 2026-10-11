@@ -1,6 +1,3 @@
-from datetime import date
-from decimal import Decimal
-
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -8,11 +5,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Goal, GoalStatus, Membership, User
+from core.models import Goal, GoalStatus, Membership, User
 from core.permissions import IsOrgMember
 from core.serializers import GoalCreateSerializer, GoalResponseSerializer, GoalUpdateSerializer
-from core.services.balance import calculate_goal_balance
-from core.services.transaction import create_transaction_entry
+from core.services.balance import annotate_goal_balance, calculate_goal_balance
+from core.services.goal import GoalArchivalError, archive_goal
 
 
 class GoalListCreateView(APIView):
@@ -20,7 +17,9 @@ class GoalListCreateView(APIView):
 
     def get(self, request: Request, org_id: int) -> Response:
         assert isinstance(request.user, User)
-        queryset = Goal.objects.filter(org_id=org_id).order_by("created_at", "id")
+        queryset = annotate_goal_balance(
+            Goal.objects.filter(org_id=org_id).select_related("created_by")
+        ).order_by("created_at", "id")
 
         status_filter = request.query_params.get("status")
         valid_statuses = {choice[0] for choice in GoalStatus.choices}
@@ -54,7 +53,11 @@ class GoalReadUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsOrgMember]
 
     def get_object(self, org_id: int, goal_id: int) -> Goal:
-        return get_object_or_404(Goal, org_id=org_id, id=goal_id)
+        return get_object_or_404(
+            annotate_goal_balance(
+                Goal.objects.select_related("created_by").filter(org_id=org_id, id=goal_id)
+            )
+        )
 
     def get(self, request: Request, org_id: int, goal_id: int) -> Response:
         goal = self.get_object(org_id, goal_id)
@@ -85,29 +88,10 @@ class GoalReadUpdateView(APIView):
 
         new_status = data.get("status")
         if new_status == GoalStatus.ARCHIVED and goal.status != GoalStatus.ARCHIVED:
-            remaining_balance = calculate_goal_balance(goal.org, goal)
-            if remaining_balance < Decimal("0"):
-                return Response(
-                    {"detail": "Goal balance cannot be archived while negative."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if remaining_balance > Decimal("0"):
-                create_transaction_entry(
-                    org=goal.org,
-                    created_by=request.user,
-                    category_id=None,
-                    goal_id=goal.id,
-                    entry_type=EntryType.WITHDRAW,
-                    amount=remaining_balance,
-                    description=f"Goal {goal.name} archived",
-                    transaction_date=date.today(),
-                    is_tax_deductible=False,
-                )
-                if calculate_goal_balance(goal.org, goal) != Decimal("0"):
-                    return Response(
-                        {"detail": "Goal balance must reach zero before archiving."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+            try:
+                goal = archive_goal(goal, request.user)
+            except GoalArchivalError as error:
+                return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
         for field, value in data.items():
             setattr(goal, field, value)
