@@ -107,6 +107,15 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
         if not attrs:
             raise serializers.ValidationError("At least one field must be provided.")
 
+        name = attrs.get("name")
+        if (
+            name is not None
+            and Goal.objects.filter(org_id=goal.org_id, name=name).exclude(pk=goal.pk).exists()
+        ):
+            raise serializers.ValidationError(
+                {"name": "A goal with this name already exists in this organization."}
+            )
+
         target_date = attrs.get("target_date")
         if target_date is not None and not isinstance(target_date, date):
             raise serializers.ValidationError({"target_date": "Invalid target date."})

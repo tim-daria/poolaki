@@ -246,6 +246,59 @@ def test_goal_update_requires_owner_or_creator(
     assert response.status_code == 403
 
 
+def test_goal_update_allows_partial_updates_and_unchanged_name(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Vacation",
+        target_amount=Decimal("3000.00"),
+        target_date=date(2027, 6, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"target_amount": "3500.00"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    goal.refresh_from_db()
+    assert goal.name == "Vacation"
+    assert goal.target_amount == Decimal("3500.00")
+
+
+def test_goal_update_rejects_duplicate_name_in_same_organization(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Vacation",
+        target_amount=Decimal("3000.00"),
+        target_date=date(2027, 6, 1),
+        created_by=owner,
+    )
+    duplicate = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date=date(2027, 7, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"name": duplicate.name},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data == {"name": ["A goal with this name already exists in this organization."]}
+
+
 def test_goal_balance_uses_contribution_transactions(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
