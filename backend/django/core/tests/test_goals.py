@@ -94,12 +94,13 @@ def test_owner_can_archive_goal_and_return_remaining_balance(
     assert goal.status == GoalStatus.ARCHIVED
     shared_org.refresh_from_db()
     assert shared_org.initial_balance == Decimal("0")
-    assert Transaction.objects.filter(
+    archived_transaction = Transaction.objects.get(
         org=shared_org,
         goal=goal,
         entry_type="withdraw",
         amount=Decimal("125.50"),
-    ).exists()
+    )
+    assert archived_transaction.description == "Goal Laptop archived"
     assert response.data["goal"]["balance"] == "0.00"
 
 

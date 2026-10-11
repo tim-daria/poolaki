@@ -231,11 +231,6 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
                 {"category_id": ("Category type must match transaction entry type.")}
             )
 
-        if goal is not None and entry_type == EntryType.INCOME:
-            raise serializers.ValidationError(
-                {"goal_id": ("Goal cannot be set on an income transaction.")}
-            )
-
         goal_entry_types = {EntryType.CONTRIBUTION, EntryType.WITHDRAW}
         if entry_type in goal_entry_types and goal is None:
             raise serializers.ValidationError(
@@ -243,6 +238,10 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
             )
 
         if isinstance(goal, Goal):
+            if entry_type == EntryType.INCOME:
+                raise serializers.ValidationError(
+                    {"goal_id": ("Goal cannot be set on an income transaction.")}
+                )
             if entry_type == EntryType.CONTRIBUTION and goal.status != GoalStatus.ACTIVE:
                 raise serializers.ValidationError(
                     {"goal_id": ("Contributions can only be made to active goals.")}

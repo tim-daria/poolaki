@@ -99,7 +99,7 @@ class GoalReadUpdateView(APIView):
                     goal_id=goal.id,
                     entry_type=EntryType.WITHDRAW,
                     amount=remaining_balance,
-                    description="Goal archived.",
+                    description=f"Goal {goal.name} archived",
                     transaction_date=date.today(),
                     is_tax_deductible=False,
                 )
