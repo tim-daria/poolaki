@@ -72,6 +72,11 @@ export const theme = createTheme({
           MozOsxFontSmoothing: "grayscale",
           "@media (max-width: 1024px)": { fontSize: 16 },
         },
+        // Literal var() rather than a theme callback: MuiCssBaseline's
+        // styleOverrides are typed as raw CSS, so a callback's `theme` is any.
+        body: {
+          backgroundColor: "var(--mui-palette-primary-light)",
+        },
       },
     },
     MuiButton: {
@@ -154,6 +159,21 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           fontSize: "1rem",
+        },
+      },
+    },
+    MuiAlert: {
+      // The icon column is laid out against the first line of the message
+      // rather than the whole block: `1lh` box with its own padding keeps a
+      // one-line alert centred and a wrapping one top-aligned with its text.
+      // Centralised here so no Alert has to repeat it in `sx`.
+      styleOverrides: {
+        icon: {
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: "1lh",
+          boxSizing: "content-box",
+          alignItems: "center",
         },
       },
     },
