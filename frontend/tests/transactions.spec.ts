@@ -39,13 +39,14 @@ async function getOrganizationCategories(
 
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
- * 3 transfers, 3 tax refundable, 15 per page. Category names match the
+ * 3 transfers (two contributions and one withdrawal), 3 tax refundable,
+ * 15 per page. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
 type Fixture = [
   date: string,
-  type: "expense" | "income" | "contribution",
+  type: "expense" | "income" | "contribution" | "withdraw",
   category: string | null,
   name: string,
   amount: number,
@@ -72,7 +73,7 @@ const FIXTURES: Fixture[] = [
   ["2026-06-27", "expense", "Food", "Lidl", 33.15],
   ["2026-06-22", "income", "Gift", "Birthday gift", 100],
   ["2026-06-20", "expense", "Shopping", "Bookshop", 24.99, true],
-  ["2026-06-17", "contribution", null, "To savings", 300],
+  ["2026-06-17", "withdraw", null, "From savings", 300],
   ["2026-06-14", "expense", "Food", "Sushi Yama", 41.5],
   ["2026-06-10", "expense", "Transport", "Taxi", 22],
   ["2026-06-06", "expense", "Utilities", "Haircut", 35],
@@ -86,6 +87,7 @@ async function postTransaction(
   page: Page,
   orgId: number,
   categories: Map<string, number>,
+  goalId: number,
   row: Fixture,
 ) {
   const [transaction_date, entry_type, category, description, amount, tax] =
@@ -110,7 +112,10 @@ async function postTransaction(
       data: {
         entry_type,
         category_id,
-        goal_id: null,
+        goal_id:
+          entry_type === "contribution" || entry_type === "withdraw"
+            ? goalId
+            : null,
         description,
         amount: amount.toFixed(2),
         transaction_date,
@@ -120,10 +125,31 @@ async function postTransaction(
   );
   if (res.status() !== 201) {
     throw new Error(
-      `transaction POST failed: ${res.status()} ${await res.text()} — ` +
-        "if it names category_id, the id is not one of this workspace's own.",
+      `transaction POST failed for ${entry_type} "${description}": ` +
+        `${res.status()} ${await res.text()}`,
     );
   }
+}
+
+async function createGoal(page: Page, orgId: number): Promise<number> {
+  const csrftoken =
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? "";
+  const res = await page.request.post(`/api/v1/organizations/${orgId}/goals/`, {
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+    data: {
+      name: "Transactions fixture goal",
+      target_amount: "1000.00",
+      target_date: "2026-12-31",
+    },
+  });
+
+  if (res.status() !== 201) {
+    throw new Error(`goal POST failed: ${res.status()} ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as { id: number };
+  return data.id;
 }
 
 /**
@@ -200,10 +226,11 @@ test.describe.serial("Transactions", () => {
     const workspace = await registerUser(page, user);
     const orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
+    const goalId = await createGoal(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
-      await postTransaction(page, orgId, categories, row);
+      await postTransaction(page, orgId, categories, goalId, row);
     }
   });
 

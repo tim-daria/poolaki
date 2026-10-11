@@ -1,14 +1,14 @@
 /** @file Client-side filtering, sorting and paging of transactions. Pure functions so the UI and future server params share one contract. */
 
 import { categoryById, type Category } from "./categories";
-import type { EntryType, Transaction } from "./transactions";
+import type { Transaction } from "./transactions";
 
 /**
  * "all" plus the entry types verbatim, so a row's own `entry_type` is the tab
  * it belongs to. The URL therefore carries ?tab=contribution, while the tab
  * itself is labelled "Transfers" in the UI.
  */
-export type Tab = "all" | EntryType;
+export type Tab = "all" | "expense" | "income" | "contribution";
 export type Sort = "newest" | "oldest";
 
 export type TransactionFilters = {
@@ -70,7 +70,13 @@ export function countByTab(rows: Transaction[]): Record<Tab, number> {
     income: 0,
     contribution: 0,
   };
-  for (const t of rows) counts[t.entry_type]++;
+  for (const t of rows) {
+    if (t.entry_type === "contribution" || t.entry_type === "withdraw") {
+      counts.contribution++;
+    } else {
+      counts[t.entry_type]++;
+    }
+  }
   return counts;
 }
 

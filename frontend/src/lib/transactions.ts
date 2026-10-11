@@ -10,8 +10,8 @@ import { TODAY } from "./date";
 import { parseMoney, toMoneyString, validateAmount } from "./money";
 import { formatName } from "./text";
 
-/** "contribution" is a transfer to a goal: it carries a goal and "Savings" category by default. */
-export type EntryType = "income" | "expense" | "contribution";
+/** Contributions and withdrawals are transfers to or from a goal. */
+export type EntryType = "income" | "expense" | "contribution" | "withdraw";
 
 /** The two entry types that are filed under a category. */
 export type TransactionType = "income" | "expense";
@@ -19,7 +19,7 @@ export type TransactionType = "income" | "expense";
 export type Transaction = {
   id: number;
   entry_type: EntryType;
-  /** Category ID. Null on contributions, and on rows whose category was removed. */
+  /** Category ID. Null on transfers, and on rows whose category was removed. */
   category: number | null;
   /** Text label used for display and search. */
   description: string;
@@ -27,7 +27,7 @@ export type Transaction = {
   /** ISO date string: YYYY-MM-DD */
   transaction_date: string;
   is_tax_deductible: boolean;
-  /** Goal ID. Only present on contributions. */
+  /** Goal ID. Present on contributions and withdrawals. */
   goal: number | null;
   /** Creator's username; null once that account is deleted. */
   created_by: string | null;
@@ -142,7 +142,10 @@ export function changeType(
     ...draft,
     entry_type,
     category: null,
-    goal: entry_type === "contribution" ? draft.goal : null,
+    goal:
+      entry_type === "contribution" || entry_type === "withdraw"
+        ? draft.goal
+        : null,
     is_tax_deductible: entry_type === "expense" && draft.is_tax_deductible,
   };
 }
@@ -155,7 +158,7 @@ export function changeType(
  * (description and category for income/expense; goal for contribution).
  */
 export function validateDraft(draft: TransactionDraft): string | null {
-  if (draft.entry_type === "contribution") {
+  if (draft.entry_type === "contribution" || draft.entry_type === "withdraw") {
     if (draft.goal === null) return "Pick a goal.";
   } else {
     if (!draft.description.trim()) return "Description is required.";

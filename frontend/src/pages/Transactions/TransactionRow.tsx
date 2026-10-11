@@ -20,14 +20,16 @@ const ROW_STYLE: Record<
   expense: { sign: "-", chipBg: "action.selected", color: "text.primary" },
   income: { sign: "+", chipBg: "success.light", color: "success.main" },
   contribution: { sign: "", chipBg: "primary.light", color: "accent.main" },
+  withdraw: { sign: "", chipBg: "primary.light", color: "accent.main" },
 };
 
 /**
- * Contributions carry no category on the wire; "Savings" is what they are
- * filed under in the UI.
+ * Transfers carry no category on the wire; "Savings" is what they are filed
+ * under in the UI.
  */
 function categoryLabel(t: Transaction, categories: Category[]): string | null {
-  if (t.entry_type === "contribution") return "Savings";
+  if (t.entry_type === "contribution" || t.entry_type === "withdraw")
+    return "Savings";
   return categoryById(categories, t.category)?.name ?? null;
 }
 
