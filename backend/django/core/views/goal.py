@@ -1,3 +1,7 @@
+"""API views for listing, updating, and inspecting organization goals."""
+
+from datetime import date
+
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -92,6 +96,11 @@ class GoalReadUpdateView(APIView):
                 goal = archive_goal(goal, request.user)
             except GoalArchivalError as error:
                 return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if goal.status == GoalStatus.ACTIVE and new_status == GoalStatus.COMPLETED:
+            goal.completed_at = date.today()
+        elif goal.status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
+            goal.completed_at = None
 
         for field, value in data.items():
             setattr(goal, field, value)

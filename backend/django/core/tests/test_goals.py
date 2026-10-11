@@ -142,18 +142,30 @@ def test_archiving_negative_goal_balance_is_rolled_back(
     ).exists()
 
 
-def test_completed_goal_cannot_return_to_active(
+def test_goal_status_transitions_update_completed_at(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
     goal = Goal.objects.create(
         org=shared_org,
-        name="Completed",
+        name="Trip",
         target_amount=Decimal("100.00"),
         target_date=date(2027, 1, 1),
-        status=GoalStatus.COMPLETED,
+        status=GoalStatus.ACTIVE,
         created_by=owner,
     )
     api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"status": "completed"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    goal.refresh_from_db()
+    assert goal.status == GoalStatus.COMPLETED
+    assert goal.completed_at == date.today()
+    assert response.data["goal"]["completed_at"] == date.today().isoformat()
 
     response = api_client.patch(
         goal_url(shared_org.id, goal.id),
@@ -161,8 +173,11 @@ def test_completed_goal_cannot_return_to_active(
         format="json",
     )
 
-    assert response.status_code == 400
-    assert response.data["status"] == ["Completed goals cannot be moved back to active."]
+    assert response.status_code == 200
+    goal.refresh_from_db()
+    assert goal.status == GoalStatus.ACTIVE
+    assert goal.completed_at is None
+    assert response.data["goal"]["completed_at"] is None
 
 
 def test_goal_list_serializes_balances_with_one_query(

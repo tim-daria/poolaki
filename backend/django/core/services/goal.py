@@ -18,8 +18,6 @@ def goal_status_transition_error(current: str, new: str) -> str | None:
     """Return an error message for an invalid goal status transition."""
     if current == GoalStatus.ARCHIVED and new != GoalStatus.ARCHIVED:
         return "Archived goals cannot be changed back to an active state."
-    # if current == GoalStatus.COMPLETED and new == GoalStatus.ACTIVE:
-    #     return "Completed goals cannot be moved back to active."
     if current == GoalStatus.ACTIVE and new not in {
         GoalStatus.ACTIVE,
         GoalStatus.COMPLETED,

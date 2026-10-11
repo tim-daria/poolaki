@@ -149,6 +149,7 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
             "status",
             "created_by",
             "created_at",
+            "completed_at",
             "balance",
             "progress",
             "overdue",
