@@ -51,7 +51,8 @@ def check_can_add_member(org: Organization) -> None:
 
 
 def check_can_join_org(org: Organization) -> None:
-    """Used when accepting an invitation — only counts actual members."""
+    """Hard member cap, counting actual members only. Enforced on invitation
+    accept and on every Membership insert"""
     current_members = Membership.objects.filter(org=org).count()
     if current_members >= MAX_MEMBERS_PER_ORG:
         raise ValidationError(
@@ -60,7 +61,8 @@ def check_can_join_org(org: Organization) -> None:
 
 
 def check_can_join_more_orgs(user: User) -> None:
-    """Used when creating new organization and accepting an invitation."""
+    """Per-user org cap; enforced on org creation, invitation accept and on
+    every Membership insert"""
     current_count = Membership.objects.filter(user=user).count()
     if current_count >= MAX_ORGS_PER_USER:
         raise ValidationError(f"You can have a maximum of {MAX_ORGS_PER_USER} workspaces.")

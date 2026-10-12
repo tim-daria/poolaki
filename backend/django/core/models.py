@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Any
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -39,6 +40,17 @@ class Membership(models.Model):
     # prevents that a user can't be added to the same org twice
     class Meta:
         unique_together = ("org", "user")
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if self.pk is None:
+            from core.services.organization import (
+                check_can_join_more_orgs,
+                check_can_join_org,
+            )
+
+            check_can_join_org(self.org)
+            check_can_join_more_orgs(self.user)
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.user} - {self.org} ({self.role})"
