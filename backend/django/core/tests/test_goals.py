@@ -61,10 +61,12 @@ def test_list_goals_filters_by_status(
     response = api_client.get(goals_url(shared_org.id), {"status": "active"})
     assert response.status_code == 200
     assert [item["id"] for item in response.data["goals"]] == [active.id]
+    assert response.data["total"] == 1
 
     response = api_client.get(goals_url(shared_org.id), {"status": "unknown"})
     assert response.status_code == 200
     assert response.data["goals"] == []
+    assert response.data["total"] == 0
 
 
 def test_owner_can_archive_goal_and_return_remaining_balance(

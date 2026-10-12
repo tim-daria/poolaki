@@ -126,7 +126,8 @@ Response example:
       "overdue": "false",
       "spendable": "false"
     }
-  ]
+  ],
+  "total": 1
 }
 ```
 

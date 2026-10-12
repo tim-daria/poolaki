@@ -29,11 +29,14 @@ class GoalListCreateView(APIView):
         valid_statuses = {choice[0] for choice in GoalStatus.choices}
         if status_filter is not None:
             if status_filter not in valid_statuses:
-                return Response({"goals": []}, status=status.HTTP_200_OK)
+                return Response({"goals": [], "total": 0}, status=status.HTTP_200_OK)
             queryset = queryset.filter(status=status_filter)
 
         return Response(
-            {"goals": GoalResponseSerializer(queryset, many=True).data},
+            {
+                "goals": GoalResponseSerializer(queryset, many=True).data,
+                "total": queryset.count(),
+            },
             status=status.HTTP_200_OK,
         )
 
