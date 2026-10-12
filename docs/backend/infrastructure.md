@@ -43,7 +43,7 @@ For more information visit: https://www.coraza.io/docs/tutorials/introduction/
 
 **in terminal**
 ```
-curl -G "http://poolaki.de/api/" --data-urlencode "id=1' OR '1'='1"
+curl -G "https://poolaki.de/api/" --data-urlencode "id=1' OR '1'='1"
 ```
 ```
 curl -G "http://poolaki.localhost:8080/api/" --data-urlencode "id=1' OR '1'='1"
@@ -51,7 +51,7 @@ curl -G "http://poolaki.localhost:8080/api/" --data-urlencode "id=1' OR '1'='1"
 
 **in Browser**
 ```
-http://poolaki.de/api/?id=1' OR '1'='1
+https://poolaki.de/api/?id=1' OR '1'='1
 ```
 ```
 http://poolaki.localhost:8080/api/?id=1' OR '1'='1
@@ -62,14 +62,14 @@ http://poolaki.localhost:8080/api/?id=1' OR '1'='1
 
 in terminal
 ```
-curl "http://poolaki.de/api/?q=<script>alert(1)</script>"
+curl "https://poolaki.de/api/?q=<script>alert(1)</script>"
 ```
 ```
 curl "http://poolaki.localhost:8080/api/?q=<script>alert(1)</script>"
 ```
 in Browser
 ```
-http://poolaki.de/api/?q=<script>alert(1)</script>
+https://poolaki.de/api/?q=<script>alert(1)</script>
 ```
 ```
 http://poolaki.localhost:8080/api/?q=<script>alert(1)</script>
@@ -80,15 +80,15 @@ http://poolaki.localhost:8080/api/?q=<script>alert(1)</script>
 **== Path traversal ==**
 
 *Percent encoding (aka URL encoding)*
- 
+
 `%2e%2e%2f` represents `../`
 
 The decoded path looks like:
-`http://poolaki.de/api/../../etc/passwd`
+`https://poolaki.de/api/../../etc/passwd`
 
 in terminal
 ```
-curl "http://poolaki.de/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+curl "https://poolaki.de/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd"
 ```
 ```
 curl "http://poolaki.localhost:8080/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd"
@@ -96,7 +96,7 @@ curl "http://poolaki.localhost:8080/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd"
 
 in browser
 ```
-http://poolaki.de/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd
+https://poolaki.de/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd
 ```
 ```
 http://poolaki.localhost:8080/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd
@@ -111,7 +111,7 @@ in terminal
 curl -A "sqlmap/1.0" "http://poolaki.localhost:8080/api/"
 ```
 ```
-curl -A "sqlmap/1.0" "http://poolaki.de/api/"
+curl -A "sqlmap/1.0" "https://poolaki.de/api/"
 ```
 
 ---
@@ -123,19 +123,19 @@ in terminal
 curl "http://poolaki.localhost:8080/api/?cmd=;cat%20/etc/passwd"
 ```
 ```
-curl "http://poolaki.de/api/?cmd=;cat%20/etc/passwd"
+curl "https://poolaki.de/api/?cmd=;cat%20/etc/passwd"
 ```
 in browser
 ```
 http://poolaki.localhost:8080/api/?cmd=;cat%20/etc/passwd
 ```
 ```
-http://poolaki.de/api/?cmd=;cat%20/etc/passwd
+https://poolaki.de/api/?cmd=;cat%20/etc/passwd
 ```
 
 ---
 
-After each command you can run the following command. 
+After each command you can run the following command.
 It creates a file named `auditlog` with all details for the last log from coraza.
 
 ```
