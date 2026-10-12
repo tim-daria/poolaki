@@ -441,8 +441,9 @@ class TestAcceptInvitation:
         pending_invitation: Invitation,
         shared_org: Organization,
     ) -> None:
-        # Fill the org up to the max while the invitation is still pending.
-        for i in range(4):
+        # Fill the org to the max (5 members) while the invitation is pending;
+        # the 6th seat must go to no one, not to the pending invitee.
+        for i in range(3):
             u = User.objects.create_user(
                 email=f"extra{i}@example.com", username=f"extra{i}", password="pass1234"
             )

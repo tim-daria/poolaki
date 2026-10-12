@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -14,7 +15,7 @@ from core.models import (
     Role,
     User,
 )
-from core.services.organization import MAX_ORGS_PER_USER
+from core.services.organization import MAX_MEMBERS_PER_ORG, MAX_ORGS_PER_USER
 
 pytestmark = pytest.mark.django_db
 
@@ -627,6 +628,71 @@ def test_can_create_organization_at_one_below_per_user_cap(
 
     assert response.status_code == 201
     assert Membership.objects.filter(user=owner).count() == MAX_ORGS_PER_USER
+
+
+def _fill_org(org: Organization, count: int) -> None:
+    """Create `count` members directly via ORM, bypassing the invitation flow."""
+    for i in range(count):
+        user = User.objects.create_user(
+            email=f"fill{i}@example.com", username=f"fill{i}", password="pass1234"
+        )
+        Membership.objects.create(user=user, org=org, role=Role.MEMBER)
+
+
+def test_direct_membership_insert_rejected_when_org_at_capacity() -> None:
+    """A script/admin/shell creating Membership directly cannot exceed the cap."""
+    org = Organization.objects.create(name="Full org", is_personal=False)
+    _fill_org(org, MAX_MEMBERS_PER_ORG)
+
+    extra = User.objects.create_user(
+        email="extra@example.com", username="extra", password="pass1234"
+    )
+
+    with pytest.raises(ValidationError):
+        Membership.objects.create(user=extra, org=org, role=Role.MEMBER)
+
+    assert Membership.objects.filter(org=org).count() == MAX_MEMBERS_PER_ORG
+
+
+def test_membership_update_skips_capacity_check() -> None:
+    """Role changes on an existing membership must not be blocked by the cap."""
+    org = Organization.objects.create(name="Full org", is_personal=False)
+    _fill_org(org, MAX_MEMBERS_PER_ORG)
+
+    membership = Membership.objects.get(org=org, user__username="fill0")
+    membership.role = Role.OWNER
+    membership.save()
+
+    assert Membership.objects.get(pk=membership.pk).role == Role.OWNER
+
+
+def test_direct_membership_insert_rejected_when_user_at_org_cap() -> None:
+    """A user already in MAX_ORGS_PER_USER orgs cannot join an 11th directly."""
+    user = User.objects.create_user(
+        email="capped@example.com", username="capped", password="pass1234"
+    )
+    _give_orgs(user, MAX_ORGS_PER_USER)
+
+    new_org = Organization.objects.create(name="One too many", is_personal=False)
+
+    with pytest.raises(ValidationError):
+        Membership.objects.create(user=user, org=new_org, role=Role.MEMBER)
+
+    assert Membership.objects.filter(user=user).count() == MAX_ORGS_PER_USER
+
+
+def test_direct_membership_insert_allowed_at_one_below_org_cap() -> None:
+    """Boundary: the MAX_ORGS_PER_USER-th org must still be allowed."""
+    user = User.objects.create_user(
+        email="nearly@example.com", username="nearly", password="pass1234"
+    )
+    _give_orgs(user, MAX_ORGS_PER_USER - 1)
+
+    new_org = Organization.objects.create(name="The tenth", is_personal=False)
+
+    Membership.objects.create(user=user, org=new_org, role=Role.OWNER)
+
+    assert Membership.objects.filter(user=user).count() == MAX_ORGS_PER_USER
 
 
 # ---------------------------------------------------------------------------
