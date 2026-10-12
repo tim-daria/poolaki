@@ -13,21 +13,25 @@ For the high-level architecture and communication flow, see: [AI Service Archite
 
 ---
 ## High-Level Endpoint Summary
+
 Initial supported endpoints:
 
 | Flow | Method | Endpoint | Purpose |
 |---|---|---|---|
-| Django → AI | POST | `/api/v1/chat` | Send user questions |
-| AI → Django | POST | `/api/internal/v1/analytics/monthly-summary` | Retrieve financial summary |
-| AI → Django | POST | `/api/internal/v1/transactions` | Retrieve transaction data |
-| AI → Django | POST | `/api/internal/v1/goals/progress` | Retrieve goals data |
+| Frontend → Django | POST | `/api/v1/organizations/{org_id}/chat/` | Public chat endpoint (session auth) |
+| Django → AI | POST | `/api/v1/chat` | Forward the user question to the AI Service |
+| AI → Django | POST | `/api/internal/v1/analytics/summary` | Monthly income/expense for a year + current balance |
+| AI → Django | POST | `/api/internal/v1/analytics/categories` | Monthly per-category breakdown for a year |
+| AI → Django | POST | `/api/internal/v1/transactions` | Filtered transaction list |
+| AI → Django | POST | `/api/internal/v1/categories` | Organization category list |
 
-The `/api/internal/` namespace is reserved for service-to-service communication and is not part of the public `Frontend` API.
+The internal endpoints are intentionally few: each returns a self-contained data set that covers a family of intents, so the AI Service can answer most questions with a single call.
+
+The `/api/internal/` namespace is reserved for service-to-service communication. It is not routed at the edge (Caddy exposes only `/api/v1/*`) and is reachable only from the backend Docker network.
 
 For more backend definitions see the [backend README](backend/README.md) and specifics on `docs/backend`.
 
 ---
-
 ## Communication Flows
 
 The AI integration consists of three main communication flows:
@@ -39,18 +43,22 @@ For the end-to-end sequential diagram and detailed RAG pipeline execution, see [
 
 ## Flow 1. User request - API Endpoints
 
-### Chat Endpoint
+The user request passes two hops:
+
+1. `Frontend → Django`: `POST /api/v1/organizations/{org_id}/chat/` — public endpoint. Standard session authentication and organization membership apply, as for the rest of the `/api/v1/` API; the user comes from the session and the organization from the URL.
+2. `Django → AI Service`: `POST /api/v1/chat` — Django forwards the question with the user and organization identifiers.
+
+### Chat Endpoint (Django → AI Service)
 
 `POST /api/v1/chat`
 
 Sends user questions and triggers AI processing to provide the final answer to the user.
 
-
 ### Request Schema
 
 ```
 {
-  "user_id": 123, 
+  "user_id": 123,
   "organization_id": 456,
   "question": "Why am I spending more this month?"
 }
@@ -78,438 +86,207 @@ Fields:
 
 ---
 ## Flow 2: AI Service → Django
-These are endpoints used by the `AI Service` to retrieve information from `Django`.
 
-### 2.1. Monthly Financial Summary
-`POST /api/internal/v1/analytics/monthly-summary`
+These are the endpoints the `AI Service` uses to retrieve financial data from `Django`.
 
-Provides aggregated financial information for financial analysis.
+### Authentication
+
+Internal endpoints require both:
+
+1. **Service authentication.** Header `Authorization: Bearer <token>` with the shared internal API token. The token is provisioned to the AI Service through Vault and compared by Django in constant time. Missing or invalid token → `401 UNAUTHORIZED`.
+2. **User authorization.** `user_id` must be a member of `organization_id`. Otherwise → `403 FORBIDDEN`.
+
+The token authenticates the *service*, not an end user.
+
+### 2.1. Financial Summary
+
+`POST /api/internal/v1/analytics/summary`
+
+Monthly income/expense distribution for a year plus the current organization balance.
+
+Covers: "how much did I spend / earn this (last) month?", "am I spending more or less than last month?", "what is my current balance?", "what is my average monthly income?" (the AI Service derives the average from the month rows).
 
 #### Request Schema
 
-```
-{ 
-  "user_id": 123, 
-  "organization_id": 456, 
-  "period": "2026-01" 
-}
-```
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| year            | integer | no       | Year to report on, 4-digit. Default: current year |
 
 #### Response Schema
 
 ```
 {
-  "period":"2026-01",
-  "total_income":2500,
-  "total_expenses":850,
-  "categories":[
-    {
-      "name":"Food",
-      "amount":300
-    }
+  "year": 2026,
+  "balance": "3500.00",
+  "totals": {
+    "income": "25000.00",
+    "expense": "8500.00"
+  },
+  "months": [
+    {"month": 1, "income": "2500.00", "expense": "850.00"},
+    {"month": 2, "income": "2200.00", "expense": "720.00"},
+    {"month": 3, "income": "0.00", "expense": "0.00"}
   ]
 }
 ```
 
-### 2.2. Transactions
-`POST /api/internal/v1/transactions`
+- `months` always contains all 12 entries, `month` is `1` (January) … `12` (December). Months without transactions are zero-filled, so period comparisons never depend on missing rows.
+- `totals` is the sum over the reported year.
+- `balance` is the organization balance **as of today, over the full transaction history** — it is not limited by `year`.
 
-Provides transaction details required for deeper analysis. The request supports optional filters and sorting parameters depending on the user's intent.
+### 2.2. Category Breakdown
 
-#### Request Schema
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | integer | yes | User identifier used for authorization and data scoping |
-| `organization_id` | integer | yes | Organization identifier used to isolate organizational scope |
-| `category` | string | no | Filter transactions by category |
-| `range` | string | no | Time range for the requested transactions |
-| `sort` | string | no | Sorting order for the returned transactions |
-| `limit` | integer | no | Maximum number of transactions to return |
-
-
-**Supported Use Cases**
-
-| Use Case | Request Parameters | Purpose |
-|---|---|---|
-| Transaction list | — | Retrieve transactions |
-| Category filtering | `category` | Retrieve transactions for a specific category |
-| Top expenses | `sort`, `limit` | Retrieve the highest-value transactions |
-| Largest transaction | `range`, `sort` | Retrieve the highest-value transaction within a period |
-| Latest transaction | — | Retrieve the most recent expense transaction |
-
-_Request Examples:_
-
-Transactions by category
-
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "category": "Food"
-}
-
-Top expenses
-
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "sort": "amount_desc",
-  "limit": 5
-}
-
-Largest transaction in a period
-
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "range": "3months",
-  "sort": "amount_desc",
-  "limit": 1
-}
-
-#### Response Schema 
-The response uses the same transaction collection structure for filtered and unfiltered requests. The returned transactions reflect the filters and sorting specified in the request.
-
-```
-{
-  "transactions":[
-    {
-      "category":"Food",
-      "amount":50,
-      "date":"2026-01-10"
-    }
-  ]
-}
-```
-
-For intents that require an aggregate value rather than individual transactions, such as "How much did I spend on Food?", the corresponding analytics endpoint should be used instead of `transactions`.
-
-### 2.3. Category Spending
 `POST /api/internal/v1/analytics/categories`
 
-Provides spending information for a specific category.
+Per-category, per-month distribution for a year, covering both income and expense categories.
 
 #### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "category": "Food"
-}
-```
+
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| year            | integer | no       | Year to report on, 4-digit. Default: current year |
 
 #### Response Schema
+
 ```
 {
-  "category": "Food",
-  "amount": 230,
-  "period": "2026-01"
-}
-```
-
-### 2.4. Category Ranking
-
-`POST /api/internal/v1/analytics/categories/ranking`
-
-Provides expense categories ranked by spending.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
+  "year": 2026,
   "categories": [
     {
+      "category_id": 12,
+      "name": "Salary",
+      "type": "income",
+      "total": "25200.00",
+      "monthly": ["2200.00", "2200.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
+    },
+    {
+      "category_id": 4,
       "name": "Food",
-      "amount": 230
+      "type": "expense",
+      "total": "2300.00",
+      "monthly": ["180.00", "190.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
     }
   ]
 }
 ```
 
-### 2.5. Latest Transaction
+- `monthly` is always 12 slots, index `0` = January, zero-filled. `total` equals the sum of `monthly`.
+- Only categories with at least one transaction in the year are returned; categories without activity are omitted.
+- Ordering: income categories first, then expense categories; within a type, by `total` descending, then by name. The biggest expense category is the first expense entry.
 
-`POST /api/internal/v1/transactions/latest`
+### 2.3. Transactions
 
-Provides the user's most recent expense transaction.
+`POST /api/internal/v1/transactions`
 
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
+Filtered transaction list.
 
-#### Response Schema
-```
-{
-  "transaction": {
-    "category": "Entertainment",
-    "amount": 15,
-    "date": "2026-06-15"
-  }
-}
-```
-
-### 2.6. Income Summary
-`POST /api/internal/v1/analytics/income-summary`
-
-Provides aggregated income information for a period.
+Covers: "what are my top 5 expenses?", "when was the last time I made an expense?", "what was my largest transaction in the last 3 months?", and generic "show my transactions" browsing.
 
 #### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "period": "2026-01"
-}
-```
 
-#### Response Schema
-```
-{
-  "organization_id": 456,
-  "period": "2026-01",
-  "total_income": 2200
-}
-```
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| entry_type      | string  | no       | `income` \| `expense`                    |
+| date_from       | string  | no       | Inclusive start date, `YYYY-MM-DD`       |
+| date_to         | string  | no       | Inclusive end date, `YYYY-MM-DD`         |
+| sort            | string  | no       | `date_desc` (default) \| `date_asc`     |
+| limit           | integer | no       | Maximum rows returned. Default `100`, max `200` |
 
-### 2.7. Average Income
-`POST /api/internal/v1/analytics/income-average`
+Default date window when `date_from` / `date_to` are omitted: the last 3 calendar months including the current one (`date_from` = first day of the month two months before the current month, `date_to` = today).
 
-Provides the user's average monthly income.
+The AI Service fills `date_from` / `date_to` from the fixed template (below); the dates are computed in code from the current date. The LLM returns the intent label only and does not produce filter values.
 
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
+**Request Example**
 
-#### Response Schema
-```
-{
-  "average_monthly_income": 2100
-}
-```
+The single request the AI Service sends — the full 3-month list (dates computed from the current date):
 
-### 2.8. Current Balance
-`POST /api/internal/v1/analytics/balance`
-
-Provides the user's current financial balance.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
-  "balance": 3500
-}
-```
-
-### 2.9. Goal Progress
-`POST /api/internal/v1/goals/progress`
-
-Provides progress information for a specific financial goal.
-
-#### Request Schema
 ```
 {
   "user_id": 123,
   "organization_id": 456,
-  "goal_id": 789
+  "date_from": "2026-04-01",
+  "date_to": "2026-06-29",
+  "sort": "date_desc",
+  "limit": 200
 }
 ```
+
+**Requests by intent (closed set)**
+
+The LLM returns the intent label only (no slots); the AI Service builds the request from a fixed template per intent. All dates are computed in code from the current date.
+
+| Intent | Request |
+|---|---|
+| `transactions` ("show my transactions", "top 5 expenses", "largest transaction in the last 3 months", "when was my last expense?", sub-period variants) | `date_from` / `date_to` = last 3 calendar months, `sort: date_desc`, `limit: 200` (all entry types) |
+
+The template retrieves the full bounded transaction list; the LLM answers from it:
+- latest expense = the first `expense` row (the list is newest-first);
+- top `N` / largest = filter by entry type and/or a date sub-period, then scan by amount;
+- `limit: 200` truncates the oldest rows first, which is unreachable at this scale.
+
+
+
+Questions about periods **outside** the fetched window (e.g. "largest expense last year") are still classified into the same intent. The final-answer prompt receives the original question together with the data window actually retrieved and must state that window or decline politely.
 
 #### Response Schema
-```
- {
-  "goal_id": 789,
-  "target": 5000,
-  "current": 3000,
-  "progress": 60
-}
-```
 
-### 2.10. Goal Forecast
-`POST /api/internal/v1/goals/forecast`
-
-Provides an estimated completion date for a financial goal.
-
-#### Request Schema
 ```
 {
-  "user_id": 123,
-  "organization_id": 456,
-  "goal_id": 789
-}
-```
-#### Response Schema
-```
-{
-  "goal_id": 789,
-  "estimated_completion": "2026-10"
-}
-```
-
-### 2.11. Spending Trends
-
-`POST /api/internal/v1/analytics/trends`
-
-Provides spending trends compared with previous periods.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
+  "transactions": [
+    {
+      "id": 789,
+      "date": "2026-06-20",
+      "description": "Groceries",
+      "entry_type": "expense",
+      "category": "Food",
+      "amount": "50.00"
+    }
+  ]
 }
 ```
 
-#### Response Schema
-```
-{
-  "comparison_period": "previous_month",
-  "change_percentage": 15,
-  "direction": "increase"
-}
-```
-
-### 2.12. Cash Flow
-
-`POST /api/internal/v1/analytics/cash-flow`
-
-Provides net cash flow for the requested period.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "period": "current_week"
-}
-```
-
-#### Response Schema
-```
-{
-  "period": "current_week",
-  "net_cash_flow": 350
-}
-```
-
-### 2.13. Shared Expenses
-
-`POST /api/internal/v1/analytics/shared-expenses`
-
-Provides aggregated expenses for shared accounts.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
-  "period": "current_month",
-  "total_shared_expenses": 1200
-}
-```
-
-### 2.14. Organization Summary
-
-`POST /api/internal/v1/analytics/organization-summary`
-
-Provides aggregated spending information for the organization.
-
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
-
-#### Response Schema
-```
-{
-  "organization_id": 456,
-  "period": "current_month",
-  "total_expenses": 2500
-}
-```
-
-### 2.15. Categories
+### 2.4. Categories
 
 `POST /api/internal/v1/categories`
 
-Provides category information required for transaction categorization.
+The organization's category list.
+
+Used by the AI Service to answer category-related questions, e.g. which category fits a new transaction (VEC-003), together with the category definitions from the vector store.
 
 #### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456
-}
-```
+
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
 
 #### Response Schema
+
 ```
 {
   "categories": [
-    {
-      "name": "Food",
-      "description": "Groceries, restaurants, and food delivery"
-    }
+    {"id": 4, "name": "Food", "type": "expense"},
+    {"id": 12, "name": "Salary", "type": "income"}
   ]
 }
 ```
 
-### 2.16. Transaction Detail
+### 2.5. Deferred Endpoints (Goals)
 
-`POST /api/internal/v1/transactions/detail`
+Goal endpoints are part of the planned contract but are **not implemented** in this iteration. The AI Service must not call them; goal questions (see [Supported AI Questions](../supported-questions.md)) are declined until the endpoints land.
 
-Provides detailed information for a specific transaction.
+Planned:
 
-#### Request Schema
-```
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "transaction_id": 789
-}
-```
-
-#### Response Schema
-```
-{
-  "transaction": {
-    "id": 789,
-    "description": "Public transport",
-    "category": "Transport",
-    "amount": 50,
-    "date": "2026-01-10"
-  }
-}
-```
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/internal/v1/goals/progress` | Goal target, current balance, progress percentage |
+| POST | `/api/internal/v1/goals/forecast` | Estimated completion date at the current saving pace |
 
 ---
 ## Data Requirements
@@ -518,10 +295,11 @@ Internal endpoints use `POST` with `user_id` and `organization_id` in the reques
 
 `organization_id` isolates organizational scope.
 
-`user_id` enforces user-level authorization and auditing.
+`user_id` enforces user-level authorization and auditing (validated against organization membership).
 
 Additional request body fields are endpoint-specific and defined in each endpoint's Request Schema.
 
+---
 ## Error Format
 
 All API errors should follow a consistent structure.
@@ -539,8 +317,8 @@ Error codes:
 | Code            | HTTP Status               | Description                          |
 | --------------- | ------------------------- | ------------------------------------ |
 | INVALID_REQUEST | 400 Bad Request           | Invalid request payload              |
-| UNAUTHORIZED    | 401 Unauthorized          | Authentication failure               |
-| FORBIDDEN       | 403 Forbidden             | User does not have access            |
+| UNAUTHORIZED    | 401 Unauthorized          | Missing or invalid internal token    |
+| FORBIDDEN       | 403 Forbidden             | User is not a member of the organization |
 | DATA_NOT_FOUND  | 404 Not Found             | Requested information does not exist |
 | CONTEXT_ERROR   | 422 Unprocessable Entity  | Context generation failed            |
 | LLM_ERROR       | 502 Bad Gateway           | LLM provider failure                 |
@@ -549,9 +327,10 @@ Error codes:
 ---
 ## Mapping Intents to Endpoints
 
-When the `AI Service` receives a request at `POST /api/v1/chat`, it classifies the user intent to determine which backend APIs to call. 
+When the `AI Service` receives a request at the chat endpoint, it classifies the user intent to determine which backend APIs to call.
 
-For the complete list of supported intents, refer to **[Supported AI Questions Documentation](supported-ai-questions.md)**
+For the complete list of supported intents and their endpoint mapping, refer to **[Supported AI Questions Documentation](../supported-questions.md)**.
+
 
 ---
 ## API Versioning
