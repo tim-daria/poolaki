@@ -15,6 +15,8 @@ Data retrieval is mainly performed through backend services using SQL-based quer
 
 The following are the initial supported questions for the MVP:
 
+Data retrieval is consolidated into four internal endpoints — `analytics/summary`, `analytics/categories`, `transactions`, and `categories` (see [API Contract](api/api-contract.md)).
+
 ---
 
 # Domain: Expenses & Transactions
@@ -37,7 +39,7 @@ Retrieval:
 `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/monthly-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -62,7 +64,7 @@ Retrieval:
 `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/monthly-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -112,7 +114,7 @@ Data Required:
 Retrieval: `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/categories/ranking`
+`POST /api/internal/v1/analytics/categories`
 
 Expected Response:
 
@@ -138,6 +140,8 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/transactions`
 
+Parameters: fixed template — full transaction list for the last 3 calendar months, `sort: date_desc`, `limit: 200`; the LLM picks the top 5 expenses from the returned list.
+
 Expected Response:
 
 > "A list of your five largest expenses."
@@ -160,7 +164,9 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`POST /api/internal/v1/transactions/latest`
+`POST /api/internal/v1/transactions`
+
+Parameters: same template as EXP-005 — full transaction list for the last 3 calendar months; the LLM reads the first expense row of the returned list.
 
 Expected Response:
 
@@ -184,7 +190,9 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`/api/internal/v1/transactions`
+`POST /api/internal/v1/transactions`
+
+Parameters: same template as EXP-005 — full transaction list for the last 3 calendar months; the LLM finds the largest expense in the requested sub-period (default: the full window) from the returned list.
 
 Expected Response:
 
@@ -210,7 +218,7 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/income-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -234,7 +242,9 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/income-average`
+`POST /api/internal/v1/analytics/summary`
+
+The average is derived by the AI Service from the month rows of the response.
 
 Expected Response:
 
@@ -261,7 +271,9 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/balance`
+`POST /api/internal/v1/analytics/summary`
+
+The `balance` field of the response.
 
 Expected Response:
 
@@ -290,6 +302,8 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/goals/progress`
 
+Status: planned — endpoint not implemented yet.
+
 Expected Response:
 
 > "You have completed 60% of your savings goal."
@@ -313,6 +327,8 @@ Retrieval: `SQL`
 
 Backend Endpoint:
 `POST /api/internal/v1/goals/progress`
+
+Status: planned — endpoint not implemented yet.
 
 Expected Response:
 
@@ -339,6 +355,8 @@ Retrieval: `SQL` + Analytics
 Backend Endpoint:
 `POST /api/internal/v1/goals/forecast`
 
+Status: planned — endpoint not implemented yet.
+
 Expected Response:
 
 > "You are expected to reach your goal in 4 months."
@@ -356,28 +374,13 @@ User Question:
 Retrieval: Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/trends`
+`POST /api/internal/v1/analytics/summary`
+
+The comparison is derived by the AI Service from adjacent month rows.
 
 Expected Response:
 
 > "You spent 15% more than last month."
-
----
-
-## TREND-002 - Cash Flow
-
-User Question:
-
-> What is my net cash flow this week?
-
-Retrieval: Analytics
-
-Backend Endpoint:
-`POST /api/internal/v1/analytics/cash-flow`
-
-Expected Response:
-
-> "Your net cash flow this week is +€350."
 
 ---
 
@@ -392,7 +395,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/shared-expenses`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -409,7 +412,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/organization-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -521,7 +524,9 @@ Data Required:
 Retrieval: `SQL` + `Vector`
 
 Backend Endpoint:
-`POST /api/internal/v1/transactions/detail`
+`POST /api/internal/v1/transactions`
+
+Status: planned — identifying a specific transaction from free text requires slot extraction, which is out of scope in the MVP (see [Out of Scope](out-of-scope-questions.md)); the question is declined until it lands.
 
 Vector Source:
 
