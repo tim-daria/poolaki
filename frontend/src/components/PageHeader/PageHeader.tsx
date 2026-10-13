@@ -20,8 +20,18 @@ import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
+/** Floating over the page it needs the lift a flat in-bar button does not. */
+const fabSx = {
+  height: 48,
+  bgcolor: "primary.dark",
+  "&:hover": { bgcolor: "primary.main" },
+  boxShadow: "0 8px 24px -8px var(--mui-palette-shadow-main)",
+} as const;
+
 interface PageHeaderProps {
   children: ReactNode;
+  /** Phones: where the page action floats instead of sitting in this bar. */
+  fabSlot?: HTMLElement | null;
 }
 
 /**
@@ -30,12 +40,12 @@ interface PageHeaderProps {
  * state: the action button closes over page state, so passing it up through
  * setState would go stale or re-render in a loop.
  */
-export function PageHeader({ children }: PageHeaderProps) {
+export function PageHeader({ children, fabSlot = null }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
 
   return (
-    <PageHeaderContext.Provider value={{ titleSlot, actionSlot }}>
+    <PageHeaderContext.Provider value={{ titleSlot, actionSlot, fabSlot }}>
       <Box
         component="header"
         sx={{
@@ -128,15 +138,21 @@ export function PageTitle({ title, subtitle, back }: PageTitleProps) {
  */
 export function PageActionButton({ sx, ...props }: ButtonProps) {
   const slots = usePageHeaderSlots();
-  if (!slots?.actionSlot) return null;
+  const target = slots?.fabSlot ?? slots?.actionSlot;
+  if (!target) return null;
+  const floating = Boolean(slots?.fabSlot);
 
   return createPortal(
     <Button
       variant="contained"
       startIcon={<AddIcon />}
       {...props}
-      sx={[actionButtonSx, ...(Array.isArray(sx) ? sx : [sx])]}
+      sx={[
+        actionButtonSx,
+        floating && fabSx,
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     />,
-    slots.actionSlot,
+    target,
   );
 }

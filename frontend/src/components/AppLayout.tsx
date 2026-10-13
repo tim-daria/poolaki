@@ -46,6 +46,7 @@ export function AppLayout() {
   const chatFullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [chatOpen, setChatOpen] = useState(false);
+  const [fabSlot, setFabSlot] = useState<HTMLElement | null>(null);
 
   const shellRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -108,7 +109,7 @@ export function AppLayout() {
               mx: "auto",
             }}
           >
-            <PageHeader>
+            <PageHeader fabSlot={isMobile ? fabSlot : null}>
               <Outlet />
             </PageHeader>
           </Box>
@@ -138,6 +139,16 @@ export function AppLayout() {
         </Box>
         {isMobile && (
           <Box sx={{ position: "sticky", bottom: 0, zIndex: "appBar" }}>
+            {/* Anchored to the bar, so it rides above it whatever the safe-area
+        inset adds below. */}
+            <Box
+              ref={setFabSlot}
+              sx={{
+                position: "absolute",
+                right: 16,
+                bottom: "calc(100% + 16px)",
+              }}
+            />
             <BottomNav />
           </Box>
         )}
