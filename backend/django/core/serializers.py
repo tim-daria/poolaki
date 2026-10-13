@@ -318,7 +318,8 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
 
 class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
     question = serializers.CharField(min_length=1, max_length=1000, trim_whitespace=True)
-    
+
+
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
     income = serializers.DecimalField(max_digits=14, decimal_places=2)
     expense = serializers.DecimalField(max_digits=14, decimal_places=2)
