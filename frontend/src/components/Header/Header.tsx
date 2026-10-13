@@ -23,12 +23,11 @@ import {
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../navItems";
+import { NAV_DESKTOP } from "../BottomNav/navItems";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
@@ -50,27 +49,25 @@ const glyphSize = 28;
 
 interface HeaderProps {
   onLogout: () => void;
-  /** Opens the Sidebar's temporary Drawer; only reachable on mobile. */
-  onMenuClick: () => void;
-  showMenuButton: boolean;
   /** Opens AI Assistant chat. */
   onAssistantClick: () => void;
   /** Routes can turn AI button off via `handle.assistant`. */
   showAssistant: boolean;
+  /** Desktop only; phones navigate with the bottom bar. */
+  showTabs: boolean;
 }
 
 /**
  * On desktop a three-column grid whose side columns are equal, so the tabs
  * sit on the page's centre line whatever the switcher and the controls
  * measure; `minmax(0, 1fr)` lets a long budget name truncate instead of
- * pushing into the tabs. On phones a plain row: hamburger, switcher, controls.
+ * pushing into the tabs. On phones a plain row: switcher, controls.
  */
 export function Header({
   onLogout,
-  onMenuClick,
-  showMenuButton,
   onAssistantClick,
   showAssistant,
+  showTabs,
 }: HeaderProps) {
   const { user } = useAuth();
   const org = useCurrentOrg();
@@ -111,19 +108,10 @@ export function Header({
           [NAV_DESKTOP]: { justifySelf: "start" },
         }}
       >
-        {showMenuButton && (
-          <IconButton
-            aria-label="Open navigation"
-            edge="start"
-            onClick={onMenuClick}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
         <OrgSwitcher />
       </Box>
 
-      {!showMenuButton && <NavTabs />}
+      {showTabs && <NavTabs />}
 
       <Stack
         direction="row"

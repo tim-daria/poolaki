@@ -1,4 +1,4 @@
-/** @file The workspace's pages, as both the header tabs and the phone drawer list them. */
+/** @file The workspace's pages, as both the header tabs and the mobile bottom bar list them. */
 
 import type { ReactNode } from "react";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";

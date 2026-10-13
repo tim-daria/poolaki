@@ -6,8 +6,8 @@ import { useLogout } from "../context/useLogout";
 import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
-import { Sidebar } from "./Sidebar/Sidebar";
-import { LEGAL_LINKS, NAV_MOBILE_QUERY } from "./navItems";
+import { BottomNav } from "./BottomNav/BottomNav";
+import { LEGAL_LINKS, NAV_MOBILE_QUERY } from "./BottomNav/navItems";
 
 /**
  * Ceiling for the page column. Past this the content centres instead of
@@ -22,9 +22,6 @@ const narrowContentMaxWidth = 880;
 /**
  * Main application layout: the Header with the page tabs, and the page area.
  *
- * - On phones the tabs give way to a hamburger that opens the Sidebar's
- *   overlay drawer; `mobileOpen` lives here because the Header opens what the
- *   Sidebar owns.
  * - State reset via `key={orgId}`: bound to `<main>`, changing `orgId` forces
  *   React to remount only the page content (<Outlet />), clearing old
  *   filters and stale data while the shell stays mounted. The shell column
@@ -47,7 +44,6 @@ export function AppLayout() {
   const showAssistant = useRouteMeta()?.assistant ?? true;
   const isMobile = useMediaQuery(NAV_MOBILE_QUERY);
   const chatFullScreen = useMediaQuery(theme.breakpoints.down("sm"));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -80,10 +76,6 @@ export function AppLayout() {
           overflowY: "auto",
         }}
       >
-        {isMobile && (
-          <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
-        )}
-
         {/* Same column, side padding and scroll container as the page, so the
             bar's edges line up with the cards below it at every width, with
             or without a scrollbar, and it scrolls away with them. */}
@@ -101,10 +93,9 @@ export function AppLayout() {
         >
           <Header
             onLogout={logout}
-            onMenuClick={() => setMobileOpen(true)}
-            showMenuButton={isMobile}
             onAssistantClick={() => setChatOpen(true)}
             showAssistant={showAssistant}
+            showTabs={!isMobile}
           />
         </Box>
 
@@ -122,7 +113,7 @@ export function AppLayout() {
             </PageHeader>
           </Box>
 
-          {/* Below the page on every size; the drawer does not carry them. */}
+          {/* Below the page on every size; the bottom bar does not carry them. */}
           <Box
             component="footer"
             sx={{
@@ -145,6 +136,11 @@ export function AppLayout() {
             ))}
           </Box>
         </Box>
+        {isMobile && (
+          <Box sx={{ position: "sticky", bottom: 0, zIndex: "appBar" }}>
+            <BottomNav />
+          </Box>
+        )}
       </Box>
 
       <AiChatDrawer
