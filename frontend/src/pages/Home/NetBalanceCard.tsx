@@ -95,7 +95,7 @@ export function NetBalanceCard({
       </Box>
 
       <Typography sx={{ color: "text.secondary", mt: "auto" }}>
-        Funds on your account available to spend
+        Funds available to spend
       </Typography>
     </Box>
   );
