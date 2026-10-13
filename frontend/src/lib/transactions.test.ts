@@ -70,7 +70,7 @@ describe("fetchTransactionPage", () => {
     const fetch = stubFetch(EMPTY_PAGE);
     await fetchTransactionPage(ORG, DEFAULT_FILTERS);
     const [url, init] = fetch.mock.calls[0];
-    expect(url).toBe("/api/v1/organizations/1/transactions/?");
+    expect(url).toBe("/api/v1/organizations/1/transactions/");
     expect(init.credentials).toBe("include");
   });
 

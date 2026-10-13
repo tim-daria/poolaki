@@ -415,8 +415,9 @@ export async function fetchTransactionPage(
     params.set("page_size", String(PAGE_SIZE));
   }
 
+  const query = params.toString();
   const res = await fetch(
-    `/api/v1/organizations/${org_id}/transactions/?${params}`,
+    `/api/v1/organizations/${org_id}/transactions/${query ? `?${query}` : ""}`,
     { credentials: "include", signal },
   );
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
