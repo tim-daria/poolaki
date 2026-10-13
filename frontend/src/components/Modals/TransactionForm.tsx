@@ -263,22 +263,8 @@ export function TransactionForm({
               }}
               aria-label="Transaction type"
               sx={{
-                bgcolor: "background.default",
                 borderRadius: 2,
-                p: 0.5,
-                gap: 0.5,
-                "& .MuiToggleButtonGroup-grouped": {
-                  border: 0,
-                  borderRadius: 2,
-                  py: 1,
-                  fontWeight: 700,
-                  color: "text.primary",
-                  "&.Mui-selected": {
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                    "&:hover": { bgcolor: "primary.main" },
-                  },
-                },
+                "& .MuiToggleButtonGroup-grouped": { py: 1 },
               }}
             >
               {TABS.map((tab) => (

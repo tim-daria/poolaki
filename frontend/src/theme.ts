@@ -83,6 +83,38 @@ export const theme = createTheme({
         root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
       },
     },
+    MuiToggleButtonGroup: {
+      // The one segmented-control look: a `background.default` track with
+      // borderless, gapped buttons and a primary-filled selected one. Callers
+      // set only the group's radius (the buttons inherit it) and sizing.
+      // Centralised here so no ToggleButtonGroup has to repeat it in `sx`.
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          padding: 4,
+          gap: 4,
+          // `.Mui-disabled` repeated so this outranks MUI's three-class
+          // disabled rules, which otherwise restore a three-sided border and
+          // a -1px overlap on the non-first buttons of a disabled group. It
+          // also beats the group's first/middle/last rules that square off the
+          // inner corners.
+          "& .MuiToggleButtonGroup-grouped, & .MuiToggleButtonGroup-grouped.Mui-disabled":
+            {
+              border: 0,
+              marginLeft: 0,
+              borderRadius: "inherit",
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              "&.Mui-disabled": { color: theme.palette.text.disabled },
+              "&.Mui-selected": {
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                "&:hover": { backgroundColor: theme.palette.primary.main },
+              },
+            },
+        }),
+      },
+    },
     MuiDialog: {
       styleOverrides: {
         paper: ({ theme }) => ({
