@@ -697,6 +697,78 @@ test.describe.serial("Transactions", () => {
     await page.getByRole("button", { name: "Discard" }).click();
   });
 
+  test("an expense can be paid from a goal, with a live split preview", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+
+    // Collapsed by default: one quiet chip, no picker.
+    const chip = dialog.getByRole("button", { name: "Pay from a goal" });
+    await expect(chip).toBeVisible();
+    await expect(dialog.getByLabel("Pay from goal")).toHaveCount(0);
+
+    await chip.click();
+    await expect(chip).toHaveCount(0);
+    const picker = dialog.getByLabel("Pay from goal");
+    await expect(picker).toBeVisible();
+
+    // Only goals the server lets an expense draw from are listed.
+    await picker.click();
+    await expect(
+      page.getByRole("option", { name: /Cat mansion/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: /Emergency fund/ }),
+    ).toContainText("€0,00 left · will be paid from balance");
+    await expect(page.getByRole("option", { name: /New laptop/ })).toHaveCount(
+      0,
+    );
+    await page.getByRole("option", { name: /Cat mansion/ }).click();
+    await expect(picker).toContainText("€15.000,00 left");
+
+    // Goal has enough.
+    await dialog.getByLabel("Amount").fill("980");
+    await expect(dialog.getByText("€980,00 from Cat mansion")).toBeVisible();
+    await expect(
+      dialog.getByText("€14.020,00 will be left in the goal."),
+    ).toBeVisible();
+
+    // Goal runs out with this expense.
+    await dialog.getByLabel("Amount").fill("15220");
+    await expect(
+      dialog.getByText("€15.000,00 from Cat mansion · €220,00 from balance"),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(
+        "The goal runs out with this expense and goes over by €220,00.",
+      ),
+    ).toBeVisible();
+
+    // Goal already empty.
+    await picker.click();
+    await page.getByRole("option", { name: /Emergency fund/ }).click();
+    // Refocusing the money field after the menu closes appends; clear first.
+    await dialog.getByLabel("Amount").clear();
+    await dialog.getByLabel("Amount").fill("120");
+    await expect(dialog.getByText("€120,00 from balance")).toBeVisible();
+    await expect(
+      dialog.getByText(/Emergency fund is empty\. This still counts toward it/),
+    ).toBeVisible();
+
+    // Remove collapses back to the chip, and the goal is dropped from the draft.
+    await dialog.getByRole("button", { name: "Remove" }).click();
+    await expect(picker).toHaveCount(0);
+    await expect(chip).toBeVisible();
+
+    // Leaving the Expense tab hides the chip; coming back shows it collapsed.
+    await dialog.getByRole("button", { name: "Income" }).click();
+    await expect(chip).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Expense" }).click();
+    await expect(chip).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+  });
+
   test("a tax-refundable expense from the form is found by the filter", async () => {
     await page.getByRole("button", { name: "Add transaction" }).click();
     const dialog = page.getByRole("dialog");
