@@ -30,13 +30,31 @@ export function goalState(g: Goal): GoalStatus {
 
 export const isArchived = (g: Goal) => goalState(g) === "archived";
 
+/** An expense may be paid from this goal. The server decides; see `Goal.spendable`. */
+export const isSpendable = (g: Goal) => g.spendable;
+
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
   id: number;
   name: string;
   target_amount: number;
-  /** Derived on the server from the goal's contributions, never sent up. */
+  /**
+   * Derived on the server from the goal's contributions, never sent up.
+   * TODO: the goals API sends `balance` instead; fold this into it when
+   * getGoals switches to the fetch.
+   */
   saved_amount: number;
+  /**
+   * What the goal holds now: contributions minus withdrawals and expenses
+   * paid from it. Negative once expenses exceed what was saved.
+   */
+  balance: number;
+  /**
+   * Whether an expense may be paid from this goal. The server's rule is
+   * "completed, or active with no target date", and it rejects an expense
+   * against any other goal with a 400.
+   */
+  spendable: boolean;
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
   status: GoalStatus;
@@ -76,10 +94,10 @@ export function oldestFirst(a: Goal, b: Goal): number {
 }
 
 /**
- * TODO: no goals API exists yet. Swap the body for a real fetch
- * (`GET /api/v1/organizations/${org_id}/goals/`) once it lands, the
- * signature (org_id in, Promise<Goal[]> out) is written to match that call,
- * so Goals.tsx does not need to change, just the `await` it already has room for.
+ * TODO: the goals API is on the unmerged feat/goals branch. Swap the body for
+ * `GET /api/v1/organizations/${org_id}/goals/`, which answers
+ * `{ goals: GoalDTO[], total }`, once it lands. The signature (org_id in,
+ * Promise<Goal[]> out) already matches, so callers do not change.
  */
 export async function getGoals(org_id: number): Promise<Goal[]> {
   void org_id; // TODO: use once the fetch call replaces the seed
@@ -140,6 +158,8 @@ type GoalDTO = {
   /** String to preserve decimal precision. */
   target_amount: string;
   saved_amount: string;
+  balance: string;
+  spendable: boolean;
   target_date: string | null;
   /**
    * Raw, not GoalStatus: no serializer sends this yet, so the boundary
@@ -168,6 +188,8 @@ function fromDTO(d: GoalDTO): Goal {
     name: d.name,
     target_amount: parseMoney(d.target_amount),
     saved_amount: parseMoney(d.saved_amount),
+    balance: parseMoney(d.balance),
+    spendable: d.spendable,
     target_date: d.target_date,
     status: parseGoalStatus(d.status),
     created_at: d.created_at,
