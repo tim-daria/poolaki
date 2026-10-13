@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from core.models import (
     Category,
-    # CategoryType,
+    CategoryType,
     EntryType,
     Goal,
     Invitation,
@@ -84,6 +84,13 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         category = attrs.get("category_id")
         entry_type = attrs["entry_type"]
+
+        # Income/expense must always be categorized: the report partitions
+        # totals per category and has no "uncategorized" bucket.
+        if entry_type in (EntryType.INCOME, EntryType.EXPENSE) and category is None:
+            raise serializers.ValidationError(
+                {"category_id": ("A category is required for income and expense transactions.")}
+            )
 
         if isinstance(category, Category) and category.type != entry_type:
             raise serializers.ValidationError(
@@ -197,6 +204,16 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
         category = attrs.get("category_id")
         transaction = self.context["transaction"]
 
+        # An explicit null clears the category; income/expense must keep theirs.
+        if (
+            "category_id" in attrs
+            and category is None
+            and transaction.entry_type in (EntryType.INCOME, EntryType.EXPENSE)
+        ):
+            raise serializers.ValidationError(
+                {"category_id": ("Income and expense transactions cannot be uncategorized.")}
+            )
+
         if isinstance(category, Category) and category.type != transaction.entry_type:
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
@@ -297,3 +314,38 @@ class CategoryResponseSerializer(serializers.ModelSerializer[Category]):
             "name",
             "type",
         )
+
+
+class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
+    income = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
+    month = serializers.IntegerField()
+    income = serializers.DecimalField(max_digits=14, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
+    category_id = serializers.IntegerField()
+    name = serializers.CharField()
+    # Contribution rows are excluded from the report for now
+    type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
+    total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    monthly = serializers.ListField(
+        child=serializers.DecimalField(max_digits=14, decimal_places=2),
+        min_length=12,
+        max_length=12,
+    )
+
+
+class ReportQuerySerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField(required=False, min_value=1900, max_value=2099)
+
+
+class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField()
+    totals = ReportAmountsSerializer()
+    monthly = ReportMonthlySerializer(many=True)
+    categories = ReportCategorySerializer(many=True)
