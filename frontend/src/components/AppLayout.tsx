@@ -44,6 +44,7 @@ export function AppLayout() {
   const theme = useTheme();
   const { orgId } = useParams();
   const narrow = useRouteMeta()?.width === "narrow";
+  const showAssistant = useRouteMeta()?.assistant ?? true;
   const isMobile = useMediaQuery(NAV_MOBILE_QUERY);
   const chatFullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -102,6 +103,8 @@ export function AppLayout() {
             onLogout={logout}
             onMenuClick={() => setMobileOpen(true)}
             showMenuButton={isMobile}
+            onAssistantClick={() => setChatOpen(true)}
+            showAssistant={showAssistant}
           />
         </Box>
 
@@ -114,7 +117,7 @@ export function AppLayout() {
               mx: "auto",
             }}
           >
-            <PageHeader onAssistantClick={() => setChatOpen(true)}>
+            <PageHeader>
               <Outlet />
             </PageHeader>
           </Box>

@@ -9,6 +9,7 @@ import {
   Avatar,
   Badge,
   Box,
+  Button,
   Divider,
   IconButton,
   ListItemIcon,
@@ -19,6 +20,7 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -51,6 +53,10 @@ interface HeaderProps {
   /** Opens the Sidebar's temporary Drawer; only reachable on mobile. */
   onMenuClick: () => void;
   showMenuButton: boolean;
+  /** Opens AI Assistant chat. */
+  onAssistantClick: () => void;
+  /** Routes can turn AI button off via `handle.assistant`. */
+  showAssistant: boolean;
 }
 
 /**
@@ -59,7 +65,13 @@ interface HeaderProps {
  * measure; `minmax(0, 1fr)` lets a long budget name truncate instead of
  * pushing into the tabs. On phones a plain row: hamburger, switcher, controls.
  */
-export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
+export function Header({
+  onLogout,
+  onMenuClick,
+  showMenuButton,
+  onAssistantClick,
+  showAssistant,
+}: HeaderProps) {
   const { user } = useAuth();
   const org = useCurrentOrg();
   const navigate = useNavigate();
@@ -122,6 +134,16 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
         }}
       >
+        {showAssistant && (
+          <Button
+            variant="outlined"
+            startIcon={<AutoAwesomeOutlinedIcon />}
+            onClick={onAssistantClick}
+            sx={{ mr: 1.5, fontWeight: 700, border: "1px solid" }}
+          >
+            Ask AI
+          </Button>
+        )}
         <IconButton
           aria-label="Notifications"
           // Not "menu": the panel is an inbox of content with per-row

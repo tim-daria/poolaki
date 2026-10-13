@@ -8,28 +8,20 @@ import { Link as RouterLink } from "react-router";
 import {
   Box,
   Button,
-  IconButton,
   Link,
   Stack,
-  Tooltip,
   Typography,
   type ButtonProps,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
-/** See the assistant button: the height MUI gives a medium Button. */
-const ACTION_BUTTON_HEIGHT = "calc(0.875rem * 1.75 + 12px)";
-
 interface PageHeaderProps {
   children: ReactNode;
-  /** Optional until the assistant feature ships. */
-  onAssistantClick?: () => void;
 }
 
 /**
@@ -38,10 +30,9 @@ interface PageHeaderProps {
  * state: the action button closes over page state, so passing it up through
  * setState would go stale or re-render in a loop.
  */
-export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
+export function PageHeader({ children }: PageHeaderProps) {
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
-  const showAssistant = useRouteMeta()?.assistant ?? true;
 
   return (
     <PageHeaderContext.Provider value={{ titleSlot, actionSlot }}>
@@ -65,31 +56,6 @@ export function PageHeader({ children, onAssistantClick }: PageHeaderProps) {
           sx={{ alignItems: "center", flexShrink: 0 }}
         >
           <Box ref={setActionSlot} sx={{ display: "contents" }} />
-
-          {showAssistant && (
-            <Tooltip title="Ask AI">
-              <IconButton
-                aria-label="AI Assistant"
-                onClick={onAssistantClick}
-                sx={{
-                  // The action button's height, in its own terms: MUI's medium
-                  // Button is 0.875rem text at 1.75 line height plus 6px padding
-                  // top and bottom. In rem, so the two track the root font size
-                  // together (it is 18px on wide screens, 16px at 1024px and
-                  // below).
-                  width: ACTION_BUTTON_HEIGHT,
-                  height: ACTION_BUTTON_HEIGHT,
-                  color: "primary.dark",
-                  bgcolor: "primary.contrastText",
-                  border: "1px solid",
-                  borderColor: "primary.main",
-                  "&:hover": { bgcolor: "primary.light" },
-                }}
-              >
-                <AutoAwesomeOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
         </Stack>
       </Box>
 

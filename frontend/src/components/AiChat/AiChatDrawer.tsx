@@ -84,7 +84,9 @@ export function AiChatDrawer({ open, fullScreen, onClose }: Props) {
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
-          <Typography sx={{ fontWeight: 700 }}>Ask AI</Typography>
+          <Typography component="h2" sx={{ fontWeight: 700 }}>
+            AI Assistant
+          </Typography>
         </Box>
         <IconButton
           aria-label="Close assistant"
