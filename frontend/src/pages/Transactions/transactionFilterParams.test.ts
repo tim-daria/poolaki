@@ -1,7 +1,10 @@
 /** @file URL ↔ filters round-trip, including rejection of malformed params. */
 
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS } from "../../lib/transactionFilters";
+import {
+  DEFAULT_FILTERS,
+  QUERY_MAX_LENGTH,
+} from "../../lib/transactionFilters";
 import { parseFilters, serializeFilters } from "./transactionFilterParams";
 
 const parse = (query: string) => parseFilters(new URLSearchParams(query));
@@ -52,6 +55,11 @@ describe("parseFilters", () => {
     expect(parse("page=abc").page).toBe(1);
     expect(parse("page=2.5").page).toBe(1);
     expect(parse("page=7").page).toBe(7);
+  });
+
+  it("truncates a query longer than the backend accepts", () => {
+    const long = "x".repeat(QUERY_MAX_LENGTH + 20);
+    expect(parse(`q=${long}`).q).toBe("x".repeat(QUERY_MAX_LENGTH));
   });
 });
 

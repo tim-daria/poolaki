@@ -40,6 +40,7 @@ import { categoryById } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
 import {
   PAGE_SIZE,
+  QUERY_MAX_LENGTH,
   type Sort,
   type Tab as TabValue,
 } from "../../lib/transactionFilters";
@@ -234,6 +235,7 @@ function Transactions() {
                 size="small"
                 sx={[{ flex: 1, minWidth: 220 }, pillInputSx]}
                 slotProps={{
+                  htmlInput: { maxLength: QUERY_MAX_LENGTH },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">

@@ -28,6 +28,9 @@ export type TransactionFilters = {
 
 export const PAGE_SIZE = 15;
 
+/** The backend rejects a longer `q` with a 400 (TransactionListQuerySerializer). */
+export const QUERY_MAX_LENGTH = 100;
+
 export const DEFAULT_FILTERS: TransactionFilters = {
   tab: "all",
   q: "",
