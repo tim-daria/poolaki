@@ -16,7 +16,7 @@ GET /api/v1/organizations/{org_id}/reports/
 
 Query parameters:
 
-- `year` (optional, integer, 2000..2100) — the year to report on. Defaults
+- `year` (optional, integer, 1900..2099) — the year to report on. Defaults
   to the current year. A year within the range with no data simply returns
   zeros; a non-integer or out-of-range value returns `400`.
 
