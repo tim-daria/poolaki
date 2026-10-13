@@ -16,6 +16,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --group dev | uv pip install --system --no-cache -r -
 
 COPY app/ ./app/
+COPY models/ ./models/
+# In production remove tests/
 COPY tests/ ./app/tests/
 
 EXPOSE 8000

@@ -26,6 +26,7 @@ from core.views.organization import (
     OrganizationUpdateView,
     SetInitialBalanceView,
 )
+from core.views.report import ReportView
 from core.views.transaction import (
     TransactionGetDeleteView,
     TransactionListCreateView,
@@ -34,6 +35,7 @@ from core.views.utils import csrf
 
 urlpatterns = [
     path("csrf/", csrf),
+    # Organization Management
     path(
         "organizations/",
         OrganizationListCreateView.as_view(),
@@ -60,6 +62,12 @@ urlpatterns = [
         name="organization-remove-member",
     ),
     path(
+        "organizations/personal/initial-balance/",
+        SetInitialBalanceView.as_view(),
+        name="set-initial-balance",
+    ),
+    # Invitations
+    path(
         "organizations/<int:org_id>/invitations/",
         InvitationListCreateView.as_view(),
         name="invitation-list-create",
@@ -70,9 +78,19 @@ urlpatterns = [
         name="invitation-cancel",
     ),
     path(
-        "organizations/personal/initial-balance/",
-        SetInitialBalanceView.as_view(),
-        name="set-initial-balance",
+        "invitations/<int:invitation_id>/accept/",
+        AcceptInvitationView.as_view(),
+        name="invitation-accept",
+    ),
+    path(
+        "invitations/<int:invitation_id>/decline/",
+        DeclineInvitationView.as_view(),
+        name="invitation-decline",
+    ),
+    path(
+        "invitations/my/",
+        MyInvitationsView.as_view(),
+        name="my-invitations",
     ),
     # Transactions
     path(
@@ -101,21 +119,13 @@ urlpatterns = [
         OrganizationBalanceView.as_view(),
         name="organization-balance",
     ),
+    # Reports
     path(
-        "invitations/<int:invitation_id>/accept/",
-        AcceptInvitationView.as_view(),
-        name="invitation-accept",
+        "organizations/<int:org_id>/reports/",
+        ReportView.as_view(),
+        name="organization-report",
     ),
-    path(
-        "invitations/<int:invitation_id>/decline/",
-        DeclineInvitationView.as_view(),
-        name="invitation-decline",
-    ),
-    path(
-        "invitations/my/",
-        MyInvitationsView.as_view(),
-        name="my-invitations",
-    ),
+    # Notifications
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
     path(
         "notifications/unread-count/",

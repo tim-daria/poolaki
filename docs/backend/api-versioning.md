@@ -36,9 +36,9 @@ they are and are intentionally not versioned:
 A new endpoint added to the **current** version (v1 today) must not break
 existing clients. In practice:
 
-- **Safe to add inside v1** — new endpoints (e.g. the finance endpoints from
-  [proposed-api.md](./proposed-api.md)), new optional request fields, and new
-  fields in responses
+- **Safe to add inside v1** — new endpoints (e.g. the [yearly reports
+  endpoint](./reports.md)), new optional request fields, and new fields in
+  responses
 - **Never do inside v1** — removing or renaming an endpoint, changing a
   response shape in a way clients parse, tightening validation of existing
   required fields, changing status codes for existing outcomes
