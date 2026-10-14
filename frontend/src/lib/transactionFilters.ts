@@ -1,7 +1,7 @@
-/** @file Client-side filtering, sorting and paging of transactions. Pure functions so the UI and future server params share one contract. */
+/** @file The transaction list's filter state: the shape the URL, the page and fetchTransactionPage share. Matching, counting and paging happen on the backend. */
 
 import { categoryById, type Category } from "./categories";
-import type { Transaction } from "./transactions";
+import type { EntryType, Transaction } from "./transactions";
 
 /**
  * "all" plus the entry types verbatim, so a row's own `entry_type` is the tab
@@ -28,6 +28,9 @@ export type TransactionFilters = {
 };
 
 export const PAGE_SIZE = 15;
+
+/** The backend rejects a longer `q` with a 400 (TransactionListQuerySerializer). */
+export const QUERY_MAX_LENGTH = 100;
 
 export const DEFAULT_FILTERS: TransactionFilters = {
   tab: "all",

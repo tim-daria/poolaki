@@ -3,8 +3,9 @@
 import { Chip, TableCell, TableRow, Typography } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import { Money } from "../../components/Money";
-import { categoryById, type Category } from "../../lib/categories";
+import type { Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
+import { ENTRY_STYLE, entryCategoryLabel } from "../../lib/entryDisplay";
 import { displayAmount } from "../../lib/money";
 import type { EntryType, Transaction } from "../../lib/transactions";
 
@@ -45,8 +46,8 @@ export function TransactionRow({
   onClick,
   categories: categories,
 }: TransactionRowProps) {
-  const style = ROW_STYLE[t.entry_type];
-  const category = categoryLabel(t, categories);
+  const style = ENTRY_STYLE[t.entry_type];
+  const category = entryCategoryLabel(t, categories);
 
   return (
     <TableRow
