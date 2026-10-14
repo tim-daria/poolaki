@@ -15,7 +15,7 @@ from core.models import (
     Transaction,
 )
 from core.services.balance import get_annotated_goal_balance
-from core.services.goal import allowed_entry_types, goal_status_transition_error
+from core.services.goal import allowed_entry_types
 
 
 class IntListField(serializers.Field[list[int], object, list[int], Any]):
@@ -106,6 +106,8 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
 
         if not attrs:
             raise serializers.ValidationError("At least one field must be provided.")
+        if goal.status == GoalStatus.ARCHIVED:
+            raise serializers.ValidationError("Archived goals cannot be updated.")
 
         name = attrs.get("name")
         if (
@@ -123,14 +125,6 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
             raise serializers.ValidationError(
                 {"target_date": "Target date must be today or in the future."}
             )
-
-        if "status" in attrs:
-            new_status = attrs["status"]
-            if not isinstance(new_status, str):
-                raise serializers.ValidationError({"status": "Invalid status transition."})
-            error = goal_status_transition_error(goal.status, new_status)
-            if error is not None:
-                raise serializers.ValidationError({"status": error})
 
         return attrs
 

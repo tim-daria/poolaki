@@ -343,6 +343,44 @@ def test_goal_update_allows_partial_updates_and_unchanged_name(
     assert goal.target_amount == Decimal("3500.00")
 
 
+@pytest.mark.parametrize(
+    ("payload", "field", "value"),
+    [
+        ({"name": "Archived reserve"}, "name", "Vacation"),
+        ({"target_amount": "3500.00"}, "target_amount", Decimal("3000.00")),
+        ({"target_date": "2027-08-01"}, "target_date", date(2027, 6, 1)),
+        ({"status": "archived"}, "status", GoalStatus.ARCHIVED),
+    ],
+)
+def test_archived_goal_rejects_every_update(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    payload: dict[str, object],
+    field: str,
+    value: object,
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Vacation",
+        target_amount=Decimal("3000.00"),
+        target_date=date(2027, 6, 1),
+        status=GoalStatus.ARCHIVED,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        payload,
+        format="json",
+    )
+
+    assert response.status_code == 400
+    goal.refresh_from_db()
+    assert getattr(goal, field) == value
+
+
 def test_goal_update_rejects_duplicate_name_in_same_organization(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:

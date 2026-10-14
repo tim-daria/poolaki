@@ -26,25 +26,6 @@ def allowed_entry_types(goal: Goal) -> set[EntryType]:
     return entry_types
 
 
-def goal_status_transition_error(current: str, new: str) -> str | None:
-    """Return an error message for an invalid goal status transition."""
-    if current == GoalStatus.ARCHIVED and new != GoalStatus.ARCHIVED:
-        return "Archived goals cannot be changed back to an active state."
-    if current == GoalStatus.ACTIVE and new not in {
-        GoalStatus.ACTIVE,
-        GoalStatus.COMPLETED,
-        GoalStatus.ARCHIVED,
-    }:
-        return "Invalid status transition."
-    if current == GoalStatus.COMPLETED and new not in {
-        GoalStatus.ACTIVE,
-        GoalStatus.COMPLETED,
-        GoalStatus.ARCHIVED,
-    }:
-        return "Invalid status transition."
-    return None
-
-
 def _archive_goal(goal: Goal, created_by: User) -> Goal:
     """Zero a locked goal's balance and archive it within the caller's transaction."""
     org = Organization.objects.select_for_update().get(pk=goal.org_id)
