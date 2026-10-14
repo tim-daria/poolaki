@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from rest_framework import serializers
 
@@ -78,14 +78,11 @@ class GoalCreateSerializer(serializers.Serializer[Goal]):
                 {"name": "A goal with this name already exists in this organization."}
             )
 
-        target_date = attrs["target_date"]
-        if target_date is not None:
-            if not isinstance(target_date, date):
-                raise serializers.ValidationError({"target_date": "Invalid target date."})
-            if target_date < date.today():
-                raise serializers.ValidationError(
-                    {"target_date": "Target date must be today or in the future."}
-                )
+        target_date = cast(date | None, attrs["target_date"])
+        if target_date is not None and target_date < date.today():
+            raise serializers.ValidationError(
+                {"target_date": "Target date must be today or in the future."}
+            )
 
         return attrs
 
@@ -98,7 +95,7 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
         min_value=Decimal("0.01"),
         required=False,
     )
-    target_date = serializers.DateField(required=False)
+    target_date = serializers.DateField(required=False, allow_null=True)
     status = serializers.ChoiceField(choices=GoalStatus.choices, required=False)
 
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
@@ -118,15 +115,19 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
                 {"name": "A goal with this name already exists in this organization."}
             )
 
-        target_date = attrs.get("target_date")
-        if target_date is not None and not isinstance(target_date, date):
-            raise serializers.ValidationError({"target_date": "Invalid target date."})
+        target_date = cast(date | None, attrs.get("target_date"))
         if target_date is not None and target_date < date.today():
             raise serializers.ValidationError(
                 {"target_date": "Target date must be today or in the future."}
             )
 
         return attrs
+
+
+class GoalListQuerySerializer(serializers.Serializer[Goal]):
+    """GET /organizations/{org_id}/goals/ query parameters."""
+
+    status = serializers.ChoiceField(choices=GoalStatus.choices, required=False)
 
 
 class GoalResponseSerializer(serializers.ModelSerializer[Goal]):

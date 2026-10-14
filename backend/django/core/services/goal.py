@@ -55,9 +55,6 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             is_tax_deductible=False,
         )
 
-    if calculate_goal_balance(goal) != Decimal("0"):
-        raise GoalArchivalError("Goal balance must reach zero before archiving.")
-
     goal.status = GoalStatus.ARCHIVED
     goal.save(update_fields=["status"])
     return goal

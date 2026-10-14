@@ -64,9 +64,8 @@ def test_list_goals_filters_by_status(
     assert response.data["total"] == 1
 
     response = api_client.get(goals_url(shared_org.id), {"status": "unknown"})
-    assert response.status_code == 200
-    assert response.data["goals"] == []
-    assert response.data["total"] == 0
+    assert response.status_code == 400
+    assert response.data == {"status": ['"unknown" is not a valid choice.']}
 
 
 def test_owner_can_archive_goal_and_return_remaining_balance(
@@ -341,6 +340,31 @@ def test_goal_update_allows_partial_updates_and_unchanged_name(
     goal.refresh_from_db()
     assert goal.name == "Vacation"
     assert goal.target_amount == Decimal("3500.00")
+
+
+def test_goal_update_can_clear_target_date_and_overdue_flag(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Vacation",
+        target_amount=Decimal("3000.00"),
+        target_date=date(2026, 10, 9),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"target_date": None},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    goal.refresh_from_db()
+    assert goal.target_date is None
+    assert response.data["goal"]["target_date"] is None
+    assert response.data["goal"]["overdue"] is False
 
 
 @pytest.mark.parametrize(

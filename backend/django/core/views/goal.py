@@ -9,7 +9,12 @@ from rest_framework.views import APIView
 
 from core.models import Goal, GoalStatus, User
 from core.permissions import IsGoalCreatorOrOrgOwner, IsOrgMember
-from core.serializers import GoalCreateSerializer, GoalResponseSerializer, GoalUpdateSerializer
+from core.serializers import (
+    GoalCreateSerializer,
+    GoalListQuerySerializer,
+    GoalResponseSerializer,
+    GoalUpdateSerializer,
+)
 from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
 from core.services.goal import GoalArchivalError, update_goal
 
@@ -23,17 +28,17 @@ class GoalListCreateView(APIView):
             Goal.objects.filter(org_id=org_id).select_related("created_by")
         ).order_by("created_at", "id")
 
-        status_filter = request.query_params.get("status")
-        valid_statuses = {choice[0] for choice in GoalStatus.choices}
+        params = GoalListQuerySerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        status_filter = params.validated_data.get("status")
         if status_filter is not None:
-            if status_filter not in valid_statuses:
-                return Response({"goals": [], "total": 0}, status=status.HTTP_200_OK)
             queryset = queryset.filter(status=status_filter)
 
+        goals = GoalResponseSerializer(queryset, many=True).data
         return Response(
             {
-                "goals": GoalResponseSerializer(queryset, many=True).data,
-                "total": queryset.count(),
+                "goals": goals,
+                "total": len(goals),
             },
             status=status.HTTP_200_OK,
         )
