@@ -19,13 +19,29 @@ import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
-
 /** Floating over the page it needs the lift a flat in-bar button does not. */
 const fabSx = {
   height: 48,
   bgcolor: "primary.dark",
   "&:hover": { bgcolor: "primary.main" },
   boxShadow: "0 8px 24px -8px var(--mui-palette-shadow-main)",
+  transition: "padding 200ms",
+  // Collapsed: a 48px disc around the plus; the label clips to nothing but
+  // stays in the DOM so the accessible name does not change.
+  "[data-collapsed] > &": {
+    px: 1.5,
+    minWidth: 0,
+    "& .MuiButton-startIcon": { m: 0 },
+    "& .fab-label": { maxWidth: 0, opacity: 0 },
+  },
+} as const;
+
+const fabLabelSx = {
+  display: "inline-block",
+  maxWidth: 200,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  transition: "max-width 200ms, opacity 150ms",
 } as const;
 
 interface PageHeaderProps {
@@ -136,7 +152,7 @@ export function PageTitle({ title, subtitle, back }: PageTitleProps) {
  * pages stay consistent; all props remain overridable (`startIcon={null}`
  * removes the plus icon).
  */
-export function PageActionButton({ sx, ...props }: ButtonProps) {
+export function PageActionButton({ sx, children, ...props }: ButtonProps) {
   const slots = usePageHeaderSlots();
   const target = slots?.fabSlot ?? slots?.actionSlot;
   if (!target) return null;
@@ -152,7 +168,15 @@ export function PageActionButton({ sx, ...props }: ButtonProps) {
         floating && fabSx,
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
-    />,
+    >
+      {floating ? (
+        <Box component="span" className="fab-label" sx={fabLabelSx}>
+          {children}
+        </Box>
+      ) : (
+        children
+      )}
+    </Button>,
     target,
   );
 }

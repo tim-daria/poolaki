@@ -8,6 +8,7 @@ import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { BottomNav } from "./BottomNav/BottomNav";
 import { LEGAL_LINKS, NAV_MOBILE_QUERY } from "./BottomNav/navItems";
+import { useScrollingDown } from "../hooks/useScrollingDown";
 
 /**
  * Ceiling for the page column. Past this the content centres instead of
@@ -52,6 +53,8 @@ export function AppLayout() {
   useEffect(() => {
     shellRef.current?.scrollTo({ top: 0 });
   }, [orgId]);
+
+  const fabCollapsed = useScrollingDown(shellRef);
 
   return (
     <Box
@@ -143,6 +146,7 @@ export function AppLayout() {
         inset adds below. */}
             <Box
               ref={setFabSlot}
+              data-collapsed={fabCollapsed || undefined}
               sx={{
                 position: "absolute",
                 right: 16,
