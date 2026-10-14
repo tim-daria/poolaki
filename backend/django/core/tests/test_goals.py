@@ -110,7 +110,7 @@ def test_owner_can_archive_goal_and_return_remaining_balance(
     assert response.data["goal"]["balance"] == "0.00"
 
 
-def test_archiving_negative_goal_balance_is_rolled_back(
+def test_archiving_negative_goal_balance_creates_compensating_contribution(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
     goal = Goal.objects.create(
@@ -136,12 +136,67 @@ def test_archiving_negative_goal_balance_is_rolled_back(
         format="json",
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 200
     goal.refresh_from_db()
-    assert goal.status == GoalStatus.ACTIVE
-    assert not Transaction.objects.filter(
-        goal=goal, entry_type="withdraw", description="Goal Overdrawn archived"
-    ).exists()
+    assert goal.status == GoalStatus.ARCHIVED
+    archived_transaction = Transaction.objects.get(
+        goal=goal,
+        entry_type="contribution",
+        description="Goal Overdrawn archived",
+    )
+    assert archived_transaction.org_id == shared_org.id
+    assert archived_transaction.created_by_id == owner.id
+    assert archived_transaction.amount == Decimal("25.00")
+    assert archived_transaction.transaction_date == date.today()
+    assert archived_transaction.is_tax_deductible is False
+    assert response.data["goal"]["balance"] == "0.00"
+
+
+def test_archiving_goal_compensates_only_the_net_negative_balance(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Emergency fund",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        entry_type="withdraw",
+        amount=Decimal("40.00"),
+        transaction_date=date(2026, 9, 1),
+        created_by=owner,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        entry_type="contribution",
+        amount=Decimal("10.00"),
+        transaction_date=date(2026, 9, 2),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id),
+        {"status": "archived", "name": "Emergency reserve"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    goal.refresh_from_db()
+    assert goal.name == "Emergency reserve"
+    assert goal.status == GoalStatus.ARCHIVED
+    compensation = Transaction.objects.get(
+        goal=goal,
+        entry_type="contribution",
+        description="Goal Emergency fund archived",
+    )
+    assert compensation.amount == Decimal("30.00")
+    assert response.data["goal"]["balance"] == "0.00"
 
 
 def test_goal_status_transitions_update_completed_at(

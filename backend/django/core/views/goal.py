@@ -1,7 +1,5 @@
 """API views for listing, updating, and inspecting organization goals."""
 
-from datetime import date
-
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -9,11 +7,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Goal, GoalStatus, Membership, User
-from core.permissions import IsOrgMember
+from core.models import Goal, GoalStatus, User
+from core.permissions import IsGoalCreatorOrOrgOwner, IsOrgMember
 from core.serializers import GoalCreateSerializer, GoalResponseSerializer, GoalUpdateSerializer
 from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
-from core.services.goal import GoalArchivalError, archive_goal
+from core.services.goal import GoalArchivalError, update_goal
 
 
 class GoalListCreateView(APIView):
@@ -60,7 +58,7 @@ class GoalListCreateView(APIView):
 
 
 class GoalReadUpdateView(APIView):
-    permission_classes = [IsAuthenticated, IsOrgMember]
+    permission_classes = [IsAuthenticated, IsOrgMember, IsGoalCreatorOrOrgOwner]
 
     def get_object(self, org_id: int, goal_id: int) -> Goal:
         return get_object_or_404(
@@ -76,41 +74,14 @@ class GoalReadUpdateView(APIView):
     def patch(self, request: Request, org_id: int, goal_id: int) -> Response:
         assert isinstance(request.user, User)
         goal = self.get_object(org_id, goal_id)
-
-        has_owner_access = Membership.objects.filter(
-            user=request.user,
-            org_id=org_id,
-            role="owner",
-        ).exists()
-        if request.user != goal.created_by and not has_owner_access:
-            return Response(
-                {
-                    "detail": (
-                        "Only the organization owner and the goal creator can update this goal."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        self.check_object_permissions(request, goal)
 
         serializer = GoalUpdateSerializer(data=request.data, context={"goal": goal})
         serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        new_status = data.get("status")
-        if new_status == GoalStatus.ARCHIVED and goal.status != GoalStatus.ARCHIVED:
-            try:
-                goal = archive_goal(goal, request.user)
-            except GoalArchivalError as error:
-                return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
-
-        if goal.status == GoalStatus.ACTIVE and new_status == GoalStatus.COMPLETED:
-            goal.completed_at = date.today()
-        elif goal.status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
-            goal.completed_at = None
-
-        for field, value in data.items():
-            setattr(goal, field, value)
-        goal.save()
+        try:
+            update_goal(goal, serializer.validated_data, request.user)
+        except GoalArchivalError as error:
+            return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
         goal = self.get_object(org_id, goal_id)
         return Response({"goal": GoalResponseSerializer(goal).data}, status=status.HTTP_200_OK)
