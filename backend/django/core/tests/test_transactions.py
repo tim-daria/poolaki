@@ -70,6 +70,69 @@ def test_list_transactions_returns_all_organization_transactions(
     assert {item["id"] for item in response.data["transactions"]} == {first.id, second.id}
 
 
+def test_list_transactions_search_matches_description_case_insensitively(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    rewe = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="REWE",
+        transaction_date="2026-08-10",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("40.00"),
+        description="Edeka",
+        transaction_date="2026-08-11",
+    )
+
+    api_client.force_authenticate(user=owner)
+    response = api_client.get(transactions_url(shared_org.id), {"q": "rew"})
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.data["transactions"]] == [rewe.id]
+    # Search narrows the tab counts too: it applies before the entry_type split.
+    assert response.data["counts"]["all"] == 1
+    assert response.data["total"] == 1
+
+
+def test_list_transactions_search_matches_category_name(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    groceries = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
+    eating_out = Category.objects.create(
+        org=shared_org, name="Eating out", type=CategoryType.EXPENSE
+    )
+    in_groceries = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Weekly shop",
+        category=groceries,
+        transaction_date="2026-08-10",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("18.00"),
+        description="Pizza",
+        category=eating_out,
+        transaction_date="2026-08-11",
+    )
+
+    api_client.force_authenticate(user=owner)
+    response = api_client.get(transactions_url(shared_org.id), {"q": "grocer"})
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.data["transactions"]] == [in_groceries.id]
+
+
 def test_list_transactions_returns_empty_list(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:

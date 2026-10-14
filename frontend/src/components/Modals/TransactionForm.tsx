@@ -1,4 +1,4 @@
-/** @file Modal for adding a transaction, and for viewing or deleting an existing one. */
+/** @file Modal for adding a transaction, and for editing or deleting an existing one. */
 
 import { useState } from "react";
 import {
@@ -37,7 +37,6 @@ import { goalById, isArchived, type Goal } from "../../lib/goals";
 import { SEED_GOALS } from "../../lib/goals.seed";
 
 import {
-  CAN_EDIT_TRANSACTIONS,
   TransactionError,
   changeType,
   contributionDraft,
@@ -106,8 +105,6 @@ export function TransactionForm({
    */
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const editing = editRow !== null;
-  /** Read-only until the backend can persist an edit. */
-  const locked = editing && !CAN_EDIT_TRANSACTIONS;
 
   /** One object holding every field, instead of one useState each. */
   const [draft, setDraft] = useState<TransactionDraft>(emptyDraft);
@@ -247,19 +244,14 @@ export function TransactionForm({
       <form onSubmit={handleSubmit}>
         <DialogContent>
           <Stack spacing={2.5}>
-            {locked && (
-              <Alert severity="info">
-                Editing is not available yet. Delete the transaction and add it
-                again to change it.
-              </Alert>
-            )}
-
             {/* A mode switch, not radio buttons: the type decides which
                 fields the rest of the form has. */}
             <ToggleButtonGroup
               exclusive
               fullWidth
-              disabled={locked}
+              /* The backend's PATCH ignores entry_type and goal_id: a row keeps
+                 its type and goal for life, so the switch is off while editing. */
+              disabled={editing}
               value={draft.entry_type}
               onChange={(_, value: EntryType | null) => {
                 // Null when the pressed tab was already selected; ignoring it
@@ -294,6 +286,23 @@ export function TransactionForm({
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
+            {editing && (
+              <Alert
+                severity="info"
+                sx={{
+                  "& .MuiAlert-icon": {
+                    py: 1,
+                    height: "1lh",
+                    boxSizing: "content-box",
+                    alignItems: "center",
+                  },
+                }}
+              >
+                Type and savings target cannot be edited after creation. To
+                change these, please delete this transaction and create a new
+                one.
+              </Alert>
+            )}
 
             {isTransfer ? (
               <FieldLabel
@@ -304,7 +313,7 @@ export function TransactionForm({
                 <TextField
                   id="transaction-goal"
                   select
-                  disabled={locked}
+                  disabled={editing}
                   /* null means "not picked yet", but MUI needs "" for that —
                      passing null would make the field uncontrolled. */
                   value={draft.goal ?? ""}
@@ -355,7 +364,6 @@ export function TransactionForm({
                 <TextField
                   id="transaction-category"
                   select
-                  disabled={locked}
                   value={draft.category ?? ""}
                   onChange={(e) => set("category", Number(e.target.value))}
                   slotProps={{
@@ -391,7 +399,6 @@ export function TransactionForm({
             <FieldLabel label="Amount" htmlFor="transaction-amount">
               <MoneyField
                 id="transaction-amount"
-                disabled={locked}
                 value={draft.amount}
                 onChange={(amount) => set("amount", amount)}
                 placeholder="0,00"
@@ -411,7 +418,6 @@ export function TransactionForm({
               <TextInput
                 id="transaction-description"
                 casing="name"
-                disabled={locked}
                 value={draft.description}
                 onChange={(description) => set("description", description)}
                 placeholder={
@@ -432,7 +438,6 @@ export function TransactionForm({
             >
               <IsoDatePicker
                 labelId="transaction-date-label"
-                disabled={locked}
                 value={draft.transaction_date}
                 onChange={(iso) => set("transaction_date", iso)}
                 slotProps={{
@@ -446,7 +451,6 @@ export function TransactionForm({
               <FormControlLabel
                 control={
                   <Checkbox
-                    disabled={locked}
                     checked={draft.is_tax_deductible}
                     onChange={(e) => set("is_tax_deductible", e.target.checked)}
                   />
@@ -479,10 +483,8 @@ export function TransactionForm({
             <Button
               type="submit"
               variant="contained"
-              // Nothing to save on a locked or untouched edit.
-              disabled={
-                saving || locked || (editing && !guard.hasUnsavedChanges)
-              }
+              // Nothing to save on an untouched edit.
+              disabled={saving || (editing && !guard.hasUnsavedChanges)}
             >
               {editing
                 ? saving

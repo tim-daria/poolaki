@@ -5,7 +5,7 @@ from typing import Literal
 
 from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.query import QuerySet
 
 from core.models import (
@@ -28,6 +28,7 @@ class TransactionFilters:
     category_ids: tuple[int, ...] | None = None
     goal_id: int | None = None
     tax_deductible: bool = False
+    q: str = ""
     entry_type: EntryType | None = None
     sort: Literal["newest", "oldest"] = "newest"
 
@@ -57,6 +58,8 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         qs = qs.filter(goal_id=filters.goal_id)
     if filters.tax_deductible:
         qs = qs.filter(is_tax_deductible=True)
+    if filters.q:
+        qs = qs.filter(Q(description__icontains=filters.q) | Q(category__name__icontains=filters.q))
     if filters.sort == "oldest":
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.
