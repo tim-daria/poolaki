@@ -20,9 +20,12 @@ import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
+/** Mobile action button height and, collapsed, its diameter. */
+const FAB_SIZE = 48;
+
 /** Floating over the page it needs the lift a flat in-bar button does not. */
 const fabSx = {
-  height: 48,
+  height: FAB_SIZE,
   bgcolor: "primary.dark",
   "&:hover": { bgcolor: "primary.main" },
   boxShadow: "0 8px 24px -8px var(--mui-palette-shadow-main)",
@@ -31,12 +34,13 @@ const fabSx = {
   // stays in the DOM so the accessible name does not change.
   "[data-collapsed] > &": {
     px: 0,
-    minWidth: 48,
+    minWidth: FAB_SIZE,
     "& .MuiButton-startIcon": { m: 0 },
     "& .fab-label": { gridTemplateColumns: "0fr", opacity: 0 },
   },
 } as const;
 
+/** A grid track animates to the label's true width; width: auto cannot. */
 const fabLabelSx = {
   display: "grid",
   gridTemplateColumns: "1fr",

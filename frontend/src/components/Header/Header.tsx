@@ -53,8 +53,8 @@ interface HeaderProps {
   onAssistantClick: () => void;
   /** Routes can turn AI button off via `handle.assistant`. */
   showAssistant: boolean;
-  /** Desktop only; phones navigate with the bottom bar. */
-  showTabs: boolean;
+  /** Mobile: bottom bar instead of tabs and the bell inside the avatar menu. */
+  mobile: boolean;
 }
 
 /**
@@ -67,7 +67,7 @@ export function Header({
   onLogout,
   onAssistantClick,
   showAssistant,
-  showTabs,
+  mobile,
 }: HeaderProps) {
   const { user } = useAuth();
   const org = useCurrentOrg();
@@ -111,7 +111,7 @@ export function Header({
         <OrgSwitcher />
       </Box>
 
-      {showTabs && <NavTabs />}
+      {!mobile && <NavTabs />}
 
       <Stack
         direction="row"
@@ -132,19 +132,21 @@ export function Header({
             Ask AI
           </Button>
         )}
-        <IconButton
-          aria-label="Notifications"
-          // Not "menu": the panel is an inbox of content with per-row
-          // actions, not a list of commands. See NotificationPanel.
-          aria-haspopup="dialog"
-          aria-expanded={Boolean(notifAnchor)}
-          onClick={(e) => setNotifAnchor(e.currentTarget)}
-          sx={{ width: controlSize, height: controlSize }}
-        >
-          <Badge color="error" variant="dot" invisible={unreadCount === 0}>
-            <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
-          </Badge>
-        </IconButton>
+        {!mobile && (
+          <IconButton
+            aria-label="Notifications"
+            // Not "menu": the panel is an inbox of content with per-row
+            // actions, not a list of commands. See NotificationPanel.
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(notifAnchor)}
+            onClick={(e) => setNotifAnchor(e.currentTarget)}
+            sx={{ width: controlSize, height: controlSize }}
+          >
+            <Badge color="error" variant="dot" invisible={unreadCount === 0}>
+              <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
+            </Badge>
+          </IconButton>
+        )}
 
         <NotificationPanel
           anchorEl={notifAnchor}
@@ -161,17 +163,24 @@ export function Header({
           onClick={(e) => setAccountAnchor(e.currentTarget)}
           sx={{ width: controlSize, height: controlSize }}
         >
-          <Avatar
-            sx={{
-              width: avatarSize,
-              height: avatarSize,
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              bgcolor: avatarColor(user?.username, theme.palette.avatar),
-            }}
+          <Badge
+            color="error"
+            variant="dot"
+            overlap="circular"
+            invisible={!mobile || unreadCount === 0}
           >
-            {initial}
-          </Avatar>
+            <Avatar
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                bgcolor: avatarColor(user?.username, theme.palette.avatar),
+              }}
+            >
+              {initial}
+            </Avatar>
+          </Badge>
         </IconButton>
 
         <Menu
@@ -193,6 +202,27 @@ export function Header({
             </MenuItem>
           )}
           {user && <Divider />}
+
+          {mobile && (
+            <MenuItem
+              onClick={() => {
+                // Anchor the inbox to the avatar, where the menu was.
+                setNotifAnchor(accountAnchor);
+                closeAccount();
+              }}
+            >
+              <ListItemIcon>
+                <Badge
+                  color="error"
+                  variant="dot"
+                  invisible={unreadCount === 0}
+                >
+                  <NotificationsNoneIcon fontSize="small" />
+                </Badge>
+              </ListItemIcon>
+              <ListItemText>Notifications</ListItemText>
+            </MenuItem>
+          )}
 
           {/* Scoped under the current workspace because the shell around
               the page needs one; the settings themselves are account-wide. */}

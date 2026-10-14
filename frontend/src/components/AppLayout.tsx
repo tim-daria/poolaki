@@ -99,7 +99,7 @@ export function AppLayout() {
             onLogout={logout}
             onAssistantClick={() => setChatOpen(true)}
             showAssistant={showAssistant}
-            showTabs={!isMobile}
+            mobile={isMobile}
           />
         </Box>
 
