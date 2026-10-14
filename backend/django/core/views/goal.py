@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from core.models import Goal, GoalStatus, Membership, User
 from core.permissions import IsOrgMember
 from core.serializers import GoalCreateSerializer, GoalResponseSerializer, GoalUpdateSerializer
-from core.services.balance import annotate_goal_balance, calculate_goal_balance
+from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
 from core.services.goal import GoalArchivalError, archive_goal
 
 
@@ -53,6 +53,9 @@ class GoalListCreateView(APIView):
             status=GoalStatus.ACTIVE,
             created_by=request.user,
         )
+        goal = annotate_goal_balance(
+            Goal.objects.select_related("created_by").filter(pk=goal.pk)
+        ).get()
         return Response(GoalResponseSerializer(goal).data, status=status.HTTP_201_CREATED)
 
 
@@ -109,6 +112,7 @@ class GoalReadUpdateView(APIView):
             setattr(goal, field, value)
         goal.save()
 
+        goal = self.get_object(org_id, goal_id)
         return Response({"goal": GoalResponseSerializer(goal).data}, status=status.HTTP_200_OK)
 
 
@@ -116,8 +120,10 @@ class GoalBalanceView(APIView):
     permission_classes = [IsAuthenticated, IsOrgMember]
 
     def get(self, request: Request, org_id: int, goal_id: int) -> Response:
-        goal = get_object_or_404(Goal, org_id=org_id, id=goal_id)
+        goal = get_object_or_404(
+            annotate_goal_balance(Goal.objects.filter(org_id=org_id, id=goal_id))
+        )
         return Response(
-            {"goal_id": goal.id, "balance": str(calculate_goal_balance(goal.org, goal))},
+            {"goal_id": goal.id, "balance": str(get_annotated_goal_balance(goal))},
             status=status.HTTP_200_OK,
         )

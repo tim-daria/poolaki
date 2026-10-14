@@ -14,7 +14,7 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import calculate_goal_balance
+from core.services.balance import get_annotated_goal_balance
 from core.services.goal import goal_status_transition_error
 
 
@@ -166,14 +166,7 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
         )
 
     def _get_goal_balance(self, goal: Goal) -> Decimal:
-        annotated_balance = getattr(goal, "_goal_balance", None)
-        if annotated_balance is not None:
-            return Decimal(annotated_balance)
-        cache = getattr(self, "_goal_balance_cache", {})
-        if goal.pk not in cache:
-            cache[goal.pk] = calculate_goal_balance(goal.org, goal)
-            self._goal_balance_cache = cache
-        return Decimal(cache[goal.pk])
+        return get_annotated_goal_balance(goal)
 
     def get_balance(self, goal: Goal) -> str:
         return str(self._get_goal_balance(goal))

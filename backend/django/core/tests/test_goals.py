@@ -227,6 +227,22 @@ def test_goal_list_serializes_balances_with_one_query(
     assert [item["balance"] for item in data] == ["25.00", "50.00"]
 
 
+def test_goal_serializer_requires_an_annotated_balance(
+    owner: User,
+    shared_org: Organization,
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Unannotated",
+        target_amount=Decimal("100.00"),
+        target_date=None,
+        created_by=owner,
+    )
+
+    with pytest.raises(AttributeError):
+        assert GoalResponseSerializer(goal).data
+
+
 def test_goal_update_requires_owner_or_creator(
     api_client: APIClient, member: User, owner: User, shared_org: Organization
 ) -> None:

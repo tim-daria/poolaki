@@ -41,7 +41,7 @@ def archive_goal(goal: Goal, created_by: User) -> Goal:
         return locked_goal
 
     org = Organization.objects.select_for_update().get(pk=locked_goal.org_id)
-    remaining_balance = calculate_goal_balance(org, locked_goal)
+    remaining_balance = calculate_goal_balance(locked_goal)
     if remaining_balance < Decimal("0"):
         raise GoalArchivalError("Goal balance cannot be archived while negative.")
 
@@ -58,7 +58,7 @@ def archive_goal(goal: Goal, created_by: User) -> Goal:
             is_tax_deductible=False,
         )
 
-    if calculate_goal_balance(org, locked_goal) != Decimal("0"):
+    if calculate_goal_balance(locked_goal) != Decimal("0"):
         raise GoalArchivalError("Goal balance must reach zero before archiving.")
 
     locked_goal.status = GoalStatus.ARCHIVED

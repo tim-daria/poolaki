@@ -1,11 +1,15 @@
 from decimal import Decimal
-from typing import cast
+from typing import Protocol, cast
 
-from django.db.models import DecimalField, ExpressionWrapper, Q, QuerySet, Sum
+from django.db.models import Case, DecimalField, ExpressionWrapper, F, Q, QuerySet, Sum, When
 from django.db.models.functions import Coalesce
 
 from core.models import EntryType, Goal, Membership, Organization, Transaction, User
 from core.services.exceptions import PersonalOrganizationMissingError
+
+
+class AnnotatedGoal(Protocol):
+    _goal_balance: Decimal
 
 
 def set_initial_balance(user: User, amount: Decimal) -> Organization:
@@ -50,59 +54,48 @@ def calculate_org_balance(org: Organization) -> Decimal:
     return org.initial_balance + income - expense - contribution + withdraw
 
 
-def calculate_goal_balance(org: Organization, goal: Goal) -> Decimal:
-    totals = Transaction.objects.filter(org=org, goal=goal).aggregate(
-        contribution=Coalesce(
-            Sum("amount", filter=Q(entry_type=EntryType.CONTRIBUTION)),
-            Decimal("0"),
+def _signed_goal_amount_expression(amount_field: str, entry_type_field: str) -> Case:
+    amount_field_type = DecimalField(max_digits=14, decimal_places=2)
+    return Case(
+        When(
+            **{entry_type_field: EntryType.CONTRIBUTION},
+            then=F(amount_field),
         ),
-        withdraw=Coalesce(
-            Sum("amount", filter=Q(entry_type=EntryType.WITHDRAW)),
-            Decimal("0"),
-        ),
-        expense=Coalesce(
-            Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)),
-            Decimal("0"),
-        ),
+        default=-F(amount_field),
+        output_field=amount_field_type,
     )
 
-    contribution = cast(Decimal, totals["contribution"])
-    withdraw = cast(Decimal, totals["withdraw"])
-    expense = cast(Decimal, totals["expense"])
 
-    return contribution - withdraw - expense
+def calculate_goal_balance(goal: Goal) -> Decimal:
+    total = Transaction.objects.filter(goal=goal).aggregate(
+        balance=Coalesce(
+            Sum(_signed_goal_amount_expression("amount", "entry_type")),
+            Decimal("0"),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+    )["balance"]
+    return cast(Decimal, total)
 
 
 def annotate_goal_balance(queryset: QuerySet[Goal]) -> QuerySet[Goal]:
     """Add each goal's balance to a queryset using one aggregate query."""
-    zero = Decimal("0")
     amount_field = DecimalField(max_digits=14, decimal_places=2)
     return queryset.annotate(
         _goal_balance=ExpressionWrapper(
             Coalesce(
                 Sum(
-                    "transactions__amount",
-                    filter=Q(transactions__entry_type=EntryType.CONTRIBUTION),
+                    _signed_goal_amount_expression(
+                        "transactions__amount",
+                        "transactions__entry_type",
+                    )
                 ),
-                zero,
-                output_field=amount_field,
-            )
-            - Coalesce(
-                Sum(
-                    "transactions__amount",
-                    filter=Q(transactions__entry_type=EntryType.WITHDRAW),
-                ),
-                zero,
-                output_field=amount_field,
-            )
-            - Coalesce(
-                Sum(
-                    "transactions__amount",
-                    filter=Q(transactions__entry_type=EntryType.EXPENSE),
-                ),
-                zero,
+                Decimal("0"),
                 output_field=amount_field,
             ),
             output_field=amount_field,
         )
     )
+
+
+def get_annotated_goal_balance(goal: Goal) -> Decimal:
+    return Decimal(cast(AnnotatedGoal, goal)._goal_balance)
