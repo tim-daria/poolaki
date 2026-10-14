@@ -55,6 +55,7 @@ def calculate_org_balance(org: Organization) -> Decimal:
 
 
 def _signed_goal_amount_expression(amount_field: str, entry_type_field: str) -> Case:
+    """Build an expression that adds contributions and subtracts other entries."""
     amount_field_type = DecimalField(max_digits=14, decimal_places=2)
     return Case(
         When(
@@ -67,6 +68,7 @@ def _signed_goal_amount_expression(amount_field: str, entry_type_field: str) -> 
 
 
 def calculate_goal_balance(goal: Goal) -> Decimal:
+    """Return a goal's net balance from all of its contribution and debit entries."""
     total = Transaction.objects.filter(goal=goal).aggregate(
         balance=Coalesce(
             Sum(_signed_goal_amount_expression("amount", "entry_type")),

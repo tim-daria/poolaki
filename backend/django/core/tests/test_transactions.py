@@ -382,9 +382,16 @@ def test_create_transaction_allows_uncategorized_contribution(
 ) -> None:
     api_client.force_authenticate(user=owner)
 
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+    )
+
     response = api_client.post(
         transactions_url(shared_org.id),
-        transaction_payload(entry_type="contribution"),
+        transaction_payload(entry_type="contribution", goal_id=goal.id),
         format="json",
     )
 
