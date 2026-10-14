@@ -4,6 +4,7 @@
 import { NavLink } from "react-router";
 import { Box, ButtonBase, Paper } from "@mui/material";
 import { NAV_ITEMS } from "./navItems";
+import { TABLET } from "../../pages/Home/layout";
 
 /** Shell bottom bar height, without the home-indicator inset. */
 export const bottomNavHeight = 64;
@@ -29,6 +30,7 @@ export function BottomNav() {
     >
       {NAV_ITEMS.map((item) => (
         <ButtonBase
+          aria-label={item.label}
           key={item.to}
           component={NavLink}
           to={item.to}
@@ -36,11 +38,12 @@ export function BottomNav() {
           sx={{
             flex: 1,
             flexDirection: "column",
-            gap: 0.5,
-            fontSize: 12,
-            fontWeight: 500,
             color: "text.secondary",
-            "&.active": { color: "primary.dark", fontWeight: 600 },
+            [TABLET]: { gap: 0.5, fontSize: 12, fontWeight: 500 },
+            "&.active": {
+              color: "primary.dark",
+              [TABLET]: { fontWeight: 600 },
+            },
             "&.Mui-focusVisible": {
               outline: "2px solid",
               outlineColor: "primary.main",
@@ -59,7 +62,12 @@ export function BottomNav() {
           >
             {item.icon}
           </Box>
-          {item.label}
+          <Box
+            component="span"
+            sx={{ display: "none", [TABLET]: { display: "block" } }}
+          >
+            {item.label}
+          </Box>
         </ButtonBase>
       ))}
     </Paper>
