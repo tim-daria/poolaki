@@ -19,6 +19,7 @@ import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
+
 /** Floating over the page it needs the lift a flat in-bar button does not. */
 const fabSx = {
   height: 48,
@@ -29,19 +30,18 @@ const fabSx = {
   // Collapsed: a 48px disc around the plus; the label clips to nothing but
   // stays in the DOM so the accessible name does not change.
   "[data-collapsed] > &": {
-    px: 1.5,
-    minWidth: 0,
+    px: 0,
+    minWidth: 48,
     "& .MuiButton-startIcon": { m: 0 },
-    "& .fab-label": { maxWidth: 0, opacity: 0 },
+    "& .fab-label": { gridTemplateColumns: "0fr", opacity: 0 },
   },
 } as const;
 
 const fabLabelSx = {
-  display: "inline-block",
-  maxWidth: 200,
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  transition: "max-width 200ms, opacity 150ms",
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  transition: "grid-template-columns 200ms, opacity 150ms",
+  "& > span": { overflow: "hidden", minWidth: 0, whiteSpace: "nowrap" },
 } as const;
 
 interface PageHeaderProps {
@@ -171,7 +171,7 @@ export function PageActionButton({ sx, children, ...props }: ButtonProps) {
     >
       {floating ? (
         <Box component="span" className="fab-label" sx={fabLabelSx}>
-          {children}
+          <span>{children}</span>
         </Box>
       ) : (
         children

@@ -17,10 +17,13 @@ export function useScrollingDown(ref: RefObject<HTMLElement | null>): boolean {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let last = el.scrollTop;
+    let last = Math.min(el.scrollTop, el.scrollHeight - el.clientHeight);
 
     const onScroll = () => {
-      const top = el.scrollTop;
+      // iOS overscroll bounces past both ends; clamp so the spring back
+      // does not read as a scroll in the opposite direction.
+      const max = el.scrollHeight - el.clientHeight;
+      const top = Math.min(Math.max(el.scrollTop, 0), max);
       const delta = top - last;
       if (Math.abs(delta) < THRESHOLD) return;
       last = top;
