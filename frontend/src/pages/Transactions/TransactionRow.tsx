@@ -7,32 +7,7 @@ import type { Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
 import { ENTRY_STYLE, entryCategoryLabel } from "../../lib/entryDisplay";
 import { displayAmount } from "../../lib/money";
-import type { EntryType, Transaction } from "../../lib/transactions";
-
-/**
- * Per-type colouring of the category chip and amount. Expenses stay neutral;
- * income is green with a plus; a transfer is lavender and unsigned, since it
- * moves money rather than adding or removing it.
- */
-const ROW_STYLE: Record<
-  EntryType,
-  { sign: string; chipBg: string; color: string }
-> = {
-  expense: { sign: "-", chipBg: "action.selected", color: "text.primary" },
-  income: { sign: "+", chipBg: "success.light", color: "success.main" },
-  contribution: { sign: "", chipBg: "primary.light", color: "accent.main" },
-  withdraw: { sign: "", chipBg: "primary.light", color: "accent.main" },
-};
-
-/**
- * Transfers carry no category on the wire; "Savings" is what they are filed
- * under in the UI.
- */
-function categoryLabel(t: Transaction, categories: Category[]): string | null {
-  if (t.entry_type === "contribution" || t.entry_type === "withdraw")
-    return "Savings";
-  return categoryById(categories, t.category)?.name ?? null;
-}
+import type { Transaction } from "../../lib/transactions";
 
 interface TransactionRowProps {
   transaction: Transaction;

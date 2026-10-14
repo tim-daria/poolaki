@@ -17,6 +17,11 @@ import {
 /** Contributions and withdrawals are transfers to or from a goal. */
 export type EntryType = "income" | "expense" | "contribution" | "withdraw";
 
+/** A transfer moves money between the balance and a goal, so it carries a goal and no category. */
+export function isTransfer(entry_type: EntryType): boolean {
+  return entry_type === "contribution" || entry_type === "withdraw";
+}
+
 /** The two entry types that are filed under a category. */
 export type TransactionType = "income" | "expense";
 
@@ -156,10 +161,7 @@ export function changeType(
     ...draft,
     entry_type,
     category: null,
-    goal:
-      entry_type === "contribution" || entry_type === "withdraw"
-        ? draft.goal
-        : null,
+    goal: isTransfer(entry_type) ? draft.goal : null,
     is_tax_deductible: entry_type === "expense" && draft.is_tax_deductible,
   };
 }
@@ -172,7 +174,7 @@ export function changeType(
  * (description and category for income/expense; goal for contribution).
  */
 export function validateDraft(draft: TransactionDraft): string | null {
-  if (draft.entry_type === "contribution" || draft.entry_type === "withdraw") {
+  if (isTransfer(draft.entry_type)) {
     if (draft.goal === null) return "Pick a goal.";
   } else {
     if (!draft.description.trim()) return "Description is required.";

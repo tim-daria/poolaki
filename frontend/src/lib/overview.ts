@@ -34,13 +34,14 @@ export type MonthSummary = {
 /** Totals for the month `today` falls in. */
 export function monthSummary(rows: Transaction[], today: string): MonthSummary {
   const month = monthOf(today);
-  const totals = { income: 0, expense: 0, contribution: 0 };
+  const totals = { income: 0, expense: 0, contribution: 0, withdraw: 0 };
   for (const t of rows) {
     if (monthOf(t.transaction_date) === month) totals[t.entry_type] += t.amount;
   }
   const income = cents(totals.income);
   const expenses = cents(totals.expense);
-  const saved = cents(totals.contribution);
+  // A withdrawal moves goal money back, so it undoes saving.
+  const saved = cents(totals.contribution - totals.withdraw);
   return { income, expenses, saved, left: cents(income - expenses - saved) };
 }
 
