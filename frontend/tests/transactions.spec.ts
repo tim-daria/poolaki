@@ -212,11 +212,39 @@ function ariaHiddenHits(page: Page): Promise<string[]> {
   );
 }
 
+/**
+ * Fills an IsoDatePicker (DD-MM-YYYY) inside `scope` from an ISO date. MUI's
+ * field is three spinbutton sections that auto-advance as digits land, and
+ * typing all eight digits in one stream races that advance. Each section is
+ * filled and checked on its own, so a dropped digit fails here, at the field.
+ */
+async function fillDate(scope: Locator, label: string, iso: string) {
+  const [year, month, day] = iso.split("-");
+  const sections = scope
+    .getByRole("group", { name: label })
+    .getByRole("spinbutton");
+  const parts = [day, month, year];
+  for (const [i, digits] of parts.entries()) {
+    const section = sections.nth(i);
+    await section.click();
+    // One input event per section, not one per digit: the year is typed last,
+    // and a partial year ("202") already makes a valid date that commits to
+    // the URL, which re-anchors the popover and drops the next keystroke.
+    await section.fill(digits);
+    await expect(section).toHaveAttribute(
+      "aria-valuenow",
+      String(Number(digits)),
+    );
+  }
+}
+
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
+  /** The one real goal in this workspace; the form's picker is still seeded. */
+  let goalId: number;
 
   const [user] = makeUsers("tx", "tx_unused");
 
@@ -226,7 +254,7 @@ test.describe.serial("Transactions", () => {
     const workspace = await registerUser(page, user);
     const orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
-    const goalId = await createGoal(page, orgId);
+    goalId = await createGoal(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
@@ -349,18 +377,8 @@ test.describe.serial("Transactions", () => {
     const panel = page
       .getByRole("presentation")
       .filter({ hasText: "Categories" });
-    // MUI's date field is a group of spinbutton sections: focus the first
-    // section, then type the digits and they flow through DD-MM-YYYY.
-    const typeDate = async (label: string, digits: string) => {
-      await panel
-        .getByRole("group", { name: label })
-        .getByRole("spinbutton")
-        .first()
-        .click();
-      await page.keyboard.type(digits);
-    };
-    await typeDate("From", "01072026");
-    await typeDate("To", "31082026");
+    await fillDate(panel, "From", "2026-07-01");
+    await fillDate(panel, "To", "2026-08-31");
     await panel.getByText("Food", { exact: true }).click();
     await panel.getByText("Shopping", { exact: true }).click();
     await page.keyboard.press("Escape");
@@ -532,23 +550,20 @@ test.describe.serial("Transactions", () => {
     await expect(page).not.toHaveURL(/from=/);
     await expect(panel.getByText("24 transactions match")).toBeVisible();
 
-    // To before From is flagged on the field, not silently accepted.
-    await panel
+    // Typed as one stream on purpose: a half-typed year ("202") must not be
+    // committed to the URL, or the badge changes, the popover re-anchors and
+    // the field loses focus before the last digit lands. The year section
+    // still being focused is the proof; the URL alone would be flaky.
+    const fromSections = panel
       .getByRole("group", { name: "From" })
-      .getByRole("spinbutton")
-      .first()
-      .click();
+      .getByRole("spinbutton");
+    await fromSections.first().click();
     await page.keyboard.type("31082026");
+    await expect(fromSections.last()).toBeFocused();
     // From must have landed in the URL before To is typed: To is validated
-    // against the committed From, and the popover re-anchors as the badge
-    // changes, so a mistyped From would otherwise fail later and unclearly.
+    // against the committed From.
     await expect(page).toHaveURL(/from=2026-08-31/);
-    await panel
-      .getByRole("group", { name: "To" })
-      .getByRole("spinbutton")
-      .first()
-      .click();
-    await page.keyboard.type("01072026");
+    await fillDate(panel, "To", "2026-07-01");
     await expect(panel.getByRole("group", { name: "To" })).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -638,14 +653,20 @@ test.describe.serial("Transactions", () => {
     await dialog.getByRole("button", { name: "Saving" }).click();
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
-    await dialog.getByLabel("Goal").click();
-    await page.getByRole("option", { name: /New laptop/ }).click();
-    await expect(
-      dialog.getByText("€1.790,00 of €2.000,00 saved"),
-    ).toBeVisible();
 
-    // Seeded goals belong to another workspace, so the backend refuses the
-    // transfer and the form shows the reason instead of closing.
+    // The picker is seeded (lib/goals.seed.ts) and none of those ids is meant
+    // to exist here, but on a fresh database this workspace's own fixture goal
+    // can land on seed id 1. Pick a seed goal that cannot be it, so the
+    // backend reliably refuses the transfer and the form shows the reason
+    // instead of closing.
+    const foreign =
+      goalId === 1
+        ? { name: /Emergency fund/, saved: "€3.000,00 of €3.000,00 saved" }
+        : { name: /New laptop/, saved: "€1.790,00 of €2.000,00 saved" };
+    await dialog.getByLabel("Goal").click();
+    await page.getByRole("option", { name: foreign.name }).click();
+    await expect(dialog.getByText(foreign.saved)).toBeVisible();
+
     await dialog.getByLabel("Amount").fill("10");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("Goal");

@@ -217,13 +217,6 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
                 {"category_id": ("A category is required for income and expense transactions.")}
             )
 
-        # Income/expense must always be categorized: the report partitions
-        # totals per category and has no "uncategorized" bucket.
-        if entry_type in (EntryType.INCOME, EntryType.EXPENSE) and category is None:
-            raise serializers.ValidationError(
-                {"category_id": ("A category is required for income and expense transactions.")}
-            )
-
         if isinstance(category, Category) and category.type != entry_type:
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
