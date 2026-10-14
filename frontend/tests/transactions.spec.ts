@@ -44,8 +44,10 @@ async function getOrganizationCategories(
 
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
- * 3 transfers (two contributions and one withdrawal), 3 tax refundable,
- * 15 per page. Category names match the
+ * 2 contributions and 1 withdrawal, 3 tax refundable, 15 per page. The
+ * Transfers tab and its badge cover contributions only: the backend filters
+ * and counts a single entry_type, so the withdrawal is listed under All
+ * alone until a `transfer` tab value exists. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
@@ -290,7 +292,9 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
     await expect(tab("Expenses")).toContainText("17");
     await expect(tab("Income")).toContainText("4");
-    await expect(tab("Transfers")).toContainText("3");
+    // Contributions only; the withdrawal is not a Transfers row yet (see the
+    // FIXTURES comment).
+    await expect(tab("Transfers")).toContainText("2");
 
     await expect(rows()).toHaveCount(15);
     await expect(showing("15 of 24")).toBeVisible();
