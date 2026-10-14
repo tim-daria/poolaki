@@ -15,7 +15,7 @@ from core.models import (
     Transaction,
 )
 from core.services.balance import get_annotated_goal_balance
-from core.services.goal import goal_status_transition_error
+from core.services.goal import allowed_entry_types, goal_status_transition_error
 
 
 class IntListField(serializers.Field[list[int], object, list[int], Any]):
@@ -179,9 +179,7 @@ class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
         return goal.target_date is not None and date.today() > goal.target_date
 
     def get_spendable(self, goal: Goal) -> bool:
-        return goal.status == GoalStatus.COMPLETED or (
-            goal.status == GoalStatus.ACTIVE and goal.target_date is None
-        )
+        return EntryType.EXPENSE in allowed_entry_types(goal)
 
 
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
@@ -227,26 +225,16 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
                 {"goal_id": ("A goal is required for this transaction type.")}
             )
 
-        if isinstance(goal, Goal):
-            if entry_type == EntryType.INCOME:
-                raise serializers.ValidationError(
-                    {"goal_id": ("Goal cannot be set on an income transaction.")}
-                )
-            if entry_type == EntryType.CONTRIBUTION and goal.status != GoalStatus.ACTIVE:
-                raise serializers.ValidationError(
-                    {"goal_id": ("Contributions can only be made to active goals.")}
-                )
-            if entry_type == EntryType.WITHDRAW and goal.status != GoalStatus.ACTIVE:
-                raise serializers.ValidationError(
-                    {"goal_id": ("Withdrawals can only be made from active goals.")}
-                )
-            if entry_type == EntryType.EXPENSE and not (
-                goal.status == GoalStatus.COMPLETED
-                or (goal.status == GoalStatus.ACTIVE and goal.target_date is None)
-            ):
-                raise serializers.ValidationError(
-                    {"goal_id": ("Expenses can only be made against completed or permanent goals.")}
-                )
+        if isinstance(goal, Goal) and entry_type not in allowed_entry_types(goal):
+            error_messages: dict[str, str] = {
+                EntryType.INCOME: "Goal cannot be set on an income transaction.",
+                EntryType.CONTRIBUTION: "Contributions can only be made to active goals.",
+                EntryType.WITHDRAW: "Withdrawals can only be made from active goals.",
+                EntryType.EXPENSE: (
+                    "Expenses can only be made against completed or permanent goals."
+                ),
+            }
+            raise serializers.ValidationError({"goal_id": (error_messages[str(entry_type)],)})
 
         return attrs
 

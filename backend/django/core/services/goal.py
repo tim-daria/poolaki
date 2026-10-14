@@ -14,6 +14,18 @@ class GoalArchivalError(Exception):
     """Raised when a goal cannot be archived while preserving its balance invariant."""
 
 
+def allowed_entry_types(goal: Goal) -> set[EntryType]:
+    """Return transaction types allowed for a goal in its current state."""
+    entry_types: set[EntryType] = set()
+    if goal.status == GoalStatus.ACTIVE:
+        entry_types.update({EntryType.CONTRIBUTION, EntryType.WITHDRAW})
+        if goal.target_date is None:
+            entry_types.add(EntryType.EXPENSE)
+    elif goal.status == GoalStatus.COMPLETED:
+        entry_types.add(EntryType.EXPENSE)
+    return entry_types
+
+
 def goal_status_transition_error(current: str, new: str) -> str | None:
     """Return an error message for an invalid goal status transition."""
     if current == GoalStatus.ARCHIVED and new != GoalStatus.ARCHIVED:
