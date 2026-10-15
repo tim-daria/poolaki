@@ -12,8 +12,9 @@ import {
   TransactionError,
   type Transaction,
   type TransactionDraft,
+  type TransactionPageFilters,
 } from "./transactions";
-import { DEFAULT_FILTERS, type TransactionFilters } from "./transactionFilters";
+import { DEFAULT_FILTERS } from "./transactionFilters";
 
 function draft(overrides: Partial<TransactionDraft> = {}): TransactionDraft {
   return {
@@ -52,7 +53,7 @@ const DTO = {
   description: "Ristorante Baldi",
   transaction_date: "2026-03-10",
   is_tax_deductible: false,
-  created_by: "pavel",
+  created_by: "tanya",
   created_at: "2026-03-10T12:00:00Z",
 } as const;
 
@@ -74,13 +75,14 @@ describe("fetchTransactionPage", () => {
     expect(init.credentials).toBe("include");
   });
 
-  it.each<[Partial<TransactionFilters>, string]>([
+  it.each<[Partial<TransactionPageFilters>, string]>([
     [{ tab: "income" }, "entry_type=income"],
     [{ q: "rewe" }, "q=rewe"],
     [{ sort: "oldest" }, "sort=oldest"],
     [{ from: "2026-01-01" }, "date_from=2026-01-01"],
     [{ categories: [3, 7] }, "category_id=3%2C7"],
     [{ taxDeductible: true }, "tax_deductible=true"],
+    [{ goal: 9 }, "goal_id=9"],
     [{ page: 2 }, "page=2&page_size=15"],
   ])("encodes %j as %s", async (override, expected) => {
     const fetch = stubFetch(EMPTY_PAGE);
@@ -110,7 +112,7 @@ describe("fetchTransactionPage", () => {
         transaction_date: "2026-03-10",
         is_tax_deductible: false,
         goal: null,
-        created_by: "pavel",
+        created_by: "tanya",
       },
     ]);
     expect(result).toMatchObject({ total: 1, page: 2, page_count: 3, counts });
@@ -120,6 +122,13 @@ describe("fetchTransactionPage", () => {
     stubFetch({}, 500);
     await expect(fetchTransactionPage(ORG, DEFAULT_FILTERS)).rejects.toThrow(
       "Failed to load transactions (500)",
+    );
+  });
+
+  it("surfaces a 400 as a TransactionError with the server's message", async () => {
+    stubFetch({ goal_id: ["Goal does not belong to this organization."] }, 400);
+    await expect(fetchTransactionPage(ORG, DEFAULT_FILTERS)).rejects.toThrow(
+      new TransactionError("Goal does not belong to this organization."),
     );
   });
 });

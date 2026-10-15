@@ -37,6 +37,15 @@ export function monthYear(iso: string): string {
   }).format(parseLocalDate(iso));
 }
 
+/** "July" inside the current year, "July 2025" otherwise: a list heading, like shortDate. */
+export function monthHeading(iso: string): string {
+  const d = parseLocalDate(iso);
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    ...(d.getFullYear() !== CURRENT_YEAR && { year: "numeric" }),
+  }).format(d);
+}
+
 /** "August", for the month an ISO date falls in. */
 export function monthName(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { month: "long" }).format(
