@@ -112,12 +112,13 @@ class Goal(models.Model):
     org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="goals")
     name = models.CharField(max_length=100)
     target_amount = models.DecimalField(max_digits=14, decimal_places=2)
-    target_date = models.DateField()
+    target_date = models.DateField(default=None, null=True)
     status = models.CharField(max_length=20, choices=GoalStatus.choices, default=GoalStatus.ACTIVE)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_goals"
     )
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    completed_at = models.DateField(null=True, default=None)
 
     def __str__(self) -> str:
         return self.name
@@ -127,6 +128,7 @@ class EntryType(models.TextChoices):
     INCOME = "income", "Income"
     EXPENSE = "expense", "Expense"
     CONTRIBUTION = "contribution", "Contribution"
+    WITHDRAW = "withdraw", "Withdraw"
 
 
 class Transaction(models.Model):
