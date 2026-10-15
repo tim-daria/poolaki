@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
   AppBar,
   Toolbar,
@@ -16,10 +17,11 @@ import {
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
-import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
+// import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
+import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
 import { initials } from "../../lib/initials";
@@ -54,6 +56,8 @@ interface HeaderProps {
  */
 export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
   const { user } = useAuth();
+  const org = useCurrentOrg();
+  const navigate = useNavigate();
   const theme = useTheme();
   const { unreadCount } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState<HTMLElement | null>(null);
@@ -155,16 +159,14 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
             )}
             {user && <Divider />}
 
-            {/* Placeholders until the pages exist — disabled rather than
-                dead-clickable, so the menu doesn't lie about what works. */}
-            <MenuItem disabled onClick={closeAccount}>
-              <ListItemIcon>
-                <PersonOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Account</ListItemText>
-            </MenuItem>
-
-            <MenuItem disabled onClick={closeAccount}>
+            {/* Scoped under the current workspace because the shell around
+                the page needs one; the settings themselves are account-wide. */}
+            <MenuItem
+              onClick={() => {
+                closeAccount();
+                navigate(`/o/${org.id}/settings`);
+              }}
+            >
               <ListItemIcon>
                 <SettingsOutlinedIcon fontSize="small" />
               </ListItemIcon>

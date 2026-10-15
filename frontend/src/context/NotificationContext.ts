@@ -6,6 +6,11 @@ export type NotificationType =
   | "transaction_added"
   | "goal_completed"
   | "member_left"
+  | "member_removed"
+  | "removed_from_org"
+  | "ownership_transferred"
+  | "owner_changed"
+  | "organization_deleted"
   | (string & {});
 
 /**
@@ -18,6 +23,57 @@ export type InvitationPayload = {
   org_id: number;
   org_name: string;
   invited_by: string;
+};
+
+/** Sent to every remaining member when the owner removes someone. */
+export type MemberRemovedPayload = {
+  org_name: string;
+  removed_user: string;
+  removed_by: string;
+};
+
+/** Sent to the removed user; the org may no longer be visible to them. */
+export type RemovedFromOrgPayload = {
+  org_name: string;
+  removed_by: string;
+};
+
+/** Sent to every remaining member when someone leaves. */
+export type MemberLeftPayload = {
+  user: string;
+  org_name: string;
+};
+
+/** Sent to the member who became owner because the owner left. */
+export type OwnershipTransferredPayload = {
+  previous_owner: string;
+  org_name: string;
+};
+
+/** Sent to the other remaining members when the owner left. */
+export type OwnerChangedPayload = {
+  previous_owner: string;
+  new_owner: string;
+  org_name: string;
+};
+
+/** Sent to pending invitees when the last member left; the org is gone. */
+export type OrganizationDeletedPayload = {
+  org_name: string;
+  last_member: string;
+};
+
+/** Sent when a new transaction is added. */
+export type TransactionAddedPayload = {
+  added_by: string;
+  org_name: string;
+};
+
+/** Sent when a goal is marked as completed. */
+export type GoalCompletedPayload = {
+  user: string;
+  org_name: string;
+  goal_name: string;
 };
 
 export type Notification = {

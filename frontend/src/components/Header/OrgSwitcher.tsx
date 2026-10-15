@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Box,
   Button,
+  ListItemText,
   Menu,
   MenuItem,
   Divider,
@@ -11,6 +12,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { MAX_ORGS } from "../../lib/organizations";
 import { CreateOrgForm } from "../Modals/CreateOrgForm";
 
 /**
@@ -28,6 +30,7 @@ export function OrgSwitcher() {
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const atLimit = organizations.length >= MAX_ORGS;
 
   return (
     <>
@@ -111,13 +114,19 @@ export function OrgSwitcher() {
 
         <Divider />
 
+        {/* Secondary text rather than a Tooltip: a disabled menu item gets no
+            pointer events, so a tooltip would never show. */}
         <MenuItem
+          disabled={atLimit}
           onClick={() => {
             setAnchor(null);
             setCreateOpen(true);
           }}
         >
-          Create shared workspace…
+          <ListItemText
+            primary="Create shared workspace…"
+            secondary={atLimit ? `Up to ${MAX_ORGS} workspaces` : undefined}
+          />
         </MenuItem>
       </Menu>
 

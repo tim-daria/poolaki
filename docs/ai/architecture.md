@@ -11,6 +11,7 @@ The service is decoupled from the Django backend, allowing AI capabilities to ev
 ## High-Level Architecture
 
 Current architecture:
+
 ```
              +----------------+
              |    Frontend    |
@@ -34,7 +35,6 @@ Current architecture:
              |  RAG Pipeline  |
              +----------------+
 ```
-
 
 ---
 
@@ -61,6 +61,30 @@ Responsible for:
 - LLM provider communication.
 
 The AI Service does not directly access the application database.
+
+---
+
+## Data Access and Security
+
+### Financial Data
+
+Django remains responsible for financial data ownership, authentication, authorization, and business logic.
+
+The AI Service retrieves user-specific financial data exclusively through authorized Django API endpoints. It must not directly access financial tables in the application database.
+
+### Global Knowledge Base
+
+The AI Service will access a dedicated global knowledge store for semantic retrieval of shared product FAQs and guides.
+
+The global knowledge base will contain general product information and will not store user-specific financial data.
+
+Global knowledge documents are shared across all users and organizations and do not require organization-specific filtering.
+
+### Data Isolation
+
+Financial data retrieved through `Django` must remain scoped to the authenticated user and organization.
+
+The global knowledge store and financial application data have separate responsibilities and access boundaries.
 
 ---
 
@@ -93,7 +117,6 @@ Backend
 Frontend
 ```
 
-
 The `ai service` receives validated information from `Django` and processes AI-related operations.
 
 ---
@@ -103,6 +126,7 @@ The `ai service` receives validated information from `Django` and processes AI-r
 For detailed information regarding the Retrieval-Augmented Generation pipeline (including `Retriever`, `ContextBuilder`, `PromptBuilder`, and hybrid vector retrieval), please refer to [RAG design documentation](docs/ai/rag-design.md).
 
 ## Internal Structure
+
 ```
 ├── app/
 │ ├── api/			# API routes and endpoints
@@ -125,24 +149,26 @@ Current infrastructure:
 - FastAPI application container.
 - Internal Docker network communication.
 - Health check endpoint for container monitoring.
-
-Future infrastructure:
-
+- LLM provider integration.
 - Vector database integration (`pgvector`).
 - Embedding generation.
-- LLM provider integration.
 - AI metrics and observability.
 
 ---
-##  Authentication
+
+## Authentication
+
 All internal AI requests require:
+
 - Service authentication
 - User authorization validation
 
 ### Authentication Between Backend and AI Service
+
 The AI service does not authenticate users directly.
 
 The main backend:
+
 - validates JWT tokens
 - verifies organization permissions
 - sends only authorized context

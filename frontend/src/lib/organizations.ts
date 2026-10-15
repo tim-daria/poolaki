@@ -10,6 +10,8 @@
  * looks exactly like a permissions bug.
  */
 
+import { isRejection, rejectionMessage } from "./apiErrors";
+
 /** Mirrors core.models.Role. */
 export type Role = "owner" | "member";
 
@@ -59,7 +61,65 @@ export async function createOrganization(
     credentials: "include",
     body: JSON.stringify({ name, initial_balance: initialBalance }),
   });
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not create the workspace"),
+    );
+  }
   if (!res.ok) throw new Error(`Failed to create workspace (${res.status})`);
+  return res.json();
+}
+
+/** Mirrors max_length in OrganizationNameSerializer. */
+export const MAX_ORG_NAME_LENGTH = 100;
+
+/**
+ * PATCH /api/v1/organizations/${org_id}/
+ *
+ * Owner only. The personal workspace is rejected with 400; a field error on
+ * `name` (blank, over MAX_ORG_NAME_LENGTH) arrives as `{name: [...]}`.
+ */
+export async function renameOrganization(
+  org_id: number,
+  name: string,
+  csrfToken: string,
+): Promise<{ id: number; name: string }> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify({ name }),
+  });
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not rename the workspace"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to rename workspace (${res.status})`);
+  return res.json();
+}
+
+/**
+ * POST /api/v1/organizations/${org_id}/leave/
+ *
+ * An owner leaving hands ownership to the longest-standing remaining member;
+ * the last member leaving deletes the workspace, which the response reports.
+ */
+export async function leaveOrganization(
+  org_id: number,
+  csrfToken: string,
+): Promise<{ organization_deleted: boolean }> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/leave/`, {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken },
+    credentials: "include",
+  });
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not leave the workspace"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to leave workspace (${res.status})`);
   return res.json();
 }
 
@@ -109,13 +169,14 @@ export async function fetchPendingInvitations(
 }
 
 /**
- * Backend's 400 message, e.g. "No user found with this username."
+ * Backend's 400/403 message, e.g. "No user found with this username."
  *
- * Separate from a plain Error because these are the user's own input —
- * unknown username, already a member, org full — and belong in the form,
- * not in a generic "something went wrong".
+ * Separate from a plain Error because the backend rejected the request with a
+ * message meant for the user — unknown username, workspace full, member
+ * already gone, no longer the owner — and that belongs in the UI, not in a
+ * generic "something went wrong".
  */
-export class InvitationCreateError extends Error {}
+export class WorkspaceRequestError extends Error {}
 
 /** POST /api/v1/organizations/${org_id}/invitations/ */
 export async function createInvitation(
@@ -129,17 +190,152 @@ export async function createInvitation(
     credentials: "include",
     body: JSON.stringify({ username }),
   });
-  if (res.status === 400) {
-    const body = await res.json().catch(() => null);
-    throw new InvitationCreateError(
-      // Three shapes: the service rejects the request as {errors: [...]},
-      // legacy code as {error: "..."}, the serializer the field as {username: [...]}.
-      body?.errors?.[0] ??
-        body?.error ??
-        body?.username?.[0] ??
-        "Could not send the invitation",
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not send the invitation"),
     );
   }
   if (!res.ok) throw new Error(`Failed to send invitation ${res.status}`);
   return res.json();
+}
+
+/** POST /api/v1/organizations/${org_id}/invitations/${invitation_id}/cancel/ */
+export async function cancelInvitation(
+  org_id: number,
+  invitation_id: number,
+  csrfToken: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/invitations/${invitation_id}/cancel/`,
+    {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken },
+      credentials: "include",
+    },
+  );
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not cancel the invitation"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to cancel invitation ${res.status}`);
+}
+
+/**
+ * DELETE /api/v1/organizations/${org_id}/members/${user_id}/
+ *
+ * Owner-only. A 400 means the row is stale — the user already left or was
+ * removed — and a 403 that we are no longer the owner; callers should refetch
+ * rather than retry.
+ */
+export async function removeMember(
+  org_id: number,
+  user_id: number,
+  csrfToken: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/organizations/${org_id}/members/${user_id}/`,
+    {
+      method: "DELETE",
+      headers: { "X-CSRFToken": csrfToken },
+      credentials: "include",
+    },
+  );
+  if (isRejection(res)) {
+    throw new WorkspaceRequestError(
+      await rejectionMessage(res, "Could not remove the member"),
+    );
+  }
+  if (!res.ok) throw new Error(`Failed to remove member ${res.status}`);
+}
+
+/** Mirrors invitations[] in MyInvitationsView.get */
+export type MyInvitation = {
+  id: number;
+  organization_id: number;
+  organization_name: string;
+  invited_by: string | null;
+  created_at: string;
+};
+
+/** GET /api/v1/invitations/my/ — pending invitations addressed to the user. */
+export async function fetchMyInvitations(
+  signal?: AbortSignal,
+): Promise<{ invitations: MyInvitation[] }> {
+  const res = await fetch("/api/v1/invitations/my/", {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load invitations (${res.status})`);
+  return res.json();
+}
+
+/**
+ * Mirrors MAX_MEMBERS_PER_ORG in core/services/organization.py. Duplicated
+ * rather than fetched: the backend enforces it regardless, so the worst a
+ * drift can do here is offer an invite that comes back rejected.
+ */
+export const MAX_MEMBERS = 5;
+
+/**
+ * Mirrors MAX_ORGS_PER_USER in core/services/organization.py. Counts every
+ * membership, the personal workspace included, as the backend does.
+ */
+export const MAX_ORGS = 10;
+
+/**
+ * Owners first, then by join date. The endpoint returns memberships in no
+ * particular order, and an owner buried mid-list reads as a plain member.
+ */
+export function byRoleThenJoined(a: Member, b: Member): number {
+  if (a.role !== b.role) return a.role === "owner" ? -1 : 1;
+  return a.joined_at.localeCompare(b.joined_at);
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+/**
+ * Settings row subtitle, e.g. "4 members · 1 invited · you're the owner".
+ * Counts are optional because they load per workspace after the list renders;
+ * until then only the role is shown.
+ */
+export function describeWorkspace(
+  org: Pick<Organization, "is_personal" | "role">,
+  memberCount?: number,
+  inviteCount?: number,
+): string {
+  if (org.is_personal) return "Personal · only you";
+  const parts: string[] = [];
+  if (memberCount !== undefined) parts.push(plural(memberCount, "member"));
+  if (inviteCount) parts.push(`${inviteCount} invited`);
+  parts.push(org.role === "owner" ? "you're the owner" : "member");
+  return parts.join(" · ");
+}
+
+export type LeaveOutcome = "leave" | "transfer" | "delete";
+
+/**
+ * What the leave endpoint will do, worked out from what the settings page
+ * already knows, so the confirm dialog can say so before the request.
+ */
+export function leaveOutcome(role: Role, memberCount: number): LeaveOutcome {
+  if (memberCount <= 1) return "delete";
+  return role === "owner" ? "transfer" : "leave";
+}
+
+/**
+ * The backend's successor rule when an owner leaves: earliest joined_at among
+ * the others, ties broken by the smaller user id.
+ */
+export function successorOwner(
+  members: Member[],
+  selfId: number,
+): Member | undefined {
+  return members
+    .filter((m) => m.user_id !== selfId)
+    .sort(
+      (a, b) => a.joined_at.localeCompare(b.joined_at) || a.user_id - b.user_id,
+    )[0];
 }

@@ -100,13 +100,10 @@ Current architecture:
 - Retriever: orchestrates retrieval of structured and unstructured context based on the detected intent.
 - Context Builder: combines and limits the retrieved context before sending it to the LLM.
 - Prompt Builder: loads the prompt templates and injects the user question and retrieved context.
-- LLM Client: communicates with the external LLM provider, implements retries and fallback between configured models, handles transient and non-retryable HTTP errors, and logs request timing and failures.
-- Logging: application-wide structured JSON logging for LLM requests, including model, attempt number, HTTP status, and response duration.
-
-**Future AI Components:**
-
+- LLM Client: communicates with the external LLM provider and returns the generated response.
 - Vector database integration (`pgvector`)
 - Embedding generation and indexing
+- LLM fallback and resilience mechanisms
 
 For detailed architecture documentation, see: [architecture.md](../docs/ai/architecture.md)
 

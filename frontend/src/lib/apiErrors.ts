@@ -26,6 +26,20 @@ function walk(body: unknown, field: string): ApiProblem | null {
   return null;
 }
 
+/** 400 and 403 bodies carry a message meant for the user. */
+export function isRejection(res: Response): boolean {
+  return res.status === 400 || res.status === 403;
+}
+
+/** The body's first message, or `fallback` when the body is empty or not JSON. */
+export async function rejectionMessage(
+  res: Response,
+  fallback: string,
+): Promise<string> {
+  const body: unknown = await res.json().catch(() => null);
+  return firstErrorMessage(body) ?? fallback;
+}
+
 /**
  * First message in an error body as a (field, message) pair, or null when
  * there is none. Handles service bodies {errors: [msg]} and the DRF shapes

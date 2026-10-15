@@ -104,6 +104,9 @@ if [ "$INITIALIZED" = "false" ]; then
 	
 	vault kv put secret/cloudflare \
 		tunnel_token="$TUNNEL_TOKEN"
+	
+	vault kv put secret/ai-service \
+		llm_api_key="$LLM_API_KEY"
 
 	#######################################
 	###### Setup AppRole auth method #####

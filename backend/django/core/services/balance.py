@@ -4,7 +4,7 @@ from typing import cast
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 
-from core.models import EntryType, Goal, Membership, Organization, Transaction, User
+from core.models import EntryType, Membership, Organization, Transaction, User
 from core.services.exceptions import PersonalOrganizationMissingError
 
 
@@ -40,16 +40,3 @@ def calculate_org_balance(org: Organization) -> Decimal:
     contribution = cast(Decimal, totals["contribution"])
 
     return org.initial_balance + income - expense - contribution
-
-
-def calculate_goal_balance(org: Organization, goal: Goal) -> Decimal:
-    totals = Transaction.objects.filter(org=org, goal=goal).aggregate(
-        contribution=Coalesce(
-            Sum("amount", filter=Q(entry_type=EntryType.CONTRIBUTION)),
-            Decimal("0"),
-        ),
-    )
-
-    contribution = cast(Decimal, totals["contribution"])
-
-    return contribution

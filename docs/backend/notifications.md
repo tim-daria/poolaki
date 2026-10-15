@@ -278,15 +278,15 @@ There is no push channel, so the frontend should poll.
 | `invitation`        | Text like "bob invited you to **Trip**", buttons **Accept** / **Decline** (see below).            |
 | `transaction_added` | Text like "bob added a new €20 transaction to **Family Account**"                                 |
 | `goal_completed`    | Info text.                                                                                        |
-| `member_left`       | Text like "**alice** left **Trip**" organization.
-| `member_removed`    | Text like "**alice** was removed from **Trip** organization"                                          |
-| `removed_from_org`  | Text like "you were removed from **Trip** by bob"    |
-| `ownership_transferred` | Text like "you are now the owner of **Trip**" (sent to the new owner)  |
-| `owner_changed`       | Text like "**Daria** replaced **Ivan** as the owner of **Trip**" (sent to remaining members) |
-| `organization_deleted` | Info text, e.g. "**Trip** was deleted"                                                      |
+| `member_left`       | "carol left **Trip**" (attributed to `user`)                                                      |
+| `member_removed`    | "bob removed alice from **Trip**" (attributed to `removed_by`)                                   |
+| `removed_from_org`  | "bob removed you from **Trip**" (attributed to `removed_by`)                                     |
+| `ownership_transferred` | "bob left **Trip** — you're now the owner" (sent to the new owner; attributed to `previous_owner`) |
+| `owner_changed`     | "bob left **Trip** — dana is now the owner" (sent to remaining members; attributed to `previous_owner`) |
+| `organization_deleted` | "**Trip** was deleted after bob left, so your invitation no longer stands" (sent to pending invitees; attributed to `last_member`) |
 
-The exact copy and icons are up to the frontend; the table only maps where a
-click should go.
+The copy above is what `frontend/src/lib/notificationText.ts` renders; each
+type degrades to generic wording when its payload is missing a field.
 
 ### Accept / Decline flow (from a notification)
 
