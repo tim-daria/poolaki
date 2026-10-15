@@ -69,6 +69,7 @@ def test_list_transactions_returns_paged_envelope(
         "income": 1,
         "expense": 1,
         "contribution": 0,
+        "withdraw": 0,
     }
 
 
@@ -78,6 +79,7 @@ def test_list_transactions_filters_by_entry_type(
     expense = make_transaction(shared_org, entry_type="expense")
     make_transaction(shared_org, entry_type="income")
     make_transaction(shared_org, entry_type="contribution")
+    make_transaction(shared_org, entry_type="withdraw")
     api_client.force_authenticate(user=owner)
 
     response = api_client.get(transactions_url(shared_org.id), {"entry_type": "expense"})
@@ -86,10 +88,11 @@ def test_list_transactions_filters_by_entry_type(
     assert response.data["total"] == 1
     # Counts ignore the tab itself, so the other tabs stay populated.
     assert response.data["counts"] == {
-        "all": 3,
+        "all": 4,
         "income": 1,
         "expense": 1,
         "contribution": 1,
+        "withdraw": 1,
     }
 
 
@@ -137,6 +140,7 @@ def test_list_transactions_filters_by_category_id(
         "income": 0,
         "expense": 2,
         "contribution": 0,
+        "withdraw": 0,
     }
 
 
@@ -169,6 +173,7 @@ def test_list_transactions_filters_by_multiple_category_ids(
         "income": 0,
         "expense": 2,
         "contribution": 0,
+        "withdraw": 0,
     }
 
 
@@ -260,6 +265,7 @@ def test_list_transaction_counts_respect_other_filters(
         "income": 1,
         "expense": 1,
         "contribution": 0,
+        "withdraw": 0,
     }
 
 
