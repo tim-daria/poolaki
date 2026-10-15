@@ -44,13 +44,16 @@ async function getOrganizationCategories(
 
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
- * 3 transfers, 3 tax refundable, 15 per page. Category names match the
+ * 2 contributions and 1 withdrawal, 3 tax refundable, 15 per page. The
+ * Transfers tab and its badge cover contributions only: the backend filters
+ * and counts a single entry_type, so the withdrawal is listed under All
+ * alone until a `transfer` tab value exists. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
 type Fixture = [
   date: string,
-  type: "expense" | "income" | "contribution",
+  type: "expense" | "income" | "contribution" | "withdraw",
   category: string | null,
   name: string,
   amount: number,
@@ -77,7 +80,7 @@ const FIXTURES: Fixture[] = [
   ["2026-06-27", "expense", "Food", "Lidl", 33.15],
   ["2026-06-22", "income", "Gift", "Birthday gift", 100],
   ["2026-06-20", "expense", "Shopping", "Bookshop", 24.99, true],
-  ["2026-06-17", "contribution", null, "To savings", 300],
+  ["2026-06-17", "withdraw", null, "From savings", 300],
   ["2026-06-14", "expense", "Food", "Sushi Yama", 41.5],
   ["2026-06-10", "expense", "Transport", "Taxi", 22],
   ["2026-06-06", "expense", "Utilities", "Haircut", 35],
@@ -91,6 +94,7 @@ async function postTransaction(
   page: Page,
   orgId: number,
   categories: Map<string, number>,
+  goalId: number,
   row: Fixture,
 ) {
   const [transaction_date, entry_type, category, description, amount, tax] =
@@ -115,7 +119,10 @@ async function postTransaction(
       data: {
         entry_type,
         category_id,
-        goal_id: null,
+        goal_id:
+          entry_type === "contribution" || entry_type === "withdraw"
+            ? goalId
+            : null,
         description,
         amount: amount.toFixed(2),
         transaction_date,
@@ -125,10 +132,31 @@ async function postTransaction(
   );
   if (res.status() !== 201) {
     throw new Error(
-      `transaction POST failed: ${res.status()} ${await res.text()} — ` +
-        "if it names category_id, the id is not one of this workspace's own.",
+      `transaction POST failed for ${entry_type} "${description}": ` +
+        `${res.status()} ${await res.text()}`,
     );
   }
+}
+
+async function createGoal(page: Page, orgId: number): Promise<number> {
+  const csrftoken =
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? "";
+  const res = await page.request.post(`/api/v1/organizations/${orgId}/goals/`, {
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+    data: {
+      name: "Transactions fixture goal",
+      target_amount: "1000.00",
+      target_date: "2026-12-31",
+    },
+  });
+
+  if (res.status() !== 201) {
+    throw new Error(`goal POST failed: ${res.status()} ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as { id: number };
+  return data.id;
 }
 
 /**
@@ -191,11 +219,39 @@ function ariaHiddenHits(page: Page): Promise<string[]> {
   );
 }
 
+/**
+ * Fills an IsoDatePicker (DD-MM-YYYY) inside `scope` from an ISO date. MUI's
+ * field is three spinbutton sections that auto-advance as digits land, and
+ * typing all eight digits in one stream races that advance. Each section is
+ * filled and checked on its own, so a dropped digit fails here, at the field.
+ */
+async function fillDate(scope: Locator, label: string, iso: string) {
+  const [year, month, day] = iso.split("-");
+  const sections = scope
+    .getByRole("group", { name: label })
+    .getByRole("spinbutton");
+  const parts = [day, month, year];
+  for (const [i, digits] of parts.entries()) {
+    const section = sections.nth(i);
+    await section.click();
+    // One input event per section, not one per digit: the year is typed last,
+    // and a partial year ("202") already makes a valid date that commits to
+    // the URL, which re-anchors the popover and drops the next keystroke.
+    await section.fill(digits);
+    await expect(section).toHaveAttribute(
+      "aria-valuenow",
+      String(Number(digits)),
+    );
+  }
+}
+
 test.describe.serial("Transactions", () => {
   let page: Page;
   let transactionsUrl: string;
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
+  /** The one real goal in this workspace; the form's picker is still seeded. */
+  let goalId: number;
 
   test.beforeAll(async ({ browser }) => {
     page = (await openAsSharedOwner(browser)).page;
@@ -205,10 +261,11 @@ test.describe.serial("Transactions", () => {
     const workspace = await createWorkspaceViaApi(page, `Ledger ${Date.now()}`);
     const orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
+    goalId = await createGoal(page, orgId);
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
-      await postTransaction(page, orgId, categories, row);
+      await postTransaction(page, orgId, categories, goalId, row);
     }
   });
 
@@ -235,7 +292,9 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
     await expect(tab("Expenses")).toContainText("17");
     await expect(tab("Income")).toContainText("4");
-    await expect(tab("Transfers")).toContainText("3");
+    // Contributions only; the withdrawal is not a Transfers row yet (see the
+    // FIXTURES comment).
+    await expect(tab("Transfers")).toContainText("2");
 
     await expect(rows()).toHaveCount(15);
     await expect(showing("15 of 24")).toBeVisible();
@@ -327,18 +386,8 @@ test.describe.serial("Transactions", () => {
     const panel = page
       .getByRole("presentation")
       .filter({ hasText: "Categories" });
-    // MUI's date field is a group of spinbutton sections: focus the first
-    // section, then type the digits and they flow through DD-MM-YYYY.
-    const typeDate = async (label: string, digits: string) => {
-      await panel
-        .getByRole("group", { name: label })
-        .getByRole("spinbutton")
-        .first()
-        .click();
-      await page.keyboard.type(digits);
-    };
-    await typeDate("From", "01072026");
-    await typeDate("To", "31082026");
+    await fillDate(panel, "From", "2026-07-01");
+    await fillDate(panel, "To", "2026-08-31");
     await panel.getByText("Food", { exact: true }).click();
     await panel.getByText("Shopping", { exact: true }).click();
     await page.keyboard.press("Escape");
@@ -524,23 +573,20 @@ test.describe.serial("Transactions", () => {
     await expect(page).not.toHaveURL(/from=/);
     await expect(panel.getByText("24 transactions match")).toBeVisible();
 
-    // To before From is flagged on the field, not silently accepted.
-    await panel
+    // Typed as one stream on purpose: a half-typed year ("202") must not be
+    // committed to the URL, or the badge changes, the popover re-anchors and
+    // the field loses focus before the last digit lands. The year section
+    // still being focused is the proof; the URL alone would be flaky.
+    const fromSections = panel
       .getByRole("group", { name: "From" })
-      .getByRole("spinbutton")
-      .first()
-      .click();
+      .getByRole("spinbutton");
+    await fromSections.first().click();
     await page.keyboard.type("31082026");
+    await expect(fromSections.last()).toBeFocused();
     // From must have landed in the URL before To is typed: To is validated
-    // against the committed From, and the popover re-anchors as the badge
-    // changes, so a mistyped From would otherwise fail later and unclearly.
+    // against the committed From.
     await expect(page).toHaveURL(/from=2026-08-31/);
-    await panel
-      .getByRole("group", { name: "To" })
-      .getByRole("spinbutton")
-      .first()
-      .click();
-    await page.keyboard.type("01072026");
+    await fillDate(panel, "To", "2026-07-01");
     await expect(panel.getByRole("group", { name: "To" })).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -630,14 +676,20 @@ test.describe.serial("Transactions", () => {
     await dialog.getByRole("button", { name: "Saving" }).click();
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
-    await dialog.getByLabel("Goal").click();
-    await page.getByRole("option", { name: /New laptop/ }).click();
-    await expect(
-      dialog.getByText("€1.790,00 of €2.000,00 saved"),
-    ).toBeVisible();
 
-    // Seeded goals belong to another workspace, so the backend refuses the
-    // transfer and the form shows the reason instead of closing.
+    // The picker is seeded (lib/goals.seed.ts) and none of those ids is meant
+    // to exist here, but on a fresh database this workspace's own fixture goal
+    // can land on seed id 1. Pick a seed goal that cannot be it, so the
+    // backend reliably refuses the transfer and the form shows the reason
+    // instead of closing.
+    const foreign =
+      goalId === 1
+        ? { name: /Emergency fund/, saved: "€3.000,00 of €3.000,00 saved" }
+        : { name: /New laptop/, saved: "€1.790,00 of €2.000,00 saved" };
+    await dialog.getByLabel("Goal").click();
+    await page.getByRole("option", { name: foreign.name }).click();
+    await expect(dialog.getByText(foreign.saved)).toBeVisible();
+
     await dialog.getByLabel("Amount").fill("10");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("Goal");

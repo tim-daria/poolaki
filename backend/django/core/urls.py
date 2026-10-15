@@ -4,6 +4,11 @@ from core.views.category import (
     CategoryListCreateView,
     CategoryReadUpdateDeleteView,
 )
+from core.views.goal import (
+    GoalBalanceView,
+    GoalListCreateView,
+    GoalReadUpdateView,
+)
 from core.views.invitation import (
     AcceptInvitationView,
     CancelInvitationView,
@@ -90,6 +95,22 @@ urlpatterns = [
         "invitations/my/",
         MyInvitationsView.as_view(),
         name="my-invitations",
+    ),
+    # Goals
+    path(
+        "organizations/<int:org_id>/goals/",
+        GoalListCreateView.as_view(),
+        name="goal-list-create",
+    ),
+    path(
+        "organizations/<int:org_id>/goals/<int:goal_id>/",
+        GoalReadUpdateView.as_view(),
+        name="goal-detail",
+    ),
+    path(
+        "organizations/<int:org_id>/goals/<int:goal_id>/balance/",
+        GoalBalanceView.as_view(),
+        name="goal-balance",
     ),
     # Transactions
     path(
