@@ -491,3 +491,19 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     totals = ReportAmountsSerializer()
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
+
+
+class AiAnalyticsSummaryQuerySerializer(serializers.Serializer[dict[str, Any]]):
+    """Body of POST /api/internal/v1/analytics/summary/: user and org arrive
+    in the body (service-to-service convention), not in the session or URL."""
+
+    user_id = serializers.IntegerField()
+    organization_id = serializers.IntegerField()
+    year = serializers.IntegerField(required=False, min_value=1900, max_value=2099)
+
+
+class AiAnalyticsSummaryResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField()
+    balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    totals = ReportAmountsSerializer()
+    months = ReportMonthlySerializer(many=True)
