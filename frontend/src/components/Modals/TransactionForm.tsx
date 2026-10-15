@@ -273,7 +273,7 @@ export function TransactionForm({
         editing
           ? "Edit transaction"
           : lockReason === "contributing"
-            ? "Contribute to goal"
+            ? "Contribute to saving"
             : "Add transaction"
       }
       onClose={guard.requestClose}
