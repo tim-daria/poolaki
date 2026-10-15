@@ -1,15 +1,24 @@
-FROM caddy:2-builder AS builder
+FROM node:24-alpine AS frontend-builder
+
+COPY ./frontend/package*.json ./
+RUN npm ci
+
+COPY ./frontend/ ./
+RUN npm run build
+
+FROM caddy:2-builder AS caddy-builder
 
 RUN xcaddy build \
 	--with github.com/corazawaf/coraza-caddy/v2
 
-FROM caddy:2
+FROM caddy:2-alpine
 
 RUN apk add --no-cache git ca-certificates
 
-COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+# Copy neccessary files from builders
+COPY --from=caddy-builder /usr/bin/caddy /usr/bin/caddy
+COPY --from=frontend-builder /dist/ /srv/
 
-# Pin to a specific version! Don't just grab "master"
 RUN git clone --depth 1 --branch v4.3.0 \
 	https://github.com/coreruleset/coreruleset /tmp/crs && \
 	mkdir -p /etc/caddy/coraza && \
@@ -21,10 +30,10 @@ RUN git clone --depth 1 --branch v4.3.0 \
 RUN addgroup -g 1337 -S caddy && \
     adduser -u 1337 -S -G caddy caddy
 
-RUN mkdir -p /data /config /coraza/logs && \
-    chown -R caddy:caddy /data /config /etc/caddy /coraza/logs
+RUN mkdir -p /data /config /coraza/logs /srv && \
+    chown -R caddy:caddy /data /config /etc/caddy /coraza/logs /srv
 
-COPY coraza.conf /etc/caddy/coraza.conf
+COPY ./backend/caddy/coraza.conf /etc/caddy/coraza.conf
 RUN chown caddy:caddy /etc/caddy/coraza.conf
 
 USER caddy

@@ -1,33 +1,33 @@
 services:
-  cloudflared:
-    build:
-      context: ./backend/cloudflare
-      dockerfile: Dockerfile
-    container_name: cloudflared
-    restart: unless-stopped
-    volumes:
-      - type: volume
-        source: vault_agent
-        target: /vault/agent/secrets
-        read_only: true
-        volume:
-          subpath: cloudflare
-    networks:
-      - tunnel_net
-    healthcheck:
-      test: ["CMD", "cloudflared", "tunnel", "--metrics 0.0.0.0:60123", "ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      vault:
-        condition: service_healthy
+  # cloudflared:
+  #   build:
+  #     context: ./backend/cloudflare
+  #     dockerfile: Dockerfile
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   volumes:
+  #     - type: volume
+  #       source: vault_agent
+  #       target: /vault/agent/secrets
+  #       read_only: true
+  #       volume:
+  #         subpath: cloudflare
+  #   networks:
+  #     - tunnel_net
+  #   healthcheck:
+  #     test: ["CMD", "cloudflared", "tunnel", "--metrics 0.0.0.0:60123", "ready"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   depends_on:
+  #     vault_agent:
+  #       condition: service_healthy
 
   caddy:
     build:
-      context: ./backend/caddy
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/caddy/Dockerfile
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -52,9 +52,6 @@ services:
       timeout: 5s
     depends_on:
       backend:
-        condition: service_healthy
-        restart: true
-      frontend:
         condition: service_healthy
         restart: true
 
@@ -128,36 +125,6 @@ services:
       retries: 5
       start_period: 30s
       timeout: 10s
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: ./Dockerfile
-    container_name: nodejs
-    restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
-    expose:
-      - "5173"
-    environment:
-      TZ: Europe/Berlin
-      # - NODE_ENV=production
-    volumes:
-      - ./frontend:/home/node/app
-      - /home/node/app/node_modules
-    develop:
-      watch:
-        - action: rebuild
-          path: ./frontend/package.json
-        - action: rebuild
-          path: ./frontend/package-lock.json
-    networks:
-      - frontend_net
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
-      interval: 30s
-      retries: 3
-      start_period: 30s
-      timeout: 5s
 
 ######################################################
 # Monitoring #

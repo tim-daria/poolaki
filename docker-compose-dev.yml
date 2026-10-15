@@ -1,0 +1,468 @@
+services:
+  cloudflared:
+    build:
+      context: ./backend/cloudflare
+      dockerfile: Dockerfile
+    container_name: cloudflared
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: cloudflare
+    networks:
+      - tunnel_net
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics 0.0.0.0:60123", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      vault:
+        condition: service_healthy
+
+  caddy:
+    build:
+      context: ./backend/caddy
+      dockerfile: Dockerfile
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - coraza_logs:/coraza/logs:rw
+      - ./backend/caddy/403.html:/etc/caddy/custom-pages/403.html:ro
+    networks:
+      - tunnel_net
+      - frontend_net
+      - backend_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+      frontend:
+        condition: service_healthy
+        restart: true
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: django/Dockerfile
+    container_name: django
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    expose:
+    - "8000"
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: http://vault:8200
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./backend/django:/app
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: django
+    tmpfs:
+      - /tmp:exec,mode=777
+    networks:
+      - backend_net
+      # - vault_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      vault_agent:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: postgres_db
+    restart: unless-stopped
+    volumes:
+      - postgres_db:/var/lib/postgresql/
+      - ./backend/postgres:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # PG Values are needed for psql to restore the database from backup
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Berlin
+      VAULT_ADDR: "http://vault:8200"
+    networks:
+      - backend_net
+      - backup_net
+      - vault_net
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    container_name: nodejs
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    expose:
+      - "5173"
+    environment:
+      TZ: Europe/Berlin
+      # - NODE_ENV=production
+    volumes:
+      - ./frontend:/home/node/app
+      - /home/node/app/node_modules
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+    networks:
+      - frontend_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 5s
+
+######################################################
+# Monitoring #
+######################################################
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: unless-stopped
+    expose:
+      - "9090"
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./backend/monitoring/prometheus_data:/var/prometheus
+    networks:
+      - tunnel_net
+      - backend_net
+      - frontend_net
+      - backup_net
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
+    profiles:
+      - prod
+
+
+  grafana:
+    build:
+      context: ./backend
+      dockerfile: monitoring/Dockerfile
+    container_name: grafana
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      GF_SERVER_ROOT_URL: "http://grafana.localhost"
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_AUTH_DISABLE_LOGIN_FORM: false
+      GF_SECURITY_COOKIE_SECURE: true
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: true
+      # SMTP Settings
+      GF_SMTP_ENABLED: true
+      GF_SMTP_HOST: ${SMTP_HOST}
+      GF_SMTP_FROM_NAME: "Grafana Alerts"
+      GF_SMTP_SKIP_VERIFY: false
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "provisioningWithEnvVars"
+      ALERT_RECIPIENT_EMAIL: ${ALERT_RECIPIENT_EMAIL}
+      TZ: Europe/Berlin
+    volumes:
+      - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: grafana
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      timeout: 5s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+        restart: true
+    profiles:
+      - prod
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}?sslmode=disable"
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    profiles:
+      - prod
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - "8080"
+    networks:
+      - tunnel_net
+      - backend_net
+      - frontend_net
+      - backup_net
+    depends_on:
+      - caddy
+    profiles:
+      - prod
+
+
+######################################################
+# Backup #
+######################################################
+
+  db_backup:
+    image: postgres:18
+    container_name: db_backup
+    restart: unless-stopped
+    volumes:
+      - ./backend/backups:/backups
+      - ./backend/backups/backup.sh:/backup.sh
+    entrypoint: ["sh", "-c", "while true; do sh /backup.sh; sleep 86400; done"]
+    networks:
+      - backup_net
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      TZ: Europe/Berlin
+    healthcheck:
+      test: ["CMD-SHELL", "find /backups/.last_success -mmin -2600 | grep -q . || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    profiles:
+      - prod
+
+######################################################
+# RAG - System #
+######################################################
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    user: "${UID:-1000}:${GID:-1000}"
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      PYTHONPATH: .
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      DJANGO_BASE_URL: ${DJANGO_BASE_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+      LLM_TIMEOUT: ${LLM_TIMEOUT}
+      TZ: Europe/Berlin
+    volumes:
+      - ./ai-service:/app
+      - type: volume
+        source: vault_agent
+        target: /vault/agent/secrets
+        read_only: true
+        volume:
+          subpath: ai-service
+    networks:
+      - backend_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - vault_agent
+
+    # Future:
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+    # Future observability:
+    # networks:
+    #   - backend_net
+    #   - monitor_net
+    #
+    # Prometheus:
+    # - Add /metrics endpoint
+    # - Add FastAPI metrics exporter
+    #
+    # Grafana:
+    # - Add AI Service dashboard
+    # - Monitor latency, requests, errors, token usage
+
+######################################################
+# HashiCorp Vault #
+######################################################
+
+  vault:
+    build:
+      context: ./vault
+      dockerfile: ./Dockerfile
+    container_name: vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    ports:
+    - "8200:8200"
+    volumes:
+    - ./vault/config:/vault/config
+    - vault_data:/vault/data
+    - vault_init:/vault/secure/
+    - vault_id:/vault/secure/id
+    - vault_agent:/vault/agent/secrets
+    env_file: 
+    - .env
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
+      VAULT_CONFIG: "/vault/config"
+    networks:
+    - vault_net
+    healthcheck:
+      test: ["CMD", "sh", "-c", "vault status | grep -q 'Sealed.*false'"]
+      retries: 3
+      start_period: 30s
+      timeout: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  vault_agent:
+    image: hashicorp/vault:2.0
+    container_name: vault_agent
+    entrypoint: ["vault", "agent", "-config=/vault/config/hcl/agent.hcl"]
+    volumes:
+      - ./vault/config/hcl/agent.hcl:/vault/config/hcl/agent.hcl
+      - ./vault/agent/templates:/vault/agent/templates
+      - vault_agent:/vault/agent/secrets
+      - vault_id:/vault/secure/id
+    environment:
+      TZ: Europe/Berlin
+      VAULT_ADDR: ${VAULT_ADDR}
+    networks:
+      - vault_net
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /vault/secure/id/agent-token || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      vault:
+        condition: service_healthy
+
+
+volumes:
+  postgres_db:
+  caddy_data:
+  caddy_config:
+  coraza_logs:
+  grafana_data:
+  prom_data:
+  vault_data:
+  vault_init:
+  vault_id:
+  vault_agent:
+
+networks:
+  backend_net:
+    name: backend_net
+  frontend_net:
+    name: frontend_net
+  backup_net:
+    name: backup_net
+  tunnel_net:
+    name: tunnel_net
+  vault_net:
+    name: vault_net
