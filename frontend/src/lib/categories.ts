@@ -1,6 +1,6 @@
 /** @file Category types, lookups, and API calls. */
 
-import type { EntryType } from "./transactions";
+import { isTransfer, type EntryType } from "./transactions";
 
 export type CategoryKind = "expense" | "income" | "contribution";
 
@@ -27,7 +27,7 @@ export function selectableCategories(
   categories: Category[],
   entryType: EntryType,
 ): Category[] {
-  if (entryType === "contribution") return [];
+  if (isTransfer(entryType)) return [];
   return categories.filter((c) => c.type === entryType);
 }
 
