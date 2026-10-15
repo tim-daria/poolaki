@@ -198,7 +198,7 @@ test.describe.serial("Goals", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Add transaction" }),
+      dialog.getByRole("heading", { name: "Contribute to saving" }),
     ).toBeVisible();
     // The tab is a ToggleButton, so it exposes aria-pressed.
     await expect(
