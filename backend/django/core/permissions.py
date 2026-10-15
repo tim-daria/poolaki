@@ -2,7 +2,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from core.models import Membership, Role
+from core.models import Goal, Membership, Role
 
 
 class IsOrgMember(BasePermission):
@@ -27,3 +27,20 @@ class IsOrgOwner(BasePermission):
         if org_id is None or not request.user.is_authenticated:
             return False
         return Membership.objects.filter(user=request.user, org_id=org_id, role=Role.OWNER).exists()
+
+
+class IsGoalCreatorOrOrgOwner(BasePermission):
+    """Allows goal updates to its creator or the organization owner."""
+
+    message = "Only the organization owner and the goal creator can update this goal."
+
+    def has_object_permission(self, request: Request, view: APIView, obj: object) -> bool:
+        if not request.user.is_authenticated or not isinstance(obj, Goal):
+            return False
+        if request.user == obj.created_by:
+            return True
+        return Membership.objects.filter(
+            user=request.user,
+            org_id=obj.org_id,
+            role=Role.OWNER,
+        ).exists()

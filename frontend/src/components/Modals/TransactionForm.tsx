@@ -43,6 +43,7 @@ import {
   createTransaction,
   deleteTransaction,
   emptyDraft,
+  isTransfer as isTransferType,
   toDraft,
   updateTransaction,
   validateDraft,
@@ -118,7 +119,7 @@ export function TransactionForm({
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const isTransfer = draft.entry_type === "contribution";
+  const isTransfer = isTransferType(draft.entry_type);
   const isExpense = draft.entry_type === "expense";
   const selectedGoal = goalById(SEED_GOALS, draft.goal);
   const options = selectableCategories(categories, draft.entry_type);

@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from rest_framework import serializers
 
@@ -9,11 +9,14 @@ from core.models import (
     CategoryType,
     EntryType,
     Goal,
+    GoalStatus,
     Invitation,
     Notification,
     Organization,
     Transaction,
 )
+from core.services.balance import get_annotated_goal_balance
+from core.services.goal import allowed_entry_types
 
 
 class IntListField(serializers.Field[list[int], object, list[int], Any]):
@@ -54,6 +57,127 @@ class OrganizationCreateSerializer(OrganizationNameSerializer):
     )
 
 
+class GoalCreateSerializer(serializers.Serializer[Goal]):
+    name = serializers.CharField(max_length=100, trim_whitespace=True)
+    target_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+    target_date = serializers.DateField(
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        org_id = self.context.get("org_id")
+        name = attrs["name"]
+
+        if Goal.objects.filter(org_id=org_id, name=name).exists():
+            raise serializers.ValidationError(
+                {"name": "A goal with this name already exists in this organization."}
+            )
+
+        target_date = cast(date | None, attrs["target_date"])
+        if target_date is not None and target_date < date.today():
+            raise serializers.ValidationError(
+                {"target_date": "Target date must be today or in the future."}
+            )
+
+        return attrs
+
+
+class GoalUpdateSerializer(serializers.Serializer[Goal]):
+    name = serializers.CharField(max_length=100, trim_whitespace=True, required=False)
+    target_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+    target_date = serializers.DateField(required=False, allow_null=True)
+    status = serializers.ChoiceField(choices=GoalStatus.choices, required=False)
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        goal = self.context["goal"]
+
+        if not attrs:
+            raise serializers.ValidationError("At least one field must be provided.")
+        if goal.status == GoalStatus.ARCHIVED:
+            raise serializers.ValidationError("Archived goals cannot be updated.")
+
+        name = attrs.get("name")
+        if (
+            name is not None
+            and Goal.objects.filter(org_id=goal.org_id, name=name).exclude(pk=goal.pk).exists()
+        ):
+            raise serializers.ValidationError(
+                {"name": "A goal with this name already exists in this organization."}
+            )
+
+        target_date = cast(date | None, attrs.get("target_date"))
+        if target_date is not None and target_date < date.today():
+            raise serializers.ValidationError(
+                {"target_date": "Target date must be today or in the future."}
+            )
+
+        return attrs
+
+
+class GoalListQuerySerializer(serializers.Serializer[Goal]):
+    """GET /organizations/{org_id}/goals/ query parameters."""
+
+    status = serializers.ChoiceField(choices=GoalStatus.choices, required=False)
+
+
+class GoalResponseSerializer(serializers.ModelSerializer[Goal]):
+    org = serializers.IntegerField(source="org_id", read_only=True)
+    created_by = serializers.CharField(
+        source="created_by.username",
+        allow_null=True,
+        read_only=True,
+    )
+    balance = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+    overdue = serializers.SerializerMethodField()
+    spendable = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Goal
+        fields = (
+            "id",
+            "org",
+            "name",
+            "target_amount",
+            "target_date",
+            "status",
+            "created_by",
+            "created_at",
+            "completed_at",
+            "balance",
+            "progress",
+            "overdue",
+            "spendable",
+        )
+
+    def _get_goal_balance(self, goal: Goal) -> Decimal:
+        return get_annotated_goal_balance(goal)
+
+    def get_balance(self, goal: Goal) -> str:
+        return str(self._get_goal_balance(goal))
+
+    def get_progress(self, goal: Goal) -> str:
+        progress = self._get_goal_balance(goal) / goal.target_amount
+        return str(progress.quantize(Decimal("0.01")))
+
+    def get_overdue(self, goal: Goal) -> bool:
+        return goal.target_date is not None and date.today() > goal.target_date
+
+    def get_spendable(self, goal: Goal) -> bool:
+        return EntryType.EXPENSE in allowed_entry_types(goal)
+
+
 class InvitationCreateSerializer(serializers.Serializer[Invitation]):
     username = serializers.CharField(max_length=150)
 
@@ -84,6 +208,7 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
     def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         category = attrs.get("category_id")
         entry_type = attrs["entry_type"]
+        goal = attrs.get("goal_id")
 
         # Income/expense must always be categorized: the report partitions
         # totals per category and has no "uncategorized" bucket.
@@ -97,10 +222,22 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
                 {"category_id": ("Category type must match transaction entry type.")}
             )
 
-        if attrs.get("goal_id") is not None and entry_type == EntryType.INCOME:
+        goal_entry_types = {EntryType.CONTRIBUTION, EntryType.WITHDRAW}
+        if entry_type in goal_entry_types and goal is None:
             raise serializers.ValidationError(
-                {"goal_id": ("Goal cannot be set on an income transaction.")}
+                {"goal_id": ("A goal is required for this transaction type.")}
             )
+
+        if isinstance(goal, Goal) and entry_type not in allowed_entry_types(goal):
+            error_messages: dict[str, str] = {
+                EntryType.INCOME: "Goal cannot be set on an income transaction.",
+                EntryType.CONTRIBUTION: "Contributions can only be made to active goals.",
+                EntryType.WITHDRAW: "Withdrawals can only be made from active goals.",
+                EntryType.EXPENSE: (
+                    "Expenses can only be made against completed or permanent goals."
+                ),
+            }
+            raise serializers.ValidationError({"goal_id": (error_messages[str(entry_type)],)})
 
         return attrs
 

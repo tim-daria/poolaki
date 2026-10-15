@@ -66,6 +66,20 @@ describe("monthSummary", () => {
     });
   });
 
+  it("counts a withdrawal against the saved total", () => {
+    const rows = [
+      tx({ entry_type: "income", amount: 1000 }),
+      tx({ entry_type: "contribution", category: null, amount: 300 }),
+      tx({ entry_type: "withdraw", category: null, amount: 120 }),
+    ];
+    expect(monthSummary(rows, "2026-08-03")).toEqual({
+      income: 1000,
+      expenses: 0,
+      saved: 180,
+      left: 820,
+    });
+  });
+
   it("snaps float sums to cents", () => {
     const rows = [tx({ amount: 0.1 }), tx({ amount: 0.2 })];
     expect(monthSummary(rows, "2026-08-01").expenses).toBe(0.3);

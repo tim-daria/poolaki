@@ -35,7 +35,7 @@ class TransactionListCreateView(APIView):
 
     Query parameters (all optional):
     - q: case-insensitive substring search on description and category name.
-    - entry_type: "all" (default), "income", "expense" or "contribution".
+    - entry_type: "all" (default), "income", "expense", "contribution" or "withdraw".
     - date_from / date_to: inclusive ISO date bounds on transaction_date.
     - category_id: one category ID or a comma-separated list (e.g. "3,7");
       rows in any listed category are returned. All must belong to the org.
@@ -54,7 +54,7 @@ class TransactionListCreateView(APIView):
 
     Request body required:
     - amount (decimal): Transaction amount.
-    - entry_type (string): Transaction type, such as income or expense.
+    - entry_type (string): Transaction type, such as income, expense, contribution or withdraw.
     - transaction_date (date): Date when the transaction occurred.
 
     Request body optional:
