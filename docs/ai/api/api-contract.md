@@ -100,7 +100,7 @@ The token authenticates the *service*, not an end user.
 
 ### 2.1. Financial Summary
 
-`POST /api/internal/v1/analytics/summary`
+`POST /api/internal/v1/analytics/summary/`
 
 Monthly income/expense distribution for a year plus the current organization balance.
 
@@ -138,7 +138,7 @@ Covers: "how much did I spend / earn this (last) month?", "am I spending more or
 
 ### 2.2. Category Breakdown
 
-`POST /api/internal/v1/analytics/categories`
+`POST /api/internal/v1/analytics/categories/`
 
 Per-category, per-month distribution for a year, covering both income and expense categories.
 
@@ -180,7 +180,7 @@ Per-category, per-month distribution for a year, covering both income and expens
 
 ### 2.3. Transactions
 
-`POST /api/internal/v1/transactions`
+`POST /api/internal/v1/transactions/`
 
 Filtered transaction list.
 
