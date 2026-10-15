@@ -80,12 +80,120 @@ Fields:
 ## Flow 2: AI Service → Django
 These are endpoints used by the `AI Service` to retrieve information from `Django`.
 
-### 2.1. Monthly Financial Summary
-`POST /api/internal/v1/analytics/monthly-summary`
+### 2.1. Financial Summary
 
-Provides aggregated financial information for financial analysis.
+`POST /api/internal/v1/analytics/summary`
+
+Monthly income/expense distribution for a year plus the current organization balance.
+
+Covers: "how much did I spend / earn this (last) month?", "am I spending more or less than last month?", "what is my current balance?", "what is my average monthly income?" (the AI Service derives the average from the month rows).
+
+
+### Authentication
+
+Internal endpoints require:
+
+1. **Service authentication.** Header `Authorization: Bearer <token>` with the shared internal API token. The token is provisioned to the AI Service through Vault and compared by Django in constant time. Missing or invalid token → `401 UNAUTHORIZED`.
 
 #### Request Schema
+
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| year            | integer | no       | Year to report on, 4-digit. Default: current year |
+
+#### Response Schema
+
+```
+{
+  "year": 2026,
+  "balance": "3500.00",
+  "totals": {
+    "income": "25000.00",
+    "expense": "8500.00"
+  },
+  "months": [
+    {"month": 1, "income": "2500.00", "expense": "850.00"},
+    {"month": 2, "income": "2200.00", "expense": "720.00"},
+    {"month": 3, "income": "0.00", "expense": "0.00"}
+  ]
+}
+```
+
+- `months` always contains all 12 entries, `month` is `1` (January) … `12` (December). Months without transactions are zero-filled, so period comparisons never depend on missing rows.
+- `totals` is the sum over the reported year.
+- `balance` is the organization balance **as of today, over the full transaction history** — it is not limited by `year`.
+
+### 2.2. Category Breakdown
+
+`POST /api/internal/v1/analytics/categories/`
+
+Per-category, per-month distribution for a year, covering both income and expense categories.
+
+#### Request Schema
+
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| year            | integer | no       | Year to report on, 4-digit. Default: current year |
+
+#### Response Schema
+
+```
+{
+  "year": 2026,
+  "categories": [
+    {
+      "category_id": 12,
+      "name": "Salary",
+      "type": "income",
+      "total": "25200.00",
+      "monthly": ["2200.00", "2200.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
+    },
+    {
+      "category_id": 4,
+      "name": "Food",
+      "type": "expense",
+      "total": "2300.00",
+      "monthly": ["180.00", "190.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
+    }
+  ]
+}
+```
+
+- `monthly` is always 12 slots, index `0` = January, zero-filled. `total` equals the sum of `monthly`.
+- Only categories with at least one transaction in the year are returned; categories without activity are omitted.
+- Ordering: income categories first, then expense categories; within a type, by `total` descending, then by name. The biggest expense category is the first expense entry.
+
+### 2.3. Transactions
+
+`POST /api/internal/v1/transactions/`
+
+Filtered transaction list.
+
+Covers: "what are my top 5 expenses?", "when was the last time I made an expense?", "what was my largest transaction in the last 3 months?", and generic "show my transactions" browsing.
+
+#### Request Schema
+
+| Field           | Type    | Required | Description                              |
+| --------------- | ------- | -------- | ---------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping |
+| organization_id | integer | yes      | Organization identifier                  |
+| entry_type      | string  | no       | `income` \| `expense`                    |
+| date_from       | string  | no       | Inclusive start date, `YYYY-MM-DD`       |
+| date_to         | string  | no       | Inclusive end date, `YYYY-MM-DD`         |
+| sort            | string  | no       | `date_desc` (default) \| `date_asc`     |
+| limit           | integer | no       | Maximum rows returned. Default `100`, max `200` |
+
+Default date window when `date_from` / `date_to` are omitted: the last 3 calendar months including the current one (`date_from` = first day of the month two months before the current month, `date_to` = today).
+
+The AI Service fills `date_from` / `date_to` from the fixed template (below); the dates are computed in code from the current date. The LLM returns the intent label only and does not produce filter values.
+
+**Request Example**
+
+The single request the AI Service sends — the full 3-month list (dates computed from the current date):
 
 ```
 {
