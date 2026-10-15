@@ -11,7 +11,7 @@ groups:
           data:
             - refId: A
               relativeTimeRange:
-                from: 300
+                from: 3600
                 to: 0
               datasourceUid: PBFA97CFB590B2093
               model:
@@ -32,7 +32,7 @@ groups:
                 conditions:
                     - evaluator:
                         params:
-                            - 7
+                            - 10
                         type: gt
                       operator:
                         type: and
@@ -58,8 +58,9 @@ groups:
           annotations:
             __dashboardUid__: addwp62
             __panelId__: "8"
-            summary: "Attention:\nContainer \U0001F433 needs maintenance..."
-          labels: {}
+            summary: "Attention:\nContainer needs maintenance..."
+          labels:
+            severity: critical
           isPaused: false
           notification_settings:
             receiver: email-contact-point

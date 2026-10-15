@@ -4,22 +4,22 @@
   "metadata": {
     "name": "adfvtxk",
     "namespace": "default",
-    "uid": "575a9553-77a2-427d-8dcf-1a983aa16f5d",
-    "resourceVersion": "1790435157370984",
-    "generation": 3,
-    "creationTimestamp": "2026-09-26T14:05:27Z",
+    "uid": "8726ffbf-6c46-44d3-9710-c5390fd287ea",
+    "resourceVersion": "1792058590101993",
+    "generation": 6,
+    "creationTimestamp": "2026-10-15T08:25:59Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "667400929755136"
+      "grafana.app/deprecatedInternalID": "2963741023219712"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerId": "default",
-      "grafana.app/sourceChecksum": "cf9f488e640829526c2e775b823e000c",
+      "grafana.app/sourceChecksum": "ba946dda41d2c01779955c8b8fac39d0",
       "grafana.app/sourcePath": "/etc/grafana/provisioning/dashboards/json/dashboard_caddy.json",
-      "grafana.app/sourceTimestamp": "1790435150000",
+      "grafana.app/sourceTimestamp": "1792058586000",
       "grafana.app/updatedBy": "access-policy:service",
-      "grafana.app/updatedTimestamp": "2026-09-26T15:05:57Z",
+      "grafana.app/updatedTimestamp": "2026-10-15T10:03:10Z",
       "grafana.app/folder": ""
     }
   },
@@ -69,7 +69,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(increase(caddy_http_request_duration_seconds_count{host=\"poolaki.de\"}[24h])) by (code)",
+                        "expr": "sum(increase(caddy_http_request_duration_seconds_count{host=\"poolaki.de\"}[7d])) by (code)",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
@@ -89,7 +89,8 @@
           "description": "Request split by response code",
           "id": 1,
           "links": [],
-          "title": "HTTP Requests by respone Code (24h)",
+          "title": "Caddy Response Codes [7d]",
+          "transparent": true,
           "vizConfig": {
             "group": "gauge",
             "kind": "VizConfig",
@@ -162,7 +163,368 @@
                 "textMode": "auto"
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
+          }
+        }
+      },
+      "panel-10": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "exemplar": false,
+                        "expr": "cloudflared_tunnel_response_by_code",
+                        "instant": false,
+                        "legendFormat": "{{status_code}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 10,
+          "links": [],
+          "title": "Cloudflare Response Codes [7d]",
+          "transparent": true,
+          "vizConfig": {
+            "group": "gauge",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-GrYlRd"
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "barShape": "flat",
+                "barWidthFactor": 0.54,
+                "effects": {
+                  "barGlow": false,
+                  "centerGlow": false,
+                  "gradient": true
+                },
+                "endpointMarker": "point",
+                "minVizHeight": 75,
+                "minVizWidth": 75,
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "segmentCount": 1,
+                "segmentSpacing": 0.3,
+                "shape": "gauge",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "sizing": "auto",
+                "sparkline": true,
+                "textMode": "auto"
+              }
+            },
+            "version": "13.1.8"
+          }
+        }
+      },
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "cloudflared_tunnel_request_errors",
+                        "legendFormat": "__auto",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 11,
+          "links": [],
+          "title": "Cloudflare reqeust errors [24h]",
+          "transparent": true,
+          "vizConfig": {
+            "group": "stat",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "dark-red",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "text": {},
+                "textMode": "auto",
+                "wideLayout": true
+              }
+            },
+            "version": "13.1.8"
+          }
+        }
+      },
+      "panel-12": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 12,
+          "links": [],
+          "title": "",
+          "transparent": true,
+          "vizConfig": {
+            "group": "text",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              },
+              "options": {
+                "code": {
+                  "language": "plaintext",
+                  "showLineNumbers": false,
+                  "showMiniMap": false
+                },
+                "content": "---\n\n# Cloudflare\n\n---\n",
+                "mode": "markdown"
+              }
+            },
+            "version": "13.1.8"
+          }
+        }
+      },
+      "panel-13": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 13,
+          "links": [],
+          "title": "",
+          "transparent": true,
+          "vizConfig": {
+            "group": "text",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              },
+              "options": {
+                "code": {
+                  "language": "plaintext",
+                  "showLineNumbers": false,
+                  "showMiniMap": false
+                },
+                "content": "---\n\n# Caddy\n\n---\n",
+                "mode": "markdown"
+              }
+            },
+            "version": "13.1.8"
+          }
+        }
+      },
+      "panel-14": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PBFA97CFB590B2093"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "exemplar": false,
+                        "expr": "caddy_admin_http_requests_total",
+                        "format": "time_series",
+                        "instant": false,
+                        "interval": "",
+                        "legendFormat": "{{path}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 14,
+          "links": [],
+          "title": "Caddy admin requests [24h]",
+          "transparent": true,
+          "vizConfig": {
+            "group": "bargauge",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-GrYlRd"
+                  },
+                  "thresholds": {
+                    "mode": "percentage",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "orange",
+                        "value": 60
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "displayMode": "lcd",
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "maxVizHeight": 300,
+                "minVizHeight": 16,
+                "minVizWidth": 8,
+                "namePlacement": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showUnfilled": true,
+                "sizing": "auto",
+                "valueMode": "text"
+              }
+            },
+            "version": "13.1.8"
           }
         }
       },
@@ -203,7 +565,8 @@
           "description": "The number of requests in the last 24h",
           "id": 3,
           "links": [],
-          "title": "Caddy requests in the last 24h",
+          "title": "Caddy requests [24h]",
+          "transparent": true,
           "vizConfig": {
             "group": "gauge",
             "kind": "VizConfig",
@@ -254,7 +617,7 @@
                 "textMode": "auto"
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       },
@@ -297,7 +660,8 @@
           "description": "HTTP requests that does not return a 200",
           "id": 4,
           "links": [],
-          "title": "Non 200 HTTP requests (24)",
+          "title": "Caddy Non Code 200 requests [24h]",
+          "transparent": true,
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -338,7 +702,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       },
@@ -381,7 +745,8 @@
           "description": "The mean size of the response in bytes",
           "id": 5,
           "links": [],
-          "title": "Mean Response Size",
+          "title": "Mean Response Size [1h]",
+          "transparent": true,
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -480,6 +845,9 @@
                   "placement": "bottom",
                   "showLegend": true
                 },
+                "timezone": [
+                  "browser"
+                ],
                 "tooltip": {
                   "hideZeros": false,
                   "mode": "multi",
@@ -487,7 +855,7 @@
                 }
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       },
@@ -572,7 +940,8 @@
           "description": "The request durations in seconds",
           "id": 6,
           "links": [],
-          "title": "Request Duration",
+          "title": "Request Duration [1h]",
+          "transparent": true,
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -683,6 +1052,9 @@
                   "placement": "bottom",
                   "showLegend": true
                 },
+                "timezone": [
+                  "browser"
+                ],
                 "tooltip": {
                   "hideZeros": false,
                   "mode": "multi",
@@ -690,7 +1062,7 @@
                 }
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       },
@@ -730,7 +1102,8 @@
           "description": "",
           "id": 7,
           "links": [],
-          "title": "Cloudflare Requests 24h",
+          "title": "Cloudflare Requests [24h]",
+          "transparent": true,
           "vizConfig": {
             "group": "gauge",
             "kind": "VizConfig",
@@ -789,105 +1162,7 @@
                 "textMode": "auto"
               }
             },
-            "version": "13.1.6"
-          }
-        }
-      },
-      "panel-8": {
-        "kind": "Panel",
-        "spec": {
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "PBFA97CFB590B2093"
-                      },
-                      "group": "prometheus",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "cloudflared_tunnel_response_by_code",
-                        "interval": "",
-                        "legendFormat": "{{status_code}}",
-                        "range": true
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "A"
-                  }
-                }
-              ],
-              "queryOptions": {},
-              "transformations": []
-            }
-          },
-          "description": "",
-          "id": 8,
-          "links": [],
-          "title": "Cloudflare response codes",
-          "vizConfig": {
-            "group": "bargauge",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "thresholds"
-                  },
-                  "fieldMinMax": false,
-                  "thresholds": {
-                    "mode": "percentage",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "orange",
-                        "value": 60
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              },
-              "options": {
-                "displayMode": "gradient",
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": false
-                },
-                "maxVizHeight": 300,
-                "minVizHeight": 16,
-                "minVizWidth": 8,
-                "namePlacement": "auto",
-                "orientation": "horizontal",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "showUnfilled": true,
-                "sizing": "auto",
-                "valueMode": "text"
-              }
-            },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       },
@@ -909,8 +1184,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "editorMode": "code",
-                        "expr": "caddy_http_request_errors_total",
+                        "editorMode": "builder",
+                        "expr": "increase(caddy_http_request_errors_total[24h])",
                         "legendFormat": "__auto",
                         "range": true
                       },
@@ -927,7 +1202,8 @@
           "description": "",
           "id": 9,
           "links": [],
-          "title": "Caddy request errors (24h)",
+          "title": "Caddy request errors [24h]",
+          "transparent": true,
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -977,7 +1253,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.1.6"
+            "version": "13.1.8"
           }
         }
       }
@@ -991,12 +1267,25 @@
             "spec": {
               "element": {
                 "kind": "ElementReference",
-                "name": "panel-3"
+                "name": "panel-13"
               },
-              "height": 8,
-              "width": 8,
+              "height": 3,
+              "width": 24,
               "x": 0,
               "y": 0
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-3"
+              },
+              "height": 4,
+              "width": 6,
+              "x": 0,
+              "y": 3
             }
           },
           {
@@ -1006,10 +1295,10 @@
                 "kind": "ElementReference",
                 "name": "panel-4"
               },
-              "height": 8,
-              "width": 8,
-              "x": 8,
-              "y": 0
+              "height": 4,
+              "width": 6,
+              "x": 6,
+              "y": 3
             }
           },
           {
@@ -1019,10 +1308,23 @@
                 "kind": "ElementReference",
                 "name": "panel-9"
               },
-              "height": 8,
+              "height": 4,
+              "width": 4,
+              "x": 12,
+              "y": 3
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-14"
+              },
+              "height": 4,
               "width": 8,
               "x": 16,
-              "y": 0
+              "y": 3
             }
           },
           {
@@ -1032,10 +1334,10 @@
                 "kind": "ElementReference",
                 "name": "panel-1"
               },
-              "height": 6,
+              "height": 4,
               "width": 24,
               "x": 0,
-              "y": 8
+              "y": 7
             }
           },
           {
@@ -1045,10 +1347,10 @@
                 "kind": "ElementReference",
                 "name": "panel-6"
               },
-              "height": 8,
+              "height": 7,
               "width": 12,
               "x": 0,
-              "y": 14
+              "y": 11
             }
           },
           {
@@ -1058,10 +1360,23 @@
                 "kind": "ElementReference",
                 "name": "panel-5"
               },
-              "height": 8,
+              "height": 7,
               "width": 12,
               "x": 12,
-              "y": 14
+              "y": 11
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-12"
+              },
+              "height": 3,
+              "width": 24,
+              "x": 0,
+              "y": 18
             }
           },
           {
@@ -1071,10 +1386,10 @@
                 "kind": "ElementReference",
                 "name": "panel-7"
               },
-              "height": 8,
-              "width": 12,
+              "height": 5,
+              "width": 5,
               "x": 0,
-              "y": 22
+              "y": 21
             }
           },
           {
@@ -1082,12 +1397,25 @@
             "spec": {
               "element": {
                 "kind": "ElementReference",
-                "name": "panel-8"
+                "name": "panel-10"
               },
-              "height": 8,
-              "width": 12,
-              "x": 12,
-              "y": 22
+              "height": 5,
+              "width": 14,
+              "x": 5,
+              "y": 21
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-11"
+              },
+              "height": 5,
+              "width": 5,
+              "x": 19,
+              "y": 21
             }
           }
         ]
@@ -1097,7 +1425,7 @@
     "liveNow": false,
     "preload": false,
     "tags": [
-      "k8s",
+      "cloudflare",
       "caddy"
     ],
     "timeSettings": {
@@ -1120,7 +1448,7 @@
       "timezone": "browser",
       "to": "now"
     },
-    "title": "Caddy Dashboard",
+    "title": "Caddy & Cloudflare Dashboard",
     "variables": [
       {
         "kind": "DatasourceVariable",
