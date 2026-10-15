@@ -29,6 +29,8 @@ interface Props {
   onContribute: () => void;
   /** Opens the goal's info card. */
   onInfo: () => void;
+  /** Opens the goal in the edit form. */
+  onEdit: () => void;
 }
 
 /** Tinted like TransactionRow's chips: pale background, strong text. */
@@ -91,7 +93,7 @@ function cardLook(goal: Goal) {
  * from the amounts and dates. The whole card is a control: it opens Contribute
  * where the actions menu would, and the info card otherwise.
  */
-export function GoalCard({ goal, onContribute, onInfo }: Props) {
+export function GoalCard({ goal, onContribute, onInfo, onEdit }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const look = cardLook(goal);
   const hint = goalHint(goal);
@@ -168,7 +170,7 @@ export function GoalCard({ goal, onContribute, onInfo }: Props) {
           }}
         >
           <Typography sx={{ fontWeight: 700, fontSize: "1.15rem" }}>
-            €{displayAmount(goal.saved_amount)}{" "}
+            €{displayAmount(goal.balance)}{" "}
           </Typography>
           {/* sx, not the color prop: MUI 9's Typography resolves only named
               colours ("error", "textSecondary") through the prop, not palette
@@ -222,7 +224,14 @@ export function GoalCard({ goal, onContribute, onInfo }: Props) {
           >
             Show Info
           </MenuItem>
-          <MenuItem onClick={() => setAnchorEl(null)}>Edit</MenuItem>
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              onEdit();
+            }}
+          >
+            Edit
+          </MenuItem>
         </Menu>
       )}
     </>

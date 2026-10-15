@@ -226,3 +226,115 @@ export async function createWorkspaceViaApi(
   const { id } = await res.json();
   return `/o/${id}`;
 }
+
+/** The CSRF cookie of the page's session, for POST and PATCH through `page.request`. */
+async function csrfToken(page: Page): Promise<string> {
+  return (
+    (await page.context().cookies()).find((c) => c.name === "csrftoken")
+      ?.value ?? ""
+  );
+}
+
+export type GoalInput = {
+  name: string;
+  /** Money string, "2000.00". */
+  target_amount: string;
+  /** ISO date, or null for no deadline. The server rejects a past date. */
+  target_date: string | null;
+};
+
+/**
+ * Creates a goal through the API.
+ * @returns the new goal's id.
+ */
+export async function createGoalViaApi(
+  page: Page,
+  orgId: number,
+  goal: GoalInput,
+): Promise<number> {
+  const res = await page.request.post(`/api/v1/organizations/${orgId}/goals/`, {
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": await csrfToken(page),
+    },
+    data: goal,
+  });
+  if (res.status() !== 201) {
+    throw new Error(`goal POST failed: ${res.status()} ${await res.text()}`);
+  }
+  const { id } = (await res.json()) as { id: number };
+  return id;
+}
+
+/** Patches a goal through the API, e.g. `{ status: "completed" }`. */
+export async function patchGoalViaApi(
+  page: Page,
+  orgId: number,
+  goalId: number,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const res = await page.request.patch(
+    `/api/v1/organizations/${orgId}/goals/${goalId}/`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": await csrfToken(page),
+      },
+      data: patch,
+    },
+  );
+  if (res.status() !== 200) {
+    throw new Error(`goal PATCH failed: ${res.status()} ${await res.text()}`);
+  }
+}
+
+export type TransactionInput = {
+  entry_type: "expense" | "income" | "contribution" | "withdraw";
+  /** Null for contributions and withdrawals. */
+  category_id: number | null;
+  goal_id: number | null;
+  description: string;
+  /** Money string, "640.00". */
+  amount: string;
+  transaction_date: string;
+};
+
+/** Creates a transaction through the API; the backend applies its goal rules. */
+export async function createTransactionViaApi(
+  page: Page,
+  orgId: number,
+  tx: TransactionInput,
+): Promise<void> {
+  const res = await page.request.post(
+    `/api/v1/organizations/${orgId}/transactions/`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": await csrfToken(page),
+      },
+      data: { ...tx, is_tax_deductible: false },
+    },
+  );
+  if (res.status() !== 201) {
+    throw new Error(
+      `transaction POST failed for "${tx.description}": ${res.status()} ${await res.text()}`,
+    );
+  }
+}
+
+/** Name → id of the workspace's categories. */
+export async function categoryIdsViaApi(
+  page: Page,
+  orgId: number,
+): Promise<Map<string, number>> {
+  const res = await page.request.get(
+    `/api/v1/organizations/${orgId}/categories/`,
+  );
+  if (res.status() !== 200) {
+    throw new Error(`category GET failed: ${res.status()} ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    categories: { id: number; name: string }[];
+  };
+  return new Map(data.categories.map((c) => [c.name, c.id]));
+}

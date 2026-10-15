@@ -129,7 +129,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
               <Close />
             </IconButton>
           </Box>
-          <Headline goal={shown} />
+          <Headline goal={shown} rows={rows ?? []} />
           <GoalActivityList
             rows={rows ?? []}
             emptyText={shown.spendable ? SPENDING_EMPTY : SAVING_EMPTY}
@@ -164,8 +164,8 @@ function Subtitle({ goal }: { goal: Goal }) {
  * the savings remain; any other leads with what is saved and the progress
  * to the target, like the card.
  */
-function Headline({ goal }: { goal: Goal }) {
-  const f = goalFigures(goal);
+function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+  const f = goalFigures(goal, rows);
   const spending = goal.spendable;
   const figure = spending ? goal.balance : f.saved;
   const exact = `${figure < 0 ? "-" : ""}€${displayAmount(Math.abs(figure))}`;

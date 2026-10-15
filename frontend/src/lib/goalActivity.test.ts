@@ -1,4 +1,4 @@
-/** @file Goal info view: figures, subtitle, entry mapping, the cumulative split, month grouping and the fetch-or-seed loader. */
+/** @file Goal info view: figures, subtitle, entry mapping, the cumulative split, month grouping and the loader. */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -11,7 +11,6 @@ import {
   type ActivityEntry,
 } from "./goalActivity";
 import type { Goal } from "./goals";
-import { SEED_ACTIVITY, SEED_GOALS } from "./goals.seed";
 import type { Transaction } from "./transactions";
 
 const ORG = 1;
@@ -24,9 +23,12 @@ function goal(overrides: Partial<Goal> = {}): Goal {
     id: BARCELONA,
     name: "Trip to Barcelona",
     target_amount: TARGET,
-    saved_amount: 2000,
     balance: -340,
     spendable: true,
+    progress: -0.17,
+    overdue: false,
+    completed_at: "2026-06-12",
+    created_by: "owner",
     target_date: "2026-07-31",
     status: "completed",
     created_at: "2026-04-01T09:00:00Z",
@@ -60,8 +62,45 @@ function entry(overrides: Partial<ActivityEntry> = {}): ActivityEntry {
   };
 }
 
-/** The Barcelona seed, annotated: three contributions, then four expenses. */
-const BARCELONA_ROWS = annotate(SEED_ACTIVITY[BARCELONA], TARGET);
+/**
+ * Three contributions that reach the target on 12 Jun, then four expenses that
+ * run the goal out on the third (€160 from the goal, €220 from the balance).
+ */
+const BARCELONA_ENTRIES: ActivityEntry[] = [
+  entry({ id: 911, date: "2026-05-10", amount: 800 }),
+  entry({ id: 912, date: "2026-05-25", amount: 700 }),
+  entry({ id: 913, date: "2026-06-12", amount: 500 }),
+  entry({
+    id: 914,
+    kind: "spent",
+    date: "2026-07-03",
+    description: "Flights",
+    amount: 640,
+  }),
+  entry({
+    id: 915,
+    kind: "spent",
+    date: "2026-07-10",
+    description: "Hotel",
+    amount: 1200,
+  }),
+  entry({
+    id: 916,
+    kind: "spent",
+    date: "2026-07-15",
+    description: "Sagrada Família tickets",
+    amount: 380,
+  }),
+  entry({
+    id: 917,
+    kind: "spent",
+    date: "2026-07-16",
+    description: "Tapas dinner",
+    amount: 120,
+  }),
+];
+
+const BARCELONA_ROWS = annotate(BARCELONA_ENTRIES, TARGET);
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -69,29 +108,37 @@ afterEach(() => {
 });
 
 describe("goalFigures", () => {
-  it("reads spent, to go and the share left from the wire amounts", () => {
-    expect(goalFigures(goal())).toEqual({
+  it("sums saved and spent from the rows; progress from the wire balance", () => {
+    expect(goalFigures(goal({ balance: -340 }), BARCELONA_ROWS)).toEqual({
       saved: 2000,
-      spent: 2340,
-      pct: 100,
-      toGo: 0,
+      // Only what the goal covered: the balance paid the rest.
+      spent: 2000,
+      pct: -17,
+      toGo: 2340,
       leftShare: 0,
     });
   });
 
   it("keeps the share left for a goal with money in it", () => {
+    const rows = annotate(
+      [
+        entry({ amount: 2000 }),
+        entry({ id: 2, kind: "withdrawn", amount: 210 }),
+      ],
+      TARGET,
+    );
     expect(
-      goalFigures(
-        goal({ saved_amount: 1790, balance: 1790, status: "active" }),
-      ),
+      goalFigures(goal({ balance: 1790, status: "active" }), rows),
     ).toEqual({ saved: 1790, spent: 0, pct: 90, toGo: 210, leftShare: 100 });
-    expect(goalFigures(goal({ balance: 500 })).leftShare).toBe(25);
+    expect(goalFigures(goal({ balance: 500 }), rows).leftShare).toBe(28);
   });
 
-  it("is all zeros for an empty goal", () => {
-    expect(goalFigures(goal({ saved_amount: 0, balance: 0 }))).toMatchObject({
+  it("is all zeros with no rows", () => {
+    expect(goalFigures(goal({ balance: 0 }), [])).toEqual({
+      saved: 0,
       spent: 0,
       pct: 0,
+      toGo: TARGET,
       leftShare: 0,
     });
   });
@@ -117,22 +164,22 @@ describe("goalSubtitle", () => {
     ],
     [
       "saving, overdue",
-      { status: "active", saved_amount: 1790, target_date: "2025-12-31" },
+      { status: "active", balance: 1790, target_date: "2025-12-31" },
       { text: "Saving", alert: "overdue since Dec 2025" },
     ],
     [
       "saving with a deadline",
-      { status: "active", saved_amount: 1790, target_date: "2026-12-31" },
+      { status: "active", balance: 1790, target_date: "2026-12-31" },
       { text: "Saving · by Dec 2026", alert: null },
     ],
     [
       "saving with no deadline",
-      { status: "active", saved_amount: 1790, target_date: null },
+      { status: "active", balance: 1790, target_date: null },
       { text: "Saving", alert: null },
     ],
     [
       "saving past the target",
-      { status: "active", saved_amount: 2500, target_date: "2025-12-31" },
+      { status: "active", balance: 2500, target_date: "2025-12-31" },
       { text: "Saving · target reached", alert: null },
     ],
   ])("%s", (_, overrides, expected) => {
@@ -141,8 +188,9 @@ describe("goalSubtitle", () => {
 });
 
 describe("toActivity", () => {
-  it("files a contribution as added and an expense as spent", () => {
+  it("files a contribution as added, a withdrawal as withdrawn, an expense as spent", () => {
     expect(toActivity(tx({ entry_type: "contribution" }))?.kind).toBe("added");
+    expect(toActivity(tx({ entry_type: "withdraw" }))?.kind).toBe("withdrawn");
     expect(toActivity(tx())).toEqual({
       id: 1,
       kind: "spent",
@@ -286,20 +334,14 @@ describe("getGoalActivity", () => {
     expect(fetch.mock.calls[1][0]).toContain("page=2");
   });
 
-  it("falls back to the seed when the goal is not a row of the workspace", async () => {
+  it("surfaces a rejected goal id as a TransactionError", async () => {
     stubFetch(
       [{ goal_id: ["Goal does not belong to this organization."] }],
       400,
     );
-    expect(await getGoalActivity(ORG, BARCELONA)).toBe(
-      SEED_ACTIVITY[BARCELONA],
+    await expect(getGoalActivity(ORG, BARCELONA)).rejects.toThrow(
+      "Goal does not belong to this organization.",
     );
-    stubFetch(
-      [{ goal_id: ["Goal does not belong to this organization."] }],
-      400,
-    );
-    const unseeded = SEED_GOALS.find((g) => !(g.id in SEED_ACTIVITY))!.id;
-    expect(await getGoalActivity(ORG, unseeded)).toEqual([]);
   });
 
   it("propagates any other failure", async () => {

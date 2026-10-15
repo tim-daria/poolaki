@@ -34,8 +34,8 @@ import {
 } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
 import { goalById, isArchived, isSpendable, type Goal } from "../../lib/goals";
-import { SEED_GOALS } from "../../lib/goals.seed";
 import { GoalSpendField } from "./GoalSpendField";
+import { useGoals } from "../../hooks/useGoals";
 
 import {
   TransactionError,
@@ -83,7 +83,7 @@ const TABS: { value: EntryType; label: string }[] = [
 
 /** "€1.790,00 of €2.000,00 saved", under the goal picker. */
 function progressLabel(goal: Goal) {
-  return `€${displayAmount(goal.saved_amount)} of €${displayAmount(goal.target_amount)} saved`;
+  return `€${displayAmount(goal.balance)} of €${displayAmount(goal.target_amount)} saved`;
 }
 
 const amountAdornment = {
@@ -145,8 +145,9 @@ export function TransactionForm({
 
   const isTransfer = isTransferType(draft.entry_type);
   const isExpense = draft.entry_type === "expense";
-  const selectedGoal = goalById(SEED_GOALS, draft.goal);
-  const spendableGoals = SEED_GOALS.filter(isSpendable);
+  const goals = useGoals(open);
+  const selectedGoal = goalById(goals, draft.goal);
+  const spendableGoals = goals.filter(isSpendable);
   const options = selectableCategories(categories, draft.entry_type);
 
   /** Tracks the open/closed edge, so the block below runs once per opening. */
@@ -362,19 +363,21 @@ export function TransactionForm({
                   }
                   required
                 >
-                  {SEED_GOALS.filter((g) => !isArchived(g)).map((g) => (
-                    <MenuItem key={g.id} value={g.id}>
-                      <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ ml: "auto", pl: 3 }}
-                      >
-                        €{displayAmount(g.saved_amount)} / €
-                        {displayAmount(g.target_amount)}
-                      </Typography>
-                    </MenuItem>
-                  ))}
+                  {goals
+                    .filter((g) => !isArchived(g))
+                    .map((g) => (
+                      <MenuItem key={g.id} value={g.id}>
+                        <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ ml: "auto", pl: 3 }}
+                        >
+                          €{displayAmount(g.balance)} / €
+                          {displayAmount(g.target_amount)}
+                        </Typography>
+                      </MenuItem>
+                    ))}
                 </TextField>
               </FieldLabel>
             ) : (

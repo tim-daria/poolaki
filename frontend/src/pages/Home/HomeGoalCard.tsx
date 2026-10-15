@@ -45,7 +45,7 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
   }
 
   const percent = goalPercent(goal);
-  const remaining = Math.max(0, goal.target_amount - goal.saved_amount);
+  const remaining = Math.max(0, goal.target_amount - goal.balance);
 
   return (
     <HomeCard
@@ -81,7 +81,7 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
             }}
           >
             <Box component="span" sx={{ color: "text.primary" }}>
-              €{displayWhole(goal.saved_amount)}
+              €{displayWhole(goal.balance)}
             </Box>{" "}
             / €{displayWhole(goal.target_amount)}
           </Money>
