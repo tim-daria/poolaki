@@ -69,7 +69,8 @@ Application-level errors use this shape:
 ### AI service configuration
 
 `core/services/ai_chat.py` reads `AI_SERVICE_URL` and `AI_SERVICE_TIMEOUT` from the environment at import time; without them the app fails to start.
-
+### AI chat constraints
+The `question` payload must be a string between 1 and 1000 characters with whitespace trimmed.
 ## Monitoring
 
 Prometheus and Grafana dashboards (Caddy traffic, PostgreSQL, Docker
