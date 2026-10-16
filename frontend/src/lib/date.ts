@@ -1,6 +1,13 @@
 /** @file Date constants and display formatting. */
 
-export const TODAY = new Date().toISOString().slice(0, 10);
+/** Today in the browser's local zone, "YYYY-MM-DD". UTC would lag by a day until 02:00 in Berlin. */
+export const TODAY = localIso(new Date());
+
+/** The local calendar date of `d`, zero-padded, never shifted through UTC. */
+function localIso(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 const CURRENT_YEAR = new Date().getFullYear();
 
