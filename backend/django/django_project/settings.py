@@ -222,6 +222,15 @@ SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
 ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
 
 # ======================================================
+# INTERNAL API (AI SERVICE)
+# ======================================================
+
+# Shared Bearer token for /api/internal/v1/, provisioned to both services
+# through Vault. Empty value disables the namespace (all requests -> 401).
+# INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
+
+
+# ======================================================
 # REST FRAMEWORK
 # ======================================================
 

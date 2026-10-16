@@ -43,6 +43,13 @@ template {
 }
 
 template {
+  source      = "/vault/agent/templates/internal-api-creds.tpl"
+  destination = "/vault/agent/secrets/django/internal-api-creds.env"
+  perms       = "0440"
+  command     = "touch /vault/agent/secrets/django/.reload-trigger"
+}
+
+template {
   source      = "/vault/agent/templates/grafana-creds.tpl"
   destination = "/vault/agent/secrets/grafana/grafana-creds.env"
   perms       = "0444"

@@ -4,12 +4,15 @@ set -e
 DB_SECRETS_FILE="/vault/agent/secrets/db-creds.env"
 ADMIN_SECRETS_FILE="/vault/agent/secrets/admin-creds.env"
 SOCIAL_AUTH_SECRETS_FILE="/vault/agent/secrets/social-auth-creds.env"
+INTERNAL_API_SECRETS_FILE="/vault/agent/secrets/internal-api-creds.env"
 TRIGGER_FILE="/vault/agent/secrets/.reload-trigger"
 
+# && [ -f "$INTERNAL_API_SECRETS_FILE" ]
 until [ -f "$DB_SECRETS_FILE" ] && [ -f "$ADMIN_SECRETS_FILE" ] && [ -f "$SOCIAL_AUTH_SECRETS_FILE" ] \
 	&& grep -q "^DATABASE_PASSWORD=" "$DB_SECRETS_FILE" \
 	&& grep -q "^DJANGO_SUPERUSER_PASSWORD=" "$ADMIN_SECRETS_FILE" \
 	&& grep -q "^INTRA42_CLIENT_SECRET=" "$SOCIAL_AUTH_SECRETS_FILE"; do
+	# && grep -q "^INTERNAL_API_TOKEN=" "$INTERNAL_API_SECRETS_FILE"; do
 	echo "Waiting for initial Vault secrets.."
 	sleep 1
 done
@@ -18,6 +21,7 @@ set -a
 . "$DB_SECRETS_FILE"
 . "$ADMIN_SECRETS_FILE"
 . "$SOCIAL_AUTH_SECRETS_FILE"
+# . "$INTERNAL_API_SECRETS_FILE"
 set +a
 
 APP_PID=""
@@ -48,8 +52,9 @@ restart_app() {
 	. "$DB_SECRETS_FILE"
 	. "$ADMIN_SECRETS_FILE"
 	. "$SOCIAL_AUTH_SECRETS_FILE"
+	# . "$INTERNAL_API_SECRETS_FILE"
 	set +a
-	
+
 	start_app
 }
 
