@@ -1,7 +1,6 @@
 # Hybrid RAG
 from abc import ABC, abstractmethod
 
-from app.clients.django import MockDjangoClient
 from models.retrieval import CombinedRetrievalResult, RetrievedItem
 
 
@@ -29,7 +28,7 @@ class MockRetriever(BaseRetriever):
     def __init__(
         self,
         doc_repo: MockDocumentRepository,
-        django_client: MockDjangoClient,
+        django_client,
     ):
         self._doc_repo = doc_repo
         self._django_client = django_client
@@ -38,10 +37,10 @@ class MockRetriever(BaseRetriever):
         self,
         intent: str | None,
     ) -> str | None:
-        if intent == "monthly_summary":
-            return "/api/internal/v1/analytics/monthly-summary"
+        if intent == "summary":
+            return "/api/internal/v1/analytics/summary/"
         if intent == "recent_transactions":
-            return "/api/internal/v1/transactions"
+            return "/api/internal/v1/transactions/"
         if intent == "goal_progress":
             return "/api/internal/v1/goals/progress"
         return None
