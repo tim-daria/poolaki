@@ -17,6 +17,7 @@ import {
   getGoalActivity,
   goalFigures,
   goalSubtitle,
+  heldAtArchive,
   type SplitEntry,
 } from "../../lib/goalActivity";
 import { goalBarLook, type Goal } from "../../lib/goals";
@@ -162,9 +163,12 @@ function Subtitle({ goal }: { goal: Goal }) {
 /**
  * A spendable goal leads with what is left in it and a bar of how much of
  * the savings remain; any other leads with what is saved and the progress
- * to the target, like the card.
+ * to the target, like the card. An archived goal leads with what it held
+ * when archived, read from its rows, since the server reports zero.
  */
 function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+  if (goal.status === "archived")
+    return <ArchivedHeadline goal={goal} rows={rows} />;
   const f = goalFigures(goal, rows);
   const spending = goal.spendable;
   const figure = spending ? goal.balance : f.saved;
@@ -222,6 +226,40 @@ function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
           </Typography>
         </Box>
       )}
+    </Box>
+  );
+}
+
+function ArchivedHeadline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+  // Rows arrive after the drawer opens; until then the figure is unknown.
+  const held = rows.length ? heldAtArchive(rows) : undefined;
+  const known = typeof held === "number";
+  const exact = known
+    ? `${held < 0 ? "-" : ""}€${displayAmount(Math.abs(held))}`
+    : "unknown";
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+      <Typography
+        component="p"
+        sx={{ display: "flex", alignItems: "baseline", gap: 1 }}
+      >
+        <Money
+          title={exact}
+          aria-label={exact}
+          sx={{ fontSize: "2rem", fontWeight: 400 }}
+        >
+          {known
+            ? `${held < 0 ? "-" : ""}€${displayFigure(Math.abs(held))}`
+            : "€—"}
+        </Money>
+        <Box component="span" sx={{ color: "text.secondary" }}>
+          {known && held < 0 ? "settled from balance" : "returned to balance"}
+        </Box>
+      </Typography>
+      <GoalProgressBar
+        look={goalBarLook(known ? { ...goal, balance: held } : goal)}
+      />
     </Box>
   );
 }

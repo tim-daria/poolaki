@@ -305,7 +305,7 @@ test.describe.serial("Goals", () => {
         dialog.getByRole("heading", { name: "Trip to Barcelona" }),
       ).toBeVisible();
       await expect(
-        dialog.getByText("Overdrawn · paid from your balance"),
+        dialog.getByText("Off limits · paid from your balance"),
       ).toBeVisible();
       // Whole euros on screen, the exact amount as the accessible name.
       await expect(dialog.getByLabel("-€340,00")).toHaveText("-€340");

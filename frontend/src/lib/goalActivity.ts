@@ -58,10 +58,16 @@ export function goalFigures(g: Goal, rows: SplitEntry[]): GoalFigures {
 }
 
 export type GoalSubtitle = {
-  /** "Saving", "Ready to spend", "Used up", "Overdrawn", "Archived", with a note after " · ". */
+  /** "Saving", "Ready to spend", "Used up", "Off limits", "Archived", with a note after " · ". */
   text: string;
   /** A red tail after the text, when the goal is overdue. */
   alert: string | null;
+};
+
+/** Below zero in either open state: the balance paid the difference. */
+const OFF_LIMITS: GoalSubtitle = {
+  text: "Off limits · paid from your balance",
+  alert: null,
 };
 
 /** One line under the goal's name: its status and the one thing to know about it. */
@@ -70,13 +76,13 @@ export function goalSubtitle(g: Goal, today: string = TODAY): GoalSubtitle {
     case "archived":
       return { text: "Archived", alert: null };
     case "completed":
-      if (g.balance < 0)
-        return { text: "Overdrawn · paid from your balance", alert: null };
+      if (g.balance < 0) return OFF_LIMITS;
       return {
         text: g.balance === 0 ? "Used up" : "Ready to spend",
         alert: null,
       };
     case "active":
+      if (g.balance < 0) return OFF_LIMITS;
       if (goalFlags(g, today).includes("overdue") && g.target_date)
         return {
           text: "Saving",

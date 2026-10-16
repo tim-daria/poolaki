@@ -57,8 +57,14 @@ const amountAdornment = {
   ),
 };
 
-/** What archiving does to the money, with the real figure; the server refunds via a withdraw. */
+/**
+ * What archiving does to the money, with the real figure. The server books it
+ * itself: a withdrawal returns what is left, a contribution settles an overdraft.
+ */
 function archiveNote(goal: Goal): string {
+  if (goal.balance < 0) {
+    return `This goal is €${displayAmount(-goal.balance)} over. Archiving settles that from your balance and closes the goal.`;
+  }
   return goal.balance > 0
     ? `Archiving returns €${displayAmount(goal.balance)} left in this goal to your balance. The goal can no longer be edited or contributed to.`
     : "Nothing is left in this goal to return. Archiving only closes it; it can no longer be edited or contributed to.";

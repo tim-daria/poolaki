@@ -149,9 +149,14 @@ describe("goalSubtitle", () => {
   it.each<[string, Partial<Goal>, { text: string; alert: string | null }]>([
     ["archived", { status: "archived" }, { text: "Archived", alert: null }],
     [
-      "overdrawn",
+      "completed below zero",
       { status: "completed", balance: -340 },
-      { text: "Overdrawn · paid from your balance", alert: null },
+      { text: "Off limits · paid from your balance", alert: null },
+    ],
+    [
+      "active below zero, even past its deadline",
+      { status: "active", balance: -340, target_date: "2025-12-31" },
+      { text: "Off limits · paid from your balance", alert: null },
     ],
     [
       "used up",
