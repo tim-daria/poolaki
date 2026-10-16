@@ -7,6 +7,7 @@ import {
   goalFigures,
   goalSubtitle,
   groupByMonth,
+  heldAtArchive,
   toActivity,
   type ActivityEntry,
 } from "./goalActivity";
@@ -248,6 +249,36 @@ describe("annotate", () => {
 
   it("returns nothing for no entries", () => {
     expect(annotate([], TARGET)).toEqual([]);
+  });
+});
+
+describe("heldAtArchive", () => {
+  const saved = entry({ id: 1, date: "2026-05-10", amount: 200 });
+
+  it("reads the refund: the newest row is the archive's withdrawal", () => {
+    const refund = entry({
+      id: 2,
+      kind: "withdrawn",
+      date: "2026-09-01",
+      amount: 200,
+    });
+    // Input order must not matter; the date does.
+    expect(heldAtArchive([refund, saved])).toBe(200);
+  });
+
+  it("reads a settlement as a negative figure", () => {
+    const spent = entry({
+      id: 2,
+      kind: "spent",
+      date: "2026-06-01",
+      amount: 540,
+    });
+    const settled = entry({ id: 3, date: "2026-09-01", amount: 340 });
+    expect(heldAtArchive([saved, spent, settled])).toBe(-340);
+  });
+
+  it("is null with no rows", () => {
+    expect(heldAtArchive([])).toBeNull();
   });
 });
 

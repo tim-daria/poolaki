@@ -105,7 +105,7 @@ def test_owner_can_archive_goal_and_return_remaining_balance(
         entry_type="withdraw",
         amount=Decimal("125.50"),
     )
-    assert archived_transaction.description == "Goal Laptop archived"
+    assert archived_transaction.description == "Archived Laptop"
     assert response.data["goal"]["balance"] == "0.00"
 
 
@@ -141,7 +141,7 @@ def test_archiving_negative_goal_balance_creates_compensating_contribution(
     archived_transaction = Transaction.objects.get(
         goal=goal,
         entry_type="contribution",
-        description="Goal Overdrawn archived",
+        description="Archived Overdrawn",
     )
     assert archived_transaction.org_id == shared_org.id
     assert archived_transaction.created_by_id == owner.id
@@ -192,7 +192,7 @@ def test_archiving_goal_compensates_only_the_net_negative_balance(
     compensation = Transaction.objects.get(
         goal=goal,
         entry_type="contribution",
-        description="Goal Emergency fund archived",
+        description="Archived Emergency fund",
     )
     assert compensation.amount == Decimal("30.00")
     assert response.data["goal"]["balance"] == "0.00"

@@ -212,11 +212,19 @@ test.describe.serial("Goals", () => {
     // Full but still active: the hint says what to do next.
     const emergency = active().getByRole("group", { name: "Emergency fund" });
     await expect(emergency.getByText("100% Completed")).toBeVisible();
+    // The cue is a chip; MUI's Tooltip makes its title the chip's accessible name.
+    const cue = emergency.getByRole("button", {
+      name: "Target reached. Mark it as completed to spend from it.",
+    });
+    await expect(cue).toHaveText("Target reached");
+    await cue.click();
     await expect(
-      emergency.getByText(
-        "Target reached. Mark it as completed to spend from it.",
-      ),
+      page.getByRole("dialog").getByRole("heading", { name: "Edit saving" }),
     ).toBeVisible();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Cancel" })
+      .click();
     await expect(active().getByTestId("SavingsOutlinedIcon")).toHaveCount(3);
     await expect(
       active().getByRole("button", { name: /^Actions for / }),
@@ -281,7 +289,7 @@ test.describe.serial("Goals", () => {
     await expect(dialog.getByText("Archived", { exact: true })).toBeVisible();
     const refund = dialog
       .getByRole("listitem")
-      .filter({ hasText: "Goal Vacation fund archived" });
+      .filter({ hasText: "Archived Vacation fund" });
     await expect(refund).toContainText("-€200,00");
     await dialog.getByRole("button", { name: "close" }).click();
     await expect(dialog).toBeHidden();
@@ -428,7 +436,7 @@ test.describe.serial("Goals", () => {
       page
         .getByRole("dialog")
         .getByRole("listitem")
-        .filter({ hasText: "Goal Emergency fund archived" }),
+        .filter({ hasText: "Archived Emergency fund" }),
     ).toContainText("-€3.000,00");
   });
 

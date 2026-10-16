@@ -1,4 +1,4 @@
-/** @file Clickable card for a goal in any state: avatar, flags, saved/target, progress bar, deadline; actions menu unless archived. */
+/** @file Clickable card for a goal in any state: avatar, flags, saved/target, progress bar, deadline or overdraft, what an archived goal held; actions menu per state. */
 
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import {
@@ -26,6 +26,7 @@ import { displayAmount } from "../../lib/money";
 import { monthYear } from "../../lib/date";
 import { GoalProgressBar } from "../../components/Goals/GoalProgressBar";
 import { GoalStatusAvatar } from "./GoalStatusAvatar";
+import { useHeldAtArchive } from "../../hooks/useHeldAtArchive";
 
 interface Props {
   goal: Goal;
@@ -124,6 +125,16 @@ export function GoalCard({
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const look = cardLook(goal);
+  // Archived cards show what was held, not the settled zero the server reports.
+  const archived = look.state === "archived";
+  const held = useHeldAtArchive(goal);
+  const shownBalance = archived ? held : goal.balance;
+  const bar =
+    archived && typeof held === "number"
+      ? goalBarLook({ ...goal, balance: held })
+      : goalBarLook(goal);
+  // A settled overdraft reads with a minus but not in red: nothing is owed any more.
+  const negative = look.offLimits || (typeof held === "number" && held < 0);
   const hint = targetReachedCue(goal);
   const open = { contribute: onContribute, edit: onEdit, info: onInfo }[
     look.openAction
@@ -225,7 +236,9 @@ export function GoalCard({
               // color: look.offLimits ? "error.main" : undefined,
             }}
           >
-            {look.offLimits && "−"}€{displayAmount(Math.abs(goal.balance))}{" "}
+            {shownBalance === undefined
+              ? "€—"
+              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance ?? 0))}`}{" "}
           </Typography>
           {/* sx, not the color prop: MUI 9's Typography resolves only named
               colours ("error", "textSecondary") through the prop, not palette
@@ -235,10 +248,10 @@ export function GoalCard({
           </Typography>
         </Box>
 
-        <GoalProgressBar look={goalBarLook(goal)} />
+        <GoalProgressBar look={bar} />
         <Box sx={{ display: "flex", justifyContent: "space-between" }}>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {look.pct}% Completed
+            {bar.pct}% Completed
           </Typography>
           {look.trailing && (
             <Typography variant="body2" sx={{ color: look.trailing.color }}>
@@ -246,6 +259,13 @@ export function GoalCard({
             </Typography>
           )}
         </Box>
+        {typeof held === "number" && (
+          <Typography variant="body2" sx={{ color: "text.disabled" }}>
+            {held >= 0
+              ? `Returned €${displayAmount(held)} to balance`
+              : `Settled €${displayAmount(-held)} from balance`}
+          </Typography>
+        )}
       </Paper>
 
       {/* A sibling, not a child, of the Paper: React events bubble through

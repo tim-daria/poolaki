@@ -231,3 +231,17 @@ export async function getGoalActivity(
   } while (page <= pageCount);
   return rows.map(toActivity).filter((e) => e !== null);
 }
+
+/**
+ * What an archived goal held when it was archived. Archived goals accept no
+ * rows, so the newest row is the archive's own: a withdrawal returned that
+ * much to the balance, a contribution settled that much overdraft. Null
+ * for a goal with no rows, or one that is not archived.
+ */
+export function heldAtArchive(entries: ActivityEntry[]): number | null {
+  const last = [...entries].sort(chronological).at(-1);
+  if (!last) return null;
+  if (last.kind === "withdrawn") return last.amount;
+  if (last.kind === "added") return -last.amount;
+  return null;
+}
