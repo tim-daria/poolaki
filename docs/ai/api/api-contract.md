@@ -29,7 +29,7 @@ The internal endpoints are intentionally few: each returns a self-contained data
 
 The `/api/internal/` namespace is reserved for service-to-service communication. It is not routed at the edge (Caddy exposes only `/api/v1/*`) and is reachable only from the backend Docker network.
 
-For more backend definitions see the [backend README](backend/README.md) and specifics on `docs/backend`.
+For more backend definitions see the [backend README](../../../backend/README.md) and specifics on `docs/backend`.
 
 ---
 ## Communication Flows
@@ -79,7 +79,7 @@ Fields:
 {
   "answer": "Your expenses increased mainly because of Food spending.",
   "metadata": {
-    "intent": "spending_analysis"
+    "intent": "monthly_summary"
   }
 }
 ```

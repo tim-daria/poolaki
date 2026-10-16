@@ -28,4 +28,14 @@ describe("date", () => {
     expect(shortDate("2025-08-05")).toBe("5 Aug 2025");
     expect(shortDate("2027-01-01")).toBe("1 Jan 2027");
   });
+
+  it("fullDate always includes the year", async () => {
+    const { fullDate } = await loadWithClock("2026-03-15T12:00:00Z");
+    expect(fullDate("2026-08-05")).toBe("5 Aug 2026");
+  });
+
+  it("monthName is the long English month", async () => {
+    const { monthName } = await loadWithClock("2026-03-15T12:00:00Z");
+    expect(monthName("2026-08-31")).toBe("August");
+  });
 });
