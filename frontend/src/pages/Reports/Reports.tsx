@@ -201,18 +201,6 @@ export function Component() {
         }}
       />
 
-      {/* Print-only title: the real one lives in the header portal, which is hidden on paper */}
-      <Box
-        sx={{ display: "none", "@media print": { display: "block" }, mb: 2 }}
-      >
-        <Typography variant="h4" component="h1">
-          Reports {year}
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Income, expenses and savings for the year
-        </Typography>
-      </Box>
-
       {/* 
         Injects the title, year selector, and secondary actions directly into 
         the global AppLayout Header via the PageHeading portal. 
