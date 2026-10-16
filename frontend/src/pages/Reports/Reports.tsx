@@ -276,7 +276,7 @@ export function Component() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
-            label="Set aside"
+            label="Savings"
             amount={eur(mockSavingsAmount)}
             color="primary.main"
           />
