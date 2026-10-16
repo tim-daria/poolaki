@@ -35,6 +35,8 @@ export DATABASE_USER=test_user
 export DATABASE_PASSWORD=test_password
 export DB_HOST=localhost
 export DB_PORT=5432
+export AI_SERVICE_URL=http://ai-service:8000
+export AI_SERVICE_TIMEOUT=90
 
 sleep 2
 
@@ -108,7 +110,7 @@ trap - EXIT
 # variable beats .env when compose interpolates ${DB_HOST} and friends — the
 # stack would come up pointing at localhost:5432/test_db. Drop them so the
 # services are built from .env as usual.
-unset POSTGRES_DB DATABASE_USER DATABASE_PASSWORD DB_HOST DB_PORT
+unset POSTGRES_DB DATABASE_USER DATABASE_PASSWORD DB_HOST DB_PORT AI_SERVICE_URL AI_SERVICE_TIMEOUT
 
 # The e2e suite drives the real app, so the dev stack has to be up: it owns
 # port 5432, which is why the test database is stopped first.

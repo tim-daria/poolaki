@@ -17,7 +17,7 @@ server-side.
 
 Query parameters (all optional):
 
-- `entry_type`: `all` (default), `income`, `expense`, or `contribution` —
+- `entry_type`: `all` (default), `income`, `expense`, `contribution` or `withdraw` —
   the selected tab/column; every other parameter keeps working with it
 - `date_from` / `date_to`: inclusive ISO date bounds on `transaction_date`
 - `category_id`: one category ID or a comma-separated list of them (e.g.
@@ -78,9 +78,11 @@ POST /api/v1/organizations/{org_id}/transactions/
 
 Mandatory parameters:
 
-- `entry_type` (`income`, `expense`, `contribution`)
+- `entry_type` (`income`, `expense`, `contribution`, `withdraw`)
 - `amount`
 - `transaction_date` (YYYY-MM-DD)
+- `category_id` — required for `income` and `expense`; `contribution` may be
+  uncategorized
 
 Request body:
 
@@ -177,11 +179,12 @@ Status:
 
 ## Frontend integration notes
 
-The list endpoint is the only one whose contract changed; the frontend
-consumes it through `fetchTransactions` (`frontend/src/lib/transactions.ts`)
-and, while it filters, counts, and pages client-side, with a stopgap:
+The Transactions page consumes the list endpoint through
+`fetchTransactionPage` (`frontend/src/lib/transactions.ts`): it sends the
+active filters (`entry_type`, `q`, `date_from`, `date_to`, `category_id`,
+`tax_deductible`, `sort`) and `page` / `page_size` as query parameters,
+renders the pager from `total` / `page_count`, and takes the tab badges from
+`counts`. Only parameters that differ from the backend defaults are sent.
 
-- planned migration: send the active filters (`entry_type`, `date_from`,
-  `date_to`, `category_id`, `goal_id`, `tax_deductible`, `sort`) and
-  `page` / `page_size` as query parameters, render the pager from
-  `total` / `page_count`, and take the tab badges from `counts`
+The Home page still loads a workspace's history unfiltered through
+`fetchTransactions` in the same module.
