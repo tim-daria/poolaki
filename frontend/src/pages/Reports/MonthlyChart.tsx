@@ -218,7 +218,8 @@ export function MonthlyChart({
                       <Box
                         key={idx}
                         sx={{
-                          width: 14,
+                          // Doubled bar width for Savings view since it renders a single series
+                          width: view === "Savings" ? 28 : 14,
                           height: `${Math.min((v.value / axisMax) * 100, 100)}%`,
                           bgcolor: v.color,
                           borderRadius: "4px 4px 0 0",

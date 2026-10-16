@@ -219,24 +219,31 @@ export function Component() {
       */}
       <PageHeading>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {/* Year selector embedded directly into heading to share typography and brand color */}
           <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
-            Reports
+            Reports{" "}
+            <Select
+              value={year}
+              onChange={handleYearChange}
+              variant="standard"
+              disableUnderline
+              sx={{
+                ml: 1,
+                fontSize: "inherit",
+                fontWeight: "inherit",
+                color: "primary.main",
+                "& .MuiSelect-select": { py: 0 },
+                "& .MuiSelect-icon": { color: "primary.main" },
+              }}
+            >
+              {/* Dynamically generates available options (e.g., current year and past 2 years) */}
+              {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </Select>
           </Typography>
-          <Select
-            value={year}
-            onChange={handleYearChange}
-            variant="standard"
-            disableUnderline
-            sx={{
-              fontSize: "2.125rem",
-              fontWeight: 500,
-              color: "text.primary",
-              "& .MuiSelect-select": { py: 0 },
-            }}
-          >
-            <MenuItem value={2025}>2025</MenuItem>
-            <MenuItem value={2026}>2026</MenuItem>
-          </Select>
         </Box>
         <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
           Income, expenses and savings for the year
@@ -276,7 +283,7 @@ export function Component() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
-            label="Savings"
+            label="Set aside"
             amount={eur(mockSavingsAmount)}
             color="primary.main"
           />
