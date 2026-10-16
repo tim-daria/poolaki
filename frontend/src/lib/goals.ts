@@ -11,7 +11,7 @@ export type GoalStatus = "active" | "completed" | "archived";
 /**
  * The state a goal is shown in: what the wire says, and only that. Completion
  * is set by the user, so a goal past its target stays active until marked
- * completed; the amounts only feed flags and hints (see goalHint).
+ * completed; the amounts only feed flags and hints (see targetReachedCue).
  */
 export function goalState(g: Goal): GoalStatus {
   return g.status;
@@ -22,13 +22,23 @@ export const isArchived = (g: Goal) => goalState(g) === "archived";
 /** An expense may be paid from this goal. The server decides; see `Goal.spendable`. */
 export const isSpendable = (g: Goal) => g.spendable;
 
+/** Contributions and withdrawals are accepted on active goals only; the server rejects the rest. */
+export const canTransfer = (g: Goal) => g.status === "active";
+
 export const targetReached = (g: Goal) => g.balance >= g.target_amount;
 
+/** Below zero: expenses paid from it exceeded what it held. Archived goals are settled, so never. */
+export const isOffLimits = (g: Goal) =>
+  g.balance < 0 && g.status !== "archived";
+
+/** How far below zero, as a positive amount; 0 when not off limits. */
+export const overBy = (g: Goal) => Math.max(0, -g.balance);
+
 /**
- * The one thing to tell the user about an active goal: it is full but not
- * marked completed, so nothing can be spent from it yet. Null otherwise.
+ * Why a full active goal still cannot be spent from;
+ * shown as a chip's tooltip. Null otherwise.
  */
-export function goalHint(g: Goal): string | null {
+export function targetReachedCue(g: Goal): string | null {
   return g.status === "active" && targetReached(g)
     ? "Target reached. Mark it as completed to spend from it."
     : null;
@@ -36,6 +46,7 @@ export function goalHint(g: Goal): string | null {
 
 /** Chip text per flag. Exhaustive: a flag without a label fails to compile. */
 export const FLAG_LABEL: Record<GoalFlag, string> = {
+  off_limits: "Off limits",
   overdue: "Overdue",
 };
 
@@ -53,9 +64,12 @@ export type BarLook = {
   fill: string;
 };
 
+/** An overdraft reads as 0%; the card states the amount instead. */
 export function goalBarLook(g: Goal): BarLook {
   const pct =
-    g.target_amount === 0 ? 0 : Math.round((g.balance / g.target_amount) * 100);
+    g.target_amount === 0
+      ? 0
+      : Math.max(0, Math.round((g.balance / g.target_amount) * 100));
   switch (goalState(g)) {
     case "archived":
       return {
@@ -113,21 +127,21 @@ export type Goal = {
 };
 
 /**
- * Conditions worth calling out on a goal. Extend the union to add one; the card
- * renders whatever comes back. TODO: "off_limits" (spent more than planned) joins
- * once contributions are wired up — it needs transaction data, so goalFlags will
- * grow a parameter then; the list shape stays.
+ * Conditions worth calling out on a goal, in display order. Extend the union
+ * to add one; the card renders whatever comes back.
  */
-export type GoalFlag = "overdue";
+export type GoalFlag = "off_limits" | "overdue";
 
 /**
- * Flags for a goal, in display order. Overdue means the deadline passed with
+ * Flags for a goal, in display order. Off limits means the balance is below zero.
+ * Overdue means the deadline passed with
  * the target unmet; it persists once a goal is archived, and never applies to
  * a completed one. ISO "YYYY-MM-DD" strings compare correctly as strings; a
  * goal due today is not overdue.
  */
 export function goalFlags(g: Goal, today: string = TODAY): GoalFlag[] {
   const flags: GoalFlag[] = [];
+  if (isOffLimits(g)) flags.push("off_limits");
   const unmet = g.status !== "completed" && !targetReached(g);
   if (unmet && g.target_date !== null && g.target_date < today) {
     flags.push("overdue");

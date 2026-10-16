@@ -1,13 +1,16 @@
-/** @file Goal state, flags, hint, bar look, lookup, draft validation and the PATCH diff. */
+/** @file Goal state, flags, the target-reached cue, bar look, lookup, draft validation and the PATCH diff. */
 
 import { describe, expect, it } from "vitest";
 import {
+  canTransfer,
   goalBarLook,
   goalById,
   goalFlags,
-  goalHint,
   goalPatch,
   goalState,
+  isOffLimits,
+  overBy,
+  targetReachedCue,
   toGoalDraft,
   validateGoalDraft,
   type Goal,
@@ -73,14 +76,52 @@ describe("goalFlags", () => {
       { target_date: "2026-09-01", status: "archived", balance: 2000 },
       [],
     ],
+    ["active below zero", { balance: -340 }, ["off_limits"]],
+    [
+      "completed below zero",
+      { balance: -340, status: "completed" },
+      ["off_limits"],
+    ],
+    // Archiving settles the overdraft, so an archived goal is never off limits.
+    ["archived below zero", { balance: -340, status: "archived" }, []],
+    [
+      "active, below zero, past its deadline: off limits first",
+      { balance: -340, target_date: "2026-09-01" },
+      ["off_limits", "overdue"],
+    ],
   ])("%s", (_, overrides, expected) => {
     expect(goalFlags(goal(overrides), TODAY)).toEqual(expected);
   });
 });
 
-describe("goalHint", () => {
+describe("isOffLimits and overBy", () => {
+  it.each<[Partial<Goal>, boolean, number]>([
+    [{ balance: 1790 }, false, 0],
+    [{ balance: 0 }, false, 0],
+    [{ balance: -340 }, true, 340],
+    [{ balance: -340, status: "completed" }, true, 340],
+    [{ balance: -340, status: "archived" }, false, 340],
+  ])("%o → off limits %s, over by %i", (overrides, offLimits, over) => {
+    expect(isOffLimits(goal(overrides))).toBe(offLimits);
+    expect(overBy(goal(overrides))).toBe(over);
+  });
+});
+
+describe("canTransfer", () => {
+  it.each<[GoalStatus, boolean]>([
+    ["active", true],
+    ["completed", false],
+    ["archived", false],
+  ])("a %s goal: %s", (status, allowed) => {
+    expect(canTransfer(goal({ status }))).toBe(allowed);
+  });
+});
+
+describe("targetReachedCue", () => {
   it("asks to mark a full active goal as completed", () => {
-    expect(goalHint(goal({ balance: 2000 }))).toMatch(/Mark it as completed/);
+    expect(targetReachedCue(goal({ balance: 2000 }))).toMatch(
+      /Mark it as completed/,
+    );
   });
 
   it.each<Partial<Goal>>([
@@ -88,7 +129,7 @@ describe("goalHint", () => {
     { balance: 2000, status: "completed" },
     { balance: 2000, status: "archived" },
   ])("is silent for %o", (overrides) => {
-    expect(goalHint(goal(overrides))).toBeNull();
+    expect(targetReachedCue(goal(overrides))).toBeNull();
   });
 });
 
@@ -114,6 +155,13 @@ describe("goalBarLook", () => {
 
   it("reads 0% for a zero target", () => {
     expect(goalBarLook(goal({ target_amount: 0 })).pct).toBe(0);
+  });
+
+  it("reads 0% below zero instead of a negative figure", () => {
+    expect(goalBarLook(goal({ balance: -340 }))).toMatchObject({
+      pct: 0,
+      barValue: 0,
+    });
   });
 
   it.each<[GoalStatus, string]>([

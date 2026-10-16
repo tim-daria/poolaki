@@ -30,15 +30,18 @@ const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
 
 function Goals() {
   const org = useCurrentOrg();
-  /** The goal open in the edit form; null means the form adds. */
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Bumped after a save, so the cards refetch. */
   const [version, setVersion] = useState(0);
   const [adding, setAdding] = useState(false);
+  /** The goal open in the edit form; null means the form adds. */
   const [editing, setEditing] = useState<Goal | null>(null);
-  /** The goal a Contribute click targets; null keeps the transaction modal closed. */
-  const [contributeTo, setContributeTo] = useState<Goal | null>(null);
+  /** The goal a transfer targets and which way; null keeps the transaction modal closed. */
+  const [transfer, setTransfer] = useState<{
+    goal: Goal;
+    direction: "contribution" | "withdraw";
+  } | null>(null);
   /** The goal whose info card is open; null keeps it closed. */
   const [infoFor, setInfoFor] = useState<Goal | null>(null);
 
@@ -79,9 +82,9 @@ function Goals() {
         onSaved={refresh}
       />
       <TransactionForm
-        open={contributeTo !== null}
-        onClose={() => setContributeTo(null)}
-        goal={contributeTo?.id}
+        open={transfer !== null}
+        onClose={() => setTransfer(null)}
+        goal={transfer?.goal.id}
         onSaved={refresh}
       />
       <GoalInfoCard
@@ -99,7 +102,12 @@ function Goals() {
               <GoalCard
                 key={g.id}
                 goal={g}
-                onContribute={() => setContributeTo(g)}
+                onContribute={() =>
+                  setTransfer({ goal: g, direction: "contribution" })
+                }
+                onWithdraw={() =>
+                  setTransfer({ goal: g, direction: "withdraw" })
+                }
                 onInfo={() => setInfoFor(g)}
                 onEdit={() => setEditing(g)}
               />
