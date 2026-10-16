@@ -24,7 +24,7 @@ Initial supported endpoints:
 
 The `/api/internal/` namespace is reserved for service-to-service communication and is not part of the public `Frontend` API.
 
-For more backend definitions see the [backend README](backend/README.md) and specifics on `docs/backend`.
+For more backend definitions see the [backend README](../../../backend/README.md) and specifics on `docs/backend`.
 
 ---
 
@@ -50,7 +50,7 @@ Sends user questions and triggers AI processing to provide the final answer to t
 
 ```
 {
-  "user_id": 123, 
+  "user_id": 123,
   "organization_id": 456,
   "question": "Why am I spending more this month?"
 }
@@ -71,7 +71,7 @@ Fields:
 {
   "answer": "Your expenses increased mainly because of Food spending.",
   "metadata": {
-    "intent": "spending_analysis"
+    "intent": "monthly_summary"
   }
 }
 ```
@@ -88,10 +88,10 @@ Provides aggregated financial information for financial analysis.
 #### Request Schema
 
 ```
-{ 
-  "user_id": 123, 
-  "organization_id": 456, 
-  "period": "2026-01" 
+{
+  "user_id": 123,
+  "organization_id": 456,
+  "period": "2026-01"
 }
 ```
 
@@ -167,7 +167,7 @@ Largest transaction in a period
   "limit": 1
 }
 
-#### Response Schema 
+#### Response Schema
 The response uses the same transaction collection structure for filtered and unfiltered requests. The returned transactions reflect the filters and sorting specified in the request.
 
 ```
@@ -549,9 +549,9 @@ Error codes:
 ---
 ## Mapping Intents to Endpoints
 
-When the `AI Service` receives a request at `POST /api/v1/chat`, it classifies the user intent to determine which backend APIs to call. 
+When the `AI Service` receives a request at `POST /api/v1/chat`, it classifies the user intent to determine which backend APIs to call.
 
-For the complete list of supported intents, refer to **[Supported AI Questions Documentation](supported-ai-questions.md)**
+For the complete list of supported intents, refer to **[Supported AI Questions Documentation](../supported-questions.md)**
 
 ---
 ## API Versioning

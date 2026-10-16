@@ -228,6 +228,10 @@ ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
 REST_FRAMEWORK = {
     # Single place mapping service exceptions to the API error contract.
     "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
+    # Chat answers take tens of seconds to generate, so the per-user budget
+    # stays small. Throttle cache is LocMemCache: exact only while Django
+    # runs as a single process.
+    "DEFAULT_THROTTLE_RATES": {"ai_chat": "5/min"},
 }
 
 
