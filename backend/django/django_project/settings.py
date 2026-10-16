@@ -33,15 +33,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "poolaki.localhost",
-    "backend",
+    "django",
     "django.localhost",
     "localhost",
     "poolaki.de",
 ]
 
-# CSRF_TRUSTED_ORIGINS = [
-#     "https://poolaki.localhost",
-# ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://poolaki.localhost",
