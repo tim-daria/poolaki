@@ -1,5 +1,5 @@
 /** @file AI assistant chat: message types and the call to Django's chat proxy.
- * Responses are simulated until Django forwards to ai-service. */
+ * Django validates and rate-limits, then forwards the question to ai-service. */
 
 import { firstErrorMessage } from "./apiErrors";
 
@@ -11,58 +11,73 @@ export type ChatMessage = {
   content: string;
 };
 
-/**
- * Flip once core/urls.py routes chat to the ai-service. Until then the
- * drawer answers from SIMULATED_REPLIES, so nothing pretends to be a real
- * assistant.
- */
-export const CAN_USE_ASSISTANT = false;
-
-/** A 400 whose message belongs in the chat, as opposed to a network failure. */
+/** HTTP failure with a user-facing message, as opposed to a network failure. */
 export class AiChatError extends Error {}
 
 /** Shown when the assistant itself is down (ai-service's 503), not a bad request. */
 export const ASSISTANT_UNAVAILABLE =
   "The assistant is unavailable right now. Please try again in a moment.";
 
-/** Canned replies so the UI has something to show before the backend exists. */
-const SIMULATED_REPLIES = [
-  "I can help with that once I'm connected to your real data — for now this is a placeholder answer.",
-  "Good question. Once the assistant is wired up, I'll be able to look at your transactions and goals to answer this.",
-  "I don't have live data yet, but here's roughly how I'd approach that once I do.",
-];
+/** Fixed 429 copy; DRF's throttle detail is server-side wording. */
+export const TOO_MANY_REQUESTS =
+  "You are asking the assistant too fast. Wait a moment and try again.";
 
-function simulatedReply(): string {
-  return SIMULATED_REPLIES[
-    Math.floor(Math.random() * SIMULATED_REPLIES.length)
-  ];
-}
+/** Fixed 400 copy; Django's field wording ("This field may not be blank.")
+ * is meaningless in a chat bubble, and the client pre-checks the same rules. */
+export const INVALID_QUESTION =
+  "Your question could not be processed. Please check it and try again.";
+
+/** Fixed 403 copy covering both causes: expired session or revoked membership.*/
+export const ACCESS_DENIED =
+  "You don't have access to the assistant here. Please check that you are signed in and a member of this organization.";
 
 /**
- * Sends one question and returns the assistant's answer.
- * TODO: swap the body for `POST /api/v1/organizations/${org_id}/chat/` with
- * `{ question }`, expecting `{ answer, metadata: { intent } }`. A 503 from
- * ai-service should surface as ASSISTANT_UNAVAILABLE, a 400 via
- * firstErrorMessage(body).
+ * POST /api/v1/organizations/${org_id}/chat/ with { question }; expects
+ * { answer, metadata: { intent } }. intent is dropped: the drawer shows text.
+ *
+ * A network failure throws a plain Error; any HTTP failure throws AiChatError
+ * so useAiChat renders the message inside the conversation instead.
  */
 export async function askAssistant(
   org_id: number,
   question: string,
   csrfToken: string,
 ): Promise<string> {
-  void org_id;
-  void question;
-  void csrfToken;
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1/organizations/${org_id}/chat/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify({ question }),
+    });
+  } catch {
+    throw new Error("Could not reach the assistant. Please try again.");
+  }
 
-  // Simulated network delay, so the "thinking" state is visible in the UI.
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) throw new AiChatError(chatErrorMessage(res.status, body));
 
-  return simulatedReply();
+  const answer =
+    body && typeof body === "object"
+      ? (body as { answer?: unknown }).answer
+      : undefined;
+  if (typeof answer !== "string" || !answer)
+    throw new AiChatError(ASSISTANT_UNAVAILABLE);
+  return answer;
 }
 
-/** First string found in a DRF error body — reused once the real call lands. */
+/** Maps a failed chat response to a user-facing message. */
 export function chatErrorMessage(status: number, body: unknown): string {
   if (status === 503) return ASSISTANT_UNAVAILABLE;
+  // 429 deliberately ignores the body: DRF's default "Request was throttled."
+  // detail is server-side wording, not user copy.
+  if (status === 429) return TOO_MANY_REQUESTS;
+  if (status === 400) return INVALID_QUESTION;
+  if (status === 403) return ACCESS_DENIED;
   return (
     firstErrorMessage(body) ??
     "Could not reach the assistant. Please try again."
