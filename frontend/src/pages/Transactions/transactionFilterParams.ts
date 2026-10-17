@@ -2,6 +2,7 @@
 
 import {
   DEFAULT_FILTERS,
+  QUERY_MAX_LENGTH,
   type Sort,
   type Tab,
   type TransactionFilters,
@@ -17,7 +18,7 @@ export function parseFilters(params: URLSearchParams): TransactionFilters {
   const page = Number(params.get("page"));
   return {
     tab: tab && TAB_VALUES.includes(tab) ? tab : DEFAULT_FILTERS.tab,
-    q: params.get("q") ?? "",
+    q: (params.get("q") ?? "").slice(0, QUERY_MAX_LENGTH),
     sort: sort && SORT_VALUES.includes(sort) ? sort : DEFAULT_FILTERS.sort,
     from: params.get("from") ?? "",
     to: params.get("to") ?? "",

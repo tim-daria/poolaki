@@ -3,8 +3,9 @@ DRF exception handler (REST_FRAMEWORK["EXCEPTION_HANDLER"]).
 
 Maps service-level exceptions to the API error contract:
 Django ValidationError -> 400, builtin PermissionError -> 403,
-PersonalOrganizationMissingError -> 500. Everything else falls through
-to DRF's default handler (401/403/404 and DRF-native errors).
+PersonalOrganizationMissingError -> 500, AiServiceUnavailableError -> 503.
+Everything else falls through to DRF's default handler
+(401/403/404 and DRF-native errors).
 """
 
 from typing import Any
@@ -13,10 +14,14 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
-from core.services.exceptions import PersonalOrganizationMissingError
+from core.services.exceptions import AiServiceUnavailableError, PersonalOrganizationMissingError
+
+AI_UNAVAILABLE_MESSAGE = "The assistant is unavailable right now. Please try again in a moment."
 
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
+    if isinstance(exc, AiServiceUnavailableError):
+        return Response({"errors": [AI_UNAVAILABLE_MESSAGE]}, status=503)
     if isinstance(exc, PersonalOrganizationMissingError):
         return Response({"errors": [str(exc)]}, status=500)
     if isinstance(exc, ValidationError):

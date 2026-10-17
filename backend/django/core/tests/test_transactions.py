@@ -8,6 +8,7 @@ from core.models import (
     Category,
     CategoryType,
     Goal,
+    GoalStatus,
     Membership,
     Notification,
     NotificationType,
@@ -70,6 +71,69 @@ def test_list_transactions_returns_all_organization_transactions(
     assert {item["id"] for item in response.data["transactions"]} == {first.id, second.id}
 
 
+def test_list_transactions_search_matches_description_case_insensitively(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    rewe = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="REWE",
+        transaction_date="2026-08-10",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("40.00"),
+        description="Edeka",
+        transaction_date="2026-08-11",
+    )
+
+    api_client.force_authenticate(user=owner)
+    response = api_client.get(transactions_url(shared_org.id), {"q": "rew"})
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.data["transactions"]] == [rewe.id]
+    # Search narrows the tab counts too: it applies before the entry_type split.
+    assert response.data["counts"]["all"] == 1
+    assert response.data["total"] == 1
+
+
+def test_list_transactions_search_matches_category_name(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    groceries = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
+    eating_out = Category.objects.create(
+        org=shared_org, name="Eating out", type=CategoryType.EXPENSE
+    )
+    in_groceries = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Weekly shop",
+        category=groceries,
+        transaction_date="2026-08-10",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("18.00"),
+        description="Pizza",
+        category=eating_out,
+        transaction_date="2026-08-11",
+    )
+
+    api_client.force_authenticate(user=owner)
+    response = api_client.get(transactions_url(shared_org.id), {"q": "grocer"})
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.data["transactions"]] == [in_groceries.id]
+
+
 def test_list_transactions_returns_empty_list(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
@@ -84,10 +148,13 @@ def test_list_transactions_returns_empty_list(
 def test_member_can_create_transaction_for_organization(
     api_client: APIClient, member: User, shared_org: Organization
 ) -> None:
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=member)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 201
@@ -101,11 +168,12 @@ def test_member_can_create_transaction_for_organization(
 def test_create_transaction_ignores_org_and_author_from_payload(
     api_client: APIClient, owner: User, member: User, shared_org: Organization
 ) -> None:
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=member)
 
     response = api_client.post(
         transactions_url(shared_org.id),
-        transaction_payload(org_id=999999, created_by=owner.id),
+        transaction_payload(category_id=category.id, org_id=999999, created_by=owner.id),
         format="json",
     )
 
@@ -127,10 +195,13 @@ def test_create_transaction_rejects_goal_from_another_organization(
         target_amount=Decimal("1000.00"),
         target_date="2026-12-31",
     )
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(goal_id=goal.id), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(goal_id=goal.id, category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 400
@@ -146,16 +217,118 @@ def test_create_transaction_accepts_goal_on_expense(
         org=shared_org,
         name="Trip",
         target_amount=Decimal("1000.00"),
-        target_date="2026-12-31",
+        target_date=None,
     )
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(goal_id=goal.id), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(goal_id=goal.id, category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 201
     assert Transaction.objects.get(id=response.data["id"]).goal_id == goal.id
+
+
+def test_member_can_make_contribution_to_active_goal(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="contribution", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).entry_type == "contribution"
+
+
+def test_member_can_make_withdrawal_from_active_goal(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="withdraw", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).entry_type == "withdraw"
+
+
+@pytest.mark.parametrize(
+    ("entry_type", "status", "target_date"),
+    [
+        ("contribution", GoalStatus.COMPLETED, "2026-12-31"),
+        ("withdraw", GoalStatus.COMPLETED, "2026-12-31"),
+        ("expense", GoalStatus.ACTIVE, "2026-12-31"),
+        ("expense", GoalStatus.ARCHIVED, None),
+    ],
+)
+def test_goal_transaction_rejects_invalid_goal_state(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    entry_type: str,
+    status: str,
+    target_date: str | None,
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date=target_date,
+        status=status,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type=entry_type, goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not Transaction.objects.filter(org=shared_org).exists()
+
+
+@pytest.mark.parametrize("entry_type", ["contribution", "withdraw"])
+def test_goal_transaction_requires_goal(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    entry_type: str,
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type=entry_type, goal_id=None),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["goal_id"] == ["A goal is required for this transaction type."]
 
 
 def test_create_transaction_rejects_goal_on_income(
@@ -167,11 +340,12 @@ def test_create_transaction_rejects_goal_on_income(
         target_amount=Decimal("1000.00"),
         target_date="2026-12-31",
     )
+    category = Category.objects.create(org=shared_org, name="Salary", type=CategoryType.INCOME)
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
         transactions_url(shared_org.id),
-        transaction_payload(entry_type="income", goal_id=goal.id),
+        transaction_payload(entry_type="income", goal_id=goal.id, category_id=category.id),
         format="json",
     )
 
@@ -250,6 +424,45 @@ def test_create_transaction_rejects_category_with_different_type(
     assert not Transaction.objects.filter(org=shared_org).exists()
 
 
+@pytest.mark.parametrize("entry_type", ["income", "expense"])
+def test_create_transaction_requires_category_for_income_and_expense(
+    api_client: APIClient, owner: User, shared_org: Organization, entry_type: str
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type=entry_type),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "category_id" in response.data
+
+
+def test_create_transaction_allows_uncategorized_contribution(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+    )
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="contribution", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    transaction = Transaction.objects.get(id=response.data["id"])
+    assert transaction.category_id is None
+
+
 @pytest.mark.parametrize("method", ["get", "post"])
 def test_transactions_require_organization_membership(
     api_client: APIClient, stranger: User, personal_org: Organization, method: str
@@ -293,10 +506,13 @@ def test_create_transaction_notifies_all_members_except_creator(
     shared_org: Organization,
 ) -> None:
     Membership.objects.create(user=invitee, org=shared_org, role=Role.MEMBER)
+    category = Category.objects.create(org=shared_org, name="Groceries", type=CategoryType.EXPENSE)
     api_client.force_authenticate(user=member)
 
     response = api_client.post(
-        transactions_url(shared_org.id), transaction_payload(), format="json"
+        transactions_url(shared_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 201
@@ -319,10 +535,15 @@ def test_create_transaction_notifies_all_members_except_creator(
 def test_create_transaction_in_personal_budget_creates_no_notifications(
     api_client: APIClient, owner: User, personal_org: Organization
 ) -> None:
+    category = Category.objects.create(
+        org=personal_org, name="Groceries", type=CategoryType.EXPENSE
+    )
     api_client.force_authenticate(user=owner)
 
     response = api_client.post(
-        transactions_url(personal_org.id), transaction_payload(), format="json"
+        transactions_url(personal_org.id),
+        transaction_payload(category_id=category.id),
+        format="json",
     )
 
     assert response.status_code == 201
@@ -519,6 +740,66 @@ def test_transaction_patch_rejects_category_with_different_type(
 
     assert response.status_code == 400
     assert response.data["category_id"] == ["Category type must match transaction entry type."]
+    transaction.refresh_from_db()
+    assert transaction.category_id is None
+
+
+@pytest.mark.parametrize(
+    ("entry_type", "category_type"),
+    [("income", CategoryType.INCOME), ("expense", CategoryType.EXPENSE)],
+)
+def test_transaction_patch_rejects_clearing_category_on_income_and_expense(
+    api_client: APIClient,
+    owner: User,
+    shared_org: Organization,
+    entry_type: str,
+    category_type: CategoryType,
+) -> None:
+    category = Category.objects.create(org=shared_org, name="Categorized", type=category_type)
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type=entry_type,
+        amount=Decimal("25.00"),
+        category=category,
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": None},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    transaction.refresh_from_db()
+    assert transaction.category_id == category.id
+
+
+def test_transaction_patch_allows_clearing_category_on_contribution(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    category = Category.objects.create(
+        org=shared_org, name="Contribution", type=CategoryType.CONTRIBUTION
+    )
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="contribution",
+        amount=Decimal("25.00"),
+        category=category,
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"category_id": None},
+        format="json",
+    )
+
+    assert response.status_code == 200
     transaction.refresh_from_db()
     assert transaction.category_id is None
 

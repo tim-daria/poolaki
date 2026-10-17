@@ -4,6 +4,24 @@
  */
 import { createTheme } from "@mui/material";
 
+// Lavender groups are module constants so `palette.chart` can reuse the same
+// swatches as resolved values.
+const primary = {
+  dark: "#494564", // --tint-deep  (sidebar bg)
+  main: "#5b5477", // --tint-middle (hover/active)
+  light: "#edecfd", // --tint-light  (subtle tint)
+  contrastText: "#fff",
+};
+const secondary = {
+  main: "#585a68", // neutral slate
+  light: "#b4b5ed", // lavender tint
+};
+// Separate key because primary and secondary have no free PaletteColor slots.
+const accent = {
+  main: "#826ABC", // deep lavender
+  light: "#9D84D7", // soft lavender
+};
+
 declare module "@mui/material/styles" {
   interface TypographyVariants {
     mono: React.CSSProperties;
@@ -17,11 +35,13 @@ declare module "@mui/material/styles" {
     shadow: { main: string };
     accent: { main: string; light: string };
     avatar: string[];
+    chart: string[];
   }
   interface PaletteOptions {
     shadow?: { main: string };
     accent?: { main: string; light: string };
     avatar?: string[];
+    chart?: string[];
   }
 }
 
@@ -111,17 +131,8 @@ export const theme = createTheme({
   /*               Palette              */
   /* ---------------------------------- */
   palette: {
-    primary: {
-      dark: "#494564", // --tint-deep  (sidebar bg)
-      main: "#5b5477", // --tint-middle (hover/active)
-      light: "#edecfd", // --tint-light  (subtle tint)
-      contrastText: "#fff",
-    },
-    secondary: {
-      main: "#585a68", // neutral slate
-      light: "#b4b5ed", // lavender tint
-      contrastText: "#fff",
-    },
+    primary,
+    secondary,
     success: {
       main: "#5b9778", // --income-color
       light: "#d8f8e8", // --bg-income
@@ -140,11 +151,7 @@ export const theme = createTheme({
       secondary: "#959698", // --sub-text
     },
     divider: "#e0e0e0", // --border
-    // Separate key because primary and secondary have no free PaletteColor slots.
-    accent: {
-      main: "#826ABC", // deep lavender
-      light: "#9D84D7", // soft lavender
-    },
+    accent,
     // Avatar backgrounds, one per AvatarGroup slot (max 5), chosen by `avatarColor`.
     // Palette paths rather than hex so `sx` resolves them against the theme.
     // All must stay dark enough for a white initial to remain legible.
@@ -155,6 +162,11 @@ export const theme = createTheme({
       "accent.main",
       "accent.light",
     ],
+    // Pie slices, largest first. Resolved values rather than palette paths:
+    // they are interpolated into a raw conic-gradient string, which `sx` does
+    // not resolve. The fourth is the merged "Other" slice, kept mid-tone so it
+    // separates from both neighbours.
+    chart: [primary.dark, secondary.light, primary.light, accent.light],
   },
   /* ---------------------------------- */
   /*             Typography             */

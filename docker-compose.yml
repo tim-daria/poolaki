@@ -73,6 +73,8 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      AI_SERVICE_TIMEOUT: ${AI_SERVICE_TIMEOUT}
     volumes:
       - ./backend/django:/app
       - type: volume
@@ -100,7 +102,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
     container_name: postgres_db
     restart: unless-stopped
     volumes:
@@ -331,6 +333,7 @@ services:
       - "8000"
     environment:
       PYTHONPATH: .
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
       DJANGO_BASE_URL: ${DJANGO_BASE_URL}
@@ -400,7 +403,7 @@ services:
     - vault_init:/vault/secure/
     - vault_id:/vault/secure/id
     - vault_agent:/vault/agent/secrets
-    env_file: 
+    env_file:
     - .env
     environment:
       TZ: Europe/Berlin
