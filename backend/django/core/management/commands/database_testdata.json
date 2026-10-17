@@ -1,0 +1,292 @@
+
+{
+	"transactions": [
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-8-05",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Entertainment",
+			"entry_type": "expense",
+			"amount": "45",
+			"description": "New Game",
+			"transaction_date": "2026-8-4",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-8-3",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-8-15",
+			"is_tax_deductible": "False"
+		},
+
+
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-9-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-9-4",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Freelance",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Sold game",
+			"transaction_date": "2026-9-8",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-9-15",
+			"is_tax_deductible": "False"
+		},
+
+
+
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-10-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Entertainment",
+			"entry_type": "expense",
+			"amount": "45",
+			"description": "New Game",
+			"transaction_date": "2026-10-6",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-10-4",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Freelance",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Sold game",
+			"transaction_date": "2026-10-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-10-15",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "75",
+			"description": "Ticket Boardgame Convention",
+			"transaction_date": "2026-10-22",
+			"is_tax_deductible": "False"
+		}
+	]
+}
