@@ -68,7 +68,7 @@ for a pasted URL and a refresh. One code path, three entry points.
     └── <OrgListProvider>       loads your list of workspaces, once
         ├── <OrgRedirect>       handles "/"
         └── <OrgLayout>         handles "/o/:orgId"
-            └── <AppLayout>     header, sidebar, page area
+            └── <AppLayout>     header with tabs, page area
                 └── the page
 ```
 
@@ -112,7 +112,7 @@ One provider cannot be in both places.
 2. The URL changes; React Router re-renders the `/o/:orgId` branch.
 3. `OrgLayout` finds id `2` in the loaded list. **No network request** — it is already
    in memory.
-4. Header and sidebar stay mounted. They hold nothing workspace-specific.
+4. The header (with the page tabs, or the phone drawer) stays mounted. It holds nothing workspace-specific.
 5. The page area is rebuilt, dropping the old filters, search text and page number.
 
 ### Three details that look like accidents
@@ -123,12 +123,12 @@ unavailable" for a valid workspace, with no error anywhere.
 
 **`key={orgId}` on `<main>`** — changing a React `key` throws the old component away
 and builds a fresh one. That is what clears the previous workspace's page state. It
-sits on `<main>`, not on the whole layout, so the header and sidebar survive; higher up
+sits on `<main>`, not on the whole layout, so the header survives; higher up
 it made the screen flicker on every switch.
 
-**Relative sidebar links** (`to="transactions"`, not `to="/transactions"`) — a relative
+**Relative navigation links** (`to="transactions"`, not `to="/transactions"`) — a relative
 link is recalculated on every render against the current address, so the links follow
-the new workspace without remounting. They are not fixed when the sidebar is created.
+the new workspace without remounting. They are not fixed when the tabs are created.
 
 ---
 
