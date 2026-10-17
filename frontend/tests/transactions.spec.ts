@@ -47,9 +47,8 @@ async function getOrganizationCategories(
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
  * 2 contributions and 1 withdrawal, 3 tax refundable, 15 per page. The
- * Transfers tab and its badge cover contributions only: the backend filters
- * and counts a single entry_type, so the withdrawal is listed under All
- * alone until a `transfer` tab value exists. Category names match the
+ * Transfers tab covers contributions and the Withdrawals tab withdrawals:
+ * the backend filters and counts one entry_type per tab. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
@@ -278,9 +277,8 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
     await expect(tab("Expenses")).toContainText("17");
     await expect(tab("Income")).toContainText("4");
-    // Contributions only; the withdrawal is not a Transfers row yet (see the
-    // FIXTURES comment).
     await expect(tab("Transfers")).toContainText("2");
+    await expect(tab("Withdrawals")).toContainText("1");
 
     await expect(rows()).toHaveCount(15);
     await expect(showing("15 of 24")).toBeVisible();
@@ -292,14 +290,21 @@ test.describe.serial("Transactions", () => {
   });
 
   test("colours rows by entry type", async () => {
-    // Income carries a plus; a transfer is filed under Savings and unsigned.
+    // Income carries a plus; a transfer is an arrow into or out of savings.
     const salary = rows().filter({ hasText: "Salary" }).first();
     await expect(salary).toContainText("+€3.240,00");
 
-    const transfer = rows().filter({ hasText: "To savings" }).first();
-    await expect(transfer).toContainText("Savings");
-    await expect(transfer).toContainText("€300,00");
-    await expect(transfer).not.toContainText("-€300,00");
+    const contribution = rows().filter({ hasText: "To savings" }).first();
+    await expect(contribution).toContainText("Savings");
+    await expect(contribution).toContainText("→ €300,00");
+
+    // The one withdrawal sits on page 2; its own tab has it at the top, with
+    // no category chip.
+    await tab("Withdrawals").click();
+    await expect(rows()).toHaveCount(1);
+    await expect(rows().first()).toContainText("← €300,00");
+    await expect(rows().first().getByRole("cell").nth(2)).toHaveText("—");
+    await tab("All").click();
   });
 
   test("paginates and keeps the page in the URL", async () => {
@@ -722,7 +727,7 @@ test.describe.serial("Transactions", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("option", { name: /Emergency fund/ }),
-    ).toContainText("€0,00 left · will be paid from balance");
+    ).toContainText("€0,00 left · will go below zero");
     await expect(
       page.getByRole("option", { name: /Transactions fixture goal/ }),
     ).toHaveCount(0);
@@ -738,12 +743,11 @@ test.describe.serial("Transactions", () => {
 
     // Goal runs out with this expense.
     await dialog.getByLabel("Amount").fill("15220");
-    await expect(
-      dialog.getByText("€15.000,00 from Cat mansion · €220,00 from balance"),
-    ).toBeVisible();
+    await expect(dialog.getByText("€220,00 over")).toBeVisible();
+    await expect(dialog.getByText("Cat mansion's balance")).toBeVisible();
     await expect(
       dialog.getByText(
-        "The goal runs out with this expense and goes over by €220,00.",
+        "The goal will be overdrawn by €220,00. Your net balance won't change yet.",
       ),
     ).toBeVisible();
 
@@ -753,9 +757,10 @@ test.describe.serial("Transactions", () => {
     // Refocusing the money field after the menu closes appends; clear first.
     await dialog.getByLabel("Amount").clear();
     await dialog.getByLabel("Amount").fill("120");
-    await expect(dialog.getByText("€120,00 from balance")).toBeVisible();
+    await expect(dialog.getByText("€120,00 over")).toBeVisible();
+    await expect(dialog.getByText("Emergency fund's balance")).toBeVisible();
     await expect(
-      dialog.getByText(/Emergency fund is empty\. This still counts toward it/),
+      dialog.getByText(/The goal will be overdrawn by €120,00/),
     ).toBeVisible();
 
     // Remove collapses back to the chip, and the goal is dropped from the draft.
