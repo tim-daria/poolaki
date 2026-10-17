@@ -36,7 +36,7 @@ import { NetBalanceCard } from "./NetBalanceCard";
 import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
-import { CARD_PADDING, DESKTOP, cardLinkSx } from "./layout";
+import { DESKTOP, TABLET } from "./layout";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -155,7 +155,7 @@ function Home() {
     display: "flex",
     flexDirection: "column",
     gap: 2,
-    [DESKTOP]: { px: 3, gap: 3 },
+    [TABLET]: { px: 3, gap: 3 },
   } as const;
 
   if (data === null) {
@@ -211,22 +211,23 @@ function Home() {
         component={RouterLink}
         to="reports"
         aria-label="Balance and month, see reports"
-        elevation={0}
+        variant="clickableCard"
         sx={[
-          cardLinkSx,
           {
-            borderRadius: 4,
+            // The halves carry the padding, so the divider can run full height.
+            p: 0,
             display: "flex",
             flexDirection: "column",
-            [DESKTOP]: { flexDirection: "row" },
+            [TABLET]: { flexDirection: "row" },
           },
         ]}
       >
         <Box
           sx={{
             display: "flex",
-            p: CARD_PADDING,
-            [DESKTOP]: { width: 400, flexShrink: 0 },
+            p: "var(--card-padding)",
+            [TABLET]: { width: "45%", flexShrink: 0 },
+            [DESKTOP]: { width: 400 },
           }}
         >
           <NetBalanceCard
@@ -240,16 +241,23 @@ function Home() {
           sx={{
             // The same hairline as the activity rows' dividers.
             borderTop: "1px solid var(--mui-palette-divider)",
-            mx: CARD_PADDING,
-            [DESKTOP]: {
+            mx: "var(--card-padding)",
+            [TABLET]: {
               borderTop: 0,
               borderLeft: "1px solid var(--mui-palette-divider)",
               mx: 0,
-              my: CARD_PADDING,
+              my: "var(--card-padding)",
             },
           }}
         />
-        <Box sx={{ display: "flex", flex: 1, minWidth: 0, p: CARD_PADDING }}>
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            minWidth: 0,
+            p: "var(--card-padding)",
+          }}
+        >
           <MonthlySummaryCard
             summary={summary}
             month={monthName(TODAY)}
@@ -258,9 +266,11 @@ function Home() {
         </Box>
       </Paper>
 
-      {/* Desktop: activity beside a sidebar whose content sets the row height.
-          Phones: one column, with the goal ahead of spending; the sidebar
-          dissolves (display: contents) so its cards can take their own order. */}
+      {/* Desktop: activity beside a sidebar, both columns one height. The
+          goal card keeps its size; the spending card and the activity list
+          take up whatever the other column adds. Phones: one column, with
+          the goal ahead of spending; the sidebar dissolves (display:
+          contents) so its cards can take their own order. */}
       <Box
         sx={{
           display: "grid",
@@ -271,8 +281,6 @@ function Home() {
             // The sidebar gives way on narrow desktops so the activity card
             // keeps room for its rows.
             gridTemplateColumns: "minmax(0, 1fr) min(380px, 40%)",
-            // Stretched: the sidebar matches the activity card's height, with
-            // the spending card absorbing the difference (its ring shrinks).
             alignItems: "stretch",
           },
         }}
@@ -286,25 +294,30 @@ function Home() {
         <Box
           sx={{
             display: "contents",
+            // Tablet: the two cards share a row; desktop: a column beside the list.
+            [TABLET]: {
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 3,
+            },
             [DESKTOP]: {
               display: "flex",
               flexDirection: "column",
-              gap: 3,
-              minHeight: 0,
             },
           }}
         >
           <Box
             sx={{
               order: 2,
-              [DESKTOP]: { order: 0, flex: 1, minHeight: 0, display: "flex" },
+              [TABLET]: { order: 0, display: "flex" },
+              [DESKTOP]: { flex: 1 },
             }}
           >
             <TopSpendingCard
               slices={spendingByCategory(rows, TODAY, categories)}
             />
           </Box>
-          <Box sx={{ order: 1, [DESKTOP]: { order: 0 } }}>
+          <Box sx={{ order: 1, [TABLET]: { order: 0, display: "flex" } }}>
             <HomeGoalCard goals={goals} onCreateGoal={() => setModal("goal")} />
           </Box>
         </Box>

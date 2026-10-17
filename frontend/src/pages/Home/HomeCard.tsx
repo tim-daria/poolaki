@@ -10,7 +10,6 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
-import { CARD_PADDING, cardLinkSx } from "./layout";
 
 interface HomeCardProps {
   title: string;
@@ -25,9 +24,8 @@ interface HomeCardProps {
   sx?: SxProps<Theme>;
 }
 
+// Content layout only; the look comes from the theme's card variants.
 const frameSx = {
-  borderRadius: 4,
-  p: CARD_PADDING,
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
@@ -65,8 +63,8 @@ export function HomeCard({ title, to, action, children, sx }: HomeCardProps) {
         component={RouterLink}
         to={to}
         aria-label={title}
-        elevation={0}
-        sx={[frameSx, cardLinkSx, ...userSx]}
+        variant="clickableCard"
+        sx={[frameSx, ...userSx]}
       >
         {content}
       </Paper>
@@ -76,7 +74,7 @@ export function HomeCard({ title, to, action, children, sx }: HomeCardProps) {
     <Paper
       component="section"
       aria-label={title}
-      elevation={0}
+      variant="card"
       sx={[frameSx, ...userSx]}
     >
       {content}

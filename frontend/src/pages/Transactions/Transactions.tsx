@@ -13,6 +13,7 @@ import {
   InputAdornment,
   MenuItem,
   Pagination,
+  Paper,
   Stack,
   Tab,
   Table,
@@ -157,15 +158,7 @@ function Transactions() {
         // A container card, no role: the tabs and table inside carry their
         // own semantics, and the page heading above names it. Zero padding
         // because the tabs and toolbar pad themselves.
-        <Box
-          sx={{
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            border: "1px solid",
-            borderColor: "divider",
-            overflow: "hidden",
-          }}
-        >
+        <Paper variant="card" sx={{ p: 0, overflow: "hidden" }}>
           {/* -------- Type tabs -------- */}
           <Tabs
             value={filters.tab}
@@ -429,7 +422,7 @@ function Transactions() {
               </Stack>
             )}
           </Stack>
-        </Box>
+        </Paper>
       )}
     </Box>
   );

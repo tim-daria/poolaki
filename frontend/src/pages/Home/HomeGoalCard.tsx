@@ -6,6 +6,7 @@ import type { Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
+import { TABLET } from "./layout";
 
 interface Props {
   goals: Goal[];
@@ -18,7 +19,7 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
 
   if (!goal) {
     return (
-      <HomeCard title="Goal">
+      <HomeCard title="Goal" sx={{ [TABLET]: { flex: 1 } }}>
         <Stack spacing={1.5}>
           <Typography sx={{ fontWeight: 600 }}>
             Save toward something
@@ -48,15 +49,18 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
 
   return (
     <HomeCard
-      title="Goal"
+      title="Almost there"
       to="savings"
       action={
         <HomeCardAction>
           {active.length === 1 ? "Manage" : "All goals"}
         </HomeCardAction>
       }
+      // Fills its cell when paired with the spending card; the content
+      // centres in the extra room.
+      sx={{ [TABLET]: { flex: 1 } }}
     >
-      <Stack spacing={1.25}>
+      <Stack spacing={1.25} sx={{ [TABLET]: { my: "auto" } }}>
         <Box
           sx={{
             display: "flex",
