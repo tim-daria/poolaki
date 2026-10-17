@@ -100,7 +100,8 @@ test.describe.serial("Goals", () => {
     await expect(archived).toBeVisible();
 
     // Active: New laptop (past deadline → overdue), House downpayment (on
-    // track). Completed: Emergency fund (exactly 100%), Cat mansion (101%).
+    // track). Completed: Emergency fund (exactly 100%), Cat mansion (101%),
+    // Trip to Barcelona (100%, overspent).
     await expect(active.getByText("New laptop")).toBeVisible();
     // The "start a new saving" prompt only appears when Active is empty.
     await expect(
@@ -113,11 +114,11 @@ test.describe.serial("Goals", () => {
     await expect(
       active.getByRole("button", { name: /^Actions for / }),
     ).toHaveCount(2);
-    await expect(completed.getByRole("progressbar")).toHaveCount(2);
-    await expect(completed.getByTestId("TaskAltOutlinedIcon")).toHaveCount(2);
+    await expect(completed.getByRole("progressbar")).toHaveCount(3);
+    await expect(completed.getByTestId("TaskAltOutlinedIcon")).toHaveCount(3);
     await expect(
       completed.getByRole("button", { name: /^Actions for / }),
-    ).toHaveCount(2);
+    ).toHaveCount(3);
 
     // Order within each section: oldest first. The seed's created_at runs
     // against id order on purpose, so this proves the sort, not array order.
@@ -126,7 +127,11 @@ test.describe.serial("Goals", () => {
         .getByRole("group")
         .evaluateAll((cards) => cards.map((c) => c.getAttribute("aria-label")));
     expect(await names(active)).toEqual(["House downpayment", "New laptop"]);
-    expect(await names(completed)).toEqual(["Cat mansion", "Emergency fund"]);
+    expect(await names(completed)).toEqual([
+      "Cat mansion",
+      "Emergency fund",
+      "Trip to Barcelona",
+    ]);
     expect(await names(archived)).toEqual([
       "Wedding rings",
       "Student loan",
@@ -213,7 +218,7 @@ test.describe.serial("Goals", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("clicking a card opens Contribute; the keyboard does too; archived cards are inert", async () => {
+  test("clicking a card opens Contribute; the keyboard does too; an archived card opens its info card", async () => {
     const active = page.getByRole("region", { name: "Active goals" });
     const completed = page.getByRole("region", { name: "Completed goals" });
     const archived = page.getByRole("region", { name: "Archived goals" });
@@ -234,10 +239,103 @@ test.describe.serial("Goals", () => {
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
-    // Archived starts folded; open it to reach its cards.
+    // Archived starts folded; open it to reach its cards. An archived card
+    // has no Contribute, so it opens the read-only info view instead.
     await page.getByRole("button", { name: "Archived", exact: true }).click();
     await archived.getByRole("group", { name: "Vacation fund" }).click();
-    await expect(dialog).toHaveCount(0);
+    await expect(
+      dialog.getByRole("heading", { name: "Vacation fund" }),
+    ).toBeVisible();
+    await expect(dialog.getByText("Archived", { exact: true })).toBeVisible();
+    await expect(
+      dialog.getByText("Contributions will show up here."),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "close" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("Show Info opens an overdrawn goal: what is left, the split per expense", async () => {
+    const completed = page.getByRole("region", { name: "Completed goals" });
+    const dialog = page.getByRole("dialog");
+
+    await test.step("status line and figure", async () => {
+      await completed
+        .getByRole("button", { name: "Actions for Trip to Barcelona" })
+        .click();
+      await page.getByRole("menuitem", { name: "Show Info" }).click();
+      await expect(
+        dialog.getByRole("heading", { name: "Trip to Barcelona" }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByText("Overdrawn · paid from your balance"),
+      ).toBeVisible();
+      // Whole euros on screen, the exact amount as the accessible name.
+      await expect(dialog.getByLabel("-€340,00")).toHaveText("-€340");
+      await expect(dialog.getByText("left in goal")).toBeVisible();
+      await expect(dialog.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        "0",
+      );
+      await expect(
+        dialog.getByText("€2.000 saved · €2.340 spent"),
+      ).toBeVisible();
+    });
+
+    await test.step("activity by month, newest first", async () => {
+      // Month headings carry no year inside the frozen clock's year.
+      const july = dialog.getByRole("region", { name: "July" });
+      await expect(july.getByRole("listitem")).toHaveCount(4);
+      // A list item takes no name from its text, so filter on it.
+      const tickets = july
+        .getByRole("listitem")
+        .filter({ hasText: "Sagrada Família tickets" });
+      await expect(tickets).toContainText("€220 from balance");
+      await expect(tickets).toContainText("-€380,00");
+      await expect(
+        july.getByRole("listitem").filter({ hasText: "Tapas dinner" }),
+      ).toContainText("from balance");
+      await expect(
+        july.getByRole("listitem").filter({ hasText: "Hotel" }),
+      ).not.toContainText("from balance");
+
+      const june = dialog.getByRole("region", { name: "June" });
+      await expect(june.getByRole("listitem")).toContainText(
+        "12 Jun · target reached",
+      );
+      await expect(june.getByRole("listitem")).toContainText("+€500,00");
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+    });
+  });
+
+  test("Show Info on a saving goal leads with the amount saved and what is to go", async () => {
+    const active = page.getByRole("region", { name: "Active goals" });
+    const dialog = page.getByRole("dialog");
+
+    await active
+      .getByRole("button", { name: "Actions for New laptop" })
+      .click();
+    await page.getByRole("menuitem", { name: "Show Info" }).click();
+    await expect(
+      dialog.getByRole("heading", { name: "New laptop" }),
+    ).toBeVisible();
+    await expect(dialog.getByText("Saving")).toBeVisible();
+    await expect(dialog.getByText("overdue since Dec 2025")).toHaveCSS(
+      "color",
+      "rgb(255, 112, 112)",
+    );
+    await expect(dialog.getByLabel("€1.790,00")).toHaveText("€1.790");
+    await expect(dialog.getByText("of €2.000")).toBeVisible();
+    await expect(dialog.getByText("90%", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("€210 to go")).toBeVisible();
+    // The seed stands in: the shared owner's workspace has no goal rows.
+    const september = dialog.getByRole("region", { name: "September" });
+    await expect(
+      september.getByRole("listitem").filter({ hasText: "Withdrawn" }),
+    ).toContainText("-€110,00");
+    await dialog.getByRole("button", { name: "close" }).click();
+    await expect(dialog).toBeHidden();
   });
 
   test("the actions menu does not trigger the card", async () => {
