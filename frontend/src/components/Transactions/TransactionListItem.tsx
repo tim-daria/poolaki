@@ -14,7 +14,12 @@ import { Box, Chip, Typography, type SxProps, type Theme } from "@mui/material";
 import { Money } from "../Money";
 import type { Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
-import { ENTRY_STYLE, entryCategoryLabel } from "../../lib/entryDisplay";
+import {
+  ENTRY_STYLE,
+  entryCategoryLabel,
+  entrySubtitle,
+} from "../../lib/entryDisplay";
+import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
 import type { Transaction } from "../../lib/transactions";
 import { TABLET } from "../../pages/Home/layout";
@@ -80,6 +85,8 @@ export function TransactionList({ withPerson, children, sx }: ListProps) {
 interface ItemProps {
   transaction: Transaction;
   categories: Category[];
+  /** For the subtitle: the goal an expense was paid from, or an archive row's meaning. */
+  goals: Goal[];
   withPerson?: boolean;
 }
 
@@ -87,10 +94,12 @@ interface ItemProps {
 export function TransactionListItem({
   transaction: t,
   categories,
+  goals,
   withPerson,
 }: ItemProps) {
   const style = ENTRY_STYLE[t.entry_type];
   const category = entryCategoryLabel(t, categories);
+  const subtitle = entrySubtitle(t, goals);
   const hidden = { display: "none", minWidth: 0 };
   const shown = whenWide(withPerson, { display: "block" });
 
@@ -120,6 +129,7 @@ export function TransactionListItem({
         </Typography>
         <Typography variant="body2" noWrap sx={{ color: "text.secondary" }}>
           {shortDate(t.transaction_date)}
+          {subtitle && ` · ${subtitle}`}
         </Typography>
       </Box>
       {/* Coloured by entry type, the same as the Transactions table. */}
@@ -129,7 +139,7 @@ export function TransactionListItem({
             label={category}
             sx={{
               bgcolor: style.chipBg,
-              color: style.color,
+              color: style.chipColor ?? style.color,
               fontWeight: 500,
               maxWidth: "100%",
             }}

@@ -51,18 +51,20 @@ import { tintedWhenActive } from "./styles";
 import { TransactionRow } from "./TransactionRow";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCategories } from "../../hooks/useCategories";
+import { useGoals } from "../../hooks/useGoals";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
 ];
 
-/** "Transfers" is the user-facing name for a contribution. */
+/** "Transfers" is the user-facing name for a contribution; withdrawals get a tab of their own. */
 const TABS: { value: TabValue; label: string }[] = [
   { value: "all", label: "All" },
   { value: "expense", label: "Expenses" },
   { value: "income", label: "Income" },
   { value: "contribution", label: "Transfers" },
+  { value: "withdraw", label: "Withdrawals" },
 ];
 
 /** Chip label for an open or closed date range. */
@@ -93,6 +95,7 @@ const activeChipSx = { bgcolor: "primary.light", fontWeight: 500 } as const;
 function Transactions() {
   const org = useCurrentOrg();
   const categories = useCategories();
+  const goals = useGoals();
   type Loaded =
     { data: TransactionPage; error: null } | { data: null; error: string };
   const [result, setResult] = useState<Loaded | null>(null);
@@ -357,6 +360,7 @@ function Transactions() {
                   {data.rows.map((t) => (
                     <TransactionRow
                       categories={categories}
+                      goals={goals}
                       key={t.id}
                       transaction={t}
                       onClick={setEditing}

@@ -5,7 +5,12 @@ import type { KeyboardEvent } from "react";
 import { Money } from "../../components/Money";
 import type { Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
-import { ENTRY_STYLE, entryCategoryLabel } from "../../lib/entryDisplay";
+import {
+  ENTRY_STYLE,
+  entryCategoryLabel,
+  entrySubtitle,
+} from "../../lib/entryDisplay";
+import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
 import type { Transaction } from "../../lib/transactions";
 
@@ -14,15 +19,19 @@ interface TransactionRowProps {
   /** Opens the row for editing. */
   onClick?: (t: Transaction) => void;
   categories: Category[];
+  /** For the subtitle: the goal an expense was paid from, or an archive row's meaning. */
+  goals: Goal[];
 }
 
 export function TransactionRow({
   transaction: t,
   onClick,
-  categories: categories,
+  categories,
+  goals,
 }: TransactionRowProps) {
   const style = ENTRY_STYLE[t.entry_type];
   const category = entryCategoryLabel(t, categories);
+  const subtitle = entrySubtitle(t, goals);
 
   return (
     <TableRow
@@ -49,12 +58,23 @@ export function TransactionRow({
       <TableCell sx={{ color: "text.secondary", py: 2 }}>
         {shortDate(t.transaction_date)}
       </TableCell>
-      <TableCell sx={{ fontWeight: 600, py: 2 }}>{t.description}</TableCell>
+      <TableCell sx={{ fontWeight: 600, py: 2 }}>
+        {t.description}
+        {subtitle && (
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {subtitle}
+          </Typography>
+        )}
+      </TableCell>
       <TableCell sx={{ py: 2 }}>
         {category ? (
           <Chip
             label={category}
-            sx={{ bgcolor: style.chipBg, color: style.color, fontWeight: 500 }}
+            sx={{
+              bgcolor: style.chipBg,
+              color: style.chipColor ?? style.color,
+              fontWeight: 500,
+            }}
           />
         ) : (
           <Typography variant="body2" color="text.secondary">

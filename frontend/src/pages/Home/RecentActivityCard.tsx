@@ -7,6 +7,7 @@ import {
   TransactionListItem,
 } from "../../components/Transactions/TransactionListItem";
 import type { Category } from "../../lib/categories";
+import type { Goal } from "../../lib/goals";
 import type { Transaction } from "../../lib/transactions";
 import { HomeCard, HomeCardAction } from "./HomeCard";
 import { DESKTOP } from "./layout";
@@ -15,6 +16,7 @@ interface Props {
   /** Newest first. */
   rows: Transaction[];
   categories: Category[];
+  goals: Goal[];
   /** Adds the person column. */
   shared: boolean;
   onAdd: () => void;
@@ -38,7 +40,13 @@ const listSx = {
   },
 } as const;
 
-export function RecentActivityCard({ rows, categories, shared, onAdd }: Props) {
+export function RecentActivityCard({
+  rows,
+  categories,
+  goals,
+  shared,
+  onAdd,
+}: Props) {
   if (rows.length === 0) {
     return (
       <HomeCard title="Recent activity">
@@ -96,6 +104,7 @@ export function RecentActivityCard({ rows, categories, shared, onAdd }: Props) {
               key={t.id}
               transaction={t}
               categories={categories}
+              goals={goals}
               withPerson={shared}
             />
           ))}

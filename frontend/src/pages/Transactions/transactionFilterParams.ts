@@ -8,7 +8,13 @@ import {
   type TransactionFilters,
 } from "../../lib/transactionFilters";
 
-const TAB_VALUES: Tab[] = ["all", "expense", "income", "contribution"];
+const TAB_VALUES: Tab[] = [
+  "all",
+  "expense",
+  "income",
+  "contribution",
+  "withdraw",
+];
 const SORT_VALUES: Sort[] = ["newest", "oldest"];
 
 /** Unknown or malformed values fall back to the defaults rather than failing. */
