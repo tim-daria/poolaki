@@ -2,16 +2,23 @@
 
 ## Overview
 
-HashiCorp Vault is used to store and provide secrets to the web application and its supporting services. All components, including Vault, run in Docker.
+HashiCorp Vault is a dedicated secrets manager. In this project it is the single place that stores and hands out every sensitive value the web application and its supporting services need — the database credentials, the LLM API key, the Grafana and Cloudflare logins, and the 42 social-auth tokens.
 
-At startup, the Vault container’s entrypoint script reads the required environment variables, unlocks the vault and writes the secrets into the vault.
+The Vault server and the Vault Agent each run in their own Docker container.
 
-The Vault Agent then authenticates to Vault, retrieves the secrets needed by each service, and writes them to service-specific environment files into the service-container.
+### Why Vault
+
+Keeping the secrets in Vault stores them **encrypted at rest** and **isolated** (each service can only read the paths its policy allows), instead of plaintext scattered across containers. It also gives us things a plain `.env` cannot:
+
+- **Short-lived database credentials.** Vault generates a Postgres username and password per request with a short TTL and drops the user when the lease expires — a leaked credential stops working on its own (see *Dynamic PostgreSQL Credentials* below).
+- **Isolated, read-only access.** The Vault Agent’s AppRole policy grants read access only to the secret paths the services consume.
+- **No stale credentials.** On update, the Vault Agent rewrites the service’s env file and triggers a reload.
+
 
 ### Startup flow
 
-- Docker starts the vault & vault agent containers.
-- The vault entrypoint script reads the environment variables and stores them.
+- Docker starts the Vault & Vault Agent containers.
+- The Vault entrypoint script reads the environment variables and stores them.
 - Vault becomes available.
 - The Vault Agent authenticates to Vault.
 - The agent retrieves the secrets and creates environment files for the services.
