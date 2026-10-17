@@ -10,6 +10,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Home", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
   { label: "Transactions", to: "transactions", icon: <SyncAltOutlinedIcon /> },
   { label: "Savings", to: "savings", icon: <FavoriteBorderIcon /> },
+  { label: "Reports", to: "reports", icon: <BarChartOutlinedIcon /> },
 ];
 
 /** Absolute paths: these live at the app root, not under /o/:orgId. */
