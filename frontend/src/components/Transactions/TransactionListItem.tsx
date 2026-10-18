@@ -18,6 +18,7 @@ import {
   ENTRY_STYLE,
   entryCategoryLabel,
   entrySubtitle,
+  entryTitle,
 } from "../../lib/entryDisplay";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
@@ -125,7 +126,7 @@ export function TransactionListItem({
     >
       <Box sx={{ minWidth: 0 }}>
         <Typography sx={{ fontWeight: 600 }} noWrap>
-          {t.description || category || "Untitled"}
+          {entryTitle(t, categories, goals)}
         </Typography>
         <Typography variant="body2" noWrap sx={{ color: "text.secondary" }}>
           {shortDate(t.transaction_date)}

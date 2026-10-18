@@ -9,6 +9,7 @@ import {
   ENTRY_STYLE,
   entryCategoryLabel,
   entrySubtitle,
+  entryTitle,
 } from "../../lib/entryDisplay";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
@@ -59,7 +60,7 @@ export function TransactionRow({
         {shortDate(t.transaction_date)}
       </TableCell>
       <TableCell sx={{ fontWeight: 600, py: 2 }}>
-        {t.description}
+        {entryTitle(t, categories, goals)}
         {subtitle && (
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {subtitle}

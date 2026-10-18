@@ -2,7 +2,12 @@
 
 import { describe, expect, it } from "vitest";
 import type { Category } from "./categories";
-import { ENTRY_STYLE, entryCategoryLabel, entrySubtitle } from "./entryDisplay";
+import {
+  ENTRY_STYLE,
+  entryCategoryLabel,
+  entrySubtitle,
+  entryTitle,
+} from "./entryDisplay";
 import type { Goal } from "./goals";
 import type { EntryType, Transaction } from "./transactions";
 
@@ -45,8 +50,8 @@ describe("ENTRY_STYLE", () => {
   it.each<[EntryType, string, string]>([
     ["expense", "-", "text.primary"],
     ["income", "+", "success.main"],
-    ["contribution", "→ ", "accent.main"],
-    ["withdraw", "← ", "secondary.light"],
+    ["contribution", "→", "accent.main"],
+    ["withdraw", "←", "secondary.light"],
   ])("draws a %s as %j in %s", (type, sign, color) => {
     expect(ENTRY_STYLE[type]).toMatchObject({ sign, color });
   });
@@ -76,16 +81,26 @@ describe("entrySubtitle", () => {
     expect(entrySubtitle(tx({ goal: 9 }), [goal()])).toBe("Paid from Trip");
   });
 
-  it.each<[EntryType, string]>([
-    ["contribution", "Overdraft settlement"],
-    ["withdraw", "Returned to balance"],
-  ])("marks a %s on an archived goal: %s", (type, subtitle) => {
+  it.each<[EntryType, string, string]>([
+    ["contribution", "Archived Trip", "Overdraft settlement"],
+    ["withdraw", "Archived Trip", "Returned to balance"],
+    // Rows written before the description was renamed.
+    ["withdraw", "Goal Trip archived", "Returned to balance"],
+  ])("marks the archive's own %s row %j: %s", (type, description, subtitle) => {
     const archived = goal({ status: "archived" });
-    expect(
-      entrySubtitle(tx({ entry_type: type, goal: 9, category: null }), [
-        archived,
-      ]),
-    ).toBe(subtitle);
+    const row = tx({ entry_type: type, goal: 9, category: null, description });
+    expect(entrySubtitle(row, [archived])).toBe(subtitle);
+  });
+
+  it("leaves a goal's earlier transfers alone once it is archived", () => {
+    const archived = goal({ status: "archived" });
+    const topUp = tx({
+      entry_type: "contribution",
+      goal: 9,
+      category: null,
+      description: "",
+    });
+    expect(entrySubtitle(topUp, [archived])).toBeNull();
   });
 
   it("is null for a plain expense, a transfer on an open goal, or an unknown goal", () => {
@@ -97,5 +112,29 @@ describe("entrySubtitle", () => {
       ),
     ).toBeNull();
     expect(entrySubtitle(tx({ goal: 404 }), [goal()])).toBeNull();
+  });
+});
+
+describe("entryTitle", () => {
+  it("prefers the description", () => {
+    expect(entryTitle(tx(), [FOOD], [])).toBe("Flights");
+  });
+
+  it("falls back to the goal for a blank transfer, then to Savings", () => {
+    const blank = tx({
+      entry_type: "contribution",
+      goal: 9,
+      category: null,
+      description: "",
+    });
+    expect(entryTitle(blank, [], [goal()])).toBe("Trip");
+    expect(entryTitle(blank, [], [])).toBe("Savings");
+  });
+
+  it("falls back to the category for a blank expense, then to Untitled", () => {
+    expect(entryTitle(tx({ description: "" }), [FOOD], [])).toBe("Food");
+    expect(entryTitle(tx({ description: "", category: 99 }), [FOOD], [])).toBe(
+      "Untitled",
+    );
   });
 });
