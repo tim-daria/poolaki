@@ -83,6 +83,7 @@ function Goals() {
       />
       <TransactionForm
         open={transfer !== null}
+        direction={transfer?.direction}
         onClose={() => setTransfer(null)}
         goal={transfer?.goal.id}
         onSaved={refresh}

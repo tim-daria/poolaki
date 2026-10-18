@@ -33,19 +33,19 @@ import {
   contributionCategory,
 } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
-import { goalById, isArchived, isSpendable, type Goal } from "../../lib/goals";
+import { canTransfer, goalById, isSpendable, type Goal } from "../../lib/goals";
 import { GoalSpendField } from "./GoalSpendField";
 import { useGoals } from "../../hooks/useGoals";
 
 import {
   TransactionError,
   changeType,
-  contributionDraft,
   createTransaction,
   deleteTransaction,
   emptyDraft,
   isTransfer as isTransferType,
   toDraft,
+  transferDraft,
   updateTransaction,
   validateDraft,
   type EntryType,
@@ -53,6 +53,7 @@ import {
   type TransactionDraft,
 } from "../../lib/transactions";
 import { useCategories } from "../../hooks/useCategories";
+import { TransferDirection, type Direction } from "./TransferDirection";
 
 /** Why the type and goal are fixed for one opening of the form. */
 type LockReason = "editing" | "contributing";
@@ -72,6 +73,8 @@ interface Props {
    * `transaction` is set.
    */
   goal?: number;
+  /** With goal: which way the money moves. Defaults to a contribution. */
+  direction?: "contribution" | "withdraw";
 }
 
 /** Tab label per entry type. */
@@ -102,6 +105,7 @@ export function TransactionForm({
   transaction,
   onDeleted,
   goal,
+  direction,
 }: Props) {
   const org = useCurrentOrg();
   const categories = useCategories();
@@ -167,7 +171,7 @@ export function TransactionForm({
       const seeded = transaction
         ? toDraft(transaction)
         : goal !== undefined
-          ? contributionDraft(goal)
+          ? transferDraft(goal, direction ?? "contribution")
           : emptyDraft();
       setEditRow(transaction ?? null);
       setLockReason(
@@ -197,7 +201,7 @@ export function TransactionForm({
     e.preventDefault();
 
     // Stop before the request if the draft is incomplete.
-    const problem = validateDraft(draft);
+    const problem = validateDraft(draft, goals);
     if (problem) {
       setError(problem);
       return;
@@ -208,7 +212,13 @@ export function TransactionForm({
     // A transfer has no category picker, so it is filed under the workspace's
     // Contribution category. Null while the list loads; the backend allows it.
     const payload = isTransfer
-      ? { ...draft, category: contributionCategory(categories)?.id ?? null }
+      ? {
+          ...draft,
+          category:
+            draft.entry_type === "contribution"
+              ? (contributionCategory(categories)?.id ?? null)
+              : null,
+        }
       : draft;
     try {
       // A transfer may leave the description blank, in which case the goal name
@@ -274,7 +284,9 @@ export function TransactionForm({
         editing
           ? "Edit transaction"
           : lockReason === "contributing"
-            ? "Contribute to saving"
+            ? draft.entry_type === "withdraw"
+              ? "Withdraw"
+              : " Contribute"
             : "Add transaction"
       }
       onClose={guard.requestClose}
@@ -293,7 +305,11 @@ export function TransactionForm({
                  Also off when contributing to a goal, so that flow stays on
                  the Saving tab with the chosen goal. */
               disabled={locked}
-              value={draft.entry_type}
+              value={
+                draft.entry_type === "withdraw"
+                  ? "contribution"
+                  : draft.entry_type
+              }
               onChange={(_, value: EntryType | null) => {
                 // Null when the pressed tab was already selected; ignoring it
                 // keeps a tab from deselecting itself and clearing the form.
@@ -322,64 +338,74 @@ export function TransactionForm({
             )}
             {lockReason === "contributing" && (
               <Alert severity="info">
-                Contributing to {selectedGoal?.name ?? "this goal"}. To record
-                something else, add a transaction from the Transactions page.
+                {draft.entry_type === "withdraw"
+                  ? "Withdrawing from"
+                  : "Contributing to"}{" "}
+                {selectedGoal?.name ?? "this goal"}. To record something else,
+                add a transaction from the Transactions page.
               </Alert>
             )}
 
             {isTransfer ? (
-              <FieldLabel
-                label="Goal"
-                htmlFor="transaction-goal"
-                id="transaction-goal-label"
-              >
-                <TextField
-                  id="transaction-goal"
-                  select
-                  disabled={locked}
-                  /* null means "not picked yet", but MUI needs "" for that —
-                     passing null would make the field uncontrolled. */
-                  value={draft.goal ?? ""}
-                  onChange={(e) => set("goal", Number(e.target.value))}
-                  /* Collapsed, the field shows the name alone; the progress
-                     figures go in the helper text below. */
-                  slotProps={{
-                    select: {
-                      labelId: "transaction-goal-label",
-                      displayEmpty: true,
-                      renderValue: () =>
-                        selectedGoal?.name ?? (
-                          <Box
-                            component="span"
-                            sx={{ color: "text.secondary" }}
-                          >
-                            Select
-                          </Box>
-                        ),
-                    },
-                  }}
-                  helperText={
-                    selectedGoal ? progressLabel(selectedGoal) : undefined
-                  }
-                  required
+              <>
+                <TransferDirection
+                  value={draft.entry_type as Direction}
+                  onChange={(direction) => set("entry_type", direction)}
+                  disabled={editing}
+                />
+                <FieldLabel
+                  label="Saving"
+                  htmlFor="transaction-goal"
+                  id="transaction-goal-label"
                 >
-                  {goals
-                    .filter((g) => !isArchived(g))
-                    .map((g) => (
-                      <MenuItem key={g.id} value={g.id}>
-                        <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: "auto", pl: 3 }}
-                        >
-                          €{displayAmount(g.balance)} / €
-                          {displayAmount(g.target_amount)}
-                        </Typography>
-                      </MenuItem>
-                    ))}
-                </TextField>
-              </FieldLabel>
+                  <TextField
+                    id="transaction-goal"
+                    select
+                    disabled={locked}
+                    /* null means "not picked yet", but MUI needs "" for that —
+                     passing null would make the field uncontrolled. */
+                    value={draft.goal ?? ""}
+                    onChange={(e) => set("goal", Number(e.target.value))}
+                    /* Collapsed, the field shows the name alone; the progress
+                     figures go in the helper text below. */
+                    slotProps={{
+                      select: {
+                        labelId: "transaction-goal-label",
+                        displayEmpty: true,
+                        renderValue: () =>
+                          selectedGoal?.name ?? (
+                            <Box
+                              component="span"
+                              sx={{ color: "text.secondary" }}
+                            >
+                              Select
+                            </Box>
+                          ),
+                      },
+                    }}
+                    helperText={
+                      selectedGoal ? progressLabel(selectedGoal) : undefined
+                    }
+                    required
+                  >
+                    {goals
+                      .filter((g) => canTransfer(g))
+                      .map((g) => (
+                        <MenuItem key={g.id} value={g.id}>
+                          <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ ml: "auto", pl: 3 }}
+                          >
+                            €{displayAmount(g.balance)} / €
+                            {displayAmount(g.target_amount)}
+                          </Typography>
+                        </MenuItem>
+                      ))}
+                  </TextField>
+                </FieldLabel>
+              </>
             ) : (
               <FieldLabel
                 label="Category"

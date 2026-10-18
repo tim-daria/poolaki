@@ -110,7 +110,9 @@ export function GoalSpendField({
           disabled={disabled}
           /* null means "not picked yet", but MUI needs "" for that. */
           value={value ?? ""}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) =>
+            onChange(e.target.value === "" ? null : Number(e.target.value))
+          }
           slotProps={{
             select: {
               labelId: "transaction-spend-goal-label",
