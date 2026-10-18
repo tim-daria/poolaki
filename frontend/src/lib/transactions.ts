@@ -390,6 +390,10 @@ export async function updateTransaction(
       describeProblem(body) ?? "Could not save the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
   if (!res.ok) throw new Error(`Failed to update transaction (${res.status})`);
   const body: { transaction: TransactionDTO } = await res.json();
   return fromDTO(body.transaction);
@@ -417,6 +421,11 @@ export async function deleteTransaction(
       describeProblem(body) ?? "Could not delete the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
+
   if (!res.ok) throw new Error(`Failed to delete transaction (${res.status})`);
 }
 

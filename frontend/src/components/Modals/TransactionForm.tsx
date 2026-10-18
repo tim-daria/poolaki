@@ -54,6 +54,8 @@ import {
 } from "../../lib/transactions";
 import { useCategories } from "../../hooks/useCategories";
 import { TransferDirection, type Direction } from "./TransferDirection";
+import { useAuth } from "../../context/useAuth";
+import { canEditTransaction } from "../../lib/access";
 
 /** Why the type and goal are fixed for one opening of the form. */
 type LockReason = "editing" | "contributing";
@@ -109,6 +111,7 @@ export function TransactionForm({
 }: Props) {
   const org = useCurrentOrg();
   const categories = useCategories();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
   /**
@@ -119,6 +122,8 @@ export function TransactionForm({
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const editing = editRow !== null;
 
+  const foreign = editing && !canEditTransaction(editRow, user?.username);
+
   /**
    * Why the type and goal are fixed this opening; null when they are free.
    * One value, so every control that locks reads the same decision. State for
@@ -126,7 +131,7 @@ export function TransactionForm({
    * dialog fades, which would unlock the tabs mid-fade-out.
    */
   const [lockReason, setLockReason] = useState<LockReason | null>(null);
-  const locked = lockReason !== null;
+  const locked = lockReason !== null || foreign;
 
   /** One object holding every field, instead of one useState each. */
   const [draft, setDraft] = useState<TransactionDraft>(emptyDraft);
@@ -286,7 +291,7 @@ export function TransactionForm({
           : lockReason === "contributing"
             ? draft.entry_type === "withdraw"
               ? "Withdraw"
-              : " Contribute"
+              : "Contribute"
             : "Add transaction"
       }
       onClose={guard.requestClose}
@@ -332,8 +337,9 @@ export function TransactionForm({
             </ToggleButtonGroup>
             {lockReason === "editing" && (
               <Alert severity="info">
-                Type and goal cannot be edited after creation. To change these,
-                please delete this transaction and create a new one.
+                {foreign
+                  ? `This transaction is added by ${editRow.created_by}. Only they can change or delete it.`
+                  : "Type and goal cannot be edited after creation. To change these, please delete this transaction and create a new one."}
               </Alert>
             )}
             {lockReason === "contributing" && (
@@ -413,6 +419,7 @@ export function TransactionForm({
                 id="transaction-category-label"
               >
                 <TextField
+                  disabled={foreign}
                   id="transaction-category"
                   select
                   value={draft.category ?? ""}
@@ -450,6 +457,7 @@ export function TransactionForm({
             <FieldLabel label="Amount" htmlFor="transaction-amount">
               <MoneyField
                 id="transaction-amount"
+                disabled={foreign}
                 value={draft.amount}
                 onChange={(amount) => set("amount", amount)}
                 placeholder="0,00"
@@ -484,6 +492,7 @@ export function TransactionForm({
             >
               <TextInput
                 id="transaction-description"
+                disabled={foreign}
                 casing="name"
                 value={draft.description}
                 onChange={(description) => set("description", description)}
@@ -505,6 +514,7 @@ export function TransactionForm({
             >
               <IsoDatePicker
                 labelId="transaction-date-label"
+                disabled={foreign}
                 value={draft.transaction_date}
                 onChange={(iso) => set("transaction_date", iso)}
                 slotProps={{
@@ -533,7 +543,7 @@ export function TransactionForm({
         {/* Delete sits apart from the Cancel/Save pair, out of reach of a
             misdirected click on Save. */}
         <DialogActions sx={{ justifyContent: "space-between" }}>
-          {editing && (
+          {editing && !foreign && (
             <Button
               variant="outlined"
               color="error"
@@ -545,22 +555,24 @@ export function TransactionForm({
           )}
           <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
             <Button onClick={guard.requestClose} disabled={saving}>
-              Cancel
+              {foreign ? "Close" : "Cancel"}
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              // Nothing to save on an untouched edit.
-              disabled={saving || (editing && !guard.hasUnsavedChanges)}
-            >
-              {editing
-                ? saving
-                  ? "Saving…"
-                  : "Save changes"
-                : saving
-                  ? "Adding…"
-                  : "Add"}
-            </Button>
+            {!foreign && (
+              <Button
+                type="submit"
+                variant="contained"
+                // Nothing to save on an untouched edit.
+                disabled={saving || (editing && !guard.hasUnsavedChanges)}
+              >
+                {editing
+                  ? saving
+                    ? "Saving…"
+                    : "Save changes"
+                  : saving
+                    ? "Adding…"
+                    : "Add"}
+              </Button>
+            )}
           </Stack>
         </DialogActions>
       </form>
