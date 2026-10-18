@@ -53,6 +53,15 @@ export function monthHeading(iso: string): string {
   }).format(d);
 }
 
+/** "Saturday 17 October" (en-GB puts no comma): the Home greeting's line, in the app's one locale. */
+export function longDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(d);
+}
+
 /** "August", for the month an ISO date falls in. */
 export function monthName(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { month: "long" }).format(

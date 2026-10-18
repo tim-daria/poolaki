@@ -19,7 +19,7 @@ import { GoalForm } from "../../components/Modals/GoalForm";
 import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
-import { TODAY, monthName } from "../../lib/date";
+import { TODAY, longDate, monthName } from "../../lib/date";
 import { getGoals, type Goal } from "../../lib/goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -113,14 +113,7 @@ function Home() {
     <>
       {/* Personal workspaces have no members, so they show a greeting instead. */}
       {org.is_personal ? (
-        <PageTitle
-          title={greeting(now.getHours())}
-          subtitle={now.toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        />
+        <PageTitle title={greeting(now.getHours())} subtitle={longDate(now)} />
       ) : (
         <PageHeading>
           <OrgMembers />

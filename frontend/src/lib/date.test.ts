@@ -40,6 +40,13 @@ describe("date", () => {
     expect(monthHeading("2025-07-01")).toBe("July 2025");
   });
 
+  it("longDate is weekday, day and month, in English whatever the browser says", async () => {
+    const { longDate } = await loadWithClock("2026-03-15T12:00:00Z");
+    expect(longDate(new Date("2026-10-17T12:00:00"))).toBe(
+      "Saturday 17 October",
+    );
+  });
+
   it("monthName is the long English month", async () => {
     const { monthName } = await loadWithClock("2026-03-15T12:00:00Z");
     expect(monthName("2026-08-31")).toBe("August");
