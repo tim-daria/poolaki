@@ -34,6 +34,7 @@ export function OrgSwitcher() {
 
   return (
     <>
+      {/* A plain control, not a tab lookalike: no fill or border at rest. */}
       <Button
         onClick={(e) => setAnchor(e.currentTarget)}
         aria-haspopup="menu"
@@ -42,6 +43,8 @@ export function OrgSwitcher() {
         endIcon={
           <KeyboardArrowDownIcon
             sx={{
+              fontSize: "16px !important",
+              color: "text.secondary",
               transition: (theme) => theme.transitions.create("transform"),
               transform: anchor ? "rotate(180deg)" : "none",
             }}
@@ -50,22 +53,22 @@ export function OrgSwitcher() {
         // Truncation hides the full name, so keep it reachable on hover.
         title={currentOrg.name}
         sx={{
-          // Reads as a distinct control against the white AppBar by borrowing
-          // the page background behind it.
-          bgcolor: "background.default",
           color: "text.primary",
-          fontSize: "1.05rem",
+          fontSize: 15,
           fontWeight: 600,
-          px: 1.5,
+          minHeight: 44,
+          maxWidth: 240,
+          px: 1,
           py: 0.5,
-          "&:hover": { bgcolor: "primary.light" },
-          // Fixed so the header doesn't reflow when switching workspaces, but
-          // in rem so it tracks the root font size.
-          width: "14rem",
-          maxWidth: "100%",
-          justifyContent: "space-between",
-          // Without this the chevron is squeezed instead of the label.
-          "& .MuiButton-endIcon": { flexShrink: 0 },
+          gap: "10px",
+          justifyContent: "flex-start",
+          textAlign: "left",
+          "&:hover": { bgcolor: "action.hover" },
+          // Without these the icons are squeezed instead of the label.
+          "& .MuiButton-endIcon": {
+            m: 0,
+            flexShrink: 0,
+          },
         }}
       >
         <Box
