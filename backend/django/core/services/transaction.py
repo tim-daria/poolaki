@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
@@ -87,6 +87,46 @@ def list_transactions(
         paginator.num_pages,
         counts,
     )
+
+
+def last_three_months_start(today: date) -> date:
+    """First day of the month two months before `today`'s month; with `today`
+    it spans the last 3 calendar months (the AI transactions window)."""
+    year, month = today.year, today.month - 2
+    if month < 1:
+        year -= 1
+        month += 12
+    return date(year, month, 1)
+
+
+def get_org_ai_transactions(org: Organization) -> list[dict[str, Any]]:
+    """Static context for internal ai endpoint about transactions: all
+    income/expense transactions of the last 3 calendar months (inclusive),
+    newest first. Contribution/withdraw are internal goal transfers, not
+    income/expense events, and are excluded (mirrors the categories endpoint);
+    goal funding questions belong to the goals endpoint. The AI Service sends
+    no filters; the LLM narrows by category in context. Reuses the public
+    list's ordering so both stay deterministic (id breaks ties within a day)."""
+    today = date.today()
+    filters = TransactionFilters(
+        date_from=last_three_months_start(today), date_to=today, sort="newest"
+    )
+    qs = build_transaction_queryset(org.id, filters).filter(
+        entry_type__in=(EntryType.INCOME, EntryType.EXPENSE)
+    )
+    fields = ("id", "transaction_date", "description", "entry_type", "category__name", "amount")
+    raw = qs.values(*fields)
+    return [
+        {
+            "id": row["id"],
+            "date": row["transaction_date"],
+            "description": row["description"],
+            "entry_type": row["entry_type"],
+            "category": row["category__name"],
+            "amount": row["amount"],
+        }
+        for row in raw
+    ]
 
 
 def count_by_entry_type(qs: QuerySet[Transaction]) -> dict[str, int]:
