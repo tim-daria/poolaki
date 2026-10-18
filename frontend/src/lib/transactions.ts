@@ -25,6 +25,8 @@ export function isTransfer(entry_type: EntryType): boolean {
 /** The two entry types that are filed under a category. */
 export type TransactionType = "income" | "expense";
 
+export type TransactionPageFilters = TransactionFilters & { goal?: number };
+
 export type Transaction = {
   id: number;
   entry_type: EntryType;
@@ -403,7 +405,9 @@ export async function deleteTransaction(
 /** GET /api/v1/organizations/${org_id}/transactions/?… */
 export async function fetchTransactionPage(
   org_id: number,
-  f: TransactionFilters,
+  // `goal` is a caller-side filter: the Transactions page has no UI or URL
+  // param for it, so it stays out of TransactionFilters.
+  f: TransactionPageFilters,
   signal?: AbortSignal,
 ): Promise<TransactionPage> {
   const params = new URLSearchParams();
@@ -416,6 +420,7 @@ export async function fetchTransactionPage(
   if (f.to) params.set("date_to", f.to);
   if (f.categories.length) params.set("category_id", f.categories.join(","));
   if (f.taxDeductible) params.set("tax_deductible", "true");
+  if (f.goal !== undefined) params.set("goal_id", String(f.goal));
   if (f.page > 1) {
     params.set("page", String(f.page));
     params.set("page_size", String(PAGE_SIZE));
@@ -426,6 +431,12 @@ export async function fetchTransactionPage(
     `/api/v1/organizations/${org_id}/transactions/${query ? `?${query}` : ""}`,
     { credentials: "include", signal },
   );
+  if (res.status === 400) {
+    const body: unknown = await res.json().catch(() => null);
+    throw new TransactionError(
+      describeProblem(body) ?? "Could not load transactions",
+    );
+  }
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
 
   const data: {

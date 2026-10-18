@@ -217,21 +217,23 @@ describe("goals", () => {
 
   it("closestGoal picks the highest saved-to-target ratio among active goals", () => {
     const goals = [
-      goal({ id: 1, saved_amount: 2000 }),
+      goal({ id: 1, saved_amount: 2000, status: "completed" }),
       goal({ id: 2, saved_amount: 1000 }),
       goal({ id: 3, saved_amount: 1790 }),
       // Less left to save than goal 3, but a lower ratio.
       goal({ id: 4, target_amount: 10000, saved_amount: 9500 }),
     ];
     expect(closestGoal(goals)?.id).toBe(4);
-    expect(closestGoal([goal({ saved_amount: 2000 })])).toBeUndefined();
+    expect(
+      closestGoal([goal({ saved_amount: 2000, status: "completed" })]),
+    ).toBeUndefined();
     expect(closestGoal([goal({ status: "archived" })])).toBeUndefined();
   });
 
-  it("activeGoals drops reached and archived goals", () => {
+  it("activeGoals drops completed and archived goals", () => {
     const goals = [
       goal({ id: 1 }),
-      goal({ id: 2, saved_amount: 2000 }),
+      goal({ id: 2, saved_amount: 2000, status: "completed" }),
       goal({ id: 3, status: "archived" }),
     ];
     expect(activeGoals(goals).map((g) => g.id)).toEqual([1]);
