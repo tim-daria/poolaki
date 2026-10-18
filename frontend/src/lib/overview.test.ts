@@ -43,6 +43,8 @@ function goal(overrides: Partial<Goal> = {}): Goal {
     name: "Trip",
     target_amount: 2000,
     saved_amount: 1790,
+    balance: 1790,
+    spendable: false,
     target_date: null,
     status: "active",
     created_at: "2026-01-01T00:00:00Z",

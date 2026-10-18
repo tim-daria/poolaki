@@ -33,8 +33,9 @@ import {
   contributionCategory,
 } from "../../lib/categories";
 import { displayAmount } from "../../lib/money";
-import { goalById, isArchived, type Goal } from "../../lib/goals";
+import { goalById, isArchived, isSpendable, type Goal } from "../../lib/goals";
 import { SEED_GOALS } from "../../lib/goals.seed";
+import { GoalSpendField } from "./GoalSpendField";
 
 import {
   TransactionError,
@@ -53,6 +54,9 @@ import {
 } from "../../lib/transactions";
 import { useCategories } from "../../hooks/useCategories";
 
+/** Why the type and goal are fixed for one opening of the form. */
+type LockReason = "editing" | "contributing";
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -62,7 +66,11 @@ interface Props {
   transaction?: Transaction;
   /** Required alongside `transaction`: the Delete button lives in this modal. */
   onDeleted?: (id: number) => void;
-  /** Add flow only: open on the Saving tab with this goal chosen. Ignored when `transaction` is set. */
+  /**
+   * Add flow only: open on the Saving tab contributing to this goal. The type
+   * and goal are then fixed for that opening, like in edit mode. Ignored when
+   * `transaction` is set.
+   */
   goal?: number;
 }
 
@@ -107,6 +115,15 @@ export function TransactionForm({
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const editing = editRow !== null;
 
+  /**
+   * Why the type and goal are fixed this opening; null when they are free.
+   * One value, so every control that locks reads the same decision. State for
+   * the same reason as `editRow`: the Goals page clears its chosen goal as the
+   * dialog fades, which would unlock the tabs mid-fade-out.
+   */
+  const [lockReason, setLockReason] = useState<LockReason | null>(null);
+  const locked = lockReason !== null;
+
   /** One object holding every field, instead of one useState each. */
   const [draft, setDraft] = useState<TransactionDraft>(emptyDraft);
 
@@ -119,9 +136,17 @@ export function TransactionForm({
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  /**
+   * The expense's "Pay from goal" picker is open. Not part of the draft: the
+   * draft only records a chosen goal, and opening the picker is not a change
+   * worth guarding.
+   */
+  const [payingFromGoal, setPayingFromGoal] = useState(false);
+
   const isTransfer = isTransferType(draft.entry_type);
   const isExpense = draft.entry_type === "expense";
   const selectedGoal = goalById(SEED_GOALS, draft.goal);
+  const spendableGoals = SEED_GOALS.filter(isSpendable);
   const options = selectableCategories(categories, draft.entry_type);
 
   /** Tracks the open/closed edge, so the block below runs once per opening. */
@@ -144,7 +169,13 @@ export function TransactionForm({
           ? contributionDraft(goal)
           : emptyDraft();
       setEditRow(transaction ?? null);
+      setLockReason(
+        transaction ? "editing" : goal !== undefined ? "contributing" : null,
+      );
       setDraft(seeded);
+      setPayingFromGoal(
+        seeded.entry_type === "expense" && seeded.goal !== null,
+      );
       setError("");
       setConfirmingDelete(false);
       // Passed explicitly: the setStates above have not landed, so the guard
@@ -238,7 +269,13 @@ export function TransactionForm({
   return (
     <ModalShell
       open={open}
-      title={editing ? "Edit transaction" : "Add transaction"}
+      title={
+        editing
+          ? "Edit transaction"
+          : lockReason === "contributing"
+            ? "Contribute to saving"
+            : "Add transaction"
+      }
       onClose={guard.requestClose}
     >
       {/* The form wraps content AND actions, or Enter never reaches submit. */}
@@ -251,34 +288,23 @@ export function TransactionForm({
               exclusive
               fullWidth
               /* The backend's PATCH ignores entry_type and goal_id: a row keeps
-                 its type and goal for life, so the switch is off while editing. */
-              disabled={editing}
+                 its type and goal for life, so the switch is off while editing.
+                 Also off when contributing to a goal, so that flow stays on
+                 the Saving tab with the chosen goal. */
+              disabled={locked}
               value={draft.entry_type}
               onChange={(_, value: EntryType | null) => {
                 // Null when the pressed tab was already selected; ignoring it
                 // keeps a tab from deselecting itself and clearing the form.
                 if (!value) return;
                 setDraft((d) => changeType(d, value));
+                setPayingFromGoal(false);
                 setError("");
               }}
               aria-label="Transaction type"
               sx={{
-                bgcolor: "background.default",
                 borderRadius: 2,
-                p: 0.5,
-                gap: 0.5,
-                "& .MuiToggleButtonGroup-grouped": {
-                  border: 0,
-                  borderRadius: 2,
-                  py: 1,
-                  fontWeight: 700,
-                  color: "text.primary",
-                  "&.Mui-selected": {
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                    "&:hover": { bgcolor: "primary.main" },
-                  },
-                },
+                "& .MuiToggleButtonGroup-grouped": { py: 1 },
               }}
             >
               {TABS.map((tab) => (
@@ -287,21 +313,16 @@ export function TransactionForm({
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
-            {editing && (
-              <Alert
-                severity="info"
-                sx={{
-                  "& .MuiAlert-icon": {
-                    py: 1,
-                    height: "1lh",
-                    boxSizing: "content-box",
-                    alignItems: "center",
-                  },
-                }}
-              >
-                Type and savings target cannot be edited after creation. To
-                change these, please delete this transaction and create a new
-                one.
+            {lockReason === "editing" && (
+              <Alert severity="info">
+                Type and goal cannot be edited after creation. To change these,
+                please delete this transaction and create a new one.
+              </Alert>
+            )}
+            {lockReason === "contributing" && (
+              <Alert severity="info">
+                Contributing to {selectedGoal?.name ?? "this goal"}. To record
+                something else, add a transaction from the Transactions page.
               </Alert>
             )}
 
@@ -314,7 +335,7 @@ export function TransactionForm({
                 <TextField
                   id="transaction-goal"
                   select
-                  disabled={editing}
+                  disabled={locked}
                   /* null means "not picked yet", but MUI needs "" for that —
                      passing null would make the field uncontrolled. */
                   value={draft.goal ?? ""}
@@ -407,6 +428,22 @@ export function TransactionForm({
                 slotProps={{ input: amountAdornment }}
               />
             </FieldLabel>
+
+            {isExpense && (
+              <GoalSpendField
+                goals={spendableGoals}
+                value={draft.goal}
+                onChange={(g) => set("goal", g)}
+                amount={draft.amount}
+                expanded={payingFromGoal}
+                onExpand={() => setPayingFromGoal(true)}
+                onRemove={() => {
+                  set("goal", null);
+                  setPayingFromGoal(false);
+                }}
+                disabled={locked}
+              />
+            )}
 
             {/* The model has one free-text column, so this field is both the
                 row's label and its note. A transfer may leave it blank and

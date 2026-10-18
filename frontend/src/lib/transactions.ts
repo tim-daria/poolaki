@@ -36,7 +36,7 @@ export type Transaction = {
   /** ISO date string: YYYY-MM-DD */
   transaction_date: string;
   is_tax_deductible: boolean;
-  /** Goal ID. Present on contributions and withdrawals. */
+  /** Goal ID. Only present on contributions. */
   goal: number | null;
   /** Creator's username; null once that account is deleted. */
   created_by: string | null;
@@ -105,7 +105,7 @@ export type TransactionDraft = {
    * or if entry_type is contribution.
    */
   category: number | null;
-  /** Goal ID. Required on a contribution, always null on the other two. */
+  /** Goal ID. Required on a contribution, optional on an expense (paid from the goal), null on income. */
   goal: number | null;
   description: string;
   amount: string;
@@ -151,7 +151,8 @@ export function toDraft(t: Transaction): TransactionDraft {
 
 /**
  * Updates entry_type and resets incompatible fields (category, goal, tax deductible)
- * in a single update to prevent rendering or submitting invalid state.
+ * in a single update to prevent rendering or submitting invalid state. An
+ * expense's goal is dropped too: "pay from a goal" is opted into per expense.
  */
 export function changeType(
   draft: TransactionDraft,
