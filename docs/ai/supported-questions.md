@@ -15,7 +15,7 @@ Data retrieval is mainly performed through backend services using SQL-based quer
 
 The following are the initial supported questions for the MVP:
 
-Data retrieval is consolidated into four internal endpoints — `analytics/summary`, `analytics/categories`, `transactions`, and `categories` (see [API Contract](api/api-contract.md)).
+Data retrieval is consolidated into three internal endpoints — `analytics/summary`, `transactions`, and `categories` (see [API Contract](api/api-contract.md)).
 
 ---
 
@@ -89,7 +89,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/categories`
+`POST /api/internal/v1/categories`
 
 Expected Response:
 
@@ -114,7 +114,7 @@ Data Required:
 Retrieval: `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/categories`
+`POST /api/internal/v1/categories`
 
 Expected Response:
 

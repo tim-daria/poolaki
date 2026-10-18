@@ -21,9 +21,8 @@ Initial supported endpoints:
 | Frontend → Django | POST | `/api/v1/organizations/{org_id}/chat/` | Public chat endpoint (session auth) |
 | Django → AI | POST | `/api/v1/chat/` | Forward the user question to the AI Service |
 | AI → Django | POST | `/api/internal/v1/analytics/summary/` | Monthly income/expense for a year + current balance |
-| AI → Django | POST | `/api/internal/v1/analytics/categories/` | Monthly per-category breakdown for a year |
 | AI → Django | POST | `/api/internal/v1/transactions/` | Filtered transaction list |
-| AI → Django | POST | `/api/internal/v1/categories/` | Organization category list |
+| AI → Django | POST | `/api/internal/v1/categories/` | Organization income/expense categories, each with a monthly breakdown for a year |
 
 The internal endpoints are intentionally few: each returns a self-contained data set that covers a family of intents, so the AI Service can answer most questions with a single call.
 
@@ -126,11 +125,13 @@ Covers: "how much did I spend / earn this (last) month?", "am I spending more or
 - `totals` is the sum over the reported year.
 - `balance` is the organization balance **as of today, over the full transaction history** — it is not limited by `year`.
 
-### 2.2. Category Breakdown
+### 2.2. Categories
 
-`POST /api/internal/v1/analytics/categories/`
+`POST /api/internal/v1/categories/`
 
-Per-category, per-month distribution for a year, covering both income and expense categories.
+The organization's income and expense category list, each category carrying its per-month distribution for a year.
+
+Covers: category spending questions ("how much did I spend on food?", "what is my biggest expense category?") and category reference questions ("which categories do I have?", "which category fits this transaction?"), so the whole category intent family is answered by a single call.
 
 #### Request Schema
 
@@ -138,7 +139,7 @@ Per-category, per-month distribution for a year, covering both income and expens
 | --------------- | ------- | -------- | ---------------------------------------- |
 | user_id         | integer | yes      | User identifier used for authorization and data scoping |
 | organization_id | integer | yes      | Organization identifier                  |
-| year            | integer | no       | Year to report on, 4-digit. Default: current year |
+| year            | integer | no       | Year the per-category breakdown covers, 4-digit. Default: current year |
 
 #### Response Schema
 
@@ -147,14 +148,14 @@ Per-category, per-month distribution for a year, covering both income and expens
   "year": 2026,
   "categories": [
     {
-      "category_id": 12,
+      "id": 12,
       "name": "Salary",
       "type": "income",
       "total": "25200.00",
       "monthly": ["2200.00", "2200.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
     },
     {
-      "category_id": 4,
+      "id": 4,
       "name": "Food",
       "type": "expense",
       "total": "2300.00",
@@ -164,8 +165,9 @@ Per-category, per-month distribution for a year, covering both income and expens
 }
 ```
 
+- One row per income and expense category in the organization, including categories without activity in the year (zero-filled), so the AI Service can distinguish "no spending on Health this year" from "the category does not exist".
 - `monthly` is always 12 slots, index `0` = January, zero-filled. `total` equals the sum of `monthly`.
-- Only categories with at least one transaction in the year are returned; categories without activity are omitted.
+- Only income and expense categories are returned. The contribution category is excluded until the planned `withdraw` entry type lands: savings only make sense net of withdrawals, so contribution data is deferred with the goal endpoints (2.4).
 - Ordering: income categories first, then expense categories; within a type, by `total` descending, then by name. The biggest expense category is the first expense entry.
 
 ### 2.3. Transactions
@@ -241,33 +243,7 @@ Questions about periods **outside** the fetched window (e.g. "largest expense la
 }
 ```
 
-### 2.4. Categories
-
-`POST /api/internal/v1/categories/`
-
-The organization's category list.
-
-Used by the AI Service to answer category-related questions, e.g. which category fits a new transaction (VEC-003), together with the category definitions from the vector store.
-
-#### Request Schema
-
-| Field           | Type    | Required | Description                              |
-| --------------- | ------- | -------- | ---------------------------------------- |
-| user_id         | integer | yes      | User identifier used for authorization and data scoping |
-| organization_id | integer | yes      | Organization identifier                  |
-
-#### Response Schema
-
-```
-{
-  "categories": [
-    {"id": 4, "name": "Food", "type": "expense"},
-    {"id": 12, "name": "Salary", "type": "income"}
-  ]
-}
-```
-
-### 2.5. Deferred Endpoints (Goals)
+### 2.4. Deferred Endpoints (Goals)
 
 Goal endpoints are part of the planned contract but are **not implemented** in this iteration. The AI Service must not call them; goal questions (see [Supported AI Questions](../supported-questions.md)) are declined until the endpoints land.
 
