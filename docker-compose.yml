@@ -87,7 +87,6 @@ services:
       - /tmp:exec,mode=777
     networks:
       - backend_net
-      # - vault_net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -175,7 +174,6 @@ services:
       TZ: Europe/Berlin
     volumes:
       - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./backend/monitoring/prometheus_data:/var/prometheus
     networks:
       - tunnel_net
       - backend_net
@@ -451,7 +449,6 @@ volumes:
   caddy_config:
   coraza_logs:
   grafana_data:
-  prom_data:
   vault_data:
   vault_init:
   vault_id:
