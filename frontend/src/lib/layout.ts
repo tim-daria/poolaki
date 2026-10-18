@@ -14,3 +14,15 @@ export const TABLET = `@media (min-width:${TABLET_MIN_WIDTH}px)`;
 export const DESKTOP_MIN_WIDTH = 1024;
 export const DESKTOP = `@media (min-width:${DESKTOP_MIN_WIDTH}px)`;
 export const DESKTOP_QUERY = `(min-width:${DESKTOP_MIN_WIDTH}px)`;
+
+/**
+ * Header tabs appear from here; below it the bottom bar takes over. Separate
+ * from TABLET/DESKTOP on purpose: the header needs room for four tabs and
+ * the switcher, the overview grid needs room for its columns.
+ */
+export const NAV_DESKTOP_MIN_WIDTH = 860;
+export const NAV_DESKTOP = `@media (min-width:${NAV_DESKTOP_MIN_WIDTH}px)`;
+export const NAV_MOBILE_QUERY = `(max-width:${NAV_DESKTOP_MIN_WIDTH - 0.05}px)`;
+
+/** Side padding every page and the header bar share, so their edges line up at every width. */
+export const PAGE_PADDING = { px: 2, [TABLET]: { px: 3 } } as const;

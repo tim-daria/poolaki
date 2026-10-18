@@ -36,7 +36,7 @@ import { NetBalanceCard } from "./NetBalanceCard";
 import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
-import { DESKTOP, TABLET } from "./layout";
+import { DESKTOP, PAGE_PADDING, TABLET } from "../../lib/layout";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -143,12 +143,12 @@ function Home() {
   );
 
   const pageSx = {
-    px: 2,
+    ...PAGE_PADDING,
     pb: 5,
     display: "flex",
     flexDirection: "column",
     gap: 2,
-    [TABLET]: { px: 3, gap: 3 },
+    [TABLET]: { ...PAGE_PADDING[TABLET], gap: 3 },
   } as const;
 
   if (data === null) {

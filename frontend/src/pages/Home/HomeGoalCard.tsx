@@ -6,7 +6,7 @@ import type { Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
-import { TABLET } from "./layout";
+import { TABLET } from "../../lib/layout";
 
 interface Props {
   goals: Goal[];

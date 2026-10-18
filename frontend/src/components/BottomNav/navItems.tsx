@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import SyncAltOutlinedIcon from "@mui/icons-material/SyncAltOutlined";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 
 export interface NavItemDef {
@@ -19,7 +19,7 @@ export const NAV_ITEMS: NavItemDef[] = [
   // `end` stops "." from matching every route under /o/:orgId.
   { label: "Home", to: ".", end: true, icon: <DashboardOutlinedIcon /> },
   { label: "Transactions", to: "transactions", icon: <SyncAltOutlinedIcon /> },
-  { label: "Savings", to: "savings", icon: <FavoriteBorderIcon /> },
+  { label: "Savings", to: "savings", icon: <SavingsOutlinedIcon /> },
   { label: "Reports", to: "reports", icon: <BarChartOutlinedIcon /> },
 ];
 
@@ -28,8 +28,3 @@ export const LEGAL_LINKS = [
   { to: "/terms", label: "Terms of Use" },
   { to: "/policy", label: "Privacy Policy" },
 ];
-
-/** From here the header shows the page tabs; below it, the bottom bar. */
-export const NAV_DESKTOP_MIN_WIDTH = 860;
-export const NAV_DESKTOP = `@media (min-width:${NAV_DESKTOP_MIN_WIDTH}px)`;
-export const NAV_MOBILE_QUERY = `(max-width:${NAV_DESKTOP_MIN_WIDTH - 0.05}px)`;

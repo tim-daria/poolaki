@@ -7,7 +7,8 @@ import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { BottomNav } from "./BottomNav/BottomNav";
-import { LEGAL_LINKS, NAV_MOBILE_QUERY } from "./BottomNav/navItems";
+import { LEGAL_LINKS } from "./BottomNav/navItems";
+import { NAV_MOBILE_QUERY, PAGE_PADDING } from "../lib/layout";
 import { useScrollingDown } from "../hooks/useScrollingDown";
 
 /**
@@ -80,18 +81,17 @@ export function AppLayout() {
           overflowY: "auto",
         }}
       >
-        {/* Same column, side padding and scroll container as the page, so the
+        {/* Same column, PAGE_PADDING and scroll container as the pages, so the
             bar's edges line up with the cards below it at every width, with
             or without a scrollbar, and it scrolls away with them. */}
+
         <Box
           sx={{
             width: "100%",
-            // Always the full column: a narrow page narrows its content, not
-            // the bar, which needs the room for switcher, tabs and controls.
             maxWidth: contentMaxWidth,
             mx: "auto",
-            // Switches at 600px like the pages (Home's TABLET breakpoint).
-            px: { xs: 2, sm: 3 },
+            // The pages share this exact padding, so the bar's edges meet theirs.
+            ...PAGE_PADDING,
             pt: 2,
           }}
         >

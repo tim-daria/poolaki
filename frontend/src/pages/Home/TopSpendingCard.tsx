@@ -9,7 +9,7 @@ import {
   type SpendingSlice,
 } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
-import { TABLET } from "./layout";
+import { TABLET } from "../../lib/layout";
 
 interface Props {
   slices: SpendingSlice[];

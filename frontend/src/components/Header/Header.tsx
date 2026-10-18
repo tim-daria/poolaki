@@ -27,7 +27,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../BottomNav/navItems";
+import { NAV_DESKTOP } from "../../lib/layout";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";

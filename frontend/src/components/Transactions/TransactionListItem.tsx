@@ -23,7 +23,7 @@ import {
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
 import type { Transaction } from "../../lib/transactions";
-import { TABLET } from "../../pages/Home/layout";
+import { TABLET } from "../../lib/layout";
 
 /** Space between rows; the hairline sits halfway down it. */
 export const ROW_GAP = 24;
