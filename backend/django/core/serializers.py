@@ -494,7 +494,7 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
 
 
 class AiAnalyticsSummaryQuerySerializer(serializers.Serializer[dict[str, Any]]):
-    """Body of POST /api/internal/v1/analytics/summary/: user and org arrive
+    """Inside internal endpoints user and org arrive
     in the body (service-to-service convention), not in the session or URL."""
 
     user_id = serializers.IntegerField()

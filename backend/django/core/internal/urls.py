@@ -12,6 +12,6 @@ urlpatterns = [
         AiAnalyticsSummaryView.as_view(),
         name="ai-analytics-summary",
     ),
-    # Remaining contract endpoints (analytics/categories, transactions,
+    # Remaining contract endpoints (categories, transactions,
     # categories) are added here as they are implemented.
 ]
