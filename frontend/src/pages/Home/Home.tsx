@@ -64,8 +64,8 @@ function readDismissed(orgId: number): boolean {
 type Modal = "transaction" | "goal" | "balance" | null;
 
 type Loaded = {
-  /** This year's report: the month's income and expenses, spending by category. */
-  report: YearlyReportResponse;
+  /** This year's report: the month's income and expenses, spending by category. Null when it failed. */
+  report: YearlyReportResponse | null;
   /** The newest RECENT_ROWS rows. */
   recent: Transaction[];
   /** This month's rows, for the savings figure the report does not carry yet. */
@@ -96,8 +96,18 @@ function Home() {
   useEffect(() => {
     const controller = new AbortController();
     const { from, to } = monthBounds(TODAY);
+    const report = fetchYearlyReport(
+      org.id,
+      Number(TODAY.slice(0, 4)),
+      controller.signal,
+    ).catch((e: unknown) => {
+      if (controller.signal.aborted) throw e;
+      // The cause goes to the console; the cards say only that it is missing.
+      console.error(e);
+      return null;
+    });
     Promise.all([
-      fetchYearlyReport(org.id, Number(TODAY.slice(0, 4)), controller.signal),
+      report,
       fetchTransactions(org.id, { pageSize: RECENT_ROWS }, controller.signal),
       // TODO(report): drop once the report carries contribution and withdraw sums.
       fetchTransactions(org.id, { from, to, pageSize: 100 }, controller.signal),
@@ -180,11 +190,13 @@ function Home() {
   }
 
   const { report, recent, monthRows, balance, goals, categories } = data;
-  const summary = monthSummary(report, monthRows, TODAY);
-  const scaleMax = columnScaleMax(
-    [summary.income, summary.expenses, summary.saved],
-    DEFAULT_SCALE_FLOOR,
-  );
+  const summary = report && monthSummary(report, monthRows, TODAY);
+  const scaleMax = summary
+    ? columnScaleMax(
+        [summary.income, summary.expenses, summary.saved],
+        DEFAULT_SCALE_FLOOR,
+      )
+    : DEFAULT_SCALE_FLOOR;
 
   // Personal workspaces only: a shared one has its balance from creation and
   // its members already know the app.
@@ -243,7 +255,7 @@ function Home() {
         >
           <NetBalanceCard
             balance={balance}
-            change={balanceChange(summary)}
+            change={summary && balanceChange(summary)}
             monthStart={`${TODAY.slice(0, 7)}-01`}
           />
         </Box>
@@ -311,7 +323,7 @@ function Home() {
         />
         <TopSpendingCard
           sx={{ gridArea: "spending" }}
-          slices={spendingByCategory(report, TODAY)}
+          slices={report && spendingByCategory(report, TODAY)}
         />
         <HomeGoalCard
           sx={{ gridArea: "goal" }}

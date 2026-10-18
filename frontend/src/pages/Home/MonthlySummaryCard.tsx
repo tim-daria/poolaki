@@ -4,11 +4,13 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Money } from "../../components/Money";
 import { displayAmount, displayFigure } from "../../lib/money";
 import { monthFooter, type MonthSummary } from "../../lib/overview";
-import { HomeCardAction } from "./HomeCard";
+import { HomeCardAction, HomeCardProblem } from "./HomeCard";
 import { DESKTOP } from "../../lib/layout";
+import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
 interface Props {
-  summary: MonthSummary;
+  /** Null when the report did not load; the card then says so. */
+  summary: MonthSummary | null;
   /** The month's name, e.g. "September". */
   month: string;
   /** Value that fills a full-height column. */
@@ -98,8 +100,8 @@ function Column({
 }
 
 export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
-  const footer = monthFooter(summary);
-  const empty = footer.kind === "empty";
+  const footer = summary && monthFooter(summary);
+  const empty = !footer || footer.kind === "empty";
 
   return (
     <Box
@@ -118,58 +120,64 @@ export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
         {!empty && <HomeCardAction>More info</HomeCardAction>}
       </Stack>
 
-      {/* Columns share one baseline: each stacks label then bar at its bottom. */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          alignItems: "end",
-          columnGap: 2,
-          textAlign: "center",
-          py: 2,
-        }}
-      >
-        {COLUMNS.map((c) => (
-          <Column
-            key={c.key}
-            value={summary[c.key]}
-            scaleMax={scaleMax}
-            bar={c.bar}
-            barOpacity={c.barOpacity}
-            text={c.text}
-            label={c.label}
-          />
-        ))}
-      </Box>
+      {!footer && <HomeCardProblem>{REPORT_UNAVAILABLE}</HomeCardProblem>}
 
-      <Typography sx={{ color: "text.secondary", mt: "auto" }}>
-        {footer.kind === "empty" && "Nothing this month yet"}
-        {footer.kind === "left" && (
-          <>
-            <Money sx={{ color: "text.primary" }}>
-              €{displayFigure(footer.amount)}
-            </Money>{" "}
-            left after spending and saving
-          </>
-        )}
-        {footer.kind === "over" && (
-          <>
-            <Money sx={{ color: "error.main" }}>
-              €{displayFigure(footer.amount)}
-            </Money>{" "}
-            more than you received
-          </>
-        )}
-        {footer.kind === "no-income" && (
-          <>
-            Income not received yet ·{" "}
-            <Money sx={{ color: "text.primary" }}>
-              €{displayFigure(footer.amount)}
-            </Money>{" "}
-            spent so far
-          </>
-        )}
-      </Typography>
+      {/* Columns share one baseline: each stacks label then bar at its bottom. */}
+      {footer && (
+        <>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              alignItems: "end",
+              columnGap: 2,
+              textAlign: "center",
+              py: 2,
+            }}
+          >
+            {COLUMNS.map((c) => (
+              <Column
+                key={c.key}
+                value={summary[c.key]}
+                scaleMax={scaleMax}
+                bar={c.bar}
+                barOpacity={c.barOpacity}
+                text={c.text}
+                label={c.label}
+              />
+            ))}
+          </Box>
+
+          <Typography sx={{ color: "text.secondary", mt: "auto" }}>
+            {footer.kind === "empty" && "Nothing this month yet"}
+            {footer.kind === "left" && (
+              <>
+                <Money sx={{ color: "text.primary" }}>
+                  €{displayFigure(footer.amount)}
+                </Money>{" "}
+                left after spending and saving
+              </>
+            )}
+            {footer.kind === "over" && (
+              <>
+                <Money sx={{ color: "error.main" }}>
+                  €{displayFigure(footer.amount)}
+                </Money>{" "}
+                more than you received
+              </>
+            )}
+            {footer.kind === "no-income" && (
+              <>
+                Income not received yet ·{" "}
+                <Money sx={{ color: "text.primary" }}>
+                  €{displayFigure(footer.amount)}
+                </Money>{" "}
+                spent so far
+              </>
+            )}
+          </Typography>
+        </>
+      )}
     </Box>
   );
 }

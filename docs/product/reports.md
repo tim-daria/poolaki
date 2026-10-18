@@ -24,6 +24,18 @@ The reports page provides visual and consolidated financial summaries, allowing 
 
 - **Category table:** Displays the total transactions per category.
 
+## When the report fails
+
+The Home page reads this month's income, expenses and top-spending split
+from the report. If that request fails, the rest of Home still renders:
+the balance, recent activity and the goal card come from other requests,
+and only the month card and the top-spending card show a message in place
+of their figures. The Reports page shows the same message instead of its
+charts.
+
+The failure itself is logged to the browser console, so the message on the
+card never hides the real cause from a developer.
+
 ## Related Concepts
 
 - Transaction

@@ -10,6 +10,7 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
 
 interface HomeCardProps {
   title: string;
@@ -103,5 +104,19 @@ export function HomeCardAction({ children }: { children: ReactNode }) {
     >
       {children}
     </Box>
+  );
+}
+
+/** A card's body when its figures could not load: one sentence where the data was. */
+export function HomeCardProblem({ children }: { children: ReactNode }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ alignItems: "center", color: "text.secondary", flex: 1 }}
+    >
+      <ErrorOutlineIcon fontSize="small" sx={{ flexShrink: 0 }} />
+      <Typography role="status">{children}</Typography>
+    </Stack>
   );
 }

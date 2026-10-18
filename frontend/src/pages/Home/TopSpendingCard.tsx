@@ -15,11 +15,13 @@ import {
   shareLabel,
   type SpendingSlice,
 } from "../../lib/overview";
-import { HomeCard, HomeCardAction } from "./HomeCard";
+import { HomeCard, HomeCardAction, HomeCardProblem } from "./HomeCard";
 import { TABLET } from "../../lib/layout";
+import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
 interface Props {
-  slices: SpendingSlice[];
+  /** Null when the report did not load; the card then says so. */
+  slices: SpendingSlice[] | null;
   /** Placement in the page grid. */
   sx?: SxProps<Theme>;
 }
@@ -50,6 +52,18 @@ function figureFontSize(text: string): number {
 export function TopSpendingCard({ slices, sx }: Props) {
   const theme = useTheme();
   const colors = theme.palette.chart;
+
+  if (slices === null) {
+    return (
+      <HomeCard
+        title="Top spending"
+        sx={[{ [TABLET]: { flex: 1 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+      >
+        <HomeCardProblem>{REPORT_UNAVAILABLE}</HomeCardProblem>
+      </HomeCard>
+    );
+  }
+
   const total = slices.reduce((sum, s) => sum + s.amount, 0);
   const empty = total === 0;
   const shares = donutShares(slices.map((s) => s.amount));

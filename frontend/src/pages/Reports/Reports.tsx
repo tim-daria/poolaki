@@ -31,6 +31,7 @@ import { MonthlyChart } from "./MonthlyChart";
 import { Segmented } from "./Segmented";
 import { eur } from "./eur";
 import { PAGE_PADDING } from "../../lib/layout";
+import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
 const cardSx = {
   borderRadius: 4,
@@ -146,7 +147,7 @@ export function Component() {
     return (
       <Box sx={{ p: 4 }}>
         <Typography sx={{ color: "error.main" }}>
-          Error loading report data.
+          {REPORT_UNAVAILABLE}
         </Typography>
       </Box>
     );
