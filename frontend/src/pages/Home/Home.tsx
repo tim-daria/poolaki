@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import { Alert, Box, CircularProgress, Paper } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { useCategories } from "../../hooks/useCategories";
 import {
   PageActionButton,
   PageHeading,
@@ -37,6 +36,7 @@ import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
 import { DESKTOP, PAGE_PADDING, TABLET } from "../../lib/layout";
+import { fetchCategories, type Category } from "../../lib/categories";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -59,11 +59,15 @@ function readDismissed(orgId: number): boolean {
 
 type Modal = "transaction" | "goal" | "balance" | null;
 
-type Loaded = { rows: Transaction[]; balance: number; goals: Goal[] };
+type Loaded = {
+  rows: Transaction[];
+  balance: number;
+  goals: Goal[];
+  categories: Category[];
+};
 
 function Home() {
   const org = useCurrentOrg();
-  const categories = useCategories();
   const now = new Date();
 
   const [data, setData] = useState<Loaded | null>(null);
@@ -85,10 +89,11 @@ function Home() {
     Promise.all([
       fetchTransactions(org.id, controller.signal),
       fetchBalance(org.id, controller.signal),
-      getGoals(org.id),
+      getGoals(org.id, controller.signal),
+      fetchCategories(org.id, controller.signal),
     ])
-      .then(([rows, balance, goals]) => {
-        setData({ rows, balance, goals });
+      .then(([rows, balance, goals, categories]) => {
+        setData({ rows, balance, goals, categories });
         setError(null);
       })
       .catch((e: unknown) => {
@@ -161,7 +166,7 @@ function Home() {
     );
   }
 
-  const { rows, balance, goals } = data;
+  const { rows, balance, goals, categories } = data;
   const summary = monthSummary(rows, TODAY);
   const scaleMax = columnScaleMax(
     [summary.income, summary.expenses, summary.saved],
@@ -259,62 +264,47 @@ function Home() {
         </Box>
       </Paper>
 
-      {/* Desktop: activity beside a sidebar, both columns one height. The
-          goal card keeps its size; the spending card and the activity list
-          take up whatever the other column adds. Phones: one column, with
-          the goal ahead of spending; the sidebar dissolves (display:
-          contents) so its cards can take their own order. */}
+      {/* One grid, three named areas. Phone: a column, the goal ahead of
+          spending. Tablet: the list full width, the two cards sharing a row.
+          Desktop: the list beside a sidebar of the two cards, spending on top
+          and stretching so the ring shrinks with the row it is given. */}
       <Box
         sx={{
           display: "grid",
           gap: 2,
           gridTemplateColumns: "minmax(0, 1fr)",
-          [DESKTOP]: {
+          gridTemplateAreas: `"activity" "goal" "spending"`,
+          [TABLET]: {
             gap: 3,
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateAreas: `"activity activity" "spending goal"`,
+          },
+          [DESKTOP]: {
             // The sidebar gives way on narrow desktops so the activity card
             // keeps room for its rows.
             gridTemplateColumns: "minmax(0, 1fr) min(380px, 40%)",
-            alignItems: "stretch",
+            gridTemplateRows: "1fr auto",
+            gridTemplateAreas: `"activity spending" "activity goal"`,
           },
         }}
       >
         <RecentActivityCard
+          sx={{ gridArea: "activity" }}
           rows={recentTransactions(rows, RECENT_ROWS)}
           categories={categories}
           goals={goals}
           shared={!org.is_personal}
           onAdd={() => setModal("transaction")}
         />
-        <Box
-          sx={{
-            display: "contents",
-            // Tablet: the two cards share a row; desktop: a column beside the list.
-            [TABLET]: {
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 3,
-            },
-            [DESKTOP]: {
-              display: "flex",
-              flexDirection: "column",
-            },
-          }}
-        >
-          <Box
-            sx={{
-              order: 2,
-              [TABLET]: { order: 0, display: "flex" },
-              [DESKTOP]: { flex: 1 },
-            }}
-          >
-            <TopSpendingCard
-              slices={spendingByCategory(rows, TODAY, categories)}
-            />
-          </Box>
-          <Box sx={{ order: 1, [TABLET]: { order: 0, display: "flex" } }}>
-            <HomeGoalCard goals={goals} onCreateGoal={() => setModal("goal")} />
-          </Box>
-        </Box>
+        <TopSpendingCard
+          sx={{ gridArea: "spending" }}
+          slices={spendingByCategory(rows, TODAY, categories)}
+        />
+        <HomeGoalCard
+          sx={{ gridArea: "goal" }}
+          goals={goals}
+          onCreateGoal={() => setModal("goal")}
+        />
       </Box>
 
       {modals}

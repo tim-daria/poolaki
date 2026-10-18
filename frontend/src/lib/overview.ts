@@ -104,14 +104,6 @@ export function balanceChange(
   return s.left;
 }
 
-/** Days after `today` until the month ends, so the last day reports 0. */
-export function daysLeftInMonth(today: string): number {
-  const [y, m, d] = today.split("-").map(Number);
-  // Day 0 of the next month is the last day of this one.
-  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return lastDay - d;
-}
-
 /* ---------------------------------- */
 /*         Spending by category       */
 /* ---------------------------------- */

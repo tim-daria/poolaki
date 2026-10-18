@@ -16,15 +16,6 @@ function parseLocalDate(iso: string): Date {
   return new Date(`${iso}T00:00:00`);
 }
 
-/** "5 Aug 2026", always with the year. */
-export function fullDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${iso}T00:00:00`));
-}
-
 /** "5 Aug", with the year appended only when it is not the current one. */
 export function shortDate(iso: string): string {
   const d = parseLocalDate(iso);

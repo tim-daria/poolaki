@@ -1,6 +1,13 @@
 /** @file Top spending card: this month's expenses as a donut of the top three categories plus Other. */
 
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 import { Money } from "../../components/Money";
 import { displayFigure, displayWhole } from "../../lib/money";
 import {
@@ -13,6 +20,8 @@ import { TABLET } from "../../lib/layout";
 
 interface Props {
   slices: SpendingSlice[];
+  /** Placement in the page grid. */
+  sx?: SxProps<Theme>;
 }
 
 /** The ring is this size everywhere; the legend takes what is left. */
@@ -38,7 +47,7 @@ function figureFontSize(text: string): number {
   return Math.min(FIGURE_MAX_SIZE, HOLE_WIDTH / (text.length * GLYPH_EM));
 }
 
-export function TopSpendingCard({ slices }: Props) {
+export function TopSpendingCard({ slices, sx }: Props) {
   const theme = useTheme();
   const colors = theme.palette.chart;
   const total = slices.reduce((sum, s) => sum + s.amount, 0);
@@ -76,13 +85,17 @@ export function TopSpendingCard({ slices }: Props) {
       title="Top spending"
       to={empty ? undefined : "reports"}
       action={!empty && <HomeCardAction>See all</HomeCardAction>}
-      sx={{
-        containerType: "inline-size",
-        containerName: "spending-card",
-        // Beside a taller card it grows to match; the ring and legend stay
-        // centred in the extra room.
-        [TABLET]: { flex: 1 },
-      }}
+      sx={[
+        {
+          containerType: "inline-size",
+          containerName: "spending-card",
+          // Beside a taller card it grows to match; the ring and legend stay
+          // centred in the extra room.
+          [TABLET]: { flex: 1 },
+        },
+        // The caller places the card in the page grid.
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     >
       {/* Ring beside legend; a narrow card stacks them. `gap`, not Stack
           spacing, since spacing is a margin on one axis. */}

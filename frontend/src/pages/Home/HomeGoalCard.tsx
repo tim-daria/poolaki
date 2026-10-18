@@ -1,6 +1,14 @@
 /** @file Goal card: the active goal closest to completion, or an invitation to create the first one. */
 
-import { Box, Button, LinearProgress, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  LinearProgress,
+  Stack,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 import { Money } from "../../components/Money";
 import type { Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
@@ -11,15 +19,17 @@ import { TABLET } from "../../lib/layout";
 interface Props {
   goals: Goal[];
   onCreateGoal: () => void;
+  /** Placement in the page grid. */
+  sx?: SxProps<Theme>;
 }
 
-export function HomeGoalCard({ goals, onCreateGoal }: Props) {
+export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
   const active = activeGoals(goals);
   const goal = closestGoal(goals);
 
   if (!goal) {
     return (
-      <HomeCard title="Goal" sx={{ [TABLET]: { flex: 1 } }}>
+      <HomeCard title="Goal" sx={sx}>
         <Stack spacing={1.5}>
           <Typography sx={{ fontWeight: 600 }}>
             Save toward something
@@ -49,6 +59,7 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
 
   return (
     <HomeCard
+      sx={sx}
       title="Almost there"
       to="savings"
       action={
@@ -56,9 +67,6 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
           {active.length === 1 ? "Manage" : "All goals"}
         </HomeCardAction>
       }
-      // Fills its cell when paired with the spending card; the content
-      // centres in the extra room.
-      sx={{ [TABLET]: { flex: 1 } }}
     >
       <Stack spacing={1.25} sx={{ [TABLET]: { my: "auto" } }}>
         <Box

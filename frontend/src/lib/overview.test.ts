@@ -14,7 +14,6 @@ import {
   previousMonthOf,
   previousMonthSummary,
   shareLabel,
-  daysLeftInMonth,
   goalPercent,
   monthSummary,
   recentTransactions,
@@ -101,18 +100,6 @@ describe("monthSummary", () => {
 
   it("reports a negative remainder when overspent", () => {
     expect(monthSummary([tx({ amount: 50 })], "2026-08-01").left).toBe(-50);
-  });
-});
-
-describe("daysLeftInMonth", () => {
-  it("counts the days after today", () => {
-    expect(daysLeftInMonth("2026-08-03")).toBe(28);
-    expect(daysLeftInMonth("2026-08-31")).toBe(0);
-  });
-
-  it("handles February in leap years", () => {
-    expect(daysLeftInMonth("2028-02-01")).toBe(28);
-    expect(daysLeftInMonth("2026-02-01")).toBe(27);
   });
 });
 

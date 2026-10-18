@@ -1,6 +1,13 @@
 /** @file Recent activity card: the latest entries, sized for five rows on desktop. */
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Stack,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 import {
   ROW_GAP,
   TransactionList,
@@ -13,13 +20,15 @@ import { HomeCard, HomeCardAction } from "./HomeCard";
 import { DESKTOP } from "../../lib/layout";
 
 interface Props {
-  /** Newest first. */
+  /** Newest first, at most RECENT_ROWS: the caller limits via recentTransactions. */
   rows: Transaction[];
   categories: Category[];
   goals: Goal[];
   /** Adds the person column. */
   shared: boolean;
   onAdd: () => void;
+  /** Placement in the page grid. */
+  sx?: SxProps<Theme>;
 }
 
 export const RECENT_ROWS = 5;
@@ -46,10 +55,11 @@ export function RecentActivityCard({
   goals,
   shared,
   onAdd,
+  sx,
 }: Props) {
   if (rows.length === 0) {
     return (
-      <HomeCard title="Recent activity">
+      <HomeCard title="Recent activity" sx={sx}>
         <Stack
           spacing={1}
           sx={[
@@ -86,6 +96,7 @@ export function RecentActivityCard({
 
   return (
     <HomeCard
+      sx={sx}
       title="Recent activity"
       to="transactions"
       action={<HomeCardAction>See all</HomeCardAction>}
@@ -99,7 +110,7 @@ export function RecentActivityCard({
               rows.length >= RECENT_ROWS ? "space-between" : "start",
           }}
         >
-          {rows.slice(0, RECENT_ROWS).map((t) => (
+          {rows.map((t) => (
             <TransactionListItem
               key={t.id}
               transaction={t}
