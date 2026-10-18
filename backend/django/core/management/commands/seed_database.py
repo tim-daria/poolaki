@@ -3,12 +3,12 @@
 import json
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from dotenv import load_dotenv
-from typing import Any
 
 from core.models import Category, Membership, Organization, Role
 from core.services.organization import create_shared_organization
@@ -77,9 +77,7 @@ class Command(BaseCommand):
 
         if membership is None:
             shared_org = create_shared_organization(
-                shared_org_name,
-                Decimal("200.00"),
-                users["bob"]
+                shared_org_name, Decimal("200.00"), users["bob"]
             )
         else:
             shared_org = membership.org
