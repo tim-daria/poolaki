@@ -239,13 +239,35 @@ def test_rows_carry_contract_shape(
     data = post_transactions(api_client, ai_user, ai_org).json()
     row = data["transactions"][0]
 
-    assert set(row) == {"id", "date", "description", "entry_type", "category", "amount"}
+    assert set(row) == {"id", "date", "description", "entry_type", "category", "goal", "amount"}
     assert row["id"] == txn.id
     assert row["date"] == today
     assert row["description"] == "Groceries"
     assert row["entry_type"] == "expense"
     assert row["category"] == "Food"
+    assert row["goal"] is None
     assert row["amount"] == "50.50"
+
+
+def test_goal_name_present_when_linked(
+    api_client: APIClient, ai_user: User, ai_org: Organization, ai_categories: dict[str, Category]
+) -> None:
+    today = date.today().isoformat()
+    vacation = Goal.objects.create(org=ai_org, name="Vacation", target_amount=Decimal("3000.00"))
+    add_transaction(
+        ai_org,
+        "expense",
+        "120.00",
+        today,
+        ai_categories["food"],
+        description="Hotel",
+        goal=vacation,
+    )
+
+    rows = post_transactions(api_client, ai_user, ai_org).json()["transactions"]
+
+    row = next(r for r in rows if r["description"] == "Hotel")
+    assert row["goal"] == "Vacation"
 
 
 def test_other_orgs_transactions_excluded(

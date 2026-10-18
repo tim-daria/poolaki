@@ -114,7 +114,15 @@ def get_org_ai_transactions(org: Organization) -> list[dict[str, Any]]:
     qs = build_transaction_queryset(org.id, filters).filter(
         entry_type__in=(EntryType.INCOME, EntryType.EXPENSE)
     )
-    fields = ("id", "transaction_date", "description", "entry_type", "category__name", "amount")
+    fields = (
+        "id",
+        "transaction_date",
+        "description",
+        "entry_type",
+        "category__name",
+        "goal__name",
+        "amount",
+    )
     raw = qs.values(*fields)
     return [
         {
@@ -123,6 +131,7 @@ def get_org_ai_transactions(org: Organization) -> list[dict[str, Any]]:
             "description": row["description"],
             "entry_type": row["entry_type"],
             "category": row["category__name"],
+            "goal": row["goal__name"],
             "amount": row["amount"],
         }
         for row in raw

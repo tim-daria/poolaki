@@ -527,6 +527,7 @@ class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
     description = serializers.CharField(allow_null=True)
     entry_type = serializers.ChoiceField(choices=EntryType.choices)
     category = serializers.CharField(allow_null=True)
+    goal = serializers.CharField(allow_null=True)
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
