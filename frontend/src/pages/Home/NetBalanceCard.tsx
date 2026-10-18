@@ -1,96 +1,102 @@
-/** @file Net balance card: the workspace's spendable funds, or how to add some when there are none. */
+/** @file Net balance half of the top card: the figure, fitted to its width, and the change since the 1st. */
 
-import { Link, Typography } from "@mui/material";
+import { useRef } from "react";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 import { Money } from "../../components/Money";
-import { displayAmount } from "../../lib/money";
-import { ComingSoon } from "../../components/Settings/SettingsCard";
-import { CAN_SET_SHARED_STARTING_BALANCE } from "../../lib/initialBalance";
-import { HomeCard } from "./HomeCard";
+import { useElementSize } from "../../hooks/useElementSize";
+import { shortDate } from "../../lib/date";
+import { compactAmount, displayFigure, splitCents } from "../../lib/money";
+import { DESKTOP_QUERY } from "./layout";
 
 interface Props {
   balance: number;
-  /** Only the personal workspace has a starting-balance endpoint so far. */
-  isPersonal: boolean;
-  onSetStartingBalance: () => void;
-  onAddIncome: () => void;
+  /** Since the first of the month; null when nothing predates the month. */
+  change: number | null;
+  /** First day of the month, ISO. */
+  monthStart: string;
+  showMonthChange?: boolean;
 }
 
-// `font` first: the shorthand resets the weight set after it.
-const actionLinkSx = {
-  font: "inherit",
-  fontWeight: 700,
-  color: "primary.dark",
-  verticalAlign: "baseline",
-} as const;
+/** Width of one glyph in the mono font, as a fraction of the font size. */
+const GLYPH_EM = 0.6;
+const MAX_PX = { desktop: 44, mobile: 32 };
+const MIN_PX = 28;
 
 export function NetBalanceCard({
   balance,
-  isPersonal,
-  onSetStartingBalance,
-  onAddIncome,
+  change,
+  monthStart,
+  showMonthChange = true,
 }: Props) {
-  const empty = balance === 0;
-  const canSetStartingBalance = isPersonal || CAN_SET_SHARED_STARTING_BALANCE;
+  const ref = useRef<HTMLDivElement>(null);
+  const { width } = useElementSize(ref);
+  const desktop = useMediaQuery(DESKTOP_QUERY);
+
+  const negative = balance < 0;
+  const { whole, cents } = splitCents(Math.abs(balance));
+  const full = `${negative ? "-" : ""}€${whole}${cents}`;
+
+  // The largest size at which the figure fits, floored so it still reads as
+  // a headline. Past the floor the figure is abbreviated instead of wrapped.
+  const max = desktop ? MAX_PX.desktop : MAX_PX.mobile;
+  const fitted = width > 0 ? width / (full.length * GLYPH_EM) : max;
+  const fontSize = Math.max(MIN_PX, Math.min(max, fitted));
+  const abbreviated = width > 0 && fitted < MIN_PX;
+  const shownChange = showMonthChange && change !== null;
 
   return (
-    <HomeCard title="Net Balance">
-      <Money
-        sx={{
-          fontSize: { xs: "2.25rem", sm: "2.75rem" },
-          fontWeight: 500,
-          lineHeight: 1.1,
-          whiteSpace: "nowrap",
-          color: empty
-            ? "text.disabled"
-            : balance < 0
-              ? "error.main"
-              : "text.primary",
-        }}
-      >
-        {balance < 0 && "-"}€{displayAmount(Math.abs(balance))}
-      </Money>
-
-      <Typography sx={{ color: "text.secondary", mt: empty ? 0 : "auto" }}>
-        {!empty &&
-          (balance > 0
-            ? "Funds on your account available to spend"
-            : "Spending has gone past the funds on your account")}
-        {empty && (
-          <>
-            There are no available funds yet. You can{" "}
-            <ComingSoon enabled={canSetStartingBalance}>
-              <Link
-                component="button"
-                underline="hover"
-                onClick={onSetStartingBalance}
-                disabled={!canSetStartingBalance}
-                sx={[
-                  actionLinkSx,
-                  {
-                    "&:disabled": {
-                      color: "text.disabled",
-                      cursor: "default",
-                      textDecoration: "none",
-                    },
-                  },
-                ]}
-              >
-                set starting balance
-              </Link>
-            </ComingSoon>{" "}
-            or{" "}
-            <Link
-              component="button"
-              underline="hover"
-              onClick={onAddIncome}
-              sx={actionLinkSx}
-            >
-              add a new income
-            </Link>
-            .
-          </>
-        )}
+    <Box
+      ref={ref}
+      sx={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}
+    >
+      <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.15rem" }}>
+        Net balance
       </Typography>
-    </HomeCard>
+
+      <Box sx={{ flex: 1, display: "flex", alignItems: "center", py: 2 }}>
+        <Box>
+          <Money
+            aria-label={abbreviated ? full : undefined}
+            title={abbreviated ? full : undefined}
+            sx={{
+              display: "block",
+              fontSize,
+              fontWeight: 500,
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+              color: negative ? "error.main" : "text.primary",
+            }}
+          >
+            {abbreviated ? (
+              `${negative ? "-" : ""}€${compactAmount(Math.abs(balance))}`
+            ) : (
+              <>
+                {negative && "-"}€{whole}
+                <Box component="span" sx={{ fontSize: "0.5em" }}>
+                  {cents}
+                </Box>
+              </>
+            )}
+          </Money>
+          {shownChange && (
+            <Typography
+              variant="body2"
+              sx={{
+                mt: 1,
+                color: change >= 0 ? "success.main" : "error.main",
+              }}
+            >
+              {change >= 0 ? "↑" : "↓"}{" "}
+              <Money>€{displayFigure(Math.abs(change))}</Money> since{" "}
+              {shortDate(monthStart)}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+
+      <Typography sx={{ color: "text.secondary", mt: "auto" }}>
+        Funds available to spend
+      </Typography>
+    </Box>
   );
 }

@@ -5,10 +5,7 @@ import { Box, Paper, Stack, Tooltip, Typography } from "@mui/material";
 
 export function SettingsCard({ children }: { children: ReactNode }) {
   return (
-    <Paper
-      elevation={0}
-      sx={{ borderRadius: 3, p: { xs: 2.5, sm: 3.5 }, minWidth: 0 }}
-    >
+    <Paper variant="card" sx={{ minWidth: 0 }}>
       {children}
     </Paper>
   );

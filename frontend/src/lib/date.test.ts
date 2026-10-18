@@ -34,6 +34,12 @@ describe("date", () => {
     expect(fullDate("2026-08-05")).toBe("5 Aug 2026");
   });
 
+  it("monthHeading names the month, with the year only outside the current one", async () => {
+    const { monthHeading } = await loadWithClock("2026-03-15T12:00:00Z");
+    expect(monthHeading("2026-07-01")).toBe("July");
+    expect(monthHeading("2025-07-01")).toBe("July 2025");
+  });
+
   it("monthName is the long English month", async () => {
     const { monthName } = await loadWithClock("2026-03-15T12:00:00Z");
     expect(monthName("2026-08-31")).toBe("August");
