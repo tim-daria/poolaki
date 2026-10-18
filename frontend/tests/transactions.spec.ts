@@ -338,7 +338,9 @@ test.describe.serial("Transactions", () => {
     await expect(rows()).toHaveCount(4);
     await expect(showing("4 of 4")).toBeVisible();
     // Everything fits on one page, so the pager is gone.
-    await expect(page.getByRole("navigation")).toBeHidden();
+    await expect(
+      page.getByRole("navigation", { name: /pagination/i }),
+    ).toBeHidden();
     for (const row of await rows().all()) {
       await expect(row).toContainText("+€");
     }

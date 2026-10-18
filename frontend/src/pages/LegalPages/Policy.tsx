@@ -462,10 +462,10 @@ function Policy() {
               sx={{ color: "text.secondary", lineHeight: 1.5 }}
             >
               We use strictly necessary cookies (<code>sessionid</code>,{" "}
-              <code>csrftoken</code>) and local storage (
-              <code>sidebar:collapsed</code>) for app navigation. Third-party
-              utilities like Cloudflare and Google Fonts manage their respective
-              edge cookies and resource loads.
+              <code>csrftoken</code>) for signing in, and local storage for
+              small preferences such as dismissed banners. Third-party utilities
+              like Cloudflare and Google Fonts manage their respective edge
+              cookies and resource loads.
             </Typography>
           </Box>
         )}

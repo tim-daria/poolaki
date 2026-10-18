@@ -1,19 +1,17 @@
 /** @file Right-hand chat surface for the AI assistant: message list, input,
- * send. An inline side panel on desktop — no Modal, so the page stays usable
- * and `aria-hidden` never touches `#root` — and a fullscreen temporary Drawer
- * on phones. */
+ * send. Never a Modal: on desktop it is an inline flex sibling of the app
+ * shell, on phones a fixed fullscreen overlay while AppLayout marks the shell
+ * `inert`. No portal means `aria-hidden` never touches `#root`, so the
+ * "Blocked aria-hidden" focus warning cannot occur. */
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import {
   Alert,
   Box,
   CircularProgress,
-  Drawer,
   IconButton,
   TextField,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
@@ -25,19 +23,28 @@ const panelWidth = 420;
 
 interface Props {
   open: boolean;
+  /** Cover the viewport instead of sitting beside the page (phones). */
+  fullScreen: boolean;
   onClose: () => void;
 }
 
-export function AiChatDrawer({ open, onClose }: Props) {
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
+export function AiChatDrawer({ open, fullScreen, onClose }: Props) {
   const { messages, sending, error, send, reset } = useAiChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // Remember what opened the panel and hand focus back when it closes, the
+  // way a Modal would, since nothing else restores it for an inline panel.
+  useEffect(() => {
+    if (!open) return;
+    openerRef.current = document.activeElement as HTMLElement | null;
+    return () => openerRef.current?.focus();
+  }, [open]);
 
   function handleClose() {
     onClose();
@@ -63,10 +70,7 @@ export function AiChatDrawer({ open, onClose }: Props) {
   }
 
   const content = (
-    <Box
-      onKeyDown={onPanelKeyDown}
-      sx={{ display: "flex", flexDirection: "column", height: "100%" }}
-    >
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Box
         sx={{
           display: "flex",
@@ -132,6 +136,8 @@ export function AiChatDrawer({ open, onClose }: Props) {
           display: "flex",
           gap: 1,
           p: 2,
+          // Clear the home indicator when the panel covers a phone screen.
+          pb: fullScreen ? "max(16px, env(safe-area-inset-bottom))" : 2,
           borderTop: "1px solid",
           borderColor: "divider",
         }}
@@ -159,40 +165,33 @@ export function AiChatDrawer({ open, onClose }: Props) {
     </Box>
   );
 
-  if (fullScreen) {
-    return (
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={handleClose}
-        variant="temporary"
-        // Unmount on close before focus returns to the trigger, so the
-        // Modal's aria-hidden on #root never overlaps the restored focus
-        // (Chrome's "Blocked aria-hidden" warning).
-        ModalProps={{ closeAfterTransition: false }}
-        slotProps={{ paper: { sx: { width: "100%" } } }}
-      >
-        {content}
-      </Drawer>
-    );
-  }
-
   if (!open) return null;
 
   return (
     <Box
       component="aside"
+      // Fullscreen it behaves as a dialog: the shell behind it is inert, so
+      // announce it as modal. Beside the page it is just a landmark.
+      role={fullScreen ? "dialog" : undefined}
+      aria-modal={fullScreen ? true : undefined}
       aria-label="AI assistant"
-      sx={{
-        width: panelWidth,
-        flexShrink: 0,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
-      }}
+      onKeyDown={onPanelKeyDown}
+      sx={[
+        {
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          bgcolor: "background.paper",
+        },
+        fullScreen
+          ? { position: "fixed", inset: 0, zIndex: "drawer" }
+          : {
+              width: panelWidth,
+              flexShrink: 0,
+              borderLeft: "1px solid",
+              borderColor: "divider",
+            },
+      ]}
     >
       {content}
     </Box>
