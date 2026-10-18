@@ -59,3 +59,10 @@ export function monthName(iso: string): string {
     new Date(`${iso}T00:00:00`),
   );
 }
+
+/** First and last day of the month `iso` falls in, as inclusive ISO bounds for the API. */
+export function monthBounds(iso: string): { from: string; to: string } {
+  const [y, m] = iso.split("-").map(Number);
+  // Day 0 of the next month is the last day of this one.
+  return { from: `${iso.slice(0, 7)}-01`, to: localIso(new Date(y, m, 0)) };
+}

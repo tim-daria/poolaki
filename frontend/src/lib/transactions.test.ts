@@ -10,6 +10,7 @@ import {
   transferDraft,
   validateDraft,
   fetchTransactionPage,
+  fetchTransactions,
   updateTransaction,
   TransactionError,
   type Transaction,
@@ -68,6 +69,30 @@ const EMPTY_PAGE = {
   page_count: 1,
   counts: { all: 0, income: 0, expense: 0, contribution: 0 },
 };
+
+describe("fetchTransactions", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks for a page of the newest rows", async () => {
+    const fetch = stubFetch({ transactions: [] });
+    await fetchTransactions(7, { pageSize: 5 });
+    expect(fetch.mock.calls[0][0]).toBe(
+      "/api/v1/organizations/7/transactions/?page_size=5",
+    );
+  });
+
+  it("bounds the rows to a month when asked", async () => {
+    const fetch = stubFetch({ transactions: [] });
+    await fetchTransactions(7, {
+      from: "2026-10-01",
+      to: "2026-10-31",
+      pageSize: 100,
+    });
+    expect(fetch.mock.calls[0][0]).toBe(
+      "/api/v1/organizations/7/transactions/?page_size=100&date_from=2026-10-01&date_to=2026-10-31",
+    );
+  });
+});
 
 describe("fetchTransactionPage", () => {
   it("sends no params for the default filters", async () => {

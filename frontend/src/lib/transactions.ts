@@ -320,15 +320,26 @@ export function describeProblem(body: unknown): string | null {
   return message;
 }
 
-/** GET /api/v1/organizations/${org_id}/transactions/ */
+export interface TransactionQuery {
+  /** Rows per page, newest first; the API caps it at 100. */
+  pageSize?: number;
+  /** Inclusive ISO date bounds. */
+  from?: string;
+  to?: string;
+}
+
+/** GET /api/v1/organizations/${org_id}/transactions/?… newest first. */
 export async function fetchTransactions(
   org_id: number,
+  query: TransactionQuery,
   signal?: AbortSignal,
 ): Promise<Transaction[]> {
-  // Stopgap until this fetch goes server-driven: client-side filtering and
-  // tab counts need the full set, so request the API's largest page.
+  const params = new URLSearchParams();
+  if (query.pageSize) params.set("page_size", String(query.pageSize));
+  if (query.from) params.set("date_from", query.from);
+  if (query.to) params.set("date_to", query.to);
   const res = await fetch(
-    `/api/v1/organizations/${org_id}/transactions/?page_size=100`,
+    `/api/v1/organizations/${org_id}/transactions/?${params}`,
     { credentials: "include", signal },
   );
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);

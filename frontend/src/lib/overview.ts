@@ -1,12 +1,14 @@
 /**
- * @file Overview page figures derived from the workspace's transactions and
- * goals: the month's totals and footer, the balance change, the column scale,
- * spending split by category with donut shares, recent entries and the goal
- * nearest completion. React-free so the arithmetic is unit-tested.
+ * @file Overview page figures derived from the yearly report, this month's
+ * transfer rows and the goals: the month's totals and footer, the balance
+ * change, the column scale, spending split by category with donut shares,
+ * recent entries and the goal nearest completion. React-free so the
+ * arithmetic is unit-tested.
  */
 
-import { categoryById, type Category } from "./categories";
 import { goalState, type Goal } from "./goals";
+import { parseMoney } from "./money";
+import type { YearlyReportResponse } from "./reports";
 import type { Transaction } from "./transactions";
 
 /** Sums of floats drift (0.1 + 0.2); every total is snapped back to cents. */
@@ -19,13 +21,6 @@ function monthOf(iso: string): string {
   return iso.slice(0, 7);
 }
 
-/** "2026-07" for any ISO date in August 2026. */
-export function previousMonthOf(iso: string): string {
-  const [y, m] = iso.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 2, 1));
-  return d.toISOString().slice(0, 7);
-}
-
 /* ---------------------------------- */
 /*           Monthly summary          */
 /* ---------------------------------- */
@@ -33,34 +28,36 @@ export function previousMonthOf(iso: string): string {
 export type MonthSummary = {
   income: number;
   expenses: number;
-  /** Contributions to goals. */
+  /** Contributions to goals, net of withdrawals. */
   saved: number;
   /** Income not yet spent or moved to a goal; negative when overspent. */
   left: number;
 };
 
-/** Totals for the month `today` falls in. */
-export function monthSummary(rows: Transaction[], today: string): MonthSummary {
-  return summaryFor(rows, monthOf(today));
-}
-
-/** Totals for the month before the one `today` falls in. */
-export function previousMonthSummary(
+/**
+ * Totals for the month `today` falls in: income and expenses from the report,
+ * savings from the month's transfer rows.
+ */
+export function monthSummary(
+  report: YearlyReportResponse,
   rows: Transaction[],
   today: string,
 ): MonthSummary {
-  return summaryFor(rows, previousMonthOf(today));
-}
+  const month = monthOf(today);
+  const entry = report.monthly[Number(month.slice(5)) - 1];
+  const income = parseMoney(entry.income);
+  const expenses = parseMoney(entry.expense);
 
-function summaryFor(rows: Transaction[], month: string): MonthSummary {
-  const totals = { income: 0, expense: 0, contribution: 0, withdraw: 0 };
+  // TODO(report): read these from the report once it carries transfer sums.
+  let contribution = 0;
+  let withdraw = 0;
   for (const t of rows) {
-    if (monthOf(t.transaction_date) === month) totals[t.entry_type] += t.amount;
+    if (monthOf(t.transaction_date) !== month) continue;
+    if (t.entry_type === "contribution") contribution += t.amount;
+    if (t.entry_type === "withdraw") withdraw += t.amount;
   }
-  const income = cents(totals.income);
-  const expenses = cents(totals.expense);
   // A withdrawal moves goal money back, so it undoes saving.
-  const saved = cents(totals.contribution - totals.withdraw);
+  const saved = cents(contribution - withdraw);
   return { income, expenses, saved, left: cents(income - expenses - saved) };
 }
 
@@ -90,17 +87,12 @@ export function columnScaleMax(values: number[], floor: number): number {
 }
 
 /**
- * Change in balance since the first of the month: what this month's rows
- * added and removed. Null when nothing predates the month, since a change
- * from nothing is not a change.
+ * Change in balance since the first of the month: what the month's rows
+ * added and removed. Null when nothing has happened this month yet, since a
+ * change of nothing is not a change.
  */
-export function balanceChange(
-  rows: Transaction[],
-  today: string,
-): number | null {
-  const first = `${monthOf(today)}-01`;
-  if (!rows.some((t) => t.transaction_date < first)) return null;
-  const s = monthSummary(rows, today);
+export function balanceChange(s: MonthSummary): number | null {
+  if (s.income === 0 && s.expenses === 0 && s.saved === 0) return null;
   return s.left;
 }
 
@@ -146,40 +138,22 @@ export function wholePercents(amounts: number[]): number[] {
 }
 
 /**
- * The month's expenses grouped by category, largest first. Beyond `maxSlices`
- * the tail is merged into "Other", since thin slices are unreadable in a
- * chart. Equal amounts rank by the category's earliest expense, so the order
- * does not depend on how the API happened to return the rows.
+ * This month's expenses by category, largest first, read from the yearly
+ * report. Beyond `maxSlices` the tail is merged into "Other", since thin
+ * slices are unreadable in a chart. Equal amounts rank by name, so the order
+ * does not depend on how the API happened to return the categories.
  */
 export function spendingByCategory(
-  rows: Transaction[],
+  report: YearlyReportResponse,
   today: string,
-  categories: Category[],
   maxSlices = 3,
 ): SpendingSlice[] {
-  const month = monthOf(today);
-  const byLabel = new Map<string, { amount: number; first: string }>();
-  for (const t of rows) {
-    if (t.entry_type !== "expense" || monthOf(t.transaction_date) !== month)
-      continue;
-    const label = categoryById(categories, t.category)?.name ?? "Uncategorised";
-    // Date then id, zero-padded so the tie-break compares as a string.
-    const key = `${t.transaction_date}:${String(t.id).padStart(12, "0")}`;
-    const seen = byLabel.get(label);
-    byLabel.set(label, {
-      amount: (seen?.amount ?? 0) + t.amount,
-      first: seen && seen.first < key ? seen.first : key,
-    });
-  }
-
-  const sorted = [...byLabel]
-    .map(([label, { amount, first }]) => ({
-      label,
-      amount: cents(amount),
-      first,
-    }))
-    .sort((a, b) => b.amount - a.amount || a.first.localeCompare(b.first))
-    .map(({ label, amount }) => ({ label, amount }));
+  const index = Number(today.slice(5, 7)) - 1;
+  const sorted = report.categories
+    .filter((c) => c.type === "expense")
+    .map((c) => ({ label: c.name, amount: parseMoney(c.monthly[index]) }))
+    .filter((s) => s.amount > 0)
+    .sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
 
   const groups =
     sorted.length > maxSlices

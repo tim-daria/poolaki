@@ -18,7 +18,7 @@ import { GoalForm } from "../../components/Modals/GoalForm";
 import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
-import { TODAY, longDate, monthName } from "../../lib/date";
+import { TODAY, longDate, monthBounds, monthName } from "../../lib/date";
 import { getGoals, type Goal } from "../../lib/goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -28,6 +28,10 @@ import {
   recentTransactions,
   spendingByCategory,
 } from "../../lib/overview";
+import {
+  fetchYearlyReport,
+  type YearlyReportResponse,
+} from "../../lib/reports";
 import { fetchTransactions, type Transaction } from "../../lib/transactions";
 import { HomeGoalCard } from "./HomeGoalCard";
 import { MonthlySummaryCard } from "./MonthlySummaryCard";
@@ -60,7 +64,12 @@ function readDismissed(orgId: number): boolean {
 type Modal = "transaction" | "goal" | "balance" | null;
 
 type Loaded = {
-  rows: Transaction[];
+  /** This year's report: the month's income and expenses, spending by category. */
+  report: YearlyReportResponse;
+  /** The newest RECENT_ROWS rows. */
+  recent: Transaction[];
+  /** This month's rows, for the savings figure the report does not carry yet. */
+  monthRows: Transaction[];
   balance: number;
   goals: Goal[];
   categories: Category[];
@@ -86,14 +95,18 @@ function Home() {
    */
   useEffect(() => {
     const controller = new AbortController();
+    const { from, to } = monthBounds(TODAY);
     Promise.all([
-      fetchTransactions(org.id, controller.signal),
+      fetchYearlyReport(org.id, Number(TODAY.slice(0, 4)), controller.signal),
+      fetchTransactions(org.id, { pageSize: RECENT_ROWS }, controller.signal),
+      // TODO(report): drop once the report carries contribution and withdraw sums.
+      fetchTransactions(org.id, { from, to, pageSize: 100 }, controller.signal),
       fetchBalance(org.id, controller.signal),
       getGoals(org.id, controller.signal),
       fetchCategories(org.id, controller.signal),
     ])
-      .then(([rows, balance, goals, categories]) => {
-        setData({ rows, balance, goals, categories });
+      .then(([report, recent, monthRows, balance, goals, categories]) => {
+        setData({ report, recent, monthRows, balance, goals, categories });
         setError(null);
       })
       .catch((e: unknown) => {
@@ -166,8 +179,8 @@ function Home() {
     );
   }
 
-  const { rows, balance, goals, categories } = data;
-  const summary = monthSummary(rows, TODAY);
+  const { report, recent, monthRows, balance, goals, categories } = data;
+  const summary = monthSummary(report, monthRows, TODAY);
   const scaleMax = columnScaleMax(
     [summary.income, summary.expenses, summary.saved],
     DEFAULT_SCALE_FLOOR,
@@ -183,7 +196,7 @@ function Home() {
     },
     {
       label: "Add your first transaction",
-      done: rows.length > 0,
+      done: recent.length > 0,
       onClick: () => setModal("transaction"),
     },
     {
@@ -230,7 +243,7 @@ function Home() {
         >
           <NetBalanceCard
             balance={balance}
-            change={balanceChange(rows, TODAY)}
+            change={balanceChange(summary)}
             monthStart={`${TODAY.slice(0, 7)}-01`}
           />
         </Box>
@@ -290,7 +303,7 @@ function Home() {
       >
         <RecentActivityCard
           sx={{ gridArea: "activity" }}
-          rows={recentTransactions(rows, RECENT_ROWS)}
+          rows={recentTransactions(recent, RECENT_ROWS)}
           categories={categories}
           goals={goals}
           shared={!org.is_personal}
@@ -298,7 +311,7 @@ function Home() {
         />
         <TopSpendingCard
           sx={{ gridArea: "spending" }}
-          slices={spendingByCategory(rows, TODAY, categories)}
+          slices={spendingByCategory(report, TODAY)}
         />
         <HomeGoalCard
           sx={{ gridArea: "goal" }}

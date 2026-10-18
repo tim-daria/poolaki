@@ -68,7 +68,10 @@ Status:
 
 - **Yearly sections are income and expenses only.** Contribution and
   withdraw rows move money between cash and goals, so they never appear in
-  `totals`, `monthly` or `categories`.
+  `totals`, `monthly` or `categories`. The Home page takes this month's
+  income, expenses and the top-spending split from this endpoint, and its
+  savings figure from the month's `contribution` and `withdraw` rows via the
+  transactions list.
 - **`goal_balance` is the savings figure, net of withdrawals.** It is the
   current balance across all active and completed goals (contributions minus
   withdrawals and expenses paid from them). It is a "right now" snapshot: it
