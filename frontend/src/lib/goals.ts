@@ -18,14 +18,12 @@ import { SEED_GOALS, seedIsEmptied } from "./goals.seed";
 export type GoalStatus = "active" | "completed" | "archived";
 
 /**
- * The state a goal is shown in. Completion is derived, never set: a goal that has
- * reached its target is "completed" while it stays un-archived. Only "archived"
- * comes from the wire; if the backend ever sends "completed" the amounts still
- * decide, so the two cannot disagree.
+ * The state a goal is shown in: what the wire says, and only that. Completion
+ * is set by the user, so a goal past its target stays active until marked
+ * completed; the amounts only feed flags and hints (see goalHint).
  */
 export function goalState(g: Goal): GoalStatus {
-  if (g.status === "archived") return "archived";
-  return g.saved_amount >= g.target_amount ? "completed" : "active";
+  return g.status;
 }
 
 export const isArchived = (g: Goal) => goalState(g) === "archived";
@@ -33,15 +31,77 @@ export const isArchived = (g: Goal) => goalState(g) === "archived";
 /** An expense may be paid from this goal. The server decides; see `Goal.spendable`. */
 export const isSpendable = (g: Goal) => g.spendable;
 
+export const targetReached = (g: Goal) => g.saved_amount >= g.target_amount;
+
+/**
+ * The one thing to tell the user about an active goal: it is full but not
+ * marked completed, so nothing can be spent from it yet. Null otherwise.
+ */
+export function goalHint(g: Goal): string | null {
+  return g.status === "active" && targetReached(g)
+    ? "Target reached. Mark it as completed to spend from it."
+    : null;
+}
+
+/** Chip text per flag. Exhaustive: a flag without a label fails to compile. */
+export const FLAG_LABEL: Record<GoalFlag, string> = {
+  overdue: "Overdue",
+};
+
+/**
+ * What the progress bar draws, per state. Palette paths for `sx`. Past 100%
+ * the light track stands for the planned 100% and the bar draws only the
+ * excess, as if filling again, so 120% shows a 20% bar; `pct` stays honest
+ * for the label and assistive tech. Archived is dimmed, bar included: a full
+ * primary bar would read as "in progress".
+ */
+export type BarLook = {
+  pct: number;
+  barValue: number;
+  track: string;
+  fill: string;
+};
+
+export function goalBarLook(g: Goal): BarLook {
+  const pct =
+    g.target_amount === 0
+      ? 0
+      : Math.round((g.saved_amount / g.target_amount) * 100);
+  switch (goalState(g)) {
+    case "archived":
+      return {
+        pct,
+        barValue: Math.min(100, pct),
+        track: "action.disabledBackground",
+        fill: "text.disabled",
+      };
+    case "completed":
+      return {
+        pct,
+        // Marked completed short of the target is possible, so no assumption of >=100.
+        barValue: pct > 100 ? Math.min(100, pct - 100) : pct,
+        track: "success.light",
+        fill: "success.main",
+      };
+    case "active":
+      return {
+        pct,
+        barValue: Math.min(100, pct),
+        track: "primary.light",
+        fill: "primary.dark",
+      };
+  }
+}
+
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
   id: number;
   name: string;
   target_amount: number;
   /**
-   * Derived on the server from the goal's contributions, never sent up.
-   * TODO: the goals API sends `balance` instead; fold this into it when
-   * getGoals switches to the fetch.
+   * Contributions net of withdrawals, never sent up; what counts toward the
+   * target. TODO: the goals API sends `balance` instead; fold this into it
+   * when getGoals switches to the fetch.
    */
   saved_amount: number;
   /**
@@ -71,14 +131,15 @@ export type Goal = {
 export type GoalFlag = "overdue";
 
 /**
- * Flags for a goal, in display order. Derived from the amounts and dates, not
- * from the state, so they persist once a goal is archived. ISO "YYYY-MM-DD"
- * strings compare correctly as strings; a goal due today is not overdue.
+ * Flags for a goal, in display order. Overdue means the deadline passed with
+ * the target unmet; it persists once a goal is archived, and never applies to
+ * a completed one. ISO "YYYY-MM-DD" strings compare correctly as strings; a
+ * goal due today is not overdue.
  */
 export function goalFlags(g: Goal, today: string = TODAY): GoalFlag[] {
   const flags: GoalFlag[] = [];
-  const reached = g.saved_amount >= g.target_amount;
-  if (!reached && g.target_date !== null && g.target_date < today) {
+  const unmet = g.status !== "completed" && !targetReached(g);
+  if (unmet && g.target_date !== null && g.target_date < today) {
     flags.push("overdue");
   }
   return flags;

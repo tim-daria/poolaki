@@ -1,156 +1,175 @@
-/** @file Monthly summary card: this month's received, spent and saved totals as three bars. */
+/** @file Month half of the top card: received, spent and saved as three columns on one baseline. */
 
-import { Box, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Money } from "../../components/Money";
-import { displayAmount } from "../../lib/money";
-import type { MonthSummary } from "../../lib/overview";
-import { HomeCard, PlaceholderBar } from "./HomeCard";
+import { displayAmount, displayFigure } from "../../lib/money";
+import { monthFooter, type MonthSummary } from "../../lib/overview";
+import { HomeCardAction } from "./HomeCard";
+import { DESKTOP } from "./layout";
 
 interface Props {
   summary: MonthSummary;
+  /** The month's name, e.g. "September". */
   month: string;
-  daysLeft: number;
+  /** Value that fills a full-height column. */
+  scaleMax: number;
 }
 
-/** Tallest bar; the others scale against the largest total. */
-const chartHeight = 150;
+/** Tallest column, per the spec: 64px on phones, 72px from desktop. */
+const MAX_HEIGHT = { xs: 64, desktop: 72 };
+/** A non-zero value never draws shorter than this; zero is a stub. */
+const MIN_HEIGHT = 4;
+const STUB_HEIGHT = 3;
 
-/** A non-zero total never renders thinner than this, so it stays visible. */
-const minBarHeight = 6;
+// Pastel columns, full-colour labels: the main colours at 30% for money in
+// and out, the lavender tint for savings.
+const COLUMNS = [
+  {
+    key: "income",
+    label: "Received",
+    bar: "success.main",
+    barOpacity: 0.3,
+    text: "success.main",
+  },
+  {
+    key: "expenses",
+    label: "Spent",
+    bar: "error.light",
+    barOpacity: 1,
+    text: "error.main",
+  },
+  {
+    key: "saved",
+    label: "Saved",
+    bar: "primary.light",
+    barOpacity: 1,
+    text: "accent.main",
+  },
+] as const;
 
-const columnsSx = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  columnGap: 2,
-  textAlign: "center",
-} as const;
-
-const barSx = {
-  width: "70%",
-  maxWidth: 96,
-  mx: "auto",
-  borderRadius: "12px 12px 0 0",
-} as const;
-
-export function MonthlySummaryCard({ summary, month, daysLeft }: Props) {
-  const { income, expenses, saved, left } = summary;
-
-  const columns = [
-    {
-      label: "received",
-      amount: income,
-      text: "success.main",
-      bar: "success.main",
-    },
-    { label: "spent", amount: expenses, text: "error.main", bar: "error.main" },
-    {
-      label: "saved",
-      amount: saved,
-      text: "accent.main",
-      bar: "secondary.light",
-    },
-  ];
-
-  const empty = columns.every((c) => c.amount === 0);
-  const max = Math.max(...columns.map((c) => c.amount));
+function Column({
+  value,
+  scaleMax,
+  bar,
+  barOpacity,
+  text,
+  label,
+}: {
+  value: number;
+  scaleMax: number;
+  bar: string;
+  barOpacity: number;
+  text: string;
+  label: string;
+}) {
+  // Height as a share of the tallest column, resolved per breakpoint below.
+  const share = value > 0 ? value / scaleMax : 0;
+  const height = (max: number) =>
+    value > 0 ? Math.max(MIN_HEIGHT, share * max) : STUB_HEIGHT;
 
   return (
-    <HomeCard title="Monthly Summary">
-      <Box>
-        {/* Bars sit on a shared baseline; each amount rides on top of its bar. */}
-        <Box
-          sx={[
-            columnsSx,
-            {
-              alignItems: "end",
-              height: chartHeight + 36,
-              borderBottom: "1px solid",
-              borderColor: "divider",
-            },
-          ]}
-        >
-          {columns.map((c, i) => {
-            const height = empty
-              ? [0.5, 0.35, 0.25][i] * chartHeight
-              : c.amount === 0
-                ? 0
-                : Math.max(minBarHeight, (c.amount / max) * chartHeight);
-            return (
-              <Box key={c.label} sx={{ minWidth: 0 }}>
-                {empty ? (
-                  <Typography sx={{ color: "text.disabled", mb: 1 }}>
-                    —
-                  </Typography>
-                ) : (
-                  <Money
-                    sx={{
-                      display: "block",
-                      mb: 1,
-                      // Three cards share a row from `md`, where a full
-                      // two-decimal amount needs the smaller size to fit.
-                      fontSize: { xs: "0.95rem", md: "0.9rem", xl: "1rem" },
-                      fontWeight: 600,
-                      color: c.text,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    €{displayAmount(c.amount)}
-                  </Money>
-                )}
-                {empty ? (
-                  <PlaceholderBar sx={[barSx, { height }]} />
-                ) : (
-                  <Box
-                    aria-hidden
-                    sx={[
-                      barSx,
-                      {
-                        height,
-                        bgcolor: c.bar,
-                        // Pastel fills: the amounts above carry full colour.
-                        opacity: c.bar === "secondary.light" ? 1 : 0.3,
-                      },
-                    ]}
-                  />
-                )}
-              </Box>
-            );
-          })}
-        </Box>
-        <Box sx={[columnsSx, { pt: 1 }]}>
-          {columns.map((c) => (
-            <Typography key={c.label} sx={{ color: "text.secondary" }}>
-              {c.label}
-            </Typography>
-          ))}
-        </Box>
-      </Box>
-
-      <Typography
-        variant="body2"
+    <Stack sx={{ alignItems: "center", minWidth: 0 }}>
+      <Money
+        title={`€${displayAmount(value)}`}
         sx={{
-          color: !empty && left < 0 ? "error.main" : "text.secondary",
-          mt: "auto",
+          fontSize: "0.9rem",
+          mb: 0.75,
+          whiteSpace: "nowrap",
+          color: value > 0 ? text : "text.disabled",
         }}
       >
-        {empty ? (
+        €{displayFigure(value)}
+      </Money>
+      <Box
+        aria-hidden
+        sx={{
+          width: "60%",
+          maxWidth: 88,
+          borderRadius: 1.5,
+          height: height(MAX_HEIGHT.xs),
+          [DESKTOP]: { height: height(MAX_HEIGHT.desktop) },
+          bgcolor: value > 0 ? bar : "divider",
+          opacity: value > 0 ? barOpacity : 1,
+        }}
+      />
+      <Typography sx={{ color: "text.secondary", mt: 1 }}>{label}</Typography>
+    </Stack>
+  );
+}
+
+export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
+  const footer = monthFooter(summary);
+  const empty = footer.kind === "empty";
+
+  return (
+    <Box
+      sx={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}
+    >
+      <Stack
+        direction="row"
+        sx={{ justifyContent: "space-between", alignItems: "baseline", gap: 2 }}
+      >
+        <Typography
+          component="h2"
+          sx={{ fontWeight: 700, fontSize: "1.15rem" }}
+        >
+          {month}
+        </Typography>
+        {!empty && <HomeCardAction>More info</HomeCardAction>}
+      </Stack>
+
+      {/* Columns share one baseline: each stacks label then bar at its bottom. */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          alignItems: "end",
+          columnGap: 2,
+          textAlign: "center",
+          py: 2,
+        }}
+      >
+        {COLUMNS.map((c) => (
+          <Column
+            key={c.key}
+            value={summary[c.key]}
+            scaleMax={scaleMax}
+            bar={c.bar}
+            barOpacity={c.barOpacity}
+            text={c.text}
+            label={c.label}
+          />
+        ))}
+      </Box>
+
+      <Typography sx={{ color: "text.secondary", mt: "auto" }}>
+        {footer.kind === "empty" && "Nothing this month yet"}
+        {footer.kind === "left" && (
           <>
-            Your {month} summary appears after this month's first transaction.
+            <Money sx={{ color: "text.primary" }}>
+              €{displayFigure(footer.amount)}
+            </Money>{" "}
+            left after spending and saving
           </>
-        ) : left >= 0 ? (
+        )}
+        {footer.kind === "over" && (
           <>
-            You're on track ·{" "}
-            <Money sx={{ color: "text.primary" }}>€{displayAmount(left)}</Money>{" "}
-            left for {daysLeft} {daysLeft === 1 ? "day" : "days"}
+            <Money sx={{ color: "error.main" }}>
+              €{displayFigure(footer.amount)}
+            </Money>{" "}
+            more than you received
           </>
-        ) : (
+        )}
+        {footer.kind === "no-income" && (
           <>
-            Over budget by <Money>€{displayAmount(-left)}</Money> this month
+            Income not received yet ·{" "}
+            <Money sx={{ color: "text.primary" }}>
+              €{displayFigure(footer.amount)}
+            </Money>{" "}
+            spent so far
           </>
         )}
       </Typography>
-    </HomeCard>
+    </Box>
   );
 }

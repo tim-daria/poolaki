@@ -1,6 +1,7 @@
-/** @file Card frame and empty-state placeholder shapes shared by the Home page cards. */
+/** @file Card frame shared by the Overview cards: optionally the whole card is a link, with a "See all" cue in its header. */
 
 import type { ReactNode } from "react";
+import { Link as RouterLink } from "react-router";
 import {
   Box,
   Paper,
@@ -12,30 +13,29 @@ import {
 
 interface HomeCardProps {
   title: string;
-  /** Right of the title: a link or a chip. */
-  aside?: ReactNode;
+  /**
+   * Makes the whole card a link. Only for a card with data: an empty state
+   * keeps its own button, and a button inside a link is invalid HTML.
+   */
+  to?: string;
+  /** Right of the title: a HomeCardAction cue. */
+  action?: ReactNode;
   children: ReactNode;
   sx?: SxProps<Theme>;
 }
 
-export function HomeCard({ title, aside, children, sx }: HomeCardProps) {
-  return (
-    <Paper
-      component="section"
-      aria-label={title}
-      elevation={0}
-      sx={[
-        {
-          borderRadius: 4,
-          p: { xs: 2.5, sm: 3 },
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: 2.5,
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-    >
+// Content layout only; the look comes from the theme's card variants.
+const frameSx = {
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: 2.5,
+} as const;
+
+export function HomeCard({ title, to, action, children, sx }: HomeCardProps) {
+  const userSx = Array.isArray(sx) ? sx : [sx];
+  const content = (
+    <>
       <Stack
         direction="row"
         sx={{
@@ -51,22 +51,57 @@ export function HomeCard({ title, aside, children, sx }: HomeCardProps) {
         >
           {title}
         </Typography>
-        {aside}
+        {action}
       </Stack>
       {children}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Paper
+        component={RouterLink}
+        to={to}
+        aria-label={title}
+        variant="clickableCard"
+        sx={[frameSx, ...userSx]}
+      >
+        {content}
+      </Paper>
+    );
+  }
+  return (
+    <Paper
+      component="section"
+      aria-label={title}
+      variant="card"
+      sx={[frameSx, ...userSx]}
+    >
+      {content}
     </Paper>
   );
 }
 
-/** Rounded grey bar standing in for text or a value in an empty card. */
-export function PlaceholderBar({ sx }: { sx?: SxProps<Theme> }) {
+/**
+ * "See all" in a card header. Plain text, not a link: the card itself is
+ * the link, and this only says where it goes. Always visible, darker when
+ * the card is hovered or focused.
+ */
+export function HomeCardAction({ children }: { children: ReactNode }) {
   return (
     <Box
-      aria-hidden
-      sx={[
-        { height: 12, borderRadius: 999, bgcolor: "primary.light" },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-    />
+      component="span"
+      className="HomeCard-action"
+      sx={{
+        // body2, the size of the cards' secondary lines.
+        fontSize: "0.875rem",
+        color: "text.secondary",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+        transition: "color 150ms",
+      }}
+    >
+      {children}
+    </Box>
   );
 }

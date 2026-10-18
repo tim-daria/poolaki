@@ -1,6 +1,6 @@
 /** @file Onboarding checklist shown on Home until every step is done or the banner is dismissed. */
 
-import { Box, ButtonBase, IconButton, Stack, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -40,18 +40,34 @@ export function SetupBanner({ steps, onDismiss }: Props) {
         </Typography>
       </Box>
 
-      <Stack
+      {/* A grid, so the tiles share one width and one height at every size. */}
+      <Box
         component="ol"
-        direction={{ xs: "column", md: "row" }}
-        sx={{ flex: "3 1 480px", gap: 1.5, listStyle: "none", m: 0, p: 0 }}
+        sx={{
+          flex: "3 1 480px",
+          flexBasis: { xs: "100%", md: 480 },
+          // On narrow screens the list wraps under the header and the X stays on the header line.
+          order: { xs: 2, md: 0 },
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: `repeat(${steps.length}, minmax(0, 1fr))`,
+          },
+          gap: 1.5,
+          listStyle: "none",
+          m: 0,
+          p: 0,
+        }}
       >
         {steps.map((step, i) => (
-          <Box component="li" key={step.label} sx={{ flex: 1, minWidth: 0 }}>
+          <Box component="li" key={step.label} sx={{ minWidth: 0 }}>
             <ButtonBase
               onClick={step.onClick}
               disabled={step.done}
               sx={{
                 width: "100%",
+                height: "100%",
+                minHeight: 56,
                 justifyContent: "flex-start",
                 gap: 1.5,
                 px: 2,
@@ -98,9 +114,14 @@ export function SetupBanner({ steps, onDismiss }: Props) {
             </ButtonBase>
           </Box>
         ))}
-      </Stack>
+      </Box>
 
-      <IconButton aria-label="Dismiss setup" onClick={onDismiss}>
+      <IconButton
+        aria-label="Dismiss setup"
+        onClick={onDismiss}
+        size="small"
+        sx={{ ml: "auto", alignSelf: { xs: "flex-start", md: "center" } }}
+      >
         <CloseIcon fontSize="small" />
       </IconButton>
     </Box>
