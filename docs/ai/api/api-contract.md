@@ -21,7 +21,7 @@ Initial supported endpoints:
 | Frontend → Django | POST | `/api/v1/organizations/{org_id}/chat/` | Public chat endpoint (session auth) |
 | Django → AI | POST | `/api/v1/chat/` | Forward the user question to the AI Service |
 | AI → Django | POST | `/api/internal/v1/analytics/summary/` | Monthly income/expense for a year + current balance |
-| AI → Django | POST | `/api/internal/v1/transactions/` | Filtered transaction list |
+| AI → Django | POST | `/api/internal/v1/transactions/` | Static transaction context: income/expense of the last 3 calendar months |
 | AI → Django | POST | `/api/internal/v1/categories/` | Organization income/expense categories, each with a monthly breakdown for a year |
 
 The internal endpoints are intentionally few: each returns a self-contained data set that covers a family of intents, so the AI Service can answer most questions with a single call.
@@ -174,7 +174,7 @@ Covers: category spending questions ("how much did I spend on food?", "what is m
 
 `POST /api/internal/v1/transactions/`
 
-Filtered transaction list.
+Static transaction context: all income/expense transactions of the last 3 calendar months (inclusive), newest first. The AI Service sends no filters — the LLM returns the intent label only, and Django decides the payload (window, ordering, entry types).
 
 Covers: "what are my top 5 expenses?", "when was the last time I made an expense?", "what was my largest transaction in the last 3 months?", and generic "show my transactions" browsing.
 
@@ -184,45 +184,30 @@ Covers: "what are my top 5 expenses?", "when was the last time I made an expense
 | --------------- | ------- | -------- | ---------------------------------------- |
 | user_id         | integer | yes      | User identifier used for authorization and data scoping |
 | organization_id | integer | yes      | Organization identifier                  |
-| entry_type      | string  | no       | `income` \| `expense`                    |
-| date_from       | string  | no       | Inclusive start date, `YYYY-MM-DD`       |
-| date_to         | string  | no       | Inclusive end date, `YYYY-MM-DD`         |
-| sort            | string  | no       | `date_desc` (default) \| `date_asc`     |
-| limit           | integer | no       | Maximum rows returned. Default `100`, max `200` |
 
-Default date window when `date_from` / `date_to` are omitted: the last 3 calendar months including the current one (`date_from` = first day of the month two months before the current month, `date_to` = today).
-
-The AI Service fills `date_from` / `date_to` from the fixed template (below); the dates are computed in code from the current date. The LLM returns the intent label only and does not produce filter values.
+The body contains only `user_id` and `organization_id`. Unknown fields are ignored.
 
 **Request Example**
 
-The single request the AI Service sends — the full 3-month list (dates computed from the current date):
+The single request the AI Service sends for every transaction intent:
 
 ```
 {
   "user_id": 123,
-  "organization_id": 456,
-  "date_from": "2026-04-01",
-  "date_to": "2026-06-29",
-  "sort": "date_desc",
-  "limit": 200
+  "organization_id": 456
 }
 ```
 
-**Requests by intent (closed set)**
+#### Window, ordering, and row set
 
-The LLM returns the intent label only (no slots); the AI Service builds the request from a fixed template per intent. All dates are computed in code from the current date.
+- Window: the last 3 calendar months including the current one — from the first day of the month two months before the current month to today. Computed server-side from the current date; the AI Service sends no dates.
+- No row cap: every income/expense transaction in the window is returned.
+- Newest first: `date` descending, `id` descending within a day.
+- Only `income` and `expense` are returned. `contribution` / `withdraw` are internal goal transfers, not income/expense events, and are excluded; goal funding questions are answered by the goals endpoint (2.4).
 
-| Intent | Request |
-|---|---|
-| `transactions` ("show my transactions", "top 5 expenses", "largest transaction in the last 3 months", "when was my last expense?", sub-period variants) | `date_from` / `date_to` = last 3 calendar months, `sort: date_desc`, `limit: 200` (all entry types) |
-
-The template retrieves the full bounded transaction list; the LLM answers from it:
+The endpoint retrieves the full bounded list; the LLM answers from it:
 - latest expense = the first `expense` row (the list is newest-first);
-- top `N` / largest = filter by entry type and/or a date sub-period, then scan by amount;
-- `limit: 200` truncates the oldest rows first, which is unreachable at this scale.
-
-
+- top `N` / largest = filter by entry type and/or a date sub-period, then scan by amount.
 
 Questions about periods **outside** the fetched window (e.g. "largest expense last year") are still classified into the same intent. The final-answer prompt receives the original question together with the data window actually retrieved and must state that window or decline politely.
 
@@ -237,11 +222,16 @@ Questions about periods **outside** the fetched window (e.g. "largest expense la
       "description": "Groceries",
       "entry_type": "expense",
       "category": "Food",
+      "goal": null,
       "amount": "50.00"
     }
   ]
 }
 ```
+
+- `date` is `YYYY-MM-DD`; `amount` is a 2-decimal string.
+- `category` and `description` are `null` when the transaction has none.
+- `goal` is the name of the linked goal (e.g. an expense paid from a goal), `null` when the transaction is not tied to a goal.
 
 ### 2.4. Deferred Endpoints (Goals)
 

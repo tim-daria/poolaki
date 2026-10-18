@@ -140,7 +140,7 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/transactions`
 
-Parameters: fixed template — full transaction list for the last 3 calendar months, `sort: date_desc`, `limit: 200`; the LLM picks the top 5 expenses from the returned list.
+Parameters: none — the endpoint returns all income/expense transactions of the last 3 calendar months, newest first; the LLM picks the top 5 expenses from the returned list.
 
 Expected Response:
 
@@ -166,7 +166,7 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/transactions`
 
-Parameters: same template as EXP-005 — full transaction list for the last 3 calendar months; the LLM reads the first expense row of the returned list.
+Parameters: none — same static payload as EXP-005 (all income/expense transactions of the last 3 calendar months, newest first); the LLM reads the first expense row of the returned list.
 
 Expected Response:
 
@@ -192,7 +192,7 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/transactions`
 
-Parameters: same template as EXP-005 — full transaction list for the last 3 calendar months; the LLM finds the largest expense in the requested sub-period (default: the full window) from the returned list.
+Parameters: none — same static payload as EXP-005 (all income/expense transactions of the last 3 calendar months, newest first); the LLM finds the largest expense in the requested sub-period (default: the full window) from the returned list.
 
 Expected Response:
 
