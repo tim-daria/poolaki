@@ -7,8 +7,8 @@ from rest_framework.views import APIView
 
 from core.models import Membership, Organization
 from core.serializers import (
-    AiAnalyticsSummaryQuerySerializer,
     AiAnalyticsSummaryResponseSerializer,
+    AiQuerySerializer,
 )
 from core.services.balance import calculate_org_balance
 from core.services.report import get_org_report
@@ -22,7 +22,7 @@ class AiAnalyticsSummaryView(APIView):
     """
 
     def post(self, request: Request) -> Response:
-        query = AiAnalyticsSummaryQuerySerializer(data=request.data)
+        query = AiQuerySerializer(data=request.data)
         query.is_valid(raise_exception=True)
         data = query.validated_data
         year = data.get("year", timezone.now().year)

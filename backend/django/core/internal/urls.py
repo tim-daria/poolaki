@@ -1,9 +1,8 @@
-"""URLconf for the /api/internal/v1/ namespace (AI Service only, never
-routed at the edge)."""
-
 from django.urls import path
 
 from core.internal.views.analytics_summary import AiAnalyticsSummaryView
+from core.internal.views.categories import AiCategoriesView
+from core.internal.views.transactions import AiTransactionsView
 
 urlpatterns = [
     # Analytics
@@ -12,6 +11,8 @@ urlpatterns = [
         AiAnalyticsSummaryView.as_view(),
         name="ai-analytics-summary",
     ),
-    # Remaining contract endpoints (categories, transactions,
-    # categories) are added here as they are implemented.
+    # Categories
+    path("categories/", AiCategoriesView.as_view(), name="ai-categories"),
+    # Transactions
+    path("transactions/", AiTransactionsView.as_view(), name="ai-transactions"),
 ]

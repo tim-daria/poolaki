@@ -4,7 +4,7 @@ from typing import Any
 from django.db.models import Q, QuerySet, Sum
 from django.db.models.functions import Coalesce, ExtractMonth
 
-from core.models import EntryType, Organization, Transaction
+from core.models import Category, CategoryType, EntryType, Organization, Transaction
 
 _ZERO = Decimal("0")
 
@@ -51,36 +51,63 @@ def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
     return monthly
 
 
-def _category_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
-    """Per-category rows with a zero-filled 12-slot monthly series (index 0 =
-    January); grouped by type, total desc. The yearly total is the sum of the
-    monthly series, so the two cannot drift apart. Shares are client-side
-    derivations.
-    """
+def _monthly_by_category(base: QuerySet[Transaction]) -> dict[int, list[Decimal]]:
+    """Per-category 12-slot monthly series (index 0 = January), zero-filled;
+    categories without rows are absent, so callers zero-fill them themselves."""
     rows = (
         base.annotate(month=ExtractMonth("transaction_date"))
-        .values("category_id", "category__name", "category__type", "month")
+        .values("category_id", "month")
         .annotate(total=Sum("amount"))
     )
 
-    categories: dict[int, dict[str, Any]] = {}
+    by_category: dict[int, list[Decimal]] = {}
     for row in rows:
-        entry = categories.setdefault(
-            row["category_id"],
-            {
-                "category_id": row["category_id"],
-                "name": row["category__name"],
-                "type": row["category__type"],
-                "monthly": [_ZERO] * 12,
-            },
-        )
-        entry["monthly"][row["month"] - 1] = row["total"]
+        by_category.setdefault(row["category_id"], [_ZERO] * 12)[row["month"] - 1] = row["total"]
+    return by_category
 
-    for entry in categories.values():
-        entry["total"] = sum(entry["monthly"], _ZERO)
+
+def get_org_category_breakdown(
+    org: Organization, year: int, include_inactive: bool = False
+) -> list[dict[str, Any]]:
+    """Per-category rows with a zero-filled 12-slot monthly series for `year`
+    (index 0 = January), shared by the yearly report and the AI service.
+    Ordered: income block first, then expense; within a type by total desc,
+    then name. The yearly total is the sum of the monthly series, so the two
+    cannot drift apart. By default only categories with transactions in the
+    year appear; with `include_inactive` every org income/expense category is
+    returned, zero-filled when it has no activity, so the AI service can
+    distinguish "no spending" from "the category does not exist". Contribution
+    categories are excluded by design (shared report/AI rule).
+    """
+    base = Transaction.objects.filter(
+        org=org,
+        transaction_date__year=year,
+        entry_type__in=_REPORTED_TYPES,
+    )
+    monthly_by_category = _monthly_by_category(base)
+
+    if include_inactive:
+        categories = Category.objects.filter(
+            org=org, type__in=(CategoryType.INCOME, CategoryType.EXPENSE)
+        )
+    else:
+        categories = Category.objects.filter(pk__in=monthly_by_category)
+
+    entries = []
+    for category in categories:
+        monthly = monthly_by_category.get(category.pk, [_ZERO] * 12)
+        entries.append(
+            {
+                "category_id": category.pk,
+                "name": category.name,
+                "type": category.type,
+                "total": sum(monthly, _ZERO),
+                "monthly": monthly,
+            }
+        )
 
     return sorted(
-        categories.values(),
+        entries,
         key=lambda entry: (_TYPE_ORDER[entry["type"]], -entry["total"], entry["name"]),
     )
 
@@ -97,5 +124,5 @@ def get_org_report(org: Organization, year: int) -> dict[str, Any]:
         "year": year,
         "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
-        "categories": _category_breakdown(base),
+        "categories": get_org_category_breakdown(org, year),
     }
