@@ -34,14 +34,14 @@ const COLUMNS = [
   {
     key: "expenses",
     label: "Spent",
-    bar: "error.main",
-    barOpacity: 0.3,
+    bar: "error.light",
+    barOpacity: 1,
     text: "error.main",
   },
   {
     key: "saved",
     label: "Saved",
-    bar: "secondary.light",
+    bar: "primary.light",
     barOpacity: 1,
     text: "accent.main",
   },

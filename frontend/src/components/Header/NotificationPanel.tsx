@@ -313,7 +313,6 @@ export function NotificationPanel({
               <Paper
                 key={n.id}
                 component="li"
-                elevation={0}
                 sx={{
                   p: 1.5,
                   // The palette's "subtle tint", used app-wide for gentle
