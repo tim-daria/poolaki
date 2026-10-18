@@ -1,6 +1,160 @@
-
 {
-	"transactions": [
+  "transactions_bob": [
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "42.80",
+      "description": "Grocery shopping",
+      "transaction_date": "2026-8-02",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "28.50",
+      "description": "Monthly transit pass",
+      "transaction_date": "2026-8-03",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Housing",
+      "entry_type": "expense",
+      "amount": "1250.00",
+      "description": "August rent",
+      "transaction_date": "2026-8-04",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "24.00",
+      "description": "Movie tickets",
+      "transaction_date": "2026-8-06",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "68.99",
+      "description": "New running shoes",
+      "transaction_date": "2026-8-08",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Health",
+      "entry_type": "expense",
+      "amount": "19.50",
+      "description": "Pharmacy prescription",
+      "transaction_date": "2026-8-10",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "86.40",
+      "description": "Electricity bill",
+      "transaction_date": "2026-8-12",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Salary",
+      "entry_type": "income",
+      "amount": "3200.00",
+      "description": "Monthly salary",
+      "transaction_date": "2026-8-14",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Freelance",
+      "entry_type": "income",
+      "amount": "450.00",
+      "description": "Website design project",
+      "transaction_date": "2026-8-16",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "income",
+      "amount": "35.00",
+      "description": "Birthday gift",
+      "transaction_date": "2026-8-18",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "25.00",
+      "description": "Community food bank donation",
+      "transaction_date": "2026-8-20",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "16.75",
+      "description": "Lunch at a cafe",
+      "transaction_date": "2026-8-22",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "52.30",
+      "description": "Fuel",
+      "transaction_date": "2026-8-24",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization", 
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "38.00",
+      "description": "Concert ticket",
+      "transaction_date": "2026-8-27",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "Bob's Personal Organization",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "29.95",
+      "description": "Household supplies",
+      "transaction_date": "2026-8-30",
+      "is_tax_deductible": "False"
+    }
+    ],
+
+
+
+	"transactions_club": [
 		{
 			"org_name": "Boardgame Club",
 			"username": "bob",
