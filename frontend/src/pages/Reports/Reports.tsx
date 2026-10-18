@@ -36,7 +36,10 @@ const cardSx = {
   boxShadow: "none",
   border: "1px solid",
   borderColor: "divider",
-  "@media print": { breakInside: "avoid" },
+  "@media print": {
+    breakInside: "avoid",
+    pageBreakInside: "avoid",
+  },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -185,21 +188,60 @@ export function Component() {
       : `Share of all ${categoryFilter.toLowerCase()} in ${year} · ${eur(filterTotal)}`;
 
   return (
-    <Box sx={{ p: 3, maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+    <Box sx={{ px: 3, pb: 5 }}>
       <GlobalStyles
         styles={{
           "@media print": {
-            "@page": { margin: "12mm" },
-            "*": { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" },
-            ".MuiDrawer-root, .MuiAppBar-root": { display: "none !important" },
+            "@page": {
+              size: "auto",
+              margin: "12mm",
+            },
+            "*": {
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact",
+            },
+            /* Resets layout overflow/height restrictions for multi-page printing */
+            "html, body, #root, #root > div, main": {
+              height: "auto !important",
+              minHeight: "0 !important",
+              maxHeight: "none !important",
+              overflow: "visible !important",
+              position: "static !important",
+            },
+            ".MuiDrawer-root, .MuiAppBar-root, header, nav": {
+              display: "none !important",
+            },
             main: {
               margin: "0 !important",
               padding: "0 !important",
               width: "100% !important",
+              overflow: "visible !important",
             },
           },
         }}
       />
+
+      {/* Heading visible ONLY during print */}
+      <Box
+        sx={{
+          display: "none",
+          "@media print": {
+            display: "block !important",
+            mb: 3,
+          },
+        }}
+      >
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{ fontWeight: "bold", color: "text.primary" }}
+        >
+          Reports {year}
+        </Typography>
+        <Typography variant="body1" sx={{ color: "text.secondary", mt: 0.5 }}>
+          Income, expenses and savings for the year
+        </Typography>
+      </Box>
 
       {/* 
         Injects the title, year selector, and secondary actions directly into 
@@ -241,12 +283,11 @@ export function Component() {
       {/* Primary Action Button overrides the default Add icon with Print */}
       <PageActionButton
         startIcon={<PrintIcon />}
-        variant="outlined"
-        color="inherit"
+        variant="contained"
+        color="primary"
         onClick={() => window.print()}
         sx={{
           borderRadius: 8,
-          borderColor: "divider",
           "@media print": { display: "none" },
         }}
       >
@@ -284,6 +325,19 @@ export function Component() {
         year={year}
         savingsByMonth={mockMonthlySavings}
         sx={{ mb: 4 }}
+      />
+
+      {/* Explicit Print-Only Page Break + Top Margin Spacer */}
+      <Box
+        sx={{
+          display: "none",
+          "@media print": {
+            display: "block !important",
+            pageBreakBefore: "always",
+            breakBefore: "page",
+            height: 40, // Regula el margen superior de la segunda página
+          },
+        }}
       />
 
       {/* Categories */}
