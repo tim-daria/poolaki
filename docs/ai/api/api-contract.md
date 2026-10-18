@@ -148,14 +148,14 @@ Covers: category spending questions ("how much did I spend on food?", "what is m
   "year": 2026,
   "categories": [
     {
-      "id": 12,
+      "category_id": 12,
       "name": "Salary",
       "type": "income",
       "total": "25200.00",
       "monthly": ["2200.00", "2200.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"]
     },
     {
-      "id": 4,
+      "category_id": 4,
       "name": "Food",
       "type": "expense",
       "total": "2300.00",
