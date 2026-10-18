@@ -91,9 +91,7 @@ export function goalSubtitle(g: Goal, today: string = TODAY): GoalSubtitle {
       if (targetReached(g))
         return { text: "Goal · target reached", alert: null };
       return {
-        text: g.target_date
-          ? `Goal · by ${monthYear(g.target_date)}`
-          : "Goal",
+        text: g.target_date ? `Goal · by ${monthYear(g.target_date)}` : "Goal",
         alert: null,
       };
   }
