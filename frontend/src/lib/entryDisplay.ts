@@ -50,6 +50,6 @@ export function entrySubtitle(t: Transaction, goals: Goal[]): string | null {
   if (t.entry_type === "expense") return `Paid from ${goal.name}`;
   if (!isArchived(goal)) return null;
   if (t.entry_type === "contribution") return "Overdraft settlement";
-  if (t.entry_type === "withdraw") return "Returned on archiving";
+  if (t.entry_type === "withdraw") return "Returned to balance";
   return null;
 }

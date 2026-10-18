@@ -17,6 +17,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import { DiscardChangesDialog } from "./CloseGuard";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ModalShell } from "./ModalShell";
@@ -36,6 +37,7 @@ import { displayAmount } from "../../lib/money";
 import { canTransfer, goalById, isSpendable, type Goal } from "../../lib/goals";
 import { GoalSpendField } from "./GoalSpendField";
 import { useGoals } from "../../hooks/useGoals";
+import { GoalForm } from "./GoalForm";
 
 import {
   TransactionError,
@@ -83,7 +85,7 @@ interface Props {
 const TABS: { value: EntryType; label: string }[] = [
   { value: "expense", label: "Expense" },
   { value: "income", label: "Income" },
-  { value: "contribution", label: "Saving" },
+  { value: "contribution", label: "Savings" },
 ];
 
 /** "€1.790,00 of €2.000,00 saved", under the goal picker. */
@@ -145,6 +147,10 @@ export function TransactionForm({
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  /** The nested "new goal" form; a counter makes useGoals refetch after a save. */
+  const [creatingGoal, setCreatingGoal] = useState(false);
+  const [goalsVersion, setGoalsVersion] = useState(0);
+
   /**
    * The expense's "Pay from goal" picker is open. Not part of the draft: the
    * draft only records a chosen goal, and opening the picker is not a change
@@ -154,7 +160,8 @@ export function TransactionForm({
 
   const isTransfer = isTransferType(draft.entry_type);
   const isExpense = draft.entry_type === "expense";
-  const goals = useGoals(open);
+  const goals = useGoals(`${open}:${goalsVersion}`);
+
   const selectedGoal = goalById(goals, draft.goal);
   const spendableGoals = goals.filter(isSpendable);
   const options = selectableCategories(categories, draft.entry_type);
@@ -188,6 +195,8 @@ export function TransactionForm({
       );
       setError("");
       setConfirmingDelete(false);
+      setCreatingGoal(false);
+
       // Passed explicitly: the setStates above have not landed, so the guard
       // would otherwise re-snapshot the values being replaced.
       guard.reset(seeded);
@@ -371,7 +380,10 @@ export function TransactionForm({
                     /* null means "not picked yet", but MUI needs "" for that —
                      passing null would make the field uncontrolled. */
                     value={draft.goal ?? ""}
-                    onChange={(e) => set("goal", Number(e.target.value))}
+                    onChange={(e) => {
+                      if (e.target.value === "new") setCreatingGoal(true);
+                      else set("goal", Number(e.target.value));
+                    }}
                     /* Collapsed, the field shows the name alone; the progress
                      figures go in the helper text below. */
                     slotProps={{
@@ -394,6 +406,18 @@ export function TransactionForm({
                     }
                     required
                   >
+                    {goals.filter(canTransfer).length === 0 && (
+                      <MenuItem disabled value="">
+                        No goals yet.
+                      </MenuItem>
+                    )}
+                    <MenuItem
+                      value="new"
+                      sx={{ color: "primary.dark", fontWeight: 600 }}
+                    >
+                      <AddIcon fontSize="small" sx={{ mr: 1 }} />
+                      New goal…
+                    </MenuItem>
                     {goals
                       .filter((g) => canTransfer(g))
                       .map((g) => (
@@ -590,6 +614,14 @@ export function TransactionForm({
         onConfirm={handleDelete}
         onCancel={() => setConfirmingDelete(false)}
         busy={saving}
+      />
+      <GoalForm
+        open={creatingGoal}
+        onClose={() => setCreatingGoal(false)}
+        onSaved={(g) => {
+          setGoalsVersion((v) => v + 1);
+          set("goal", g.id);
+        }}
       />
     </ModalShell>
   );

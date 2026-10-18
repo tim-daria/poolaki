@@ -78,7 +78,7 @@ describe("entrySubtitle", () => {
 
   it.each<[EntryType, string]>([
     ["contribution", "Overdraft settlement"],
-    ["withdraw", "Returned on archiving"],
+    ["withdraw", "Returned to balance"],
   ])("marks a %s on an archived goal: %s", (type, subtitle) => {
     const archived = goal({ status: "archived" });
     expect(

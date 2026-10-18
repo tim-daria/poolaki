@@ -483,7 +483,7 @@ test.describe.serial("Transactions", () => {
     ).toBeDisabled();
 
     // A row keeps its type for life: the switch is off and says why.
-    for (const name of ["Expense", "Income", "Saving"]) {
+    for (const name of ["Expense", "Income", "Savings"]) {
       await expect(dialog.getByRole("button", { name })).toBeDisabled();
     }
     await expect(
@@ -668,13 +668,13 @@ test.describe.serial("Transactions", () => {
     await expect(page.getByRole("option", { name: "Food" })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    await dialog.getByRole("button", { name: "Saving" }).click();
+    await dialog.getByRole("button", { name: "Savings" }).click();
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
 
     // The picker lists this workspace's goals from the API: only the fixture
     // goal exists here, and choosing it shows what it holds under the field.
-    await dialog.getByLabel("Saving").click();
+    await dialog.getByLabel("Goal").click();
     await page
       .getByRole("option", { name: "Transactions fixture goal" })
       .click();
