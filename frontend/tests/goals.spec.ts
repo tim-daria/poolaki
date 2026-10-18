@@ -123,12 +123,12 @@ test.describe.serial("Goals", () => {
     await page.getByRole("button", { name: `Actions for ${goalName}` }).click();
   };
 
-  test("Add saving opens blank, with no deadline preset, and creates a goal", async () => {
-    await page.getByRole("button", { name: "Add saving" }).click();
+  test("Add goal opens blank, with no deadline preset, and creates a goal", async () => {
+    await page.getByRole("button", { name: "Add goal" }).click();
     const dialog = page.getByRole("dialog");
 
     await expect(
-      dialog.getByRole("heading", { name: "Add saving" }),
+      dialog.getByRole("heading", { name: "Add goal" }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await expect(dialog.getByLabel("Target amount")).toHaveValue("");
@@ -150,7 +150,7 @@ test.describe.serial("Goals", () => {
   });
 
   test("unsaved input is guarded and the name is normalised on blur", async () => {
-    await page.getByRole("button", { name: "Add saving" }).click();
+    await page.getByRole("button", { name: "Add goal" }).click();
     const dialog = page.getByRole("dialog");
     const name = dialog.getByLabel("Name");
 
@@ -168,7 +168,7 @@ test.describe.serial("Goals", () => {
     await expect(dialog).toBeHidden();
 
     // Reopening starts blank again.
-    await page.getByRole("button", { name: "Add saving" }).click();
+    await page.getByRole("button", { name: "Add goal" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await dialog.getByRole("button", { name: "Cancel" }).click();
   });
@@ -198,7 +198,7 @@ test.describe.serial("Goals", () => {
     expect(await names(completed())).toEqual(["Trip to Barcelona"]);
     expect(await names(archived())).toEqual(["Vacation fund"]);
     await expect(
-      page.getByRole("button", { name: "Start a new saving" }),
+      page.getByRole("button", { name: "Start a new goal" }),
     ).toHaveCount(0);
 
     // Active: progress from the API balance, the deadline from the goal.
@@ -219,7 +219,7 @@ test.describe.serial("Goals", () => {
     await expect(cue).toHaveText("Target reached");
     await cue.click();
     await expect(
-      page.getByRole("dialog").getByRole("heading", { name: "Edit saving" }),
+      page.getByRole("dialog").getByRole("heading", { name: "Edit goal" }),
     ).toBeVisible();
     await page
       .getByRole("dialog")
@@ -252,12 +252,12 @@ test.describe.serial("Goals", () => {
     // The tab is a ToggleButton, so it exposes aria-pressed.
     await expect(
       dialog.getByRole("button", {
-        name: "Saving",
+        name: "Savings",
         exact: true,
         pressed: true,
       }),
     ).toBeVisible();
-    await expect(dialog.getByLabel("Saving")).toContainText("New laptop");
+    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
     // Format-agnostic on purpose: the currency plan moves the symbol.
     await expect(dialog.getByText(/1\.790,00.*2\.000,00.*saved/)).toBeVisible();
 
@@ -271,18 +271,18 @@ test.describe.serial("Goals", () => {
     await active().getByRole("group", { name: "New laptop" }).click();
     await expect(
       dialog.getByRole("button", {
-        name: "Saving",
+        name: "Savings",
         exact: true,
         pressed: true,
       }),
     ).toBeVisible();
-    await expect(dialog.getByLabel("Saving")).toContainText("New laptop");
+    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
     await active().getByRole("group", { name: "Emergency fund" }).focus();
     await page.keyboard.press("Enter");
-    await expect(dialog.getByLabel("Saving")).toContainText("Emergency fund");
+    await expect(dialog.getByLabel("Goal")).toContainText("Emergency fund");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
@@ -363,7 +363,7 @@ test.describe.serial("Goals", () => {
     await expect(
       dialog.getByRole("heading", { name: "New laptop" }),
     ).toBeVisible();
-    await expect(dialog.getByText("Saving · by Dec 2027")).toBeVisible();
+    await expect(dialog.getByText("Goal · by Dec 2027")).toBeVisible();
     await expect(dialog.getByLabel("€1.790,00")).toHaveText("€1.790");
     await expect(dialog.getByText("of €2.000")).toBeVisible();
     await expect(dialog.getByText("90%", { exact: true })).toBeVisible();
@@ -383,7 +383,7 @@ test.describe.serial("Goals", () => {
       await openMenu("Winter tyres");
       await page.getByRole("menuitem", { name: "Edit" }).click();
       await expect(
-        dialog.getByRole("heading", { name: "Edit saving" }),
+        dialog.getByRole("heading", { name: "Edit Goal" }),
       ).toBeVisible();
       await expect(dialog.getByLabel("Name")).toHaveValue("Winter tyres");
       await expect(dialog.getByLabel("Target amount")).toHaveValue("480,00");
@@ -397,7 +397,7 @@ test.describe.serial("Goals", () => {
       await dialog.getByRole("button", { name: "Save changes" }).click();
       await expect(
         dialog.getByText(
-          "A goal with this name already exists in this organization.",
+          "A goal with this name already exists in this workspace.",
         ),
       ).toBeVisible();
     });
@@ -426,7 +426,7 @@ test.describe.serial("Goals", () => {
     );
 
     await dialog.getByRole("button", { name: "Archive" }).click();
-    const confirm = page.getByRole("dialog", { name: "Archive this saving?" });
+    const confirm = page.getByRole("dialog", { name: "Archive this goal?" });
     await expect(confirm).toContainText("returns €3.000,00");
     await confirm.getByRole("button", { name: "Archive" }).click();
 
@@ -467,12 +467,12 @@ test.describe.serial("Goals", () => {
     await page.goto(`${empty}/savings`);
     await expect(active().getByRole("group")).toHaveCount(0);
 
-    const prompt = page.getByRole("button", { name: "Start a new saving" });
+    const prompt = page.getByRole("button", { name: "Start a new goal" });
     await expect(prompt).toBeVisible();
     await prompt.click();
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Add saving" }),
+      dialog.getByRole("heading", { name: "Add goal" }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();

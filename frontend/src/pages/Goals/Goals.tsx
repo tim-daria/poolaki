@@ -72,7 +72,7 @@ function Goals() {
     >
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
-        Add saving
+        Add goal
       </PageActionButton>
       {error && <Alert severity="error">{error}</Alert>}
       <GoalForm

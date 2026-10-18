@@ -56,7 +56,7 @@ Linking an expense deducts the money from that specific savings total while keep
 
 **Home Page:** Displays a summary of active goals.
 
-**Savings Page:** Displays all goals, individual saved amounts, completion percentages, status filters, and the "Add Savings" option.
+**Savings Page:** Displays all goals, individual saved amounts, completion percentages, status filters, and the "Add Goal" option.
 
 **Transactions Page:** Lists contributions and linked expenses individually. Transactions can be filtered by type, and editing a contribution adjusts the corresponding goal balance automatically.
 

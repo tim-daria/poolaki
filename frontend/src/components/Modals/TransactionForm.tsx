@@ -360,7 +360,7 @@ export function TransactionForm({
                   disabled={editing}
                 />
                 <FieldLabel
-                  label="Saving"
+                  label="Goal"
                   htmlFor="transaction-goal"
                   id="transaction-goal-label"
                 >

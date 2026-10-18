@@ -77,7 +77,7 @@ class GoalCreateSerializer(serializers.Serializer[Goal]):
 
         if Goal.objects.filter(org_id=org_id, name=name).exists():
             raise serializers.ValidationError(
-                {"name": "A goal with this name already exists in this organization."}
+                {"name": "A goal with this name already exists in this workspace."}
             )
 
         target_date = cast(date | None, attrs["target_date"])
@@ -114,7 +114,7 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
             and Goal.objects.filter(org_id=goal.org_id, name=name).exclude(pk=goal.pk).exists()
         ):
             raise serializers.ValidationError(
-                {"name": "A goal with this name already exists in this organization."}
+                {"name": "A goal with this name already exists in this workspace."}
             )
 
         target_date = cast(date | None, attrs.get("target_date"))

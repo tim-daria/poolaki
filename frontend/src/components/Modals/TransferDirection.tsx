@@ -19,7 +19,7 @@ const OPTIONS: {
 }[] = [
   {
     value: "contribution",
-    title: "Add to saving",
+    title: "Add to goal",
     note: "from your balance",
     Icon: ArrowDownwardIcon,
   },

@@ -76,9 +76,10 @@ describe("createGoal", () => {
 
   it("turns a 400 into a GoalError with the server's message", async () => {
     stubFetch(
-      { name: ["A goal with this name already exists in this organization."] },
+      { name: ["A goal with this name already exists in this workspace."] },
       400,
     );
+    stubFetch({ name: [""] }, 400);
     await expect(
       createGoal(
         ORG,
