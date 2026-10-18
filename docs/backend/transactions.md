@@ -127,7 +127,7 @@ Status:
 
 - `201 Created` on success
 - `400 Bad Request` when a rule above is violated
-- `403 Forbidden` when the user is not the organization owner
+- `403 Forbidden` when the user is not a member of the organization
 
 Side effect (see [notifications.md](notifications.md)): every other member of
 the organization receives a `transaction_added` notification; the creator is
@@ -162,8 +162,8 @@ Response example:
 Status:
 
 - `200 OK` on success
-- `404 Not Found` for invalid transaction_id
-- `403 Forbidden` when the user is not the organization owner
+- `404 Not Found` for an invalid transaction_id, or one created by another member: rows are scoped to their creator, so nobody else can change them, the organization owner included
+- `403 Forbidden` when the user is not a member of the organization
 
 ### Delete transaction
 
@@ -174,8 +174,8 @@ DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 Status:
 - `204 No Content` on successful deletion
 - `400 Bad Request` if the balance is insufficient to cancel income transaction
-- `403 Forbidden` when the user is not the organization owner
-- `404 Not Found` for invalid transaction_id
+- `403 Forbidden` when the user is not a member of the organization
+- `404 Not Found` for an invalid transaction_id, or one created by another member (creator only, see above)
 
 ## Frontend integration notes
 

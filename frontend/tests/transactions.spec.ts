@@ -298,12 +298,14 @@ test.describe.serial("Transactions", () => {
     await expect(contribution).toContainText("Savings");
     await expect(contribution).toContainText("→ €300,00");
 
-    // The one withdrawal sits on page 2; its own tab has it at the top, with
-    // no category chip.
+    // The one withdrawal sits on page 2; its own tab has it at the top, under
+    // its own chip.
     await tab("Withdrawals").click();
     await expect(rows()).toHaveCount(1);
     await expect(rows().first()).toContainText("← €300,00");
-    await expect(rows().first().getByRole("cell").nth(2)).toHaveText("—");
+    await expect(rows().first().getByRole("cell").nth(2)).toHaveText(
+      "Withdraw",
+    );
     await tab("All").click();
   });
 
@@ -672,7 +674,7 @@ test.describe.serial("Transactions", () => {
 
     // The picker lists this workspace's goals from the API: only the fixture
     // goal exists here, and choosing it shows what it holds under the field.
-    await dialog.getByLabel("Goal").click();
+    await dialog.getByLabel("Saving").click();
     await page
       .getByRole("option", { name: "Transactions fixture goal" })
       .click();

@@ -247,13 +247,17 @@ test.describe.serial("Goals", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Contribute to saving" }),
+      dialog.getByRole("heading", { name: "Contribute" }),
     ).toBeVisible();
     // The tab is a ToggleButton, so it exposes aria-pressed.
     await expect(
-      dialog.getByRole("button", { name: "Saving", pressed: true }),
+      dialog.getByRole("button", {
+        name: "Saving",
+        exact: true,
+        pressed: true,
+      }),
     ).toBeVisible();
-    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
+    await expect(dialog.getByLabel("Saving")).toContainText("New laptop");
     // Format-agnostic on purpose: the currency plan moves the symbol.
     await expect(dialog.getByText(/1\.790,00.*2\.000,00.*saved/)).toBeVisible();
 
@@ -266,15 +270,19 @@ test.describe.serial("Goals", () => {
 
     await active().getByRole("group", { name: "New laptop" }).click();
     await expect(
-      dialog.getByRole("button", { name: "Saving", pressed: true }),
+      dialog.getByRole("button", {
+        name: "Saving",
+        exact: true,
+        pressed: true,
+      }),
     ).toBeVisible();
-    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
+    await expect(dialog.getByLabel("Saving")).toContainText("New laptop");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
     await active().getByRole("group", { name: "Emergency fund" }).focus();
     await page.keyboard.press("Enter");
-    await expect(dialog.getByLabel("Goal")).toContainText("Emergency fund");
+    await expect(dialog.getByLabel("Saving")).toContainText("Emergency fund");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
