@@ -216,6 +216,25 @@ def test_totals_sum_income_and_expense_and_ignore_initial_balance(
     assert data["totals"] == {"income": "120.10", "expense": "40.50"}
 
 
+def test_sums_wider_than_one_amount_still_serialize(
+    report_client: APIClient,
+    personal_user: tuple[User, Organization],
+    report_categories: dict[str, Category],
+) -> None:
+    """Rows are capped at 14 digits; a sum of them is not, and must not be."""
+    _, org = personal_user
+    for day in ("2025-01-05", "2025-01-06"):
+        add_transaction(org, "income", "999999999999.99", day, category=report_categories["income"])
+
+    response = report_client.get(report_url(org.id), {"year": 2025})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["totals"]["income"] == "1999999999999.98"
+    assert data["monthly"][0]["income"] == "1999999999999.98"
+    assert data["categories"][0]["total"] == "1999999999999.98"
+
+
 def test_contribution_transactions_excluded_from_all_sections(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:

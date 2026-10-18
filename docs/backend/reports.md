@@ -107,3 +107,6 @@ Status:
   month chart needs no extra request.
 - Amounts are strings with exactly 2 decimal places, same as the rest of the
   API.
+- **Sums have a scale, not a width.** A row is capped at 14 digits; a sum
+  of rows is not, so every total here (and the organization balance) is
+  serialized with two decimals and no digit limit.
