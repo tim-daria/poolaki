@@ -45,7 +45,7 @@ For the end-to-end sequential diagram and detailed RAG pipeline execution, see [
 The user request passes two hops:
 
 1. `Frontend → Django`: `POST /api/v1/organizations/{org_id}/chat/` — public endpoint. Standard session authentication and organization membership apply, as for the rest of the `/api/v1/` API; the user comes from the session and the organization from the URL.
-2. `Django → AI Service`: `POST /api/v1/chat` — Django forwards the question with the user and organization identifiers.
+2. `Django → AI Service`: `POST /api/v1/chat/` — Django forwards the question with the user and organization identifiers.
 
 ### Chat Endpoint (Django → AI Service)
 
