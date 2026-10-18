@@ -127,7 +127,7 @@ Internal endpoints require:
 
 ### 2.2. Category Breakdown
 
-`POST /api/internal/v1/analytics/categories/`
+`POST /api/internal/v1/categories/`
 
 Per-category, per-month distribution for a year, covering both income and expense categories.
 
@@ -164,14 +164,14 @@ Per-category, per-month distribution for a year, covering both income and expens
 ```
 
 - `monthly` is always 12 slots, index `0` = January, zero-filled. `total` equals the sum of `monthly`.
-- Only categories with at least one transaction in the year are returned; categories without activity are omitted.
+- Inactive categories are included with zero-filled `monthly` values, so the AI Service sees the full category list, not just the ones with activity.
 - Ordering: income categories first, then expense categories; within a type, by `total` descending, then by name. The biggest expense category is the first expense entry.
 
 ### 2.3. Transactions
 
 `POST /api/internal/v1/transactions/`
 
-Filtered transaction list.
+Static transaction context for the AI Service. The AI Service sends no filters — the LLM returns the intent label only, and Django decides the payload: all income/expense transactions of the last 3 calendar months (inclusive), newest first. Top-N and "largest transaction" questions are answered by the LLM over the returned rows.
 
 Covers: "what are my top 5 expenses?", "when was the last time I made an expense?", "what was my largest transaction in the last 3 months?", and generic "show my transactions" browsing.
 
@@ -181,43 +181,30 @@ Covers: "what are my top 5 expenses?", "when was the last time I made an expense
 | --------------- | ------- | -------- | ---------------------------------------- |
 | user_id         | integer | yes      | User identifier used for authorization and data scoping |
 | organization_id | integer | yes      | Organization identifier                  |
-| entry_type      | string  | no       | `income` \| `expense`                    |
-| date_from       | string  | no       | Inclusive start date, `YYYY-MM-DD`       |
-| date_to         | string  | no       | Inclusive end date, `YYYY-MM-DD`         |
-| sort            | string  | no       | `date_desc` (default) \| `date_asc`     |
-| limit           | integer | no       | Maximum rows returned. Default `100`, max `200` |
 
-Default date window when `date_from` / `date_to` are omitted: the last 3 calendar months including the current one (`date_from` = first day of the month two months before the current month, `date_to` = today).
-
-The AI Service fills `date_from` / `date_to` from the fixed template (below); the dates are computed in code from the current date. The LLM returns the intent label only and does not produce filter values.
-
-**Request Example**
-
-The single request the AI Service sends — the full 3-month list (dates computed from the current date):
-
-```
-{
-  "user_id": 123,
-  "organization_id": 456,
-  "period": "2026-01"
-}
-```
+Unknown fields are ignored.
 
 #### Response Schema
 
 ```
 {
-  "period":"2026-01",
-  "total_income":2500,
-  "total_expenses":850,
-  "categories":[
+  "transactions": [
     {
-      "name":"Food",
-      "amount":300
+      "id": 482,
+      "date": "2026-03-15",
+      "description": "Groceries",
+      "entry_type": "expense",
+      "category": "Food",
+      "amount": "50.00"
     }
   ]
 }
 ```
+
+- No row cap: every income/expense transaction in the window is returned.
+- Newest first: `date` descending, `id` descending within a day.
+- `date` is `YYYY-MM-DD`; `amount` is a 2-decimal string; `category` is `null` when the transaction has no category.
+- Only `income` and `expense` are returned. `contribution` / `withdraw` are internal goal transfers, not income/expense events, and are excluded (same rule as the categories endpoint); goal funding questions are answered by the goals endpoint. The LLM narrows by `category` in context.
 
 ### 2.2. Transactions
 `POST /api/internal/v1/transactions`
