@@ -72,6 +72,11 @@ export const theme = createTheme({
           MozOsxFontSmoothing: "grayscale",
           "@media (max-width: 1024px)": { fontSize: 16 },
         },
+        // Literal var() rather than a theme callback: MuiCssBaseline's
+        // styleOverrides are typed as raw CSS, so a callback's `theme` is any.
+        body: {
+          backgroundColor: "var(--mui-palette-primary-light)",
+        },
       },
     },
     MuiButton: {
@@ -81,6 +86,38 @@ export const theme = createTheme({
       // Pill shape for every Button; IconButton is separate and stays round.
       styleOverrides: {
         root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
+      },
+    },
+    MuiToggleButtonGroup: {
+      // The one segmented-control look: a `background.default` track with
+      // borderless, gapped buttons and a primary-filled selected one. Callers
+      // set only the group's radius (the buttons inherit it) and sizing.
+      // Centralised here so no ToggleButtonGroup has to repeat it in `sx`.
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          padding: 4,
+          gap: 4,
+          // `.Mui-disabled` repeated so this outranks MUI's three-class
+          // disabled rules, which otherwise restore a three-sided border and
+          // a -1px overlap on the non-first buttons of a disabled group. It
+          // also beats the group's first/middle/last rules that square off the
+          // inner corners.
+          "& .MuiToggleButtonGroup-grouped, & .MuiToggleButtonGroup-grouped.Mui-disabled":
+            {
+              border: 0,
+              marginLeft: 0,
+              borderRadius: "inherit",
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              "&.Mui-disabled": { color: theme.palette.text.disabled },
+              "&.Mui-selected": {
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                "&:hover": { backgroundColor: theme.palette.primary.main },
+              },
+            },
+        }),
       },
     },
     MuiDialog: {
@@ -122,6 +159,21 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           fontSize: "1rem",
+        },
+      },
+    },
+    MuiAlert: {
+      // The icon column is laid out against the first line of the message
+      // rather than the whole block: `1lh` box with its own padding keeps a
+      // one-line alert centred and a wrapping one top-aligned with its text.
+      // Centralised here so no Alert has to repeat it in `sx`.
+      styleOverrides: {
+        icon: {
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: "1lh",
+          boxSizing: "content-box",
+          alignItems: "center",
         },
       },
     },
