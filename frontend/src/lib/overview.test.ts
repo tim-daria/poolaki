@@ -213,9 +213,10 @@ describe("recentTransactions", () => {
 });
 
 describe("goals", () => {
-  it("goalPercent rounds and caps at 100", () => {
+  it("goalPercent rounds and clamps to 0–100", () => {
     expect(goalPercent(goal())).toBe(90);
     expect(goalPercent(goal({ balance: 2500 }))).toBe(100);
+    expect(goalPercent(goal({ balance: -340 }))).toBe(0);
   });
 
   it("closestGoal picks the highest saved-to-target ratio among active goals", () => {
@@ -227,6 +228,13 @@ describe("goals", () => {
       goal({ id: 4, target_amount: 10000, balance: 9500 }),
     ];
     expect(closestGoal(goals)?.id).toBe(4);
+    // Overdrawn counts as empty: it never beats a goal with money in it.
+    expect(
+      closestGoal([
+        goal({ id: 1, balance: -340 }),
+        goal({ id: 2, balance: 10 }),
+      ])?.id,
+    ).toBe(2);
     expect(
       closestGoal([goal({ balance: 2000, status: "completed" })]),
     ).toBeUndefined();
