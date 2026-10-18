@@ -131,6 +131,14 @@ export const router = createBrowserRouter([
                         },
                         lazy: () => import("./pages/Settings/OrgSettings"),
                       },
+                      {
+                        path: "reports",
+                        handle: {
+                          title: "Reports",
+                          subtitle: "Income, expenses and savings for the year",
+                        },
+                        lazy: () => import("./pages/Reports/Reports"),
+                      },
                     ],
                   },
                 ],
