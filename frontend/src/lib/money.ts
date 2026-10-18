@@ -248,3 +248,59 @@ export function validateOpeningBalance(
 ): string | null {
   return checkAmount(canonical, 0, locale);
 }
+
+/* ---------------------------------- */
+/*              Compact               */
+/* ---------------------------------- */
+
+/**
+ * Abbreviates a large amount for a space that cannot fit the full figure
+ * ("149,2 Mio."), one decimal at most. Callers keep the exact amount in a
+ * tooltip and the accessible name: the abbreviation drops the cents.
+ */
+export function compactAmount(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(n);
+}
+
+/* ---------------------------------- */
+/*           Overview figures         */
+/* ---------------------------------- */
+
+/** Whole euros, grouped: "3.567". For chart labels, where cents are noise. */
+export function displayWhole(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+/** The display amount split at the decimal separator, so cents can be styled apart. */
+export function splitCents(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): { whole: string; cents: string } {
+  const text = displayAmount(n, locale);
+  const at = text.lastIndexOf(SEPARATORS[locale].decimal);
+  return { whole: text.slice(0, at), cents: text.slice(at) };
+}
+
+/** Whole euros up to six digits; past that the compact form ("1,0 Mrd."), so a figure never outgrows its column. */
+export function displayFigure(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  // The rounded value decides, and is what gets abbreviated: 999.999,6
+  // would otherwise pass the threshold yet come back unabbreviated.
+  const whole = Math.round(n);
+  return Math.abs(whole) >= 1_000_000
+    ? compactAmount(whole, locale)
+    : displayWhole(n, locale);
+}
