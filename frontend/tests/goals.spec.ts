@@ -448,6 +448,31 @@ test.describe.serial("Goals", () => {
     ).toContainText("-€3.000,00");
   });
 
+  test("Withdraw opens the form on Withdraw with the goal chosen, and caps the amount", async () => {
+    await openMenu("New laptop");
+    await page.getByRole("menuitem", { name: "Withdraw" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "Withdraw" }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: /^Withdraw back/, pressed: true }),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
+
+    // More than the goal holds is refused before any request.
+    await dialog.getByLabel("Amount").fill("2000");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(
+      dialog.getByText("Only €1.790,00 is in this goal."),
+    ).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
   test("the actions menu does not trigger the card", async () => {
     await openMenu("New laptop");
     await expect(
