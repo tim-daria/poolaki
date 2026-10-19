@@ -38,7 +38,7 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             goal_id=goal.id,
             entry_type=EntryType.CONTRIBUTION,
             amount=abs(remaining_balance),
-            description=f"Goal {goal.name} archived",
+            description=f"Archived {goal.name}",
             transaction_date=date.today(),
             is_tax_deductible=False,
         )
@@ -50,7 +50,7 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             goal_id=goal.id,
             entry_type=EntryType.WITHDRAW,
             amount=remaining_balance,
-            description=f"Goal {goal.name} archived",
+            description=f"Archived {goal.name}",
             transaction_date=date.today(),
             is_tax_deductible=False,
         )

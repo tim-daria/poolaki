@@ -51,9 +51,12 @@ function goal(overrides: Partial<Goal> = {}): Goal {
     id: 1,
     name: "Trip",
     target_amount: 2000,
-    saved_amount: 1790,
     balance: 1790,
     spendable: false,
+    progress: 0.9,
+    overdue: false,
+    completed_at: null,
+    created_by: "owner",
     target_date: null,
     status: "active",
     created_at: "2026-08-01T00:00:00Z",
@@ -212,20 +215,20 @@ describe("recentTransactions", () => {
 describe("goals", () => {
   it("goalPercent rounds and caps at 100", () => {
     expect(goalPercent(goal())).toBe(90);
-    expect(goalPercent(goal({ saved_amount: 2500 }))).toBe(100);
+    expect(goalPercent(goal({ balance: 2500 }))).toBe(100);
   });
 
   it("closestGoal picks the highest saved-to-target ratio among active goals", () => {
     const goals = [
-      goal({ id: 1, saved_amount: 2000, status: "completed" }),
-      goal({ id: 2, saved_amount: 1000 }),
-      goal({ id: 3, saved_amount: 1790 }),
+      goal({ id: 1, balance: 2000, status: "completed" }),
+      goal({ id: 2, balance: 1000 }),
+      goal({ id: 3, balance: 1790 }),
       // Less left to save than goal 3, but a lower ratio.
-      goal({ id: 4, target_amount: 10000, saved_amount: 9500 }),
+      goal({ id: 4, target_amount: 10000, balance: 9500 }),
     ];
     expect(closestGoal(goals)?.id).toBe(4);
     expect(
-      closestGoal([goal({ saved_amount: 2000, status: "completed" })]),
+      closestGoal([goal({ balance: 2000, status: "completed" })]),
     ).toBeUndefined();
     expect(closestGoal([goal({ status: "archived" })])).toBeUndefined();
   });
@@ -233,7 +236,7 @@ describe("goals", () => {
   it("activeGoals drops completed and archived goals", () => {
     const goals = [
       goal({ id: 1 }),
-      goal({ id: 2, saved_amount: 2000, status: "completed" }),
+      goal({ id: 2, balance: 2000, status: "completed" }),
       goal({ id: 3, status: "archived" }),
     ];
     expect(activeGoals(goals).map((g) => g.id)).toEqual([1]);
