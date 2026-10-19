@@ -30,13 +30,14 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
   if (!goal) {
     return (
       <HomeCard title="Goal" sx={sx}>
-        <Stack spacing={1.5}>
-          <Typography sx={{ fontWeight: 600 }}>
+        {/* One line and a button: the same height as the filled state, so
+            the sidebar does not jump when the first goal is created. */}
+        <Stack
+          spacing={1}
+          sx={{ alignItems: "center", [TABLET]: { my: "auto" } }}
+        >
+          <Typography sx={{ color: "text.secondary", textAlign: "center" }}>
             Save toward something
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            A trip, a new laptop, an emergency fund. Set an amount and watch it
-            fill up as you save.
           </Typography>
           <Button
             variant="outlined"
@@ -44,7 +45,7 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
             sx={{
               minHeight: 44,
               fontWeight: 600,
-              alignSelf: { xs: "stretch", sm: "flex-start" },
+              width: { xs: "100%", sm: "auto" },
             }}
           >
             Create a goal

@@ -4,7 +4,7 @@
  * footer with the month's net.
  */
 
-import { Box, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Stack, Tooltip, Typography, type Theme } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "../../components/Money";
 import { displayAmount, displayFigure } from "../../lib/money";
@@ -34,6 +34,21 @@ const MAX_HEIGHT = { xs: 64, desktop: 72 };
 /** A non-zero value never draws shorter than this; zero is a stub. */
 const MIN_HEIGHT = 4;
 const STUB_HEIGHT = 3;
+/** Bar corners, in theme radius units: the same 1.5 the other rounded fills use. */
+const BAR_RADIUS = 1.5;
+/** The figure above each bar: its size and the gap to the bar, in spacing units. */
+const FIGURE_SIZE = "0.9rem";
+const FIGURE_GAP = 0.75;
+
+/**
+ * A column's fixed height: the tallest bar plus the room its figure takes
+ * above it. Reserved whatever the values, so the chart never changes height
+ * as rows are added. The figure's line height follows body text.
+ */
+function columnHeight(t: Theme, max: number): string {
+  const line = t.typography.body1.lineHeight ?? 1.5;
+  return `calc(${max}px + ${FIGURE_SIZE} * ${line} + ${t.spacing(FIGURE_GAP)})`;
+}
 
 /** What the columns cover and how they relate to the balance figure beside them. */
 function monthInfo(month: string): string {
@@ -115,12 +130,20 @@ function Column({
   const magnitude = Math.abs(value);
 
   return (
-    <Stack sx={{ alignItems: "center", minWidth: 0 }}>
+    <Stack
+      sx={(t) => ({
+        alignItems: "center",
+        justifyContent: "flex-end",
+        minWidth: 0,
+        height: columnHeight(t, MAX_HEIGHT.xs),
+        [DESKTOP]: { height: columnHeight(t, MAX_HEIGHT.desktop) },
+      })}
+    >
       <Money
         title={`${shownSign}€${displayAmount(magnitude)}`}
         sx={{
-          fontSize: "0.9rem",
-          mb: 0.75,
+          fontSize: FIGURE_SIZE,
+          mb: FIGURE_GAP,
           whiteSpace: "nowrap",
           color: value > 0 ? text : "text.disabled",
         }}
@@ -132,7 +155,11 @@ function Column({
         sx={{
           width: "60%",
           maxWidth: 88,
-          borderRadius: "6px 6px 0 0",
+          // Top corners only, so the bar rests on the baseline.
+          borderRadius: (t) => {
+            const r = `${BAR_RADIUS * Number(t.shape.borderRadius)}px`;
+            return `${r} ${r} 0 0`;
+          },
           height: height(MAX_HEIGHT.xs),
           [DESKTOP]: { height: height(MAX_HEIGHT.desktop) },
           bgcolor: value > 0 ? bar : "divider",

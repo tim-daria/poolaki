@@ -33,19 +33,17 @@ interface Props {
 
 export const RECENT_ROWS = 5;
 
-/** A row's height: its two lines of text. */
-const ROW_HEIGHT = 44;
+/** A row's two lines: body1 and body2 line heights, in rem so it follows the root font. */
+const ROW_HEIGHT = "2.75rem";
 
 /**
- * On desktop the list keeps the room of a full five rows whatever it holds,
- * and grows with the card when the sidebar beside it is taller: a full list
- * then spreads its rows into that room, a short one keeps its rhythm. A
- * phone card fits its rows.
+ * On desktop the list keeps the room of a full five rows whatever it holds;
+ * rows keep their rhythm from the top. A phone card fits its rows.
  */
 const listSx = {
   [DESKTOP]: {
     flex: 1,
-    minHeight: RECENT_ROWS * ROW_HEIGHT + (RECENT_ROWS - 1) * ROW_GAP,
+    minHeight: `calc(${RECENT_ROWS} * ${ROW_HEIGHT} + ${(RECENT_ROWS - 1) * ROW_GAP}px)`,
   },
 } as const;
 
@@ -102,14 +100,7 @@ export function RecentActivityCard({
       action={<HomeCardAction>See all</HomeCardAction>}
     >
       <Box sx={listSx}>
-        <TransactionList
-          withPerson={shared}
-          sx={{
-            height: "100%",
-            alignContent:
-              rows.length >= RECENT_ROWS ? "space-between" : "start",
-          }}
-        >
+        <TransactionList withPerson={shared}>
           {rows.map((t) => (
             <TransactionListItem
               key={t.id}

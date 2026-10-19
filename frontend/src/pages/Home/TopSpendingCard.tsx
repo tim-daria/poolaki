@@ -16,17 +16,21 @@ import {
   type SpendingSlice,
 } from "../../lib/overview";
 import { HomeCard, HomeCardAction, HomeCardProblem } from "./HomeCard";
-import { TABLET } from "../../lib/layout";
+import { DESKTOP, TABLET } from "../../lib/layout";
 import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
 interface Props {
   /** Null when the report did not load; the card then says so. */
   slices: SpendingSlice[] | null;
+  /**
+   * On desktop the ring has no size of its own: the caller must give the
+   * card a definite height (Home's `1fr` grid row), or the ring collapses.
+   */
   /** Placement in the page grid. */
   sx?: SxProps<Theme>;
 }
 
-/** The ring is this size everywhere; the legend takes what is left. */
+/** Ring size below desktop; on desktop it fills the row it is given. */
 const SIZE = 112;
 /** In viewBox units of 100; the stroke is ~13% of the box. */
 const STROKE = 13;
@@ -125,7 +129,20 @@ export function TopSpendingCard({ slices, sx }: Props) {
         <Box
           role="img"
           aria-label={description}
-          sx={{ flexShrink: 0, width: SIZE, height: SIZE }}
+          sx={{
+            flexShrink: 0,
+            width: SIZE,
+            height: SIZE,
+            // Stretches to the row; `contain` keeps the ring out of the row's
+            // intrinsic height, so the sidebar never outgrows the card beside it.
+            [DESKTOP]: {
+              width: "auto",
+              height: "auto",
+              alignSelf: "stretch",
+              aspectRatio: "1 / 1",
+              contain: "size",
+            },
+          }}
         >
           {/* The centre figure is SVG text, sized by its length so a long
               total stays inside the hole. */}

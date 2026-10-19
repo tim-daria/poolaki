@@ -162,7 +162,11 @@ function Home() {
         onSaved={refresh}
         onDeleted={refresh}
       />
-      <GoalForm open={modal === "goal"} onClose={() => setModal(null)} />
+      <GoalForm
+        open={modal === "goal"}
+        onClose={() => setModal(null)}
+        onSaved={refresh}
+      />
       <StartingBalanceForm
         open={modal === "balance"}
         onClose={() => setModal(null)}
@@ -296,7 +300,7 @@ function Home() {
       {/* One grid, three named areas. Phone: a column, the goal ahead of
           spending. Tablet: the list full width, the two cards sharing a row.
           Desktop: the list beside a sidebar of the two cards, spending on top
-          and stretching so the ring shrinks with the row it is given. */}
+          and stretching so the ring grows with the row it is given. */}
       <Box
         sx={{
           display: "grid",
