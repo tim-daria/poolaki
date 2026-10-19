@@ -10,8 +10,11 @@ import {
   createTransactionViaApi,
   createWorkspaceViaApi,
   freezeClock,
+  inviteMember,
+  makeUsers,
   openAsSharedOwner,
   patchGoalViaApi,
+  registerUser,
   toOrgId,
 } from "./helpers.js";
 
@@ -228,6 +231,8 @@ async function fillDate(scope: Locator, label: string, iso: string) {
 
 test.describe.serial("Transactions", () => {
   let page: Page;
+  /** Shown as "by <name>" on every fixture row: the workspace is shared. */
+  let ownerName: string;
   let transactionsUrl: string;
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
@@ -236,7 +241,9 @@ test.describe.serial("Transactions", () => {
   let goalId: number;
 
   test.beforeAll(async ({ browser }) => {
-    page = (await openAsSharedOwner(browser)).page;
+    const owner = await openAsSharedOwner(browser);
+    page = owner.page;
+    ownerName = owner.user.username;
     await freezeClock(page);
     // A workspace of its own: every count below assumes exactly FIXTURES, and
     // the shared owner's personal workspace is open to other specs.
@@ -268,7 +275,8 @@ test.describe.serial("Transactions", () => {
     ).toBeVisible();
   });
 
-  const rows = (): Locator => page.locator("tbody tr");
+  const rows = (): Locator =>
+    page.getByRole("list", { name: "Transactions" }).getByRole("listitem");
   const tab = (name: string) =>
     page.getByRole("tab", { name: new RegExp(name) });
   const showing = (text: string) => page.getByText(`Showing ${text}`);
@@ -288,6 +296,7 @@ test.describe.serial("Transactions", () => {
     await expect(rows().first()).toContainText("5 Aug");
     await expect(rows().first()).toContainText("REWE");
     await expect(rows().first()).toContainText("-€255,00");
+    await expect(rows().first()).toContainText(`by ${ownerName}`);
   });
 
   test("colours rows by entry type", async () => {
@@ -304,9 +313,9 @@ test.describe.serial("Transactions", () => {
     await tab("Withdrawals").click();
     await expect(rows()).toHaveCount(1);
     await expect(rows().first()).toContainText("←€300,00");
-    await expect(rows().first().getByRole("cell").nth(2)).toHaveText(
-      "Withdraw",
-    );
+    await expect(
+      rows().first().getByText("Withdraw", { exact: true }),
+    ).toBeVisible();
     await tab("All").click();
   });
 
@@ -968,5 +977,63 @@ test.describe.serial("Transactions", () => {
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await page.getByRole("button", { name: "Discard" }).click();
     await expect(dialog).toBeHidden();
+  });
+
+  test("rows can be filtered by the member who added them", async ({
+    browser,
+  }) => {
+    // A second member, so the panel offers the Members section at all: a
+    // workspace with one member hides it.
+    const [guest] = makeUsers("txguest", "unused");
+    const guestPage = await browser.newPage();
+    await registerUser(guestPage, guest);
+    const invitation = (await inviteMember(page, orgId, guest.username)) as {
+      id: number;
+    };
+    const csrftoken =
+      (await guestPage.context().cookies()).find((c) => c.name === "csrftoken")
+        ?.value ?? "";
+    const accepted = await guestPage.request.post(
+      `/api/v1/invitations/${invitation.id}/accept/`,
+      { headers: { "X-CSRFToken": csrftoken } },
+    );
+    if (accepted.status() !== 200) {
+      throw new Error(`accept failed: ${accepted.status()}`);
+    }
+    await createTransactionViaApi(guestPage, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Food")!,
+      goal_id: null,
+      description: "Guest lunch",
+      amount: "14.00",
+      transaction_date: "2026-08-06",
+    });
+    await guestPage.close();
+
+    await page.goto(transactionsUrl);
+    await expect(rows().filter({ hasText: "Guest lunch" })).toContainText(
+      `by ${guest.username}`,
+    );
+
+    await filtersButton().click();
+    const panel = page
+      .getByRole("presentation")
+      .filter({ hasText: "Categories" });
+    await expect(panel.getByText("Members", { exact: true })).toBeVisible();
+    await panel.getByText(guest.username, { exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+
+    await expect(rows()).toHaveCount(1);
+    await expect(rows().first()).toContainText("Guest lunch");
+    await expect(filtersButton()).toContainText("1");
+    const chip = page.locator(".MuiChip-deletable", {
+      hasText: guest.username,
+    });
+    await expect(chip).toBeVisible();
+
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(chip).toBeHidden();
+    await expect(rows()).toHaveCount(15);
   });
 });

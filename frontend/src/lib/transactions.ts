@@ -457,6 +457,7 @@ export async function fetchTransactionPage(
   if (f.from) params.set("date_from", f.from);
   if (f.to) params.set("date_to", f.to);
   if (f.categories.length) params.set("category_id", f.categories.join(","));
+  if (f.members.length) params.set("created_by", f.members.join(","));
   if (f.taxDeductible) params.set("tax_deductible", "true");
   if (f.goal !== undefined) params.set("goal_id", String(f.goal));
   if (f.page > 1) {
