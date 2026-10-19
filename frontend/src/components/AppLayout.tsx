@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AiChatDrawer } from "./AiChat/AiChatDrawer";
 import { Outlet, useParams, Link as RouterLink } from "react-router";
-import { Box, Link, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Link, useMediaQuery } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
@@ -30,22 +30,17 @@ const narrowContentMaxWidth = 880;
  *   is the scroll container (so the header scrolls away with the page and
  *   a scrollbar narrows header and page alike), and it is not keyed, so an
  *   effect scrolls it back to the top on the same change.
- *   The chat panel is keyed the same way so a conversation never outlives
+ *   The chat drawer is keyed the same way so a conversation never outlives
  *   the organisation it was about.
- * - The AI assistant is a sibling of the whole shell (header + page), not
- *   of <main> alone: on desktop it pushes the entire page aside and runs the
- *   full viewport height; on phones it covers the shell, which is marked
- *   `inert` so focus and assistive tech stay inside the panel without any
- *   `aria-hidden` juggling.
+ * - The AI assistant is a temporary Drawer; `useRestoreFocus` inside it
+ *   handles the aria-hidden edges like every other overlay.
  */
 export function AppLayout() {
   const logout = useLogout();
-  const theme = useTheme();
   const { orgId } = useParams();
   const narrow = useRouteMeta()?.width === "narrow";
   const showAssistant = useRouteMeta()?.assistant ?? true;
   const isMobile = useMediaQuery(NAV_MOBILE_QUERY);
-  const chatFullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [chatOpen, setChatOpen] = useState(false);
   const [fabSlot, setFabSlot] = useState<HTMLElement | null>(null);
@@ -71,12 +66,10 @@ export function AppLayout() {
       {/* App shell: header stacked over the page, scrolling as one. */}
       <Box
         ref={shellRef}
-        inert={chatOpen && chatFullScreen}
         sx={{
           display: "flex",
           flexDirection: "column",
           flex: 1,
-          // Let the chat column take its width from here, not overflow.
           minWidth: 0,
           overflowY: "auto",
         }}
@@ -161,7 +154,6 @@ export function AppLayout() {
       <AiChatDrawer
         key={orgId}
         open={chatOpen}
-        fullScreen={chatFullScreen}
         onClose={() => setChatOpen(false)}
       />
     </Box>

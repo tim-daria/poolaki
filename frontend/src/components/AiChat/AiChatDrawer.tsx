@@ -1,14 +1,13 @@
-/** @file Right-hand chat surface for the AI assistant: message list, input,
- * send. Never a Modal: on desktop it is an inline flex sibling of the app
- * shell, on phones a fixed fullscreen overlay while AppLayout marks the shell
- * `inert`. No portal means `aria-hidden` never touches `#root`, so the
- * "Blocked aria-hidden" focus warning cannot occur. */
+/** @file Drawer for the AI assistant: message list, input, send. A right
+ * drawer on desktop, a bottom sheet on phones (useSheet). Focus handling as every overlay: `useRestoreFocus` keeps focus out of the
+ * `aria-hidden` shell on both edges of the Drawer's life. */
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent } from "react";
 import {
   Alert,
   Box,
   CircularProgress,
+  Drawer,
   IconButton,
   TextField,
   Typography,
@@ -16,35 +15,31 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import { useRestoreFocus } from "../../hooks/useRestoreFocus";
+import { useSheet } from "../../hooks/useSheet";
 import { useAiChat } from "./useAiChat";
 import { AiChatMessage } from "./AiChatMessage";
 
 const panelWidth = 420;
+/** The sheet leaves most of the page readable while the answer is in view. */
+const sheetHeight = "40dvh";
 
 interface Props {
   open: boolean;
-  /** Cover the viewport instead of sitting beside the page (phones). */
-  fullScreen: boolean;
   onClose: () => void;
 }
 
-export function AiChatDrawer({ open, fullScreen, onClose }: Props) {
+export function AiChatDrawer({ open, onClose }: Props) {
   const { messages, sending, error, send, reset } = useAiChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const restoreFocus = useRestoreFocus(open);
+  const { anchor, paperSx } = useSheet(panelWidth, sheetHeight);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
-
-  // Remember what opened the panel and hand focus back when it closes, the
-  // way a Modal would, since nothing else restores it for an inline panel.
-  useEffect(() => {
-    if (!open) return;
-    openerRef.current = document.activeElement as HTMLElement | null;
-    return () => openerRef.current?.focus();
-  }, [open]);
 
   function handleClose() {
     onClose();
@@ -64,138 +59,117 @@ export function AiChatDrawer({ open, fullScreen, onClose }: Props) {
     }
   }
 
-  /** The inline panel has no backdrop to click, so Escape closes it. */
-  function onPanelKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Escape") handleClose();
-  }
-
-  const content = (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: 2,
-          py: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
-          <Typography component="h2" sx={{ fontWeight: 700 }}>
-            AI Assistant
-          </Typography>
-        </Box>
-        <IconButton
-          aria-label="Close assistant"
-          onClick={handleClose}
-          size="small"
+  return (
+    <Drawer
+      anchor={anchor}
+      open={open}
+      onClose={handleClose}
+      // MUI would restore focus before the slide-out ends; onExited does it.
+      disableRestoreFocus
+      slotProps={{
+        transition: { onExited: restoreFocus },
+        paper: {
+          role: "dialog",
+          "aria-labelledby": titleId,
+          sx: paperSx,
+        },
+      }}
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: 2,
+            py: 1.5,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
         >
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Box>
-
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          px: 2,
-          py: 2,
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.5,
-        }}
-      >
-        {messages.length === 0 && (
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            Ask about your transactions, goals or budget.
-          </Typography>
-        )}
-        {messages.map((m) => (
-          <AiChatMessage key={m.id} message={m} />
-        ))}
-        {sending && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CircularProgress size={16} />
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Thinking…
+            <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
+            <Typography id={titleId} component="h2" sx={{ fontWeight: 700 }}>
+              AI Assistant
             </Typography>
           </Box>
-        )}
-        <div ref={bottomRef} />
-      </Box>
+          <IconButton
+            aria-label="Close assistant"
+            onClick={handleClose}
+            size="small"
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box
-        sx={{
-          display: "flex",
-          gap: 1,
-          p: 2,
-          // Clear the home indicator when the panel covers a phone screen.
-          pb: fullScreen ? "max(16px, env(safe-area-inset-bottom))" : 2,
-          borderTop: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <TextField
-          inputRef={inputRef}
-          fullWidth
-          multiline
-          maxRows={4}
-          size="small"
-          placeholder="Ask a question…"
-          onKeyDown={onInputKeyDown}
-          disabled={sending}
-          autoFocus
-        />
-        <IconButton
-          aria-label="Send"
-          onClick={submit}
-          disabled={sending}
-          color="primary"
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            py: 2,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+          }}
         >
-          <SendIcon />
-        </IconButton>
+          {messages.length === 0 && (
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Ask about your transactions, goals or budget.
+            </Typography>
+          )}
+          {messages.map((m) => (
+            <AiChatMessage key={m.id} message={m} />
+          ))}
+          {sending && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                Thinking…
+              </Typography>
+            </Box>
+          )}
+          <div ref={bottomRef} />
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            p: 2,
+            // Clear the home indicator under the sheet on phones.
+            pb: "max(16px, env(safe-area-inset-bottom))",
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <TextField
+            inputRef={inputRef}
+            fullWidth
+            multiline
+            maxRows={4}
+            size="small"
+            placeholder="Ask a question…"
+            onKeyDown={onInputKeyDown}
+            disabled={sending}
+            autoFocus
+          />
+          <IconButton
+            aria-label="Send"
+            onClick={submit}
+            disabled={sending}
+            color="primary"
+          >
+            <SendIcon />
+          </IconButton>
+        </Box>
       </Box>
-    </Box>
-  );
-
-  if (!open) return null;
-
-  return (
-    <Box
-      component="aside"
-      // Fullscreen it behaves as a dialog: the shell behind it is inert, so
-      // announce it as modal. Beside the page it is just a landmark.
-      role={fullScreen ? "dialog" : undefined}
-      aria-modal={fullScreen ? true : undefined}
-      aria-label="AI assistant"
-      onKeyDown={onPanelKeyDown}
-      sx={[
-        {
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          bgcolor: "background.paper",
-        },
-        fullScreen
-          ? { position: "fixed", inset: 0, zIndex: "drawer" }
-          : {
-              width: panelWidth,
-              flexShrink: 0,
-              borderLeft: "1px solid",
-              borderColor: "divider",
-            },
-      ]}
-    >
-      {content}
-    </Box>
+    </Drawer>
   );
 }
