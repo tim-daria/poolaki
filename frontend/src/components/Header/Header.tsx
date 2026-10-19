@@ -99,13 +99,16 @@ export function Header({
         },
       }}
     >
+      {/* Phones: the switcher keeps to half the bar, so the controls on the
+          right never get squeezed by a long workspace name. */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 1,
           minWidth: 0,
-          [NAV_DESKTOP]: { justifySelf: "start" },
+          maxWidth: "50%",
+          [NAV_DESKTOP]: { justifySelf: "start", maxWidth: "none" },
         }}
       >
         <OrgSwitcher />
@@ -122,16 +125,45 @@ export function Header({
           [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
         }}
       >
-        {showAssistant && (
-          <Button
-            variant="outlined"
-            startIcon={<AutoAwesomeOutlinedIcon />}
-            onClick={onAssistantClick}
-            sx={{ mr: 1.5, fontWeight: 700, border: "1px solid" }}
-          >
-            Ask AI
-          </Button>
-        )}
+        {showAssistant &&
+          (mobile ? (
+            <IconButton
+              aria-label="Ask AI"
+              onClick={onAssistantClick}
+              // No margin, like the bell beside the avatar on desktop: the
+              // two controls' insets around their discs are the gap.
+              sx={{ width: controlSize, height: controlSize }}
+            >
+              {/* The ring matches the avatar disc, not the hit area, so the
+                  two read as the same size. */}
+              <Box
+                sx={{
+                  width: avatarSize,
+                  height: avatarSize,
+                  // A flex child of the padded button; without this it
+                  // shrinks to the button's content box.
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  color: "text.primary",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                <AutoAwesomeOutlinedIcon fontSize="small" />
+              </Box>
+            </IconButton>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<AutoAwesomeOutlinedIcon />}
+              onClick={onAssistantClick}
+              sx={{ mr: 1.5, fontWeight: 700, border: "1px solid" }}
+            >
+              Ask AI
+            </Button>
+          ))}
         {!mobile && (
           <IconButton
             aria-label="Notifications"

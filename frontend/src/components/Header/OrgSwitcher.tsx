@@ -12,6 +12,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { NAV_DESKTOP } from "../../lib/layout";
 import { MAX_ORGS } from "../../lib/organizations";
 import { CreateOrgForm } from "../Modals/CreateOrgForm";
 
@@ -57,7 +58,8 @@ export function OrgSwitcher() {
           fontSize: 15,
           fontWeight: 600,
           minHeight: 44,
-          maxWidth: 240,
+          maxWidth: "100%",
+          [NAV_DESKTOP]: { maxWidth: 240 },
           px: 1,
           py: 0.5,
           gap: "10px",
