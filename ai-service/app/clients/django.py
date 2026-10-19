@@ -68,8 +68,7 @@ class MockDjangoClient:
 
 
 class DjangoClient:
-    """Real HTTP client for the /api/internal/v1/ namespace; service token
-    auth is not wired yet."""
+    """Real HTTP client for the /api/internal/v1/ namespace"""
 
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(base_url=settings.django_base_url)

@@ -7,8 +7,9 @@ from app.clients.llm import LLMClient
 
 class Intent(str, Enum):
     SUMMARY = "summary"
-    RECENT_TRANSACTIONS = "recent_transactions"
-    GOAL_PROGRESS = "goal_progress"
+    CATEGORIES = "categories"
+    TRANSACTIONS = "transactions"
+    # GOAL_PROGRESS = "goal_progress"
 
 
 class IntentionService:
@@ -20,8 +21,8 @@ class IntentionService:
 Classify the following financial question into exactly one of these intents:
 
 - summary
-- recent_transactions
-- goal_progress
+- categories
+- transactions
 
 Question:
 {question}

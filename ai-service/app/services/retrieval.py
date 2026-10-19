@@ -39,10 +39,12 @@ class MockRetriever(BaseRetriever):
     ) -> str | None:
         if intent == "summary":
             return "/api/internal/v1/analytics/summary/"
-        if intent == "recent_transactions":
+        if intent == "categories":
+            return "/api/internal/v1/categories/"
+        if intent == "ransactions":
             return "/api/internal/v1/transactions/"
-        if intent == "goal_progress":
-            return "/api/internal/v1/goals/progress"
+        # if intent == "goal_progress":
+        #     return "/api/internal/v1/goals/progress"
         return None
 
     async def get_context(
