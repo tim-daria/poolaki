@@ -494,3 +494,57 @@ export async function fetchTransactionPage(
     counts: data.counts,
   };
 }
+
+/**
+ * Every contribution and withdrawal dated in `year`, across pages.
+ * Savings figures are derived from these rows; the report has no transfer sums.
+ */
+export async function fetchYearTransfers(
+  org_id: number,
+  year: number,
+  signal?: AbortSignal,
+): Promise<Transaction[]> {
+  const from = `${year}-01-01`;
+  const to = `${year}-12-31`;
+  const [contributions, withdrawals] = await Promise.all([
+    fetchAllOfType(org_id, "contribution", from, to, signal),
+    fetchAllOfType(org_id, "withdraw", from, to, signal),
+  ]);
+  return [...contributions, ...withdrawals];
+}
+
+/** The API's page cap. */
+const TRANSFER_PAGE_SIZE = 100;
+
+/** Every page of one entry type within the date range. */
+async function fetchAllOfType(
+  org_id: number,
+  entry_type: "contribution" | "withdraw",
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<Transaction[]> {
+  const rows: Transaction[] = [];
+  let page = 1;
+  let pageCount: number;
+  do {
+    const params = new URLSearchParams({
+      entry_type,
+      date_from: from,
+      date_to: to,
+      page_size: String(TRANSFER_PAGE_SIZE),
+      page: String(page),
+    });
+    const res = await fetch(
+      `/api/v1/organizations/${org_id}/transactions/?${params}`,
+      { credentials: "include", signal },
+    );
+    if (!res.ok) throw new Error(`Failed to load transfers (${res.status})`);
+    const data: { transactions: TransactionDTO[]; page_count: number } =
+      await res.json();
+    rows.push(...data.transactions.map(fromDTO));
+    pageCount = data.page_count;
+    page += 1;
+  } while (page <= pageCount);
+  return rows;
+}
