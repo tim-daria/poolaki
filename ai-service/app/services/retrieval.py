@@ -41,7 +41,7 @@ class MockRetriever(BaseRetriever):
             return "/api/internal/v1/analytics/summary/"
         if intent == "categories":
             return "/api/internal/v1/categories/"
-        if intent == "ransactions":
+        if intent == "transactions":
             return "/api/internal/v1/transactions/"
         # if intent == "goal_progress":
         #     return "/api/internal/v1/goals/progress"
