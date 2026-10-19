@@ -26,42 +26,34 @@ test.describe.serial("Reports", () => {
   test.beforeEach(async () => {
     await page.goto(workspaceUrl);
     // Same path a user takes: through the sidebar link
-    await page.getByRole("link", { name: "Reports" }).click();
+    await page.getByRole("link", { name: "Reports", exact: true }).click();
   });
 
-  test("shows the summary cards and both chart sections", async () => {
+  test("shows the summary tiles and both chart sections", async () => {
     await expect(page.getByRole("heading", { name: /Reports/ })).toBeVisible();
-    await expect(page.getByText("By month", { exact: true })).toBeVisible();
-    await expect(page.getByText("Categories", { exact: true })).toBeVisible();
-    await expect(page.getByText("Set aside", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Income" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Expenses" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "By month" })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Categories" }),
+    ).toBeVisible();
   });
 
   test("shows an empty state when there are no categories", async () => {
-    await expect(page.getByText(/Share of all expenses/)).toBeVisible();
+    await expect(page.getByText(/Total expenses in/)).toBeVisible();
     await expect(
       page.getByText("No data available for this view."),
     ).toBeVisible();
   });
 
-  test("switches the Categories tab between Expenses, Income and Savings", async () => {
-    // Scope to the Categories card: "Savings" also exists as a tab in "By month"
-    const card = page
-      .getByText("Categories", { exact: true })
-      .locator("xpath=ancestor::*[contains(@class,'MuiCard-root')][1]");
-
-    // exact: true, otherwise "Income" also matches "Income & expenses"
+  test("switches the Categories card between Expenses and Income", async () => {
+    const card = page.getByRole("region", { name: "Categories" });
     await card.getByRole("button", { name: "Income", exact: true }).click();
-    await expect(page.getByText(/Share of all income/)).toBeVisible();
-
-    await card.getByRole("button", { name: "Savings", exact: true }).click();
-    await expect(page.getByText(/Savings by goal/)).toBeVisible();
+    await expect(page.getByText(/Total income in/)).toBeVisible();
   });
 
-  test("switches the By month tab to Savings", async () => {
-    await page
-      .getByRole("button", { name: "Savings", exact: true })
-      .first()
-      .click();
-    await expect(page.getByText("Saved per month")).toBeVisible();
+  test("offers the current year in the year selector", async () => {
+    const select = page.getByRole("combobox", { name: "Year" });
+    await expect(select).toHaveText(String(new Date().getFullYear()));
   });
 });
