@@ -16,7 +16,7 @@ import {
 import type { Category } from "../../lib/categories";
 import type { Goal } from "../../lib/goals";
 import type { Transaction } from "../../lib/transactions";
-import { HomeCard, HomeCardAction } from "./HomeCard";
+import { TitledCard, CardAction } from "../../components/Card/Card";
 import { DESKTOP } from "../../lib/layout";
 
 interface Props {
@@ -57,7 +57,7 @@ export function RecentActivityCard({
 }: Props) {
   if (rows.length === 0) {
     return (
-      <HomeCard title="Recent activity" sx={sx}>
+      <TitledCard title="Recent activity" sx={sx}>
         <Stack
           spacing={1}
           sx={[
@@ -88,16 +88,16 @@ export function RecentActivityCard({
             Add transaction
           </Button>
         </Stack>
-      </HomeCard>
+      </TitledCard>
     );
   }
 
   return (
-    <HomeCard
+    <TitledCard
       sx={sx}
       title="Recent activity"
       to="transactions"
-      action={<HomeCardAction>See all</HomeCardAction>}
+      action={<CardAction>See all</CardAction>}
     >
       <Box sx={listSx}>
         <TransactionList withPerson={shared}>
@@ -112,6 +112,6 @@ export function RecentActivityCard({
           ))}
         </TransactionList>
       </Box>
-    </HomeCard>
+    </TitledCard>
   );
 }

@@ -1,4 +1,4 @@
-/** @file Card frame shared by the Overview cards: optionally the whole card is a link, with a "See all" cue in its header. */
+/** @file Titled card frame shared by the Overview and Reports cards: optionally the whole card is a link, with a "See all" cue in its header. */
 
 import type { ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
@@ -12,14 +12,16 @@ import {
 } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
 
-interface HomeCardProps {
+interface TitledCardProps {
   title: string;
+  /** One line under the header row, in the secondary colour. */
+  subtitle?: string;
   /**
    * Makes the whole card a link. Only for a card with data: an empty state
    * keeps its own button, and a button inside a link is invalid HTML.
    */
   to?: string;
-  /** Right of the title: a HomeCardAction cue. */
+  /** Right of the title: a CardAction cue or a control. */
   action?: ReactNode;
   children: ReactNode;
   sx?: SxProps<Theme>;
@@ -33,27 +35,41 @@ const frameSx = {
   gap: 2.5,
 } as const;
 
-export function HomeCard({ title, to, action, children, sx }: HomeCardProps) {
+export function TitledCard({
+  title,
+  subtitle,
+  to,
+  action,
+  children,
+  sx,
+}: TitledCardProps) {
   const userSx = Array.isArray(sx) ? sx : [sx];
   const content = (
     <>
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 2,
-          minHeight: 36,
-        }}
-      >
-        <Typography
-          component="h2"
-          sx={{ fontWeight: 700, fontSize: "1.15rem" }}
+      <Box>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            minHeight: 36,
+          }}
         >
-          {title}
-        </Typography>
-        {action}
-      </Stack>
+          <Typography
+            component="h2"
+            sx={{ fontWeight: 700, fontSize: "1.15rem" }}
+          >
+            {title}
+          </Typography>
+          {action}
+        </Stack>
+        {subtitle && (
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
       {children}
     </>
   );
@@ -88,7 +104,7 @@ export function HomeCard({ title, to, action, children, sx }: HomeCardProps) {
  * the link, and this only says where it goes. Always visible, darker when
  * the card is hovered or focused.
  */
-export function HomeCardAction({ children }: { children: ReactNode }) {
+export function CardAction({ children }: { children: ReactNode }) {
   return (
     <Box
       component="span"
@@ -108,7 +124,7 @@ export function HomeCardAction({ children }: { children: ReactNode }) {
 }
 
 /** A card's body when its figures could not load: one sentence where the data was. */
-export function HomeCardProblem({ children }: { children: ReactNode }) {
+export function CardProblem({ children }: { children: ReactNode }) {
   return (
     <Stack
       direction="row"

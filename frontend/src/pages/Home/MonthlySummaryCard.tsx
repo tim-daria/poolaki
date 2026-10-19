@@ -9,7 +9,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "../../components/Money";
 import { displayAmount, displayFigure } from "../../lib/money";
 import { monthFooter, type MonthSummary } from "../../lib/overview";
-import { HomeCardAction, HomeCardProblem } from "./HomeCard";
+import { CardAction, CardProblem } from "../../components/Card/Card";
 import { DESKTOP } from "../../lib/layout";
 import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
@@ -36,6 +36,8 @@ const MIN_HEIGHT = 4;
 const STUB_HEIGHT = 3;
 /** Bar corners, in theme radius units: the same 1.5 the other rounded fills use. */
 const BAR_RADIUS = 1.5;
+/** Bars carry half weight, as in Reports; the figure above them does not. */
+const BAR_OPACITY = 0.5;
 /** The figure above each bar: its size and the gap to the bar, in spacing units. */
 const FIGURE_SIZE = "0.9rem";
 const FIGURE_GAP = 0.75;
@@ -55,32 +57,32 @@ function monthInfo(month: string): string {
   return `Everything that came in, was spent or was moved to savings since 1 ${month}. Your net balance changes by: came in – spent – to savings.`;
 }
 
-// Pastel columns, full-colour labels: the main colours at 30% for money in
-// and out, the lavender tint for savings. The sign says which way the money
-// moved; savings carry none, since they are set aside rather than gone.
+// Columns at half strength under full-colour labels, the same three tones the
+// Reports charts use. The sign says which way the money moved; savings carry
+// none, since they are set aside rather than gone.
 const COLUMNS = [
   {
     key: "income",
     label: "Came in",
     sign: "+",
     bar: "success.main",
-    barOpacity: 0.3,
+    barOpacity: BAR_OPACITY,
     text: "success.main",
   },
   {
     key: "expenses",
     label: "Spent",
     sign: "-",
-    bar: "error.light",
-    barOpacity: 1,
+    bar: "error.main",
+    barOpacity: BAR_OPACITY,
     text: "error.main",
   },
   {
     key: "saved",
     label: "To savings",
     sign: "",
-    bar: "primary.light",
-    barOpacity: 1,
+    bar: "accent.main",
+    barOpacity: BAR_OPACITY,
     text: "accent.main",
   },
 ] as const;
@@ -216,13 +218,13 @@ export function MonthlySummaryCard({
             {info}
           </Box>
         </Stack>
-        {!empty && <HomeCardAction>{year} report</HomeCardAction>}
+        {!empty && <CardAction>{year} report</CardAction>}
       </Stack>
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
         Money in and out
       </Typography>
 
-      {!footer && <HomeCardProblem>{REPORT_UNAVAILABLE}</HomeCardProblem>}
+      {!footer && <CardProblem>{REPORT_UNAVAILABLE}</CardProblem>}
 
       {/* Columns share one baseline: the bars end on a hairline that the
           labels sit under. */}

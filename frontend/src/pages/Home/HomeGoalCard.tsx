@@ -13,7 +13,7 @@ import { Money } from "../../components/Money";
 import { targetReached, type Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
-import { HomeCard, HomeCardAction } from "./HomeCard";
+import { TitledCard, CardAction } from "../../components/Card/Card";
 import { TABLET } from "../../lib/layout";
 
 interface Props {
@@ -29,7 +29,7 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
 
   if (!goal) {
     return (
-      <HomeCard title="Goal" sx={sx}>
+      <TitledCard title="Goal" sx={sx}>
         {/* One line and a button: the same height as the filled state, so
             the sidebar does not jump when the first goal is created. */}
         <Stack
@@ -51,7 +51,7 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
             Create a goal
           </Button>
         </Stack>
-      </HomeCard>
+      </TitledCard>
     );
   }
 
@@ -62,14 +62,12 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
   const reached = targetReached(goal);
 
   return (
-    <HomeCard
+    <TitledCard
       sx={sx}
       title={reached ? "Goal reached" : "Almost there"}
       to="savings"
       action={
-        <HomeCardAction>
-          {active.length === 1 ? "Manage" : "All goals"}
-        </HomeCardAction>
+        <CardAction>{active.length === 1 ? "Manage" : "All goals"}</CardAction>
       }
     >
       <Stack spacing={1.25} sx={{ [TABLET]: { my: "auto" } }}>
@@ -128,6 +126,6 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
           )}
         </Typography>
       </Stack>
-    </HomeCard>
+    </TitledCard>
   );
 }
