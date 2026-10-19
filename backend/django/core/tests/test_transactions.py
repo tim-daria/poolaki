@@ -134,6 +134,33 @@ def test_list_transactions_search_matches_category_name(
     assert [item["id"] for item in response.data["transactions"]] == [in_groceries.id]
 
 
+def test_list_transactions_search_matches_creator_username(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    by_member = Transaction.objects.create(
+        org=shared_org,
+        created_by=member,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        description="Weekly shop",
+        transaction_date="2026-08-10",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="expense",
+        amount=Decimal("18.00"),
+        description="Pizza",
+        transaction_date="2026-08-11",
+    )
+
+    api_client.force_authenticate(user=owner)
+    response = api_client.get(transactions_url(shared_org.id), {"q": "memb"})
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.data["transactions"]] == [by_member.id]
+
+
 def test_list_transactions_returns_empty_list(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:

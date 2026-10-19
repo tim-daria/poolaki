@@ -34,7 +34,8 @@ class TransactionListCreateView(APIView):
     user is a member.
 
     Query parameters (all optional):
-    - q: case-insensitive substring search on description and category name.
+    - q: case-insensitive substring search on description, category name and
+      creator's username.
     - entry_type: "all" (default), "income", "expense", "contribution" or "withdraw".
     - date_from / date_to: inclusive ISO date bounds on transaction_date.
     - category_id: one category ID or a comma-separated list (e.g. "3,7");

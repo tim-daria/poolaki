@@ -26,6 +26,8 @@ Query parameters (all optional):
 - `goal_id`: ID of a goal belonging to the organization; matches both its
   contributions and its expenses
 - `tax_deductible`: `true` keeps only tax-deductible rows
+- `q`: case-insensitive substring match on the description, the category
+  name and the username of the member who added the row
 - `created_by`: one user ID or a comma-separated list of them; rows created
   by any listed member are returned. Every ID must be a member of the
   organization
