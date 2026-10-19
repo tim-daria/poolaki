@@ -1,4 +1,4 @@
-/** @file Goals page: every goal as a card in a foldable Active, Completed or Archived section; the add modal and the Contribute modal are wired. */
+/** @file Goals page: every goal as a card in a foldable Active, Completed or Archived section; the add, Contribute and info modals are wired. */
 
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
@@ -7,6 +7,7 @@ import {
   PageTitle,
 } from "../../components/PageHeader/PageHeader";
 import { GoalForm } from "../../components/Modals/GoalForm";
+import { GoalInfoCard } from "../../components/Modals/GoalInfoCard";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import {
@@ -33,6 +34,8 @@ function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   /** The goal a Contribute click targets; null keeps the transaction modal closed. */
   const [contributeTo, setContributeTo] = useState<Goal | null>(null);
+  /** The goal whose info card is open; null keeps it closed. */
+  const [infoFor, setInfoFor] = useState<Goal | null>(null);
 
   useEffect(() => {
     getGoals(org.id).then(setGoals);
@@ -50,12 +53,16 @@ function Goals() {
       </PageActionButton>
       <GoalForm open={adding} onClose={() => setAdding(false)} />
       {/* No onSaved: saved_amount comes from the seed until the API lands, so
-          there is nothing to refresh yet. No onInfo on the cards either: the
-          Info view is not built, so archived cards are inert on click. */}
+          there is nothing to refresh yet. */}
       <TransactionForm
         open={contributeTo !== null}
         onClose={() => setContributeTo(null)}
         goal={contributeTo?.id}
+      />
+      <GoalInfoCard
+        open={infoFor !== null}
+        goal={infoFor}
+        onClose={() => setInfoFor(null)}
       />
       {SECTIONS.map(({ state, title, defaultOpen }) => {
         const cards = ordered
@@ -65,6 +72,7 @@ function Goals() {
               key={g.id}
               goal={g}
               onContribute={() => setContributeTo(g)}
+              onInfo={() => setInfoFor(g)}
             />
           ));
         return (

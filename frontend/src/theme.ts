@@ -52,6 +52,31 @@ declare module "@mui/material/Typography" {
   }
 }
 
+declare module "@mui/material/Paper" {
+  interface PaperPropsVariantOverrides {
+    card: true;
+    clickableCard: true;
+  }
+}
+
+/** The soft lift every card has at rest. */
+const CARD_SHADOW = "0 8px 24px -16px var(--mui-palette-shadow-main)";
+
+/**
+ * Radius, padding and lift shared by both card variants. The padding goes
+ * through a variable: the media query changes only the variable, so
+ * `padding` itself is one plain declaration that any `p` in `sx` overrides
+ * at every width. A card that lays out its own halves can read
+ * `var(--card-padding)` for them.
+ */
+const cardStyle = {
+  "--card-padding": "20px",
+  "@media (min-width:600px)": { "--card-padding": "24px" },
+  borderRadius: 24,
+  padding: "var(--card-padding)",
+  boxShadow: CARD_SHADOW,
+};
+
 export const theme = createTheme({
   /* ---------------------------------- */
   /*         Component overrides        */
@@ -72,7 +97,44 @@ export const theme = createTheme({
           MozOsxFontSmoothing: "grayscale",
           "@media (max-width: 1024px)": { fontSize: 16 },
         },
+        // Literal var() rather than a theme callback: MuiCssBaseline's
+        // styleOverrides are typed as raw CSS, so a callback's `theme` is any.
+        body: {
+          backgroundColor: "var(--mui-palette-primary-light)",
+        },
       },
+    },
+    MuiPaper: {
+      // The shell is flat. Dialog (24) and Menu/Popover (8) pass their own
+      // elevation, so overlays keep their shadows.
+      defaultProps: { elevation: 0 },
+      // The one card look. Cards say `variant="card"`; a card that is a link
+      // or a button says `variant="clickableCard"` and gets the lilac ring on
+      // hover, the outline on keyboard focus, and its header cue darkening
+      // (the `.HomeCard-action` span). Components add only their content
+      // layout.
+      variants: [
+        { props: { variant: "card" }, style: cardStyle },
+        {
+          props: { variant: "clickableCard" },
+          style: {
+            ...cardStyle,
+            cursor: "pointer",
+            textDecoration: "none",
+            color: "inherit",
+            "&:hover": {
+              // Kept together with the lift: box-shadow replaces, not adds.
+              boxShadow: `0 0 5px 2px var(--mui-palette-secondary-light), ${CARD_SHADOW}`,
+            },
+            "&:focus-visible": {
+              outline: "2px solid var(--mui-palette-primary-main)",
+            },
+            "&:hover .HomeCard-action, &:focus-visible .HomeCard-action": {
+              color: "var(--mui-palette-text-primary)",
+            },
+          },
+        },
+      ],
     },
     MuiButton: {
       // The app shell is flat (elevation 0); a shadowed contained button would
@@ -81,6 +143,38 @@ export const theme = createTheme({
       // Pill shape for every Button; IconButton is separate and stays round.
       styleOverrides: {
         root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
+      },
+    },
+    MuiToggleButtonGroup: {
+      // The one segmented-control look: a `background.default` track with
+      // borderless, gapped buttons and a primary-filled selected one. Callers
+      // set only the group's radius (the buttons inherit it) and sizing.
+      // Centralised here so no ToggleButtonGroup has to repeat it in `sx`.
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          padding: 4,
+          gap: 4,
+          // `.Mui-disabled` repeated so this outranks MUI's three-class
+          // disabled rules, which otherwise restore a three-sided border and
+          // a -1px overlap on the non-first buttons of a disabled group. It
+          // also beats the group's first/middle/last rules that square off the
+          // inner corners.
+          "& .MuiToggleButtonGroup-grouped, & .MuiToggleButtonGroup-grouped.Mui-disabled":
+            {
+              border: 0,
+              marginLeft: 0,
+              borderRadius: "inherit",
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              "&.Mui-disabled": { color: theme.palette.text.disabled },
+              "&.Mui-selected": {
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                "&:hover": { backgroundColor: theme.palette.primary.main },
+              },
+            },
+        }),
       },
     },
     MuiDialog: {
@@ -125,6 +219,21 @@ export const theme = createTheme({
         },
       },
     },
+    MuiAlert: {
+      // The icon column is laid out against the first line of the message
+      // rather than the whole block: `1lh` box with its own padding keeps a
+      // one-line alert centred and a wrapping one top-aligned with its text.
+      // Centralised here so no Alert has to repeat it in `sx`.
+      styleOverrides: {
+        icon: {
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: "1lh",
+          boxSizing: "content-box",
+          alignItems: "center",
+        },
+      },
+    },
   },
   cssVariables: true,
   /* ---------------------------------- */
@@ -133,6 +242,8 @@ export const theme = createTheme({
   palette: {
     primary,
     secondary,
+    // Soft drop shadows (the auth card): the text colour at 35%.
+    shadow: { main: "rgba(28, 26, 32, 0.35)" },
     success: {
       main: "#5b9778", // --income-color
       light: "#d8f8e8", // --bg-income
@@ -162,11 +273,10 @@ export const theme = createTheme({
       "accent.main",
       "accent.light",
     ],
-    // Pie slices, largest first. Resolved values rather than palette paths:
-    // they are interpolated into a raw conic-gradient string, which `sx` does
-    // not resolve. The fourth is the merged "Other" slice, kept mid-tone so it
-    // separates from both neighbours.
-    chart: [primary.dark, secondary.light, primary.light, accent.light],
+    // Donut segments by rank, one lavender hue from darkest (largest) to
+    // lightest; the merged "Other" segment always takes the last. Resolved
+    // values rather than palette paths: they go into SVG stroke attributes.
+    chart: [primary.dark, accent.main, accent.light, secondary.light],
   },
   /* ---------------------------------- */
   /*             Typography             */

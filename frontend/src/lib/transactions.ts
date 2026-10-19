@@ -25,6 +25,8 @@ export function isTransfer(entry_type: EntryType): boolean {
 /** The two entry types that are filed under a category. */
 export type TransactionType = "income" | "expense";
 
+export type TransactionPageFilters = TransactionFilters & { goal?: number };
+
 export type Transaction = {
   id: number;
   entry_type: EntryType;
@@ -36,7 +38,7 @@ export type Transaction = {
   /** ISO date string: YYYY-MM-DD */
   transaction_date: string;
   is_tax_deductible: boolean;
-  /** Goal ID. Present on contributions and withdrawals. */
+  /** Goal ID. Only present on contributions. */
   goal: number | null;
   /** Creator's username; null once that account is deleted. */
   created_by: string | null;
@@ -105,7 +107,7 @@ export type TransactionDraft = {
    * or if entry_type is contribution.
    */
   category: number | null;
-  /** Goal ID. Required on a contribution, always null on the other two. */
+  /** Goal ID. Required on a contribution, optional on an expense (paid from the goal), null on income. */
   goal: number | null;
   description: string;
   amount: string;
@@ -151,7 +153,8 @@ export function toDraft(t: Transaction): TransactionDraft {
 
 /**
  * Updates entry_type and resets incompatible fields (category, goal, tax deductible)
- * in a single update to prevent rendering or submitting invalid state.
+ * in a single update to prevent rendering or submitting invalid state. An
+ * expense's goal is dropped too: "pay from a goal" is opted into per expense.
  */
 export function changeType(
   draft: TransactionDraft,
@@ -402,7 +405,9 @@ export async function deleteTransaction(
 /** GET /api/v1/organizations/${org_id}/transactions/?… */
 export async function fetchTransactionPage(
   org_id: number,
-  f: TransactionFilters,
+  // `goal` is a caller-side filter: the Transactions page has no UI or URL
+  // param for it, so it stays out of TransactionFilters.
+  f: TransactionPageFilters,
   signal?: AbortSignal,
 ): Promise<TransactionPage> {
   const params = new URLSearchParams();
@@ -415,6 +420,7 @@ export async function fetchTransactionPage(
   if (f.to) params.set("date_to", f.to);
   if (f.categories.length) params.set("category_id", f.categories.join(","));
   if (f.taxDeductible) params.set("tax_deductible", "true");
+  if (f.goal !== undefined) params.set("goal_id", String(f.goal));
   if (f.page > 1) {
     params.set("page", String(f.page));
     params.set("page_size", String(PAGE_SIZE));
@@ -425,6 +431,12 @@ export async function fetchTransactionPage(
     `/api/v1/organizations/${org_id}/transactions/${query ? `?${query}` : ""}`,
     { credentials: "include", signal },
   );
+  if (res.status === 400) {
+    const body: unknown = await res.json().catch(() => null);
+    throw new TransactionError(
+      describeProblem(body) ?? "Could not load transactions",
+    );
+  }
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
 
   const data: {
