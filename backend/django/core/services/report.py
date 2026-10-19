@@ -19,6 +19,16 @@ _REPORTED_TYPES = (EntryType.INCOME, EntryType.EXPENSE)
 _TYPE_ORDER = {entry_type.value: idx for idx, entry_type in enumerate(_REPORTED_TYPES)}
 
 
+def _reported_transactions(org: Organization, year: int) -> QuerySet[Transaction]:
+    """The one year filter every report section shares, so totals and
+    categories can never disagree about which transactions count."""
+    return Transaction.objects.filter(
+        org=org,
+        transaction_date__year=year,
+        entry_type__in=_REPORTED_TYPES,
+    )
+
+
 def _metric_sums() -> dict[str, Any]:
     return {
         entry_type.value: Coalesce(Sum("amount", filter=Q(entry_type=entry_type)), _ZERO)
@@ -79,12 +89,7 @@ def get_org_category_breakdown(
     distinguish "no spending" from "the category does not exist". Contribution
     categories are excluded by design (shared report/AI rule).
     """
-    base = Transaction.objects.filter(
-        org=org,
-        transaction_date__year=year,
-        entry_type__in=_REPORTED_TYPES,
-    )
-    monthly_by_category = _monthly_by_category(base)
+    monthly_by_category = _monthly_by_category(_reported_transactions(org, year))
 
     if include_inactive:
         categories = Category.objects.filter(
@@ -115,11 +120,7 @@ def get_org_category_breakdown(
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:
     """Build the yearly report payload; every section is computed only from
     the reported entry types (contribution rows are excluded by design)."""
-    base = Transaction.objects.filter(
-        org=org,
-        transaction_date__year=year,
-        entry_type__in=_REPORTED_TYPES,
-    )
+    base = _reported_transactions(org, year)
     return {
         "year": year,
         "totals": _metric_totals(base),
