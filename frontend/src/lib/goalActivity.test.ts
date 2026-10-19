@@ -282,8 +282,18 @@ describe("heldAtArchive", () => {
     expect(heldAtArchive([saved, spent, settled])).toBe(-340);
   });
 
-  it("is null with no rows", () => {
-    expect(heldAtArchive([])).toBeNull();
+  it("is zero with no rows: nothing was held, so the server wrote none", () => {
+    expect(heldAtArchive([])).toBe(0);
+  });
+
+  it("is zero when the newest row is an expense: the goal was already empty", () => {
+    const spent = entry({
+      id: 2,
+      kind: "spent",
+      date: "2026-06-01",
+      amount: 200,
+    });
+    expect(heldAtArchive([saved, spent])).toBe(0);
   });
 });
 

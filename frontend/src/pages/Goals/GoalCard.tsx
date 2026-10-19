@@ -248,7 +248,7 @@ export function GoalCard({
           >
             {shownBalance === undefined
               ? "€—"
-              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance ?? 0))}`}{" "}
+              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance))}`}{" "}
           </Typography>
           {/* sx, not the color prop: MUI 9's Typography resolves only named
               colours ("error", "textSecondary") through the prop, not palette

@@ -103,6 +103,13 @@ test.describe.serial("Goals", () => {
     });
     await contribute(vacation, "200.00", "2026-09-01");
     await patchGoalViaApi(page, orgId, vacation, { status: "archived" });
+
+    const bike = await createGoalViaApi(page, orgId, {
+      name: "Old bike",
+      target_amount: "300.00",
+      target_date: null,
+    });
+    await patchGoalViaApi(page, orgId, bike, { status: "archived" });
   });
 
   test.afterAll(async () => {
@@ -196,7 +203,7 @@ test.describe.serial("Goals", () => {
       "Winter tyres",
     ]);
     expect(await names(completed())).toEqual(["Trip to Barcelona"]);
-    expect(await names(archived())).toEqual(["Vacation fund"]);
+    expect(await names(archived())).toEqual(["Vacation fund", "Old bike"]);
     await expect(
       page.getByRole("button", { name: "Start a new goal" }),
     ).toHaveCount(0);
@@ -235,7 +242,7 @@ test.describe.serial("Goals", () => {
     // Archived: dimmed, no actions; the refund left it at zero.
     const vacation = archived().getByRole("group", { name: "Vacation fund" });
     await expect(vacation.getByText("0% Completed")).toBeVisible();
-    await expect(archived().getByTestId("ArchiveOutlinedIcon")).toHaveCount(1);
+    await expect(archived().getByTestId("ArchiveOutlinedIcon")).toHaveCount(2);
     await expect(
       archived().getByRole("button", { name: /^Actions for / }),
     ).toHaveCount(0);
@@ -299,6 +306,19 @@ test.describe.serial("Goals", () => {
       .getByRole("listitem")
       .filter({ hasText: "Archived Vacation fund" });
     await expect(refund).toContainText("-€200,00");
+    await dialog.getByRole("button", { name: "close" }).click();
+    await expect(dialog).toBeHidden();
+
+    // Archived with nothing saved: no refund row, so the figure is zero, not a dash.
+    await archived().getByRole("group", { name: "Old bike" }).click();
+    await expect(
+      dialog.getByRole("heading", { name: "Old bike" }),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("€0,00")).toHaveText("€0");
+    await expect(dialog.getByText("returned to balance")).toBeVisible();
+    await expect(
+      dialog.getByText("Contributions will show up here."),
+    ).toBeVisible();
     await dialog.getByRole("button", { name: "close" }).click();
     await expect(dialog).toBeHidden();
   });
