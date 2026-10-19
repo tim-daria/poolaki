@@ -4,7 +4,7 @@
  * top spending and the nearest goal.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import { Alert, Box, CircularProgress, Paper } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
@@ -78,6 +78,7 @@ type Loaded = {
 function Home() {
   const org = useCurrentOrg();
   const now = new Date();
+  const monthInfoId = useId();
 
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +235,7 @@ function Home() {
         component={RouterLink}
         to="reports"
         aria-label="Balance and month, see reports"
+        aria-describedby={monthInfoId}
         variant="clickableCard"
         sx={[
           {
@@ -284,7 +286,9 @@ function Home() {
           <MonthlySummaryCard
             summary={summary}
             month={monthName(TODAY)}
+            year={Number(TODAY.slice(0, 4))}
             scaleMax={scaleMax}
+            descriptionId={monthInfoId}
           />
         </Box>
       </Paper>

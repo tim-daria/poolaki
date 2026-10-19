@@ -1,6 +1,11 @@
-/** @file Month half of the top card: received, spent and saved as three columns on one baseline. */
+/**
+ * @file Month half of the top card: came in, spent and to savings as three
+ * signed columns on one baseline, a hover-only note on what they mean, and a
+ * footer with the month's net.
+ */
 
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack, Tooltip, Typography } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "../../components/Money";
 import { displayAmount, displayFigure } from "../../lib/money";
 import { monthFooter, type MonthSummary } from "../../lib/overview";
@@ -13,8 +18,15 @@ interface Props {
   summary: MonthSummary | null;
   /** The month's name, e.g. "September". */
   month: string;
+  /** The year the report cue points at. */
+  year: number;
   /** Value that fills a full-height column. */
   scaleMax: number;
+  /**
+   * Id of the hidden explanation, for the card link's `aria-describedby`.
+   * The card is one link, so the info icon itself is not a control.
+   */
+  descriptionId: string;
 }
 
 /** Tallest column, per the spec: 64px on phones, 72px from desktop. */
@@ -23,12 +35,19 @@ const MAX_HEIGHT = { xs: 64, desktop: 72 };
 const MIN_HEIGHT = 4;
 const STUB_HEIGHT = 3;
 
+/** What the columns cover and how they relate to the balance figure beside them. */
+function monthInfo(month: string): string {
+  return `Everything that came in, was spent or was moved to savings since 1 ${month}. Your net balance changes by: came in – spent – to savings.`;
+}
+
 // Pastel columns, full-colour labels: the main colours at 30% for money in
-// and out, the lavender tint for savings.
+// and out, the lavender tint for savings. The sign says which way the money
+// moved; savings carry none, since they are set aside rather than gone.
 const COLUMNS = [
   {
     key: "income",
-    label: "Received",
+    label: "Came in",
+    sign: "+",
     bar: "success.main",
     barOpacity: 0.3,
     text: "success.main",
@@ -36,18 +55,40 @@ const COLUMNS = [
   {
     key: "expenses",
     label: "Spent",
+    sign: "-",
     bar: "error.light",
     barOpacity: 1,
     text: "error.main",
   },
   {
     key: "saved",
-    label: "Saved",
+    label: "To savings",
+    sign: "",
     bar: "primary.light",
     barOpacity: 1,
     text: "accent.main",
   },
 ] as const;
+
+const GRID = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  columnGap: 2,
+  textAlign: "center",
+} as const;
+
+// Visually hidden but read by assistive tech. Pixel strings on purpose: a
+// bare 1 is 100% in sx, which stretched the span past the page edge.
+const VISUALLY_HIDDEN = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  margin: "-1px",
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+} as const;
 
 function Column({
   value,
@@ -55,24 +96,28 @@ function Column({
   bar,
   barOpacity,
   text,
-  label,
+  sign,
 }: {
   value: number;
   scaleMax: number;
   bar: string;
   barOpacity: number;
   text: string;
-  label: string;
+  sign: string;
 }) {
   // Height as a share of the tallest column, resolved per breakpoint below.
   const share = value > 0 ? value / scaleMax : 0;
   const height = (max: number) =>
     value > 0 ? Math.max(MIN_HEIGHT, share * max) : STUB_HEIGHT;
+  // Savings net of withdrawals can go below zero; the sign then comes from
+  // the value, not the column.
+  const shownSign = value > 0 ? sign : value < 0 ? "-" : "";
+  const magnitude = Math.abs(value);
 
   return (
     <Stack sx={{ alignItems: "center", minWidth: 0 }}>
       <Money
-        title={`€${displayAmount(value)}`}
+        title={`${shownSign}€${displayAmount(magnitude)}`}
         sx={{
           fontSize: "0.9rem",
           mb: 0.75,
@@ -80,28 +125,34 @@ function Column({
           color: value > 0 ? text : "text.disabled",
         }}
       >
-        €{displayFigure(value)}
+        {shownSign}€{displayFigure(magnitude)}
       </Money>
       <Box
         aria-hidden
         sx={{
           width: "60%",
           maxWidth: 88,
-          borderRadius: 1.5,
+          borderRadius: "6px 6px 0 0",
           height: height(MAX_HEIGHT.xs),
           [DESKTOP]: { height: height(MAX_HEIGHT.desktop) },
           bgcolor: value > 0 ? bar : "divider",
           opacity: value > 0 ? barOpacity : 1,
         }}
       />
-      <Typography sx={{ color: "text.secondary", mt: 1 }}>{label}</Typography>
     </Stack>
   );
 }
 
-export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
+export function MonthlySummaryCard({
+  summary,
+  month,
+  year,
+  scaleMax,
+  descriptionId,
+}: Props) {
   const footer = summary && monthFooter(summary);
   const empty = !footer || footer.kind === "empty";
+  const info = monthInfo(month);
 
   return (
     <Box
@@ -111,41 +162,72 @@ export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
         direction="row"
         sx={{ justifyContent: "space-between", alignItems: "baseline", gap: 2 }}
       >
-        <Typography
-          component="h2"
-          sx={{ fontWeight: 700, fontSize: "1.15rem" }}
-        >
-          {month}
-        </Typography>
-        {!empty && <HomeCardAction>More info</HomeCardAction>}
+        <Stack direction="row" sx={{ alignItems: "center", gap: 0.75 }}>
+          <Typography
+            component="h2"
+            sx={{ fontWeight: 700, fontSize: "1.15rem" }}
+          >
+            {month} so far
+          </Typography>
+          {/* Hover only: the card is a link, so the icon cannot be focusable
+              or tappable on its own. The text reaches assistive tech through
+              the hidden span the card link is described by. */}
+          <Tooltip title={info} arrow disableFocusListener disableTouchListener>
+            <Box
+              component="span"
+              aria-hidden
+              sx={{
+                display: "inline-flex",
+                color: "text.secondary",
+                cursor: "help",
+              }}
+            >
+              <InfoOutlinedIcon sx={{ fontSize: "1rem" }} />
+            </Box>
+          </Tooltip>
+          <Box component="span" id={descriptionId} sx={VISUALLY_HIDDEN}>
+            {info}
+          </Box>
+        </Stack>
+        {!empty && <HomeCardAction>{year} report</HomeCardAction>}
       </Stack>
+      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+        Money in and out
+      </Typography>
 
       {!footer && <HomeCardProblem>{REPORT_UNAVAILABLE}</HomeCardProblem>}
 
-      {/* Columns share one baseline: each stacks label then bar at its bottom. */}
+      {/* Columns share one baseline: the bars end on a hairline that the
+          labels sit under. */}
       {footer && (
         <>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              alignItems: "end",
-              columnGap: 2,
-              textAlign: "center",
-              py: 2,
-            }}
-          >
-            {COLUMNS.map((c) => (
-              <Column
-                key={c.key}
-                value={summary[c.key]}
-                scaleMax={scaleMax}
-                bar={c.bar}
-                barOpacity={c.barOpacity}
-                text={c.text}
-                label={c.label}
-              />
-            ))}
+          <Box sx={{ pt: 2 }}>
+            <Box
+              sx={{
+                ...GRID,
+                alignItems: "end",
+                borderBottom: "1px solid var(--mui-palette-divider)",
+              }}
+            >
+              {COLUMNS.map((c) => (
+                <Column
+                  key={c.key}
+                  value={summary[c.key]}
+                  scaleMax={scaleMax}
+                  bar={c.bar}
+                  barOpacity={c.barOpacity}
+                  text={c.text}
+                  sign={c.sign}
+                />
+              ))}
+            </Box>
+            <Box sx={{ ...GRID, mt: 1, pb: 2 }}>
+              {COLUMNS.map((c) => (
+                <Typography key={c.key} sx={{ color: "text.secondary" }}>
+                  {c.label}
+                </Typography>
+              ))}
+            </Box>
           </Box>
 
           <Typography sx={{ color: "text.secondary", mt: "auto" }}>
@@ -153,22 +235,22 @@ export function MonthlySummaryCard({ summary, month, scaleMax }: Props) {
             {footer.kind === "left" && (
               <>
                 <Money sx={{ color: "text.primary" }}>
-                  €{displayFigure(footer.amount)}
+                  +€{displayFigure(footer.amount)}
                 </Money>{" "}
-                left after spending and saving
+                left this month after spending and setting aside
               </>
             )}
             {footer.kind === "over" && (
               <>
                 <Money sx={{ color: "error.main" }}>
-                  €{displayFigure(footer.amount)}
+                  -€{displayFigure(footer.amount)}
                 </Money>{" "}
-                more than you received
+                this month: you spent and set aside more than came in
               </>
             )}
             {footer.kind === "no-income" && (
               <>
-                Income not received yet ·{" "}
+                Nothing came in yet ·{" "}
                 <Money sx={{ color: "text.primary" }}>
                   €{displayFigure(footer.amount)}
                 </Money>{" "}

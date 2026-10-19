@@ -88,8 +88,12 @@ export function NetBalanceCard({ balance, change, monthStart }: Props) {
         </Box>
       </Box>
 
-      <Typography sx={{ color: "text.secondary", mt: "auto" }}>
-        Funds available to spend
+      <Typography
+        sx={{ color: negative ? "error.main" : "text.secondary", mt: "auto" }}
+      >
+        {negative
+          ? "Below zero: more went out than you had"
+          : "Available to spend"}
       </Typography>
     </Box>
   );
