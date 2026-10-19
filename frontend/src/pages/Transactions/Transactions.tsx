@@ -52,7 +52,7 @@ import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCategories } from "../../hooks/useCategories";
 import { useGoals } from "../../hooks/useGoals";
 import { useMembers } from "../../hooks/useMembers";
-import { PAGE_PADDING, PHONE_QUERY } from "../../lib/layout";
+import { PAGE_PADDING, PHONE_QUERY, TABLET } from "../../lib/layout";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -231,9 +231,19 @@ function Transactions() {
               <TextField
                 value={filters.q}
                 onChange={(e) => update({ q: e.target.value })}
-                placeholder="Search name or category"
+                placeholder="Search name, category or member"
                 size="small"
-                sx={[{ flex: 1, minWidth: 220 }, pillInputSx]}
+                // On a phone the search owns the first row and the sort
+                // grows to close the second, so both rows end on one edge.
+                sx={[
+                  {
+                    flex: 1,
+                    minWidth: 220,
+                    flexBasis: "100%",
+                    [TABLET]: { flexBasis: "auto" },
+                  },
+                  pillInputSx,
+                ]}
                 slotProps={{
                   htmlInput: { maxLength: QUERY_MAX_LENGTH },
                   input: {
@@ -252,7 +262,16 @@ function Transactions() {
                 // source of options, so the cast cannot widen past Sort.
                 onChange={(e) => update({ sort: e.target.value as Sort })}
                 size="small"
-                sx={[{ minWidth: 170 }, pillInputSx]}
+                sx={[
+                  // No floor on a phone: the row is too narrow for one next
+                  // to the Filters button, and growing already fills it.
+                  {
+                    flex: 1,
+                    minWidth: 0,
+                    [TABLET]: { flex: "0 0 auto", minWidth: 170 },
+                  },
+                  pillInputSx,
+                ]}
               >
                 {SORTS.map((s) => (
                   <MenuItem key={s.value} value={s.value}>

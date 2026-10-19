@@ -354,7 +354,7 @@ test.describe.serial("Transactions", () => {
   });
 
   test("search matches name or category and updates the tab counts", async () => {
-    const search = page.getByPlaceholder("Search name or category");
+    const search = page.getByPlaceholder("Search name, category or member");
 
     await search.fill("rewe");
     await expect(page).toHaveURL(/[?&]q=rewe/);
@@ -884,15 +884,15 @@ test.describe.serial("Transactions", () => {
 
   test("a filtered view survives reload", async () => {
     await tab("Expenses").click();
-    await page.getByPlaceholder("Search name or category").fill("rent");
+    await page.getByPlaceholder("Search name, category or member").fill("rent");
     await expect(showing("2 of 2")).toBeVisible();
 
     await page.reload();
 
     await expect(tab("Expenses")).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByPlaceholder("Search name or category")).toHaveValue(
-      "rent",
-    );
+    await expect(
+      page.getByPlaceholder("Search name, category or member"),
+    ).toHaveValue("rent");
     await expect(showing("2 of 2")).toBeVisible();
   });
 

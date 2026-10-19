@@ -40,7 +40,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
   const org = useCurrentOrg();
   const titleId = useId();
   const restoreFocus = useRestoreFocus(open);
-  const { anchor, paperSx } = useSheet(WIDTH);
+  const { anchor, paperSx } = useSheet(WIDTH, true);
 
   /**
    * The goal shown, captured on open. State, not the prop: the page clears

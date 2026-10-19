@@ -107,7 +107,7 @@ export function FilterPanel({
   const open = Boolean(anchor);
   /** The Filters button must not keep focus while the panel hides it — see the hook. */
   const restoreFocus = useRestoreFocus(open);
-  const { anchor: drawerAnchor, paperSx } = useSheet(WIDTH);
+  const { anchor: drawerAnchor, paperSx } = useSheet(WIDTH, true);
   const sheet = drawerAnchor === "bottom";
   const titleId = useId();
 
@@ -281,15 +281,7 @@ export function FilterPanel({
           paper: {
             role: "dialog",
             "aria-labelledby": titleId,
-            // As tall as its content, so a tablet gets a short sheet; the
-            // hook's height becomes the cap a phone scrolls within.
-            sx: {
-              ...paperSx,
-              height: "auto",
-              maxHeight: paperSx.height,
-              display: "flex",
-              flexDirection: "column",
-            },
+            sx: { ...paperSx, display: "flex", flexDirection: "column" },
           },
         }}
       >
