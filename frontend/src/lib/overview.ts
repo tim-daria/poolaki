@@ -249,13 +249,10 @@ export function recentTransactions(
 /** Share of the target saved, as a whole percentage capped at 100. */
 export function goalPercent(goal: Goal): number {
   if (goal.target_amount <= 0) return 100;
-  return Math.min(
-    100,
-    Math.round((goal.saved_amount / goal.target_amount) * 100),
-  );
+  return Math.min(100, Math.round((goal.balance / goal.target_amount) * 100));
 }
 
-/** Active goals only: neither reached nor archived. */
+/** Active status only; completed and archived goals are excluded. */
 export function activeGoals(goals: Goal[]): Goal[] {
   return goals.filter((g) => goalState(g) === "active");
 }
@@ -263,7 +260,7 @@ export function activeGoals(goals: Goal[]): Goal[] {
 /** The active goal closest to completion: the highest saved-to-target ratio. */
 export function closestGoal(goals: Goal[]): Goal | undefined {
   const ratio = (g: Goal) =>
-    g.target_amount > 0 ? g.saved_amount / g.target_amount : 0;
+    g.target_amount > 0 ? g.balance / g.target_amount : 0;
   return activeGoals(goals).reduce<Goal | undefined>(
     (best, g) => (!best || ratio(g) > ratio(best) ? g : best),
     undefined,

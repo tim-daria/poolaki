@@ -9,13 +9,8 @@ import { monthHeading, monthYear, TODAY } from "./date";
 import { goalFlags, targetReached, type Goal } from "./goals";
 import { splitExpense } from "./goalSpend";
 import { DEFAULT_FILTERS } from "./transactionFilters";
-import { SEED_ACTIVITY } from "./goals.seed";
 import { toMoneyString } from "./money";
-import {
-  fetchTransactionPage,
-  TransactionError,
-  type Transaction,
-} from "./transactions";
+import { fetchTransactionPage, type Transaction } from "./transactions";
 
 /* ---------------------------------- */
 /*              Headline              */
@@ -26,7 +21,7 @@ const cents = (n: number) => Number(toMoneyString(n));
 
 export type GoalFigures = {
   saved: number;
-  /** Expenses paid against the goal: what was saved less what is left. */
+  /** Expenses paid from the goal, per the row split. */
   spent: number;
   /** Unclamped percentage of the target saved. */
   pct: number;
@@ -36,29 +31,43 @@ export type GoalFigures = {
   leftShare: number;
 };
 
-/** The figures the info view shows, from the wire goal alone. */
-export function goalFigures(g: Goal): GoalFigures {
-  const spent = Math.max(0, cents(g.saved_amount - g.balance));
+/**
+ * The figures the info view shows. `saved` and `spent` come from the rows,
+ * since the wire only carries the net `balance`; progress to the target is
+ * the server's view, so it matches the card.
+ */
+export function goalFigures(g: Goal, rows: SplitEntry[]): GoalFigures {
+  let saved = 0;
+  let spent = 0;
+  for (const r of rows) {
+    if (r.kind === "added") saved = cents(saved + r.amount);
+    else if (r.kind === "withdrawn") saved = cents(saved - r.amount);
+    else spent = cents(spent + r.fromGoal);
+  }
   return {
-    saved: g.saved_amount,
+    saved,
     spent,
     pct:
       g.target_amount === 0
         ? 0
-        : Math.round((g.saved_amount / g.target_amount) * 100),
-    toGo: Math.max(0, cents(g.target_amount - g.saved_amount)),
+        : Math.round((g.balance / g.target_amount) * 100),
+    toGo: Math.max(0, cents(g.target_amount - g.balance)),
     leftShare:
-      g.saved_amount > 0
-        ? Math.round((Math.max(0, g.balance) / g.saved_amount) * 100)
-        : 0,
+      saved > 0 ? Math.round((Math.max(0, g.balance) / saved) * 100) : 0,
   };
 }
 
 export type GoalSubtitle = {
-  /** "Saving", "Ready to spend", "Used up", "Overdrawn", "Archived", with a note after " · ". */
+  /** "Saving", "Ready to spend", "Used up", "Off limits", "Archived", with a note after " · ". */
   text: string;
   /** A red tail after the text, when the goal is overdue. */
   alert: string | null;
+};
+
+/** Below zero in either open state: the balance paid the difference. */
+const OFF_LIMITS: GoalSubtitle = {
+  text: "Off limits · paid from your balance",
+  alert: null,
 };
 
 /** One line under the goal's name: its status and the one thing to know about it. */
@@ -67,13 +76,13 @@ export function goalSubtitle(g: Goal, today: string = TODAY): GoalSubtitle {
     case "archived":
       return { text: "Archived", alert: null };
     case "completed":
-      if (g.balance < 0)
-        return { text: "Overdrawn · paid from your balance", alert: null };
+      if (g.balance < 0) return OFF_LIMITS;
       return {
         text: g.balance === 0 ? "Used up" : "Ready to spend",
         alert: null,
       };
     case "active":
+      if (g.balance < 0) return OFF_LIMITS;
       if (goalFlags(g, today).includes("overdue") && g.target_date)
         return {
           text: "Saving",
@@ -94,10 +103,7 @@ export function goalSubtitle(g: Goal, today: string = TODAY): GoalSubtitle {
 /*              Entries               */
 /* ---------------------------------- */
 
-/**
- * Its own union rather than EntryType: "withdrawn" has no entry type on this
- * branch (feat/goals adds `withdraw`), and the activity never shows income.
- */
+/** Its own union rather than EntryType: the activity never shows income. */
 export type ActivityKind = "added" | "spent" | "withdrawn";
 
 export type ActivityEntry = {
@@ -114,9 +120,11 @@ export function toActivity(t: Transaction): ActivityEntry | null {
   const kind: ActivityKind | null =
     t.entry_type === "contribution"
       ? "added"
-      : t.entry_type === "expense"
-        ? "spent"
-        : null;
+      : t.entry_type === "withdraw"
+        ? "withdrawn"
+        : t.entry_type === "expense"
+          ? "spent"
+          : null;
   if (kind === null) return null;
   return {
     id: t.id,
@@ -208,33 +216,38 @@ export function groupByMonth(rows: SplitEntry[]): MonthGroup[] {
 /*               Loading              */
 /* ---------------------------------- */
 
-/**
- * The goal's rows from the API. A 400 means the goal is not a database row
- * of this workspace (most seed goals), so the seed stands in; every other
- * failure, aborts included, propagates. TODO: delete the catch with the seed.
- */
+/** Every transaction of the goal, all pages; failures and aborts propagate. */
 export async function getGoalActivity(
   org_id: number,
   goalId: number,
   signal?: AbortSignal,
 ): Promise<ActivityEntry[]> {
-  try {
-    const rows: Transaction[] = [];
-    let page = 1;
-    let pageCount = 1;
-    do {
-      const data = await fetchTransactionPage(
-        org_id,
-        { ...DEFAULT_FILTERS, goal: goalId, page },
-        signal,
-      );
-      rows.push(...data.rows);
-      pageCount = data.page_count;
-      page += 1;
-    } while (page <= pageCount);
-    return rows.map(toActivity).filter((e) => e !== null);
-  } catch (err) {
-    if (err instanceof TransactionError) return SEED_ACTIVITY[goalId] ?? [];
-    throw err;
-  }
+  const rows: Transaction[] = [];
+  let page = 1;
+  let pageCount: number;
+  do {
+    const data = await fetchTransactionPage(
+      org_id,
+      { ...DEFAULT_FILTERS, goal: goalId, page },
+      signal,
+    );
+    rows.push(...data.rows);
+    pageCount = data.page_count;
+    page += 1;
+  } while (page <= pageCount);
+  return rows.map(toActivity).filter((e) => e !== null);
+}
+
+/**
+ * What an archived goal held when it was archived. Archived goals accept no
+ * rows, so the newest row is the archive's own: a withdrawal returned that
+ * much to the balance, a contribution settled that much overdraft. Null
+ * for a goal with no rows, or one that is not archived.
+ */
+export function heldAtArchive(entries: ActivityEntry[]): number | null {
+  const last = [...entries].sort(chronological).at(-1);
+  if (!last) return null;
+  if (last.kind === "withdrawn") return last.amount;
+  if (last.kind === "added") return -last.amount;
+  return null;
 }

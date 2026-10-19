@@ -6,6 +6,8 @@
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import {
+  createGoalViaApi,
+  createTransactionViaApi,
   createWorkspaceViaApi,
   freezeClock,
   openAsSharedOwner,
@@ -138,27 +140,6 @@ async function postTransaction(
   }
 }
 
-async function createGoal(page: Page, orgId: number): Promise<number> {
-  const csrftoken =
-    (await page.context().cookies()).find((c) => c.name === "csrftoken")
-      ?.value ?? "";
-  const res = await page.request.post(`/api/v1/organizations/${orgId}/goals/`, {
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
-    data: {
-      name: "Transactions fixture goal",
-      target_amount: "1000.00",
-      target_date: "2026-12-31",
-    },
-  });
-
-  if (res.status() !== 201) {
-    throw new Error(`goal POST failed: ${res.status()} ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as { id: number };
-  return data.id;
-}
-
 /**
  * Records every moment focus and `aria-hidden` overlap — the state Chrome
  * reports as "Blocked aria-hidden on an element because its descendant
@@ -250,7 +231,8 @@ test.describe.serial("Transactions", () => {
   let transactionsUrl: string;
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
-  /** The one real goal in this workspace; the form's picker is still seeded. */
+  let orgId: number;
+  /** A dated, active goal: contributions only, never spendable. */
   let goalId: number;
 
   test.beforeAll(async ({ browser }) => {
@@ -259,9 +241,13 @@ test.describe.serial("Transactions", () => {
     // A workspace of its own: every count below assumes exactly FIXTURES, and
     // the shared owner's personal workspace is open to other specs.
     const workspace = await createWorkspaceViaApi(page, `Ledger ${Date.now()}`);
-    const orgId = toOrgId(workspace);
+    orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
-    goalId = await createGoal(page, orgId);
+    goalId = await createGoalViaApi(page, orgId, {
+      name: "Transactions fixture goal",
+      target_amount: "1000.00",
+      target_date: "2027-12-31",
+    });
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
@@ -679,27 +665,43 @@ test.describe.serial("Transactions", () => {
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
 
-    // The picker is seeded (lib/goals.seed.ts) and none of those ids is meant
-    // to exist here, but on a fresh database this workspace's own fixture goal
-    // can land on seed id 1. Pick a seed goal that cannot be it, so the
-    // backend reliably refuses the transfer and the form shows the reason
-    // instead of closing.
-    const foreign =
-      goalId === 1
-        ? { name: /Emergency fund/, saved: "€3.000,00 of €3.000,00 saved" }
-        : { name: /New laptop/, saved: "€1.790,00 of €2.000,00 saved" };
+    // The picker lists this workspace's goals from the API: only the fixture
+    // goal exists here, and choosing it shows what it holds under the field.
     await dialog.getByLabel("Goal").click();
-    await page.getByRole("option", { name: foreign.name }).click();
-    await expect(dialog.getByText(foreign.saved)).toBeVisible();
+    await page
+      .getByRole("option", { name: "Transactions fixture goal" })
+      .click();
+    await expect(dialog.getByText(/of €1\.000,00 saved/)).toBeVisible();
 
     await dialog.getByLabel("Amount").fill("10");
-    await dialog.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(dialog.getByRole("alert")).toContainText("Goal");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await page.getByRole("button", { name: "Discard" }).click();
   });
 
   test("an expense can be paid from a goal, with a live split preview", async () => {
+    // Spendable means completed, or active with no deadline. Cat mansion
+    // holds 15.000; Emergency fund is spendable but empty. The contribution is
+    // dated far back so it lands on the last page and no count above moves.
+    const catMansion = await createGoalViaApi(page, orgId, {
+      name: "Cat mansion",
+      target_amount: "1500000.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: catMansion,
+      description: "",
+      amount: "15000.00",
+      transaction_date: "2024-01-01",
+    });
+    await createGoalViaApi(page, orgId, {
+      name: "Emergency fund",
+      target_amount: "3000.00",
+      target_date: null,
+    });
+    await page.goto(transactionsUrl);
+
     await page.getByRole("button", { name: "Add transaction" }).click();
     const dialog = page.getByRole("dialog");
 
@@ -721,9 +723,9 @@ test.describe.serial("Transactions", () => {
     await expect(
       page.getByRole("option", { name: /Emergency fund/ }),
     ).toContainText("€0,00 left · will be paid from balance");
-    await expect(page.getByRole("option", { name: /New laptop/ })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("option", { name: /Transactions fixture goal/ }),
+    ).toHaveCount(0);
     await page.getByRole("option", { name: /Cat mansion/ }).click();
     await expect(picker).toContainText("€15.000,00 left");
 
