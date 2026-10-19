@@ -513,14 +513,6 @@ class AiCategoriesResponseSerializer(serializers.Serializer[dict[str, Any]]):
     categories = ReportCategorySerializer(many=True)
 
 
-class AiTransactionsQuerySerializer(serializers.Serializer[dict[str, Any]]):
-    """POST /api/internal/v1/transactions/ body. No filters: the window,
-    ordering, and row cap are fixed by the service (get_org_ai_transactions)."""
-
-    user_id = serializers.IntegerField()
-    organization_id = serializers.IntegerField()
-
-
 class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
     id = serializers.IntegerField()
     date = serializers.DateField()
