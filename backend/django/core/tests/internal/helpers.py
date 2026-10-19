@@ -35,6 +35,14 @@ def add_transaction(
     )
 
 
+def post_endpoint(api_client: APIClient, url_name: str, body: dict[str, object]) -> Any:
+    """Raw POST to an internal AI endpoint; auth-matrix tests build bodies
+    that deviate from the standard member shape."""
+    # The DRF stubs type the test response as the private `_MonkeyPatchedResponse`
+    # (a `Response` subclass that adds `.json()`), so no public return type works.
+    return api_client.post(reverse(url_name), body, format="json")
+
+
 def post_ai_endpoint(
     api_client: APIClient,
     url_name: str,
@@ -42,9 +50,7 @@ def post_ai_endpoint(
     org: Organization,
     **extra: object,
 ) -> Any:
-    # rest_framework test-client response stubs are private (_MonkeyPatchedResponse)
-    return api_client.post(
-        reverse(url_name),
-        {"user_id": user.id, "organization_id": org.id, **extra},
-        format="json",
+    """POST the standard member body (user_id + organization_id) plus extras."""
+    return post_endpoint(
+        api_client, url_name, {"user_id": user.id, "organization_id": org.id, **extra}
     )

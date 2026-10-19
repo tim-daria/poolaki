@@ -1,7 +1,5 @@
 from typing import Any
 
-from django.utils import timezone
-
 from core.internal.views.base import AiOrgView
 from core.models import Organization
 from core.serializers import AiAnalyticsSummaryResponseSerializer
@@ -16,8 +14,7 @@ class AiAnalyticsSummaryView(AiOrgView):
     response_serializer = AiAnalyticsSummaryResponseSerializer
 
     def build_payload(self, org: Organization, data: dict[str, Any]) -> dict[str, Any]:
-        year = data.get("year", timezone.now().year)
-        report = get_org_report(org, year)
+        report = get_org_report(org, data["year"])
         return {
             "year": report["year"],
             "balance": calculate_org_balance(org),

@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, cast
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from core.models import (
@@ -498,7 +499,9 @@ class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):
 
     user_id = serializers.IntegerField()
     organization_id = serializers.IntegerField()
-    year = serializers.IntegerField(required=False, min_value=1900, max_value=2099)
+    year = serializers.IntegerField(
+        min_value=1900, max_value=2099, default=lambda: timezone.now().year
+    )
 
 
 class AiAnalyticsSummaryResponseSerializer(serializers.Serializer[dict[str, Any]]):

@@ -1,7 +1,5 @@
 from typing import Any
 
-from django.utils import timezone
-
 from core.internal.views.base import AiOrgView
 from core.models import Organization
 from core.serializers import AiCategoriesResponseSerializer
@@ -17,7 +15,7 @@ class AiCategoriesView(AiOrgView):
     response_serializer = AiCategoriesResponseSerializer
 
     def build_payload(self, org: Organization, data: dict[str, Any]) -> dict[str, Any]:
-        year = data.get("year", timezone.now().year)
+        year = data["year"]
         return {
             "year": year,
             "categories": get_org_category_breakdown(org, year, include_inactive=True),

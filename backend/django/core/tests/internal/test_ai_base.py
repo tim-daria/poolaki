@@ -1,11 +1,13 @@
-from typing import Any
-
 import pytest
-from django.urls import reverse
 from rest_framework.test import APIClient
 
 from core.models import Organization, User
-from core.tests.internal.helpers import AI_ANALYTICS_URL, AI_CATEGORIES_URL, AI_TRANSACTIONS_URL
+from core.tests.internal.helpers import (
+    AI_ANALYTICS_URL,
+    AI_CATEGORIES_URL,
+    AI_TRANSACTIONS_URL,
+    post_endpoint,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -20,11 +22,6 @@ ENDPOINTS = [
 
 URL_NAMES = [url for _, url in ENDPOINTS]
 ENDPOINT_IDS = [name for name, _ in ENDPOINTS]
-
-
-def post_endpoint(api_client: APIClient, url_name: str, body: dict[str, Any]) -> Any:
-    # rest_framework test-client response stubs are private (_MonkeyPatchedResponse)
-    return api_client.post(reverse(url_name), body, format="json")
 
 
 @pytest.mark.parametrize("url_name", URL_NAMES, ids=ENDPOINT_IDS)

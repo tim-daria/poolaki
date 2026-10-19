@@ -100,13 +100,9 @@ def last_three_months_start(today: date) -> date:
 
 
 def get_org_ai_transactions(org: Organization) -> list[dict[str, Any]]:
-    """Static context for internal ai endpoint about transactions: all
-    income/expense transactions of the last 3 calendar months (inclusive),
-    newest first. Contribution/withdraw are internal goal transfers, not
-    income/expense events, and are excluded (mirrors the categories endpoint);
-    goal funding questions belong to the goals endpoint. The AI Service sends
-    no filters; the LLM narrows by category in context. Reuses the public
-    list's ordering so both stay deterministic (id breaks ties within a day)."""
+    """Income/expense transactions of the last 3 calendar months (inclusive),
+    newest first. Contribution/withdraw are goal transfers, not income/expense
+    events, and are excluded. Ordering matches the public list (id breaks ties)."""
     today = date.today()
     filters = TransactionFilters(
         date_from=last_three_months_start(today), date_to=today, sort="newest"
