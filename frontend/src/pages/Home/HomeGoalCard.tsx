@@ -10,7 +10,7 @@ import {
   type Theme,
 } from "@mui/material";
 import { Money } from "../../components/Money";
-import type { Goal } from "../../lib/goals";
+import { targetReached, type Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
@@ -57,11 +57,14 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
 
   const percent = goalPercent(goal);
   const remaining = Math.max(0, goal.target_amount - goal.balance);
+  // Only active goals reach the card, so a full one is waiting to be
+  // marked completed: the copy says it is done rather than almost there.
+  const reached = targetReached(goal);
 
   return (
     <HomeCard
       sx={sx}
-      title="Almost there"
+      title={reached ? "Goal reached" : "Almost there"}
       to="savings"
       action={
         <HomeCardAction>
@@ -116,7 +119,13 @@ export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
           variant="body2"
           sx={{ color: "text.secondary", textAlign: "left" }}
         >
-          <Money>€{displayWhole(remaining)}</Money> to go · {percent}%
+          {reached ? (
+            "Ready to use"
+          ) : (
+            <>
+              <Money>€{displayWhole(remaining)}</Money> to go · {percent}%
+            </>
+          )}
         </Typography>
       </Stack>
     </HomeCard>
