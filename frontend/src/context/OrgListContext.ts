@@ -12,6 +12,8 @@ import type { Organization } from "../lib/organizations";
 export type OrgListContextType = {
   organizations: Organization[];
   loading: boolean;
+  /** Set when the last fetch failed; the list is then stale or empty, not known. */
+  error: Error | null;
   refresh: () => Promise<void>;
 };
 

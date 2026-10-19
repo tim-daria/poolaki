@@ -2,6 +2,7 @@ import { useParams } from "react-router";
 import { useOrgList } from "../context/useOrgList";
 import { CurrentOrgContext } from "../context/CurrentOrgContext";
 import { NoAccessScreen } from "./NoAccessScreen";
+import { OrgListFailedScreen } from "./OrgListFailedScreen";
 import { AppLayout } from "./AppLayout";
 
 /**
@@ -13,12 +14,14 @@ import { AppLayout } from "./AppLayout";
  */
 export function OrgLayout() {
   const { orgId } = useParams();
-  const { organizations, loading } = useOrgList();
+  const { organizations, loading, error, refresh } = useOrgList();
   // URL params are strings, org.id is a number. `===` across types is always
   // false, which would show "workspace unavailable" for a valid workspace.
   const org = organizations.find((o) => String(o.id) === orgId);
 
   if (loading) return <div>Loading…</div>;
+  // A direct visit after a failed fetch is not "no access": the list is unknown.
+  if (!org && error) return <OrgListFailedScreen onRetry={refresh} />;
   if (!org) return <NoAccessScreen orgId={orgId} />;
 
   return (
