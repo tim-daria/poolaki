@@ -22,7 +22,7 @@ export function OrgLayout() {
   if (loading) return <div>Loading…</div>;
   // A direct visit after a failed fetch is not "no access": the list is unknown.
   if (!org && error) return <OrgListFailedScreen onRetry={refresh} />;
-  if (!org) return <NoAccessScreen orgId={orgId} />;
+  if (!org) return <NoAccessScreen />;
 
   return (
     <CurrentOrgContext.Provider value={org}>
