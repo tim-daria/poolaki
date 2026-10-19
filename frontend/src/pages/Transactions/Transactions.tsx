@@ -75,12 +75,17 @@ function rangeLabel(from: string, to: string): string {
   return `Until ${shortDate(to)}`;
 }
 
+/** The toolbar's pill outline, shared with the Filters button's look. */
 const pillInputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 999,
-    bgcolor: "background.default",
     "& fieldset": { borderColor: "divider" },
   },
+} as const;
+
+/** A well marks the one control you type into; a pick reads as a button. */
+const searchWellSx = {
+  "& .MuiOutlinedInput-root": { bgcolor: "background.default" },
 } as const;
 
 /** Chips in the active-filters row. */
@@ -243,6 +248,7 @@ function Transactions() {
                     [TABLET]: { flexBasis: "auto" },
                   },
                   pillInputSx,
+                  searchWellSx,
                 ]}
                 slotProps={{
                   htmlInput: { maxLength: QUERY_MAX_LENGTH },
