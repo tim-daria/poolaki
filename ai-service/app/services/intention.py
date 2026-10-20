@@ -3,7 +3,7 @@
 from enum import Enum
 
 from app.clients.llm import LLMClient
-
+from app.models.usage import TokenUsage 
 
 class Intent(str, Enum):
     MONTHLY_SUMMARY = "monthly_summary"         # analytics/summary
@@ -21,7 +21,7 @@ class IntentionService:
     def __init__(self, llm_client: LLMClient):
         self._llm_client = llm_client
 
-    async def classify(self, question: str) -> Intent:
+    async def classify(self, question: str, usage: TokenUsage) -> Intent:
         prompt = f"""
 Classify the following financial question into exactly one of these intents:
 
@@ -36,7 +36,10 @@ Question:
 Return only the intent name.
 """
 
-        result = await self._llm_client.generate_response(prompt)
+        result, llm_usage = await self._llm_client.generate_response(prompt)
+        usage.intent_in += llm_usage.input_tokens
+        usage.intent_out += llm_usage.output_tokens
+
 
         try:
             return Intent(result.strip().lower())
