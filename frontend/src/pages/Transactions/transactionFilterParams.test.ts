@@ -31,6 +31,10 @@ describe("parseFilters", () => {
     });
   });
 
+  it("accepts the withdrawals tab", () => {
+    expect(parse("tab=withdraw").tab).toBe("withdraw");
+  });
+
   it("falls back to defaults for unknown tab and sort values", () => {
     expect(parse("tab=bogus&sort=sideways")).toMatchObject({
       tab: "all",

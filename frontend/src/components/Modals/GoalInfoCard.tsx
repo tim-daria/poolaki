@@ -130,7 +130,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
               <Close />
             </IconButton>
           </Box>
-          <Headline goal={shown} rows={rows ?? []} />
+          <Headline goal={shown} rows={rows} />
           <GoalActivityList
             rows={rows ?? []}
             emptyText={shown.spendable ? SPENDING_EMPTY : SAVING_EMPTY}
@@ -166,10 +166,17 @@ function Subtitle({ goal }: { goal: Goal }) {
  * to the target, like the card. An archived goal leads with what it held
  * when archived, read from its rows, since the server reports zero.
  */
-function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+function Headline({
+  goal,
+  rows,
+}: {
+  goal: Goal;
+  /** Null while loading. */
+  rows: SplitEntry[] | null;
+}) {
   if (goal.status === "archived")
     return <ArchivedHeadline goal={goal} rows={rows} />;
-  const f = goalFigures(goal, rows);
+  const f = goalFigures(goal, rows ?? []);
   const spending = goal.spendable;
   const figure = spending ? goal.balance : f.saved;
   const exact = `${figure < 0 ? "-" : ""}€${displayAmount(Math.abs(figure))}`;
@@ -230,9 +237,16 @@ function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
   );
 }
 
-function ArchivedHeadline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+function ArchivedHeadline({
+  goal,
+  rows,
+}: {
+  goal: Goal;
+  rows: SplitEntry[] | null;
+}) {
   // Rows arrive after the drawer opens; until then the figure is unknown.
-  const held = rows.length ? heldAtArchive(rows) : undefined;
+  // Once they have, it is always a number: no rows means nothing was held.
+  const held = rows ? heldAtArchive(rows) : undefined;
   const known = typeof held === "number";
   const exact = known
     ? `${held < 0 ? "-" : ""}€${displayAmount(Math.abs(held))}`

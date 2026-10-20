@@ -32,7 +32,7 @@ export function NewGoalCard({ onClick }: Props) {
       }}
     >
       <AddCircleOutlineIcon sx={{ fontSize: 40, color: "primary.main" }} />
-      <Typography sx={{ fontWeight: 700 }}>Start a new saving</Typography>
+      <Typography sx={{ fontWeight: 700 }}>Start a new goal</Typography>
       <Typography variant="body2">Set a target and save towards it.</Typography>
     </Paper>
   );

@@ -20,6 +20,8 @@ import {
 import { GoalCard } from "./GoalCard";
 import { GoalSection } from "./GoalSection";
 import { NewGoalCard } from "./NewGoalCard";
+import { useAuth } from "../../context/useAuth";
+import { canEditGoal } from "../../lib/access";
 
 /** One section per state, in page order; Archived starts folded. */
 const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
@@ -30,6 +32,7 @@ const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
 
 function Goals() {
   const org = useCurrentOrg();
+  const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Bumped after a save, so the cards refetch. */
@@ -69,7 +72,7 @@ function Goals() {
     >
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
-        Add saving
+        Add goal
       </PageActionButton>
       {error && <Alert severity="error">{error}</Alert>}
       <GoalForm
@@ -83,6 +86,7 @@ function Goals() {
       />
       <TransactionForm
         open={transfer !== null}
+        direction={transfer?.direction}
         onClose={() => setTransfer(null)}
         goal={transfer?.goal.id}
         onSaved={refresh}
@@ -102,6 +106,7 @@ function Goals() {
               <GoalCard
                 key={g.id}
                 goal={g}
+                canEdit={canEditGoal(g, user?.username, org.role)}
                 onContribute={() =>
                   setTransfer({ goal: g, direction: "contribution" })
                 }

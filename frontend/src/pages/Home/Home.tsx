@@ -288,6 +288,7 @@ function Home() {
         <RecentActivityCard
           rows={recentTransactions(rows, RECENT_ROWS)}
           categories={categories}
+          goals={goals}
           shared={!org.is_personal}
           onAdd={() => setModal("transaction")}
         />

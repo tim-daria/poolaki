@@ -6,13 +6,19 @@
  */
 
 import { TODAY } from "./date";
-import { parseMoney, toMoneyString, validateAmount } from "./money";
+import {
+  displayAmount,
+  parseMoney,
+  toMoneyString,
+  validateAmount,
+} from "./money";
 import { formatName } from "./text";
 import {
   PAGE_SIZE,
   type Tab,
   type TransactionFilters,
 } from "./transactionFilters";
+import { goalById, type Goal } from "./goals";
 
 /** Contributions and withdrawals are transfers to or from a goal. */
 export type EntryType = "income" | "expense" | "contribution" | "withdraw";
@@ -128,9 +134,12 @@ export function emptyDraft(): TransactionDraft {
   };
 }
 
-/** Add flow pre-set to a goal: the Saving tab with `goal` chosen, everything else as emptyDraft. */
-export function contributionDraft(goal: number): TransactionDraft {
-  return changeType({ ...emptyDraft(), goal }, "contribution");
+/** Add flow pre-set to a goal: the Saving tab with `goal` chosen and the direction set; everything else as emptyDraft. */
+export function transferDraft(
+  goal: number,
+  direction: "contribution" | "withdraw",
+): TransactionDraft {
+  return changeType({ ...emptyDraft(), goal }, direction);
 }
 
 /**
@@ -176,8 +185,17 @@ export function changeType(
  * unselected values (null), and entry_type-specific requirements
  * (description and category for income/expense; goal for contribution).
  */
-export function validateDraft(draft: TransactionDraft): string | null {
+export function validateDraft(
+  draft: TransactionDraft,
+  goals: Goal[] = [],
+): string | null {
   if (isTransfer(draft.entry_type)) {
+    if (draft.entry_type === "withdraw") {
+      const goal = goalById(goals, draft.goal);
+      if (goal && Number(draft.amount) > goal.balance) {
+        return `Only €${displayAmount(goal.balance)} is in this goal.`;
+      }
+    }
     if (draft.goal === null) return "Pick a goal.";
   } else {
     if (!draft.description.trim()) return "Description is required.";
@@ -372,6 +390,10 @@ export async function updateTransaction(
       describeProblem(body) ?? "Could not save the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
   if (!res.ok) throw new Error(`Failed to update transaction (${res.status})`);
   const body: { transaction: TransactionDTO } = await res.json();
   return fromDTO(body.transaction);
@@ -399,6 +421,11 @@ export async function deleteTransaction(
       describeProblem(body) ?? "Could not delete the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
+
   if (!res.ok) throw new Error(`Failed to delete transaction (${res.status})`);
 }
 

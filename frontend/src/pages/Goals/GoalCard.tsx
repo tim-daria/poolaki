@@ -37,6 +37,8 @@ interface Props {
   onEdit: () => void;
   /** Opens the transaction form on Withdraw for this goal. */
   onWithdraw: () => void;
+  /** Creator or owner; the server refuses anyone else. */
+  canEdit: boolean;
 }
 
 /** Tinted like TransactionRow's chips: pale background, strong text. */
@@ -122,6 +124,7 @@ export function GoalCard({
   onInfo,
   onEdit,
   onWithdraw,
+  canEdit,
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const look = cardLook(goal);
@@ -136,9 +139,11 @@ export function GoalCard({
   // A settled overdraft reads with a minus but not in red: nothing is owed any more.
   const negative = look.offLimits || (typeof held === "number" && held < 0);
   const hint = targetReachedCue(goal);
-  const open = { contribute: onContribute, edit: onEdit, info: onInfo }[
-    look.openAction
-  ];
+  const open = {
+    contribute: onContribute,
+    edit: canEdit ? onEdit : onInfo,
+    info: onInfo,
+  }[look.openAction];
 
   // The menu button lives inside the clickable card, so its click and its
   // Enter keypress must not reach the card's handlers.
@@ -185,11 +190,16 @@ export function GoalCard({
                 <Chip
                   label="Target reached"
                   size="small"
-                  clickable
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                  }}
+                  // Opens Edit for those who may; a plain cue for everyone else.
+                  clickable={canEdit}
+                  onClick={
+                    canEdit
+                      ? (e) => {
+                          e.stopPropagation();
+                          onEdit();
+                        }
+                      : undefined
+                  }
                   onKeyDown={stopKeys}
                   sx={{
                     bgcolor: "success.light",
@@ -238,7 +248,7 @@ export function GoalCard({
           >
             {shownBalance === undefined
               ? "€—"
-              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance ?? 0))}`}{" "}
+              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance))}`}{" "}
           </Typography>
           {/* sx, not the color prop: MUI 9's Typography resolves only named
               colours ("error", "textSecondary") through the prop, not palette
@@ -259,13 +269,6 @@ export function GoalCard({
             </Typography>
           )}
         </Box>
-        {typeof held === "number" && (
-          <Typography variant="body2" sx={{ color: "text.disabled" }}>
-            {held >= 0
-              ? `Returned €${displayAmount(held)} to balance`
-              : `Settled €${displayAmount(-held)} from balance`}
-          </Typography>
-        )}
       </Paper>
 
       {/* A sibling, not a child, of the Paper: React events bubble through
@@ -306,14 +309,16 @@ export function GoalCard({
           >
             Show Info
           </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setAnchorEl(null);
-              onEdit();
-            }}
-          >
-            Edit
-          </MenuItem>
+          {canEdit && (
+            <MenuItem
+              onClick={() => {
+                setAnchorEl(null);
+                onEdit();
+              }}
+            >
+              Edit
+            </MenuItem>
+          )}
         </Menu>
       )}
     </>

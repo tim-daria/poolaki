@@ -11,6 +11,7 @@ import {
   createWorkspaceViaApi,
   freezeClock,
   openAsSharedOwner,
+  patchGoalViaApi,
   toOrgId,
 } from "./helpers.js";
 
@@ -47,9 +48,8 @@ async function getOrganizationCategories(
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
  * 2 contributions and 1 withdrawal, 3 tax refundable, 15 per page. The
- * Transfers tab and its badge cover contributions only: the backend filters
- * and counts a single entry_type, so the withdrawal is listed under All
- * alone until a `transfer` tab value exists. Category names match the
+ * Transfers tab covers contributions and the Withdrawals tab withdrawals:
+ * the backend filters and counts one entry_type per tab. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
@@ -278,9 +278,8 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
     await expect(tab("Expenses")).toContainText("17");
     await expect(tab("Income")).toContainText("4");
-    // Contributions only; the withdrawal is not a Transfers row yet (see the
-    // FIXTURES comment).
     await expect(tab("Transfers")).toContainText("2");
+    await expect(tab("Withdrawals")).toContainText("1");
 
     await expect(rows()).toHaveCount(15);
     await expect(showing("15 of 24")).toBeVisible();
@@ -292,14 +291,23 @@ test.describe.serial("Transactions", () => {
   });
 
   test("colours rows by entry type", async () => {
-    // Income carries a plus; a transfer is filed under Savings and unsigned.
+    // Income carries a plus; a transfer is an arrow into or out of savings.
     const salary = rows().filter({ hasText: "Salary" }).first();
     await expect(salary).toContainText("+€3.240,00");
 
-    const transfer = rows().filter({ hasText: "To savings" }).first();
-    await expect(transfer).toContainText("Savings");
-    await expect(transfer).toContainText("€300,00");
-    await expect(transfer).not.toContainText("-€300,00");
+    const contribution = rows().filter({ hasText: "To savings" }).first();
+    await expect(contribution).toContainText("Savings");
+    await expect(contribution).toContainText("→€300,00");
+
+    // The one withdrawal sits on page 2; its own tab has it at the top, under
+    // its own chip.
+    await tab("Withdrawals").click();
+    await expect(rows()).toHaveCount(1);
+    await expect(rows().first()).toContainText("←€300,00");
+    await expect(rows().first().getByRole("cell").nth(2)).toHaveText(
+      "Withdraw",
+    );
+    await tab("All").click();
   });
 
   test("paginates and keeps the page in the URL", async () => {
@@ -476,7 +484,7 @@ test.describe.serial("Transactions", () => {
     ).toBeDisabled();
 
     // A row keeps its type for life: the switch is off and says why.
-    for (const name of ["Expense", "Income", "Saving"]) {
+    for (const name of ["Expense", "Income", "Savings"]) {
       await expect(dialog.getByRole("button", { name })).toBeDisabled();
     }
     await expect(
@@ -661,7 +669,7 @@ test.describe.serial("Transactions", () => {
     await expect(page.getByRole("option", { name: "Food" })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    await dialog.getByRole("button", { name: "Saving" }).click();
+    await dialog.getByRole("button", { name: "Savings" }).click();
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
 
@@ -722,7 +730,7 @@ test.describe.serial("Transactions", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("option", { name: /Emergency fund/ }),
-    ).toContainText("€0,00 left · will be paid from balance");
+    ).toContainText("€0,00 left · will go below zero");
     await expect(
       page.getByRole("option", { name: /Transactions fixture goal/ }),
     ).toHaveCount(0);
@@ -738,12 +746,11 @@ test.describe.serial("Transactions", () => {
 
     // Goal runs out with this expense.
     await dialog.getByLabel("Amount").fill("15220");
-    await expect(
-      dialog.getByText("€15.000,00 from Cat mansion · €220,00 from balance"),
-    ).toBeVisible();
+    await expect(dialog.getByText("€220,00 over")).toBeVisible();
+    await expect(dialog.getByText("Cat mansion's balance")).toBeVisible();
     await expect(
       dialog.getByText(
-        "The goal runs out with this expense and goes over by €220,00.",
+        "The goal will be overdrawn by €220,00. Your net balance won't change yet.",
       ),
     ).toBeVisible();
 
@@ -753,9 +760,10 @@ test.describe.serial("Transactions", () => {
     // Refocusing the money field after the menu closes appends; clear first.
     await dialog.getByLabel("Amount").clear();
     await dialog.getByLabel("Amount").fill("120");
-    await expect(dialog.getByText("€120,00 from balance")).toBeVisible();
+    await expect(dialog.getByText("€120,00 over")).toBeVisible();
+    await expect(dialog.getByText("Emergency fund's balance")).toBeVisible();
     await expect(
-      dialog.getByText(/Emergency fund is empty\. This still counts toward it/),
+      dialog.getByText(/The goal will be overdrawn by €120,00/),
     ).toBeVisible();
 
     // Remove collapses back to the chip, and the goal is dropped from the draft.
@@ -877,5 +885,88 @@ test.describe.serial("Transactions", () => {
       "rent",
     );
     await expect(showing("2 of 2")).toBeVisible();
+  });
+
+  // The three tests below add rows; they run last so the counts above hold.
+
+  test("an expense paid from a goal names the goal under its row", async () => {
+    const museum = await createGoalViaApi(page, orgId, {
+      name: "Museum fund",
+      target_amount: "500.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: museum,
+      description: "",
+      amount: "100.00",
+      transaction_date: "2026-08-03",
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Entertainment")!,
+      goal_id: museum,
+      description: "Museum tickets",
+      amount: "30.00",
+      transaction_date: "2026-08-04",
+    });
+    await page.goto(transactionsUrl);
+
+    const row = rows().filter({ hasText: "Museum tickets" });
+    await expect(row).toContainText("Paid from Museum fund");
+    await expect(row).toContainText("-€30,00");
+  });
+
+  test("archiving an overdrawn goal books a labelled settlement row", async () => {
+    const trip = await createGoalViaApi(page, orgId, {
+      name: "Weekend trip",
+      target_amount: "50.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: trip,
+      description: "",
+      amount: "50.00",
+      transaction_date: "2026-08-02",
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Food")!,
+      goal_id: trip,
+      description: "Dinner",
+      amount: "90.00",
+      transaction_date: "2026-08-03",
+    });
+    await patchGoalViaApi(page, orgId, trip, { status: "archived" });
+    await page.goto(transactionsUrl);
+
+    // Dated today by the server, so it is the newest row.
+    const settlement = rows().filter({ hasText: "Archived Weekend trip" });
+    await expect(settlement).toContainText("Overdraft settlement");
+    await expect(settlement).toContainText("→€40,00");
+  });
+
+  test("a goal can be created from the Savings picker and is selected", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Savings", exact: true }).click();
+    await dialog.getByLabel("Goal").click();
+    await page.getByRole("option", { name: "New goal…" }).click();
+
+    const goalDialog = page
+      .getByRole("dialog")
+      .filter({ has: page.getByRole("heading", { name: "Add goal" }) });
+    await goalDialog.getByLabel("Name").fill("Picker goal");
+    await goalDialog.getByLabel("Target amount").fill("100");
+    await goalDialog.getByRole("button", { name: "Create" }).click();
+    await expect(page.getByText("Goal added")).toBeVisible();
+
+    await expect(dialog.getByLabel("Goal")).toContainText("Picker goal");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
   });
 });
