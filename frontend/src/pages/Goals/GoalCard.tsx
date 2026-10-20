@@ -41,7 +41,7 @@ interface Props {
   canEdit: boolean;
 }
 
-/** Tinted like TransactionRow's chips: pale background, strong text. */
+/** Tinted like the transaction list's chips: pale background, strong text. */
 const FLAG_CHIP = { bgcolor: "error.light", color: "error.main" };
 const FLAG_CHIP_DIMMED = { bgcolor: "action.selected", color: "text.disabled" };
 

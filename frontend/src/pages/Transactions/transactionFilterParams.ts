@@ -17,6 +17,14 @@ const TAB_VALUES: Tab[] = [
 ];
 const SORT_VALUES: Sort[] = ["newest", "oldest"];
 
+/** "1,x,-2" → [1]: anything but a positive integer is dropped. */
+function parseIdList(value: string | null): number[] {
+  return (value ?? "")
+    .split(",")
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0);
+}
+
 /** Unknown or malformed values fall back to the defaults rather than failing. */
 export function parseFilters(params: URLSearchParams): TransactionFilters {
   const tab = params.get("tab") as Tab | null;
@@ -28,10 +36,8 @@ export function parseFilters(params: URLSearchParams): TransactionFilters {
     sort: sort && SORT_VALUES.includes(sort) ? sort : DEFAULT_FILTERS.sort,
     from: params.get("from") ?? "",
     to: params.get("to") ?? "",
-    categories: (params.get("cat") ?? "")
-      .split(",")
-      .map(Number)
-      .filter((n) => Number.isInteger(n) && n > 0),
+    categories: parseIdList(params.get("cat")),
+    members: parseIdList(params.get("by")),
     taxDeductible: params.get("tax") === "1",
     page: Number.isInteger(page) && page > 0 ? page : 1,
   };
@@ -46,6 +52,7 @@ export function serializeFilters(f: TransactionFilters): URLSearchParams {
   if (f.from) p.set("from", f.from);
   if (f.to) p.set("to", f.to);
   if (f.categories.length) p.set("cat", f.categories.join(","));
+  if (f.members.length) p.set("by", f.members.join(","));
   if (f.taxDeductible) p.set("tax", "1");
   if (f.page > 1) p.set("page", String(f.page));
   return p;

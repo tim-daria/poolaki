@@ -21,8 +21,6 @@ import { useAiChat } from "./useAiChat";
 import { AiChatMessage } from "./AiChatMessage";
 
 const panelWidth = 420;
-/** The sheet leaves most of the page readable while the answer is in view. */
-const sheetHeight = "40dvh";
 
 interface Props {
   open: boolean;
@@ -35,7 +33,7 @@ export function AiChatDrawer({ open, onClose }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const restoreFocus = useRestoreFocus(open);
-  const { anchor, paperSx } = useSheet(panelWidth, sheetHeight);
+  const { anchor, paperSx } = useSheet(panelWidth);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

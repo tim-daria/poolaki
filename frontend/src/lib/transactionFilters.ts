@@ -12,7 +12,7 @@ export type Sort = "newest" | "oldest";
 
 export type TransactionFilters = {
   tab: Tab;
-  /** Case-insensitive substring match on description and category label. */
+  /** Case-insensitive substring match on description, category label and creator's username. */
   q: string;
   sort: Sort;
   /** ISO dates, inclusive. Empty string means unbounded. */
@@ -20,6 +20,8 @@ export type TransactionFilters = {
   to: string;
   /** Category IDs; empty means all. */
   categories: number[];
+  /** User IDs of the members who created the rows; empty means all. */
+  members: number[];
   /** True keeps only tax-deductible rows; false is "no filter", not "non-deductible". */
   taxDeductible: boolean;
   /** 1-based. */
@@ -38,6 +40,7 @@ export const DEFAULT_FILTERS: TransactionFilters = {
   from: "",
   to: "",
   categories: [],
+  members: [],
   taxDeductible: false,
   page: 1,
 };

@@ -12,6 +12,7 @@ from core.models import (
     Goal,
     GoalStatus,
     Invitation,
+    Membership,
     Notification,
     Organization,
     Transaction,
@@ -283,9 +284,10 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
 class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     """GET /organizations/{org_id}/transactions/ query parameters.
 
-    `entry_type="all"` is the unfiltered sentinel; `goal_id` and `category_id`
-    must belong to `context["org_id"]`. `category_id` accepts one ID or a
-    comma-separated list; dates are inclusive bounds.
+    `entry_type="all"` is the unfiltered sentinel; `goal_id`, `category_id` and
+    `created_by` must belong to `context["org_id"]`. `category_id` and
+    `created_by` accept one ID or a comma-separated list; dates are inclusive
+    bounds.
     """
 
     entry_type = serializers.ChoiceField(
@@ -296,6 +298,7 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     category_id = IntListField(required=False)
     goal_id = serializers.IntegerField(required=False, min_value=1)
     tax_deductible = serializers.BooleanField(required=False, default=False)
+    created_by = IntListField(required=False)
     q = serializers.CharField(required=False, allow_blank=True, max_length=100)
     sort = serializers.ChoiceField(choices=["newest", "oldest"], required=False, default="newest")
     page = serializers.IntegerField(required=False, default=1, min_value=1)
@@ -321,6 +324,13 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
         ).count() < len(set(category_ids)):
             raise serializers.ValidationError(["Category does not belong to this organization."])
         return category_ids
+
+    def validate_created_by(self, user_ids: list[int]) -> list[int]:
+        if Membership.objects.filter(
+            user_id__in=user_ids, org_id=self.context.get("org_id")
+        ).count() < len(set(user_ids)):
+            raise serializers.ValidationError(["User is not a member of this organization."])
+        return user_ids
 
 
 class TransactionUpdateSerializer(serializers.Serializer[Transaction]):

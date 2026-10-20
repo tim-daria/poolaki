@@ -14,6 +14,8 @@ export const TABLET = `@media (min-width:${TABLET_MIN_WIDTH}px)`;
 export const DESKTOP_MIN_WIDTH = 1024;
 export const DESKTOP = `@media (min-width:${DESKTOP_MIN_WIDTH}px)`;
 export const DESKTOP_QUERY = `(min-width:${DESKTOP_MIN_WIDTH}px)`;
+/** For props that cannot take a media query in sx, e.g. a Pagination's size. */
+export const PHONE_QUERY = `(max-width:${TABLET_MIN_WIDTH - 0.05}px)`;
 
 /**
  * Header tabs appear from here; below it the bottom bar takes over. Separate
