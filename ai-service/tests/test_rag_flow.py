@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -13,32 +14,50 @@ BODY = {
     "organization_id": 1,
     "question": "How much did I spend this month?",
 }
-
+EMPTY = CombinedRetrievalResult(items=[])
 
 def test_chat_endpoint_with_mock_rag():
-    with patch("app.services.retrieval.MockRetriever.get_context") as mock_get_context:
-        mock_get_context.return_value = CombinedRetrievalResult(items=[])
+    with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
+        mock_get_context.return_value = EMPTY
         with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
             mock_llm.side_effect = [
-                ("monthly_summary", USAGE),  # Intent classification
-                ("You spent €850 this month.", USAGE),  # Final answer
+                ("summary", USAGE),                    # intent classification
+                ("You spent €850 this month.", USAGE), # final answer
             ]
 
             response = client.post("/api/v1/chat", json=BODY)
 
             assert response.status_code == 200
             assert "€850" in response.json()["answer"]
-            assert response.json()["metadata"]["intent"] == "monthly_summary"
+            assert response.json()["metadata"]["intent"] == "summary"
 
 
 def test_unknown_intent_label_becomes_unsupported():
-    with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
-        mock_llm.side_effect = [
-            ("something weird", USAGE),
-            ("I can't help with that, but I can help with your monthly totals.", USAGE),
-        ]
+    with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
+        mock_get_context.return_value = EMPTY
+        with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
+            mock_llm.side_effect = [
+                ("something weird", USAGE),
+                ("I can't help with that, but I can help with your monthly totals.", USAGE),
+            ]
 
-        response = client.post("/api/v1/chat", json=BODY)
+            response = client.post("/api/v1/chat", json=BODY)
 
-        assert response.status_code == 200
-        assert response.json()["metadata"]["intent"] == "unsupported"
+            assert response.status_code == 200
+            assert response.json()["metadata"]["intent"] == "unsupported"
+
+
+def test_final_prompt_contains_current_date():
+    expected = datetime.now(UTC).astimezone().date().isoformat()
+
+    with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
+        mock_get_context.return_value = EMPTY
+        with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
+            mock_llm.side_effect = [("summary", USAGE), ("Some answer", USAGE)]
+
+            response = client.post("/api/v1/chat", json=BODY)
+
+            assert response.status_code == 200
+            final_prompt = mock_llm.call_args_list[1].args[0]  # 2nd call = final prompt
+            assert expected in final_prompt
+            assert "{{current_date}}" not in final_prompt

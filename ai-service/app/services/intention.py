@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class Intent(str, Enum):
-    MONTHLY_SUMMARY = "monthly_summary"  # analytics/summary
-    CATEGORY_SPENDING = "category_spending"  # categories
+    SUMMARY = "summary"  # analytics/summary
+    CATEGORIES = "categories"  # categories
     TRANSACTIONS = "transactions"  # transactions
     UNSUPPORTED = "unsupported"
 
@@ -31,8 +31,8 @@ class IntentionService:
         prompt = f"""
 Classify the following financial question into exactly one of these intents:
 
-- monthly_summary: income/expense totals per month, balance, averages, month-to-month comparison, shared/organization spending.
-- category_spending: spending/income by category, biggest category, list of categories, which category fits a transaction.
+- summary: income/expense totals per month, balance, averages, month-to-month comparison, shared/organization spending.
+- categories: spending/income by category, biggest category, list of categories, which category fits a transaction.
 - transactions: top/largest expenses, last expense, listing recent transactions.
 - unsupported: goals, investment advice, external data (e.g. crypto prices), bank import, future predictions, weekly or daily granularity, questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?").
 

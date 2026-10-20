@@ -2,7 +2,7 @@
 # retriever, then the context the prompt and at the end LLMClient
 import logging
 import time
-from datetime import date
+from datetime import UTC, datetime
 
 from app.clients.llm import LLMClient
 from app.services.context_builder import ContextBuilder
@@ -37,6 +37,7 @@ class LLMService:
         usage: TokenUsage,
     ) -> tuple[str, str]:
 
+        today = datetime.now(UTC).astimezone().date()
         start = time.perf_counter()
         intent = await self._intention_service.classify(question, usage)
 
@@ -56,7 +57,6 @@ class LLMService:
             intent=intent,  # Enum
         )
 
-        today = date.today()  # noqa: DTZ011
         context = self._context_builder.build_context(
             retrieval_result, usage, today=today
         )
