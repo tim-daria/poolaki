@@ -1,5 +1,10 @@
 from pydantic import BaseModel
 
+class LLMUsage(BaseModel):
+    """Tokens reported by the provider for ONE LLM call."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    
 class TokenUsage(BaseModel):
     intent_in: int = 0
     intent_out: int = 0
