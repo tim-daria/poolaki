@@ -1,13 +1,26 @@
 /**
  * @file Month half of the top card: came in, spent and the goal total as
- * three columns on one baseline, a hover-only note on what they mean, and a
- * footer with the month's net.
+ * three columns on one baseline, a note on what they mean, a link to the
+ * year's report, and a footer with the month's net. An abbreviated figure
+ * is a button that swaps in the exact amount.
  */
 
-import { Box, Stack, Tooltip, Typography, type Theme } from "@mui/material";
+import { useState } from "react";
+import { Link as RouterLink } from "react-router";
+import {
+  Box,
+  ButtonBase,
+  IconButton,
+  Link,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+  type Theme,
+} from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "../../components/Money";
-import { displayAmount, displayFigure } from "../../lib/money";
+import { displayAmount, displayFigure, isAbbreviated } from "../../lib/money";
 import { monthFooter, type MonthSummary } from "../../lib/overview";
 import { CardAction, CardProblem } from "../../components/Card/Card";
 import { DESKTOP } from "../../lib/layout";
@@ -22,11 +35,6 @@ interface Props {
   year: number;
   /** Value that fills a full-height column. */
   scaleMax: number;
-  /**
-   * Id of the hidden explanation, for the card link's `aria-describedby`.
-   * The card is one link, so the info icon itself is not a control.
-   */
-  descriptionId: string;
 }
 
 /** Tallest column, per the spec: 64px on phones, 72px from desktop. */
@@ -94,18 +102,93 @@ const GRID = {
   textAlign: "center",
 } as const;
 
-// Visually hidden but read by assistive tech. Pixel strings on purpose: a
-// bare 1 is 100% in sx, which stretched the span past the page edge.
-const VISUALLY_HIDDEN = {
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  margin: "-1px",
-  padding: 0,
-  overflow: "hidden",
-  clip: "rect(0 0 0 0)",
-  whiteSpace: "nowrap",
-} as const;
+/**
+ * The figure above a bar. Up to six digits it is plain text. Past that it is
+ * abbreviated and becomes a button: one tap floats the exact amount over the
+ * column, in a card-styled pill so it reads above the bars, without
+ * changing the column's height; the next tap shortens it again. The dotted
+ * underline is the only cue that it can be tapped.
+ */
+function ColumnFigure({
+  value,
+  sign,
+  color,
+}: {
+  value: number;
+  sign: string;
+  color: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  // An overdrawn goal takes the total below zero; the sign then comes from
+  // the value, not the column.
+  const shownSign = value > 0 ? sign : value < 0 ? "-" : "";
+  const magnitude = Math.abs(value);
+  const exact = `${shownSign}€${displayAmount(magnitude)}`;
+  const figureSx = {
+    fontSize: FIGURE_SIZE,
+    whiteSpace: "nowrap",
+    color: value > 0 ? color : "text.disabled",
+  } as const;
+
+  if (!isAbbreviated(magnitude)) {
+    return (
+      <Money title={exact} sx={{ ...figureSx, mb: FIGURE_GAP }}>
+        {shownSign}€{displayFigure(magnitude)}
+      </Money>
+    );
+  }
+
+  return (
+    <ButtonBase
+      aria-pressed={expanded}
+      aria-label={exact}
+      title={exact}
+      onClick={() => setExpanded((e) => !e)}
+      sx={{
+        mb: FIGURE_GAP,
+        borderRadius: 1,
+        "&:focus-visible": {
+          outline: (t) => `${t.spacing(0.25)} solid ${t.palette.primary.main}`,
+        },
+      }}
+    >
+      {/* Kept in flow while hidden, so the column holds its height. */}
+      <Money
+        sx={{
+          ...figureSx,
+          textDecoration: "underline dotted",
+          textUnderlineOffset: "0.2em",
+          visibility: expanded ? "hidden" : "visible",
+        }}
+      >
+        {shownSign}€{displayFigure(magnitude)}
+      </Money>
+      {expanded && (
+        <Stack
+          sx={{
+            position: "absolute",
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            alignItems: "center",
+            gap: 0.5,
+            zIndex: 1,
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", whiteSpace: "nowrap" }}
+          >
+            tap again to shorten
+          </Typography>
+          <Paper variant="card" sx={{ py: 0.5, px: 1.5, borderRadius: 999 }}>
+            <Money sx={figureSx}>{exact}</Money>
+          </Paper>
+        </Stack>
+      )}
+    </ButtonBase>
+  );
+}
 
 function Column({
   value,
@@ -126,10 +209,6 @@ function Column({
   const share = value > 0 ? value / scaleMax : 0;
   const height = (max: number) =>
     value > 0 ? Math.max(MIN_HEIGHT, share * max) : STUB_HEIGHT;
-  // An overdrawn goal takes the total below zero; the sign then comes from
-  // the value, not the column.
-  const shownSign = value > 0 ? sign : value < 0 ? "-" : "";
-  const magnitude = Math.abs(value);
 
   return (
     <Stack
@@ -141,17 +220,7 @@ function Column({
         [DESKTOP]: { height: columnHeight(t, MAX_HEIGHT.desktop) },
       })}
     >
-      <Money
-        title={`${shownSign}€${displayAmount(magnitude)}`}
-        sx={{
-          fontSize: FIGURE_SIZE,
-          mb: FIGURE_GAP,
-          whiteSpace: "nowrap",
-          color: value > 0 ? text : "text.disabled",
-        }}
-      >
-        {shownSign}€{displayFigure(magnitude)}
-      </Money>
+      <ColumnFigure value={value} sign={sign} color={text} />
       <Box
         aria-hidden
         sx={{
@@ -172,13 +241,7 @@ function Column({
   );
 }
 
-export function MonthlySummaryCard({
-  summary,
-  month,
-  year,
-  scaleMax,
-  descriptionId,
-}: Props) {
+export function MonthlySummaryCard({ summary, month, year, scaleMax }: Props) {
   const footer = summary && monthFooter(summary);
   const empty = !footer || footer.kind === "empty";
   const info = monthInfo(month);
@@ -198,27 +261,24 @@ export function MonthlySummaryCard({
           >
             {month} so far
           </Typography>
-          {/* Hover only: the card is a link, so the icon cannot be focusable
-              or tappable on its own. The text reaches assistive tech through
-              the hidden span the card link is described by. */}
-          <Tooltip title={info} arrow disableFocusListener disableTouchListener>
-            <Box
-              component="span"
-              aria-hidden
-              sx={{
-                display: "inline-flex",
-                color: "text.secondary",
-                cursor: "help",
-              }}
+          {/* A real button: it opens on hover, focus and touch alike, and
+              the tooltip's text is its accessible description. */}
+          <Tooltip title={info} arrow>
+            <IconButton
+              size="small"
+              aria-label="What this shows"
+              sx={{ p: 0.5, color: "text.secondary" }}
             >
               <InfoOutlinedIcon sx={{ fontSize: "1rem" }} />
-            </Box>
+            </IconButton>
           </Tooltip>
-          <Box component="span" id={descriptionId} sx={VISUALLY_HIDDEN}>
-            {info}
-          </Box>
         </Stack>
-        {!empty && <CardAction>{year} report</CardAction>}
+        {/* The card is not a link, so the cue is one. */}
+        {!empty && (
+          <Link component={RouterLink} to="reports" underline="hover">
+            <CardAction>{year} report</CardAction>
+          </Link>
+        )}
       </Stack>
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
         Money in and out
