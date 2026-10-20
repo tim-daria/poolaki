@@ -17,15 +17,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-# RAG pipeline
-    max_context_tokens: int = 3000   # budget of <context> (estimated)
-    min_similarity: float = 0.75     # min pgvector threshold (adjust with test)
-    vector_top_k: int = 3            # semantic documents per query
+    # RAG pipeline
+    max_context_tokens: int = 3000  # budget of <context> (estimated)
+    min_similarity: float = 0.75  # min pgvector threshold (adjust with test)
+    vector_top_k: int = 3  # semantic documents per query
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
 
 settings = Settings()

@@ -3,7 +3,6 @@ from pathlib import Path
 
 from app.services.context_builder import NO_CONTEXT
 
-
 APP_DIR = Path(__file__).resolve().parent.parent
 PROMPTS_PATH = APP_DIR / "prompts"
 

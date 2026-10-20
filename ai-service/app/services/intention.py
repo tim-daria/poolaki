@@ -4,21 +4,24 @@ import logging
 from enum import Enum
 
 from app.clients.llm import LLMClient
-from models.usage import TokenUsage 
+from models.usage import TokenUsage
 
 logger = logging.getLogger(__name__)
 
+
 class Intent(str, Enum):
-    MONTHLY_SUMMARY = "monthly_summary"         # analytics/summary
-    CATEGORY_SPENDING = "category_spending"     # categories
-    TRANSACTIONS = "transactions"               # transactions
+    MONTHLY_SUMMARY = "monthly_summary"  # analytics/summary
+    CATEGORY_SPENDING = "category_spending"  # categories
+    TRANSACTIONS = "transactions"  # transactions
     UNSUPPORTED = "unsupported"
+
 
 ENDPOINT_BY_INTENT = {
     Intent.MONTHLY_SUMMARY: "analytics/summary",
     Intent.CATEGORY_SPENDING: "categories",
     Intent.TRANSACTIONS: "transactions",
 }
+
 
 class IntentionService:
     def __init__(self, llm_client: LLMClient):
@@ -44,7 +47,6 @@ Return only the intent name.
         result, llm_usage = await self._llm_client.generate_response(prompt)
         usage.intent_in += llm_usage.input_tokens
         usage.intent_out += llm_usage.output_tokens
-
 
         try:
             return Intent(result.strip().lower().strip(".\"'`"))

@@ -1,10 +1,13 @@
 from pydantic import BaseModel
 
+
 class LLMUsage(BaseModel):
     """Tokens reported by the provider for ONE LLM call."""
+
     input_tokens: int = 0
     output_tokens: int = 0
-    
+
+
 class TokenUsage(BaseModel):
     intent_in: int = 0
     intent_out: int = 0
@@ -15,5 +18,10 @@ class TokenUsage(BaseModel):
 
     @property
     def total(self) -> int:
-        return (self.intent_in + self.intent_out + self.embedding
-                + self.final_in + self.final_out)
+        return (
+            self.intent_in
+            + self.intent_out
+            + self.embedding
+            + self.final_in
+            + self.final_out
+        )

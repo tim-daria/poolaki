@@ -13,10 +13,13 @@ from models.usage import TokenUsage
 
 logger = logging.getLogger(__name__)
 
-class MockDocumentRepository:
-    """TESTING ONLY: Mock temporal para simular búsqueda en base de datos vectorial."""
 
-    async def search_documents(self, query: str, top_k: int = 3) -> list[str]:
+class MockDocumentRepository:
+    """TESTING ONLY: Temporal mock to simulate vector search."""
+
+    async def search_documents(
+        self, query: str, usage: TokenUsage, top_k: int = 3
+    ) -> list[str]:
         return [f"doc_{i}" for i in range(top_k)]
 
 
@@ -67,7 +70,7 @@ class MockRetriever(BaseRetriever):
         if endpoint is not None:
             tasks.append(self._django_client.fetch_backend_data(endpoint, payload))
 
-        results = await asyncio.gather(*tasks) #to run vectors in parallel
+        results = await asyncio.gather(*tasks)  # to run vectors in parallel
 
         items = [
             RetrievedItem(

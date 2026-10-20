@@ -25,7 +25,7 @@ class LLMClient:
             },
         )
 
-    async def generate_response(self, prompt: str) -> tuple[str, LLMUsage]: 
+    async def generate_response(self, prompt: str) -> tuple[str, LLMUsage]:
         models = [settings.llm_model]
 
         if settings.llm_fallback_model:

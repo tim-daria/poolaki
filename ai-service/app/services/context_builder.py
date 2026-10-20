@@ -9,13 +9,19 @@ from models.usage import TokenUsage
 NO_CONTEXT = "No relevant information was found."
 SOURCE_LABELS = {"django_api": "financial_data", "vector_db": "product_docs"}
 
+
 def estimate_tokens(text: str) -> int:
     # Simple estimation(~4 characteres per token)
     return len(text) // 4
 
-class ContextBuilder:
 
-    def build_context(self, retrieval_result: CombinedRetrievalResult, usage: TokenUsage, today: date,) -> str:
+class ContextBuilder:
+    def build_context(
+        self,
+        retrieval_result: CombinedRetrievalResult,
+        usage: TokenUsage,
+        today: date,
+    ) -> str:
 
         if not retrieval_result.items:
             return NO_CONTEXT
@@ -45,8 +51,12 @@ class ContextBuilder:
         txs = data.get("transactions")
         if txs is not None:
             total = len(txs)
-            while txs and estimate_tokens(json.dumps(data)) > settings.max_context_tokens:
-                txs = txs[: len(txs) // 2]  # newest-first (django) this // 2 is ok for MVP
+            while (
+                txs and estimate_tokens(json.dumps(data)) > settings.max_context_tokens
+            ):
+                txs = txs[
+                    : len(txs) // 2
+                ]  # newest-first (django) this // 2 is ok for MVP
                 data["transactions"] = txs
             if len(txs) < total:
                 note = f"\nNote: showing only the {len(txs)} most recent of {total} transactions."

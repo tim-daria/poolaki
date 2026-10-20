@@ -42,7 +42,10 @@ class LLMService:
 
         logger.info(
             "intent_classified",
-            extra={"intent": intent.value, "intent_ms": round((time.perf_counter() - start) * 1000)},
+            extra={
+                "intent": intent.value,
+                "intent_ms": round((time.perf_counter() - start) * 1000),
+            },
         )
 
         retrieval_result = await self._retriever.get_context(
@@ -50,11 +53,13 @@ class LLMService:
             organization_id=organization_id,
             query=question,
             usage=usage,
-            intent=intent, #Enum
+            intent=intent,  # Enum
         )
 
-        today = date.today()
-        context = self._context_builder.build_context(retrieval_result, usage, today=today)
+        today = date.today()  # noqa: DTZ011
+        context = self._context_builder.build_context(
+            retrieval_result, usage, today=today
+        )
 
         prompt = self._prompt_builder.build(
             user_question=question,

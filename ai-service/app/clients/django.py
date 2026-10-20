@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class DjangoClientError(Exception):
     """Api contract defined as: {"error": {"code", "message"}}."""
 
@@ -8,12 +9,14 @@ class DjangoClientError(Exception):
         self.code = code  # FORBIDDEN, INVALID_REQUEST, INTERNAL_ERROR, ...
         self.status_code = status_code
 
+
 def _months(income: list[str], expense: list[str]) -> list[dict[str, str | int]]:
     pad = ["0.00"] * (12 - len(income))
     return [
         {"month": i + 1, "income": inc, "expense": exp}
         for i, (inc, exp) in enumerate(zip(income + pad, expense + pad))
     ]
+
 
 class MockDjangoClient:
     """TESTING ONLY: temporal client to simulate Django
@@ -22,7 +25,9 @@ class MockDjangoClient:
 
     async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict[str, Any]:
         if payload.get("user_id") == 0:  # simula un usuario fuera de la organización
-            raise DjangoClientError("FORBIDDEN", "User is not a member of the organization", 403)
+            raise DjangoClientError(
+                "FORBIDDEN", "User is not a member of the organization", 403
+            )
 
         if endpoint == "/api/internal/v1/analytics/summary/":
             return {
