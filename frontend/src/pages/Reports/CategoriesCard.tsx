@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Box } from "@mui/material";
 import type { CategoryReport } from "../../lib/reports";
 import type { GoalSavings } from "../../lib/savings";
-import { displayAmount, displayFigure, parseMoney } from "../../lib/money";
+import {
+  displayAmount,
+  displayFigure,
+  displayWhole,
+  parseMoney,
+} from "../../lib/money";
 import { TABLET } from "../../lib/layout";
 import { useChartColors } from "../../hooks/useChartColors";
 import { TitledCard } from "../../components/Card/Card";
@@ -38,8 +43,10 @@ const CENTRE_CAPTION: Record<View, string> = {
 const EMPTY_TEXT = "No data available for this view.";
 
 const euros = (n: number) => `€${displayAmount(n)}`;
-/** Rows and the ring centre: compact past six digits, so a large figure keeps its column. */
+/** The ring centre: compact past six digits, so the figure fits the ring. */
 const shortEuros = (n: number) => `€${displayFigure(n)}`;
+/** The list rows: every whole euro, since the column sizes itself to the widest; cents stay on hover. */
+const wholeEuros = (n: number) => `€${displayWhole(n)}`;
 
 export function CategoriesCard({
   categories,
@@ -130,7 +137,7 @@ export function CategoriesCard({
         />
         <ShareList
           rows={rows}
-          formatValue={shortEuros}
+          formatValue={wholeEuros}
           formatExact={euros}
           emptyText={EMPTY_TEXT}
         />

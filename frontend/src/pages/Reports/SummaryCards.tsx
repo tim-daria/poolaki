@@ -2,7 +2,12 @@
 
 import { Box, Paper, Typography } from "@mui/material";
 import type { YearlyReportResponse } from "../../lib/reports";
-import { displayAmount, displayFigure, parseMoney } from "../../lib/money";
+import {
+  displayAmount,
+  displayFigure,
+  isAbbreviated,
+  parseMoney,
+} from "../../lib/money";
 import { TABLET } from "../../lib/layout";
 import { Money } from "../../components/Money";
 
@@ -43,12 +48,26 @@ function Tile({
           €{displayFigure(amount)}
         </Money>
       </Typography>
+      {/* The abbreviation drops digits and cents; the exact figure follows
+          in the secondary line so nothing is lost to a hover. */}
+      {isAbbreviated(amount) && (
+        <Typography
+          variant="body2"
+          sx={{ mt: 0.5, color: "text.secondary", whiteSpace: "nowrap" }}
+        >
+          <Money>{exact}</Money>
+        </Typography>
+      )}
     </Paper>
   );
 }
 
-/** Room for "€999,9 Mrd." in the mono headline plus the card padding. */
-const TILE_MIN_WIDTH = 220;
+/**
+ * Room for "€999,9 Mrd." in the mono headline plus the card padding, in the
+ * root font size so it scales with the type. The exact line beneath may be
+ * longer; it is secondary and may clip, the headline never does.
+ */
+const TILE_MIN_WIDTH = "12rem";
 
 export function SummaryCards({ totals, setAside }: SummaryCardsProps) {
   return (
@@ -60,7 +79,7 @@ export function SummaryCards({ totals, setAside }: SummaryCardsProps) {
         // Tiles only share a row when each gets room for a compact figure.
         [TABLET]: {
           gap: 3,
-          gridTemplateColumns: `repeat(auto-fit, minmax(${TILE_MIN_WIDTH}px, 1fr))`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(${TILE_MIN_WIDTH}, 1fr))`,
         },
       }}
     >
