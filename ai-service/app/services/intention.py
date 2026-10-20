@@ -1,9 +1,12 @@
 # Service to validate the intention identified by the LLM
 
+import logging
 from enum import Enum
 
 from app.clients.llm import LLMClient
-from app.models.usage import TokenUsage 
+from models.usage import TokenUsage 
+
+logger = logging.getLogger(__name__)
 
 class Intent(str, Enum):
     MONTHLY_SUMMARY = "monthly_summary"         # analytics/summary
@@ -44,4 +47,5 @@ Return only the intent name.
         try:
             return Intent(result.strip().lower())
         except ValueError:
-            raise ValueError("LLM returned an unsupported intent")
+            logger.warning("intent_unrecognized", extra={"raw": result[:50]})
+            return Intent.UNSUPPORTED
