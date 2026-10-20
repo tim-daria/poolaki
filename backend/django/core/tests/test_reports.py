@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from core.models import Category, Organization, Transaction, User
+from core.models import Category, Goal, GoalStatus, Organization, Transaction, User
 
 pytestmark = pytest.mark.django_db
 
@@ -27,6 +27,38 @@ def add_transaction(
         amount=Decimal(amount),
         transaction_date=transaction_date,
         category=category,
+    )
+
+
+def add_goal(
+    org: Organization,
+    name: str,
+    status: str = GoalStatus.ACTIVE,
+) -> Goal:
+    return Goal.objects.create(
+        org=org,
+        name=name,
+        target_amount=Decimal("1000.00"),
+        target_date=None,
+        status=status,
+    )
+
+
+def add_goal_transaction(
+    org: Organization,
+    goal: Goal,
+    entry_type: str,
+    amount: str,
+    transaction_date: str,
+    category: Category | None = None,
+) -> Transaction:
+    return Transaction.objects.create(
+        org=org,
+        goal=goal,
+        category=category,
+        entry_type=entry_type,
+        amount=Decimal(amount),
+        transaction_date=transaction_date,
     )
 
 
@@ -143,6 +175,7 @@ def test_year_without_data_returns_zeros(
     assert [entry["month"] for entry in data["monthly"]] == list(range(1, 13))
     assert all(entry[key] == "0.00" for entry in data["monthly"] for key in ("income", "expense"))
     assert data["categories"] == []
+    assert data["goal_balance"] == "0.00"
 
 
 def test_non_integer_year_returns_400(
@@ -337,3 +370,77 @@ def test_report_excludes_other_organizations(
 
     assert data["totals"]["income"] == "10.00"
     assert [(c["name"], c["total"]) for c in data["categories"]] == [("Salary", "10.00")]
+
+
+# ------------------------------------ #
+#            Goal balance              #
+# ------------------------------------ #
+
+
+def test_goal_balance_sums_active_and_completed_goals(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    active = add_goal(org, "Emergency fund")
+    completed = add_goal(org, "Trip", status=GoalStatus.COMPLETED)
+    archived = add_goal(org, "Old fund", status=GoalStatus.ARCHIVED)
+    add_goal_transaction(org, active, "contribution", "100.50", "2025-01-05")
+    add_goal_transaction(org, active, "contribution", "49.50", "2025-02-05")
+    add_goal_transaction(org, completed, "contribution", "200.00", "2025-01-05")
+    add_goal_transaction(org, completed, "withdraw", "50.00", "2025-03-05")
+    add_goal_transaction(org, archived, "contribution", "999.00", "2025-01-05")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    # active 150.00 + completed 150.00; the archived goal is excluded
+    assert data["goal_balance"] == "300.00"
+
+
+def test_goal_balance_nets_withdrawals_and_goal_expenses(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    groceries = Category.objects.create(org=org, name="Groceries", type="expense")
+    goal = add_goal(org, "Groceries fund", status=GoalStatus.COMPLETED)
+    add_goal_transaction(org, goal, "contribution", "300.00", "2025-01-05")
+    add_goal_transaction(org, goal, "withdraw", "120.00", "2025-02-05")
+    add_goal_transaction(org, goal, "expense", "80.25", "2025-03-05", category=groceries)
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    # 300.00 contribution - 120.00 withdraw - 80.25 goal expense
+    assert data["goal_balance"] == "99.75"
+
+
+def test_goal_balance_is_current_snapshot_independent_of_year(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    salary = Category.objects.create(org=org, name="Salary", type="income")
+    goal = add_goal(org, "Savings")
+    add_goal_transaction(org, goal, "contribution", "100.00", "2024-05-10")
+    add_transaction(org, "income", "50.00", "2025-06-01", category=salary)
+
+    data_2025 = report_client.get(report_url(org.id), {"year": 2025}).json()
+    data_2024 = report_client.get(report_url(org.id), {"year": 2024}).json()
+
+    # yearly sections follow the year, the goal balance does not
+    assert data_2025["totals"]["income"] == "50.00"
+    assert data_2024["totals"]["income"] == "0.00"
+    assert data_2025["goal_balance"] == "100.00"
+    assert data_2024["goal_balance"] == "100.00"
+
+
+def test_goal_balance_excludes_other_organizations(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    other_org = Organization.objects.create(name="Other budget", initial_balance=Decimal("0"))
+    goal = add_goal(org, "Mine")
+    add_goal_transaction(org, goal, "contribution", "10.00", "2025-01-05")
+    other_goal = add_goal(other_org, "Theirs")
+    add_goal_transaction(other_org, other_goal, "contribution", "9999.00", "2025-01-05")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["goal_balance"] == "10.00"

@@ -53,6 +53,7 @@ const MOCK_REPORT: YearlyReportResponse = {
       ],
     },
   ],
+  goal_balance: "1540.50",
 };
 
 describe("fetchYearlyReport", () => {
