@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import { PHONE } from "../../lib/layout";
 
 export type Direction = "contribution" | "withdraw";
 
@@ -62,6 +63,8 @@ export function TransferDirection({ value, onChange, disabled }: Props) {
           p: 1.5,
           justifyContent: "flex-start",
           textAlign: "left",
+          // Title only on a phone (icon and note hidden below), so it centres.
+          [PHONE]: { justifyContent: "center", textAlign: "center" },
           textTransform: "none",
           "&.Mui-selected": {
             borderColor: "primary.main",
@@ -75,9 +78,12 @@ export function TransferDirection({ value, onChange, disabled }: Props) {
     >
       {OPTIONS.map(({ value: v, title, note, Icon }) => (
         <ToggleButton key={v} value={v}>
+          {/* Decorative: the title names the option. */}
           <Box
+            aria-hidden
             sx={{
               display: "flex",
+              [PHONE]: { display: "none" },
               alignItems: "center",
               justifyContent: "center",
               width: 40,
@@ -97,7 +103,10 @@ export function TransferDirection({ value, onChange, disabled }: Props) {
             >
               {title}
             </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", [PHONE]: { display: "none" } }}
+            >
               {note}
             </Typography>
           </Box>
