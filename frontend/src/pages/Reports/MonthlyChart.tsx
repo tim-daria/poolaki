@@ -133,6 +133,7 @@ export function MonthlyChart({
         series={series}
         formatValue={shortEuros}
         description={description}
+        focusIndex={currentMonth === null ? undefined : currentMonth - 1}
         referenceLine={
           average === null
             ? undefined

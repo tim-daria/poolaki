@@ -1,10 +1,12 @@
 /** @file Grouped column chart on @mui/x-charts: one band per column, with tooltips, a hover band and an optional dashed reference line. */
 
+import { useEffect, useRef } from "react";
 import { Box, useTheme } from "@mui/material";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
 import { chartsTooltipClasses } from "@mui/x-charts/ChartsTooltip";
 import { niceMax } from "../../lib/chartScale";
+import { PRINT } from "../../lib/layout";
 
 export interface ColumnSeries {
   id: string;
@@ -29,6 +31,8 @@ interface ColumnChartProps {
   description: string;
   referenceLine?: ReferenceLine;
   height?: number;
+  /** When the plot scrolls, it opens with this column as the last one in view. */
+  focusIndex?: number;
 }
 
 const AXIS_WIDTH = 72;
@@ -44,8 +48,24 @@ export function ColumnChart({
   description,
   referenceLine,
   height = 240,
+  focusIndex,
 }: ColumnChartProps) {
   const theme = useTheme();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const columns = labels.length;
+
+  // Re-runs only when the focus moves (a year change), never on data or
+  // size changes, so the plot is not yanked from wherever the user scrolled.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || focusIndex === undefined || el.scrollWidth <= el.clientWidth)
+      return;
+    const columnWidth = (el.scrollWidth - AXIS_WIDTH) / columns;
+    el.scrollLeft = Math.max(
+      0,
+      AXIS_WIDTH + (focusIndex + 1) * columnWidth - el.clientWidth,
+    );
+  }, [focusIndex, columns]);
   // Amounts carry the app's mono face, as the Money component does.
   const monoFamily = theme.typography.mono.fontFamily;
   // A fixed maximum keeps the three ticks round and the columns comparable
@@ -61,8 +81,20 @@ export function ColumnChart({
   return (
     <Box role="img" aria-label={description}>
       {/* Narrow screens scroll the plot rather than shrink the columns to hairlines. */}
-      <Box sx={{ overflowX: "auto", overflowY: "hidden" }}>
-        <Box sx={{ minWidth: AXIS_WIDTH + labels.length * MIN_COLUMN_WIDTH }}>
+      <Box
+        ref={scrollRef}
+        sx={{
+          overflowX: "auto",
+          overflowY: "hidden",
+          [PRINT]: { overflow: "visible" },
+        }}
+      >
+        <Box
+          sx={{
+            minWidth: AXIS_WIDTH + columns * MIN_COLUMN_WIDTH,
+            [PRINT]: { minWidth: 0 },
+          }}
+        >
           <BarChart
             height={height}
             hideLegend
