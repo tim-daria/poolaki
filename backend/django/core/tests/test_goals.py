@@ -34,6 +34,10 @@ def goal_balance_url(org_id: int, goal_id: int) -> str:
     return reverse("goal-balance", kwargs={"org_id": org_id, "goal_id": goal_id})
 
 
+def _goal_payload(goal: Goal, actor: User, org: Organization) -> dict[str, object]:
+    return {"org_name": org.name, "user": actor.username, "goal_name": goal.name}
+
+
 def test_list_goals_filters_by_status(
     api_client: APIClient,
     owner: User,
@@ -115,10 +119,6 @@ def test_create_goal_in_personal_org_creates_no_notifications(
 
     assert response.status_code == 201
     assert Notification.objects.count() == 0
-
-
-def _goal_payload(goal: Goal, actor: User, org: Organization) -> dict[str, object]:
-    return {"org_name": org.name, "user": actor.username, "goal_name": goal.name}
 
 
 def test_completing_goal_notifies_other_members_but_not_the_actor(
