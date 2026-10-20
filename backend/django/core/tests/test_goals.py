@@ -7,7 +7,15 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Goal, GoalStatus, Organization, Transaction, User
+from core.models import (
+    Goal,
+    GoalStatus,
+    Notification,
+    NotificationType,
+    Organization,
+    Transaction,
+    User,
+)
 from core.serializers import GoalResponseSerializer
 from core.services.balance import annotate_goal_balance
 
@@ -66,6 +74,51 @@ def test_list_goals_filters_by_status(
     response = api_client.get(goals_url(shared_org.id), {"status": "unknown"})
     assert response.status_code == 400
     assert response.data == {"status": ['"unknown" is not a valid choice.']}
+
+
+def test_create_goal_notifies_other_members_but_not_the_creator(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        goals_url(shared_org.id),
+        {"name": "Trip", "target_amount": "1500.00", "target_date": "2027-09-01"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.data["balance"] == "0.00"
+    goal = Goal.objects.get(org=shared_org, name="Trip")
+    assert goal.status == GoalStatus.ACTIVE
+    assert goal.created_by_id == owner.id
+
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_CREATED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    notification = notifications[0]
+    assert notification.org_id == shared_org.id
+    assert notification.payload == {
+        "org_name": shared_org.name,
+        "created_by": owner.username,
+        "goal_name": "Trip",
+    }
+
+
+def test_create_goal_in_personal_org_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        goals_url(personal_org.id),
+        {"name": "Savings", "target_amount": "100.00", "target_date": None},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Notification.objects.count() == 0
 
 
 def test_owner_can_archive_goal_and_return_remaining_balance(
