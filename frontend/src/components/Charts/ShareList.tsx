@@ -1,8 +1,8 @@
-/** @file Rows of label, share bar, whole percent and value; the percents sum to 100. */
+/** @file Rows of label, whole percent and value, with a share bar on desktop screens; the percents sum to 100. */
 
 import { Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { shareLabel, wholePercents } from "../../lib/overview";
-import { PHONE } from "../../lib/layout";
+import { DESKTOP, PRINT } from "../../lib/layout";
 import { Money } from "../Money";
 
 export interface ShareRow {
@@ -31,10 +31,13 @@ const MIN_BAR_SHARE = 1;
 /** Room for the longest compact figure, so the columns line up row to row. */
 const VALUE_WIDTH = 112;
 const PERCENT_WIDTH = 44;
-/** The bar is the only column that gives up room as the card narrows. */
+/** Desktop: the bar is the only column that gives up room as the card narrows. */
 const ROW_COLUMNS = `minmax(0, 0.8fr) minmax(48px, 2fr) ${PERCENT_WIDTH}px ${VALUE_WIDTH}px`;
-/** No room for a bar on a phone; the percent and the figure carry the same reading. */
-const PHONE_COLUMNS = `minmax(0, 1fr) ${PERCENT_WIDTH}px ${VALUE_WIDTH}px`;
+/**
+ * Below desktop and on paper there is no bar: the donut beside the list
+ * carries the proportions, and the percent and figure carry the reading.
+ */
+const COMPACT_COLUMNS = `minmax(0, 1fr) ${PERCENT_WIDTH}px ${VALUE_WIDTH}px`;
 
 export function ShareList({
   rows,
@@ -67,10 +70,12 @@ export function ShareList({
             key={row.id}
             sx={{
               display: "grid",
-              gridTemplateColumns: ROW_COLUMNS,
+              gridTemplateColumns: COMPACT_COLUMNS,
               alignItems: "center",
-              gap: 2,
-              [PHONE]: { gridTemplateColumns: PHONE_COLUMNS, gap: 1.5 },
+              gap: 1.5,
+              [DESKTOP]: { gridTemplateColumns: ROW_COLUMNS, gap: 2 },
+              // Last, so it outranks DESKTOP when printing from a wide window.
+              [PRINT]: { gridTemplateColumns: COMPACT_COLUMNS, gap: 1.5 },
             }}
           >
             <Stack
@@ -100,7 +105,9 @@ export function ShareList({
                 borderRadius: 999,
                 bgcolor: "action.hover",
                 "& .MuiLinearProgress-bar": { bgcolor: row.color },
-                [PHONE]: { display: "none" },
+                display: "none",
+                [DESKTOP]: { display: "block" },
+                [PRINT]: { display: "none" },
               }}
             />
             <Money
@@ -116,10 +123,11 @@ export function ShareList({
                 percent: percents[i],
               })}
             </Money>
-            {/* Mono at the row's own size and weight, as amounts read elsewhere. */}
+            {/* Mono at the row's own size and weight, as amounts read elsewhere.
+                Left-aligned: the euro signs line up, so the column scans as one. */}
             <Money
               sx={{
-                textAlign: "right",
+                textAlign: "left",
                 fontSize: "0.875rem",
                 whiteSpace: "nowrap",
               }}
