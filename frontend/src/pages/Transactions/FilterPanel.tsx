@@ -107,8 +107,7 @@ export function FilterPanel({
   const open = Boolean(anchor);
   /** The Filters button must not keep focus while the panel hides it — see the hook. */
   const restoreFocus = useRestoreFocus(open);
-  const { anchor: drawerAnchor, paperSx } = useSheet(WIDTH, true);
-  const sheet = drawerAnchor === "bottom";
+  const { sheet, anchor: drawerAnchor, paperSx } = useSheet(WIDTH, true);
   const titleId = useId();
 
   const content = (
