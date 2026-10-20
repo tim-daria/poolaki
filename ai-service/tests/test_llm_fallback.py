@@ -3,6 +3,7 @@ import pytest
 
 from app.clients.llm import LLMClient
 from app.config.settings import settings
+from models.usage import LLMUsage
 
 
 @pytest.mark.asyncio
@@ -12,7 +13,9 @@ async def test_llm_fallback():
         httpx.Response(503),
         httpx.Response(
             200,
-            json={"choices": [{"message": {"content": "Fallback!"}}]},
+            json={"choices": [{"message": {"content": "Fallback!"}}],
+                  "usage": {"prompt_tokens": 7, "completion_tokens": 2},
+                  },
         ),
     ]
 
@@ -28,8 +31,10 @@ async def test_llm_fallback():
 
     settings.llm_fallback_model = "fallback-model"
 
-    result = await client.generate_response("Hello")
+    text, usage = await client.generate_response("Hello")
 
-    assert result == "Fallback!"
+    assert text == "Fallback!"
+
+    assert usage.input_tokens == 7
 
     await client.close()

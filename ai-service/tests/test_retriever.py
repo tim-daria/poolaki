@@ -1,64 +1,48 @@
-from unittest.mock import AsyncMock, patch
+import json
 
 import pytest
 
-from app.clients.django import MockDjangoClient
+from app.clients.django import DjangoClientError, MockDjangoClient
+from app.services.intention import Intent
 from app.services.retrieval import MockDocumentRepository, MockRetriever
-from models.retrieval import CombinedRetrievalResult, RetrievedItem
+from models.usage import TokenUsage
+
+
+def make_retriever() -> MockRetriever:
+    return MockRetriever(doc_repo=MockDocumentRepository(), django_client=MockDjangoClient())
 
 
 @pytest.mark.anyio
-async def test_mock_retriever_returns_structured_format():
-    doc_repo = MockDocumentRepository()
-    django_client = MockDjangoClient()
-    retriever = MockRetriever(doc_repo=doc_repo, django_client=django_client)
+async def test_retriever_combines_vector_docs_and_django_data():
+    result = await make_retriever().get_context(
+        user_id=123, organization_id=456, query="How much did I spend?",
+        usage=TokenUsage(), intent=Intent.MONTHLY_SUMMARY, top_k=2,
+    )
 
-    mock_items = [
-        RetrievedItem(
-            type="financial_summary", content="Spent €850", source="django", metadata={}
-        ),
-        RetrievedItem(
-            type="category_breakdown", content="Food €230", source="django", metadata={}
-        ),
-    ]
+    types = [i.type for i in result.items]
+    assert types.count("unstructured_doc") == 2
+    assert types.count("structured_data") == 1
 
-    with patch.object(
-        retriever, "get_context", new_callable=AsyncMock
-    ) as mock_get_context:
-        mock_get_context.return_value = CombinedRetrievalResult(items=mock_items)
-
-        result = await retriever.get_context(
-            user_id="123",
-            organization_id="456",
-            query="How much did I spend this month?",
-            intent="monthly_summary",
-            top_k=2,
-        )
-
-        assert isinstance(result, CombinedRetrievalResult)
-        assert len(result.items) == 2
-        assert result.items[0].content == "Spent €850"
+    structured = next(i for i in result.items if i.type == "structured_data")
+    assert structured.metadata["endpoint"] == "/api/internal/v1/analytics/summary/"
+    assert len(json.loads(structured.content)["months"]) == 12
 
 
 @pytest.mark.anyio
-async def test_mock_retriever_top_k_limit():
-    doc_repo = MockDocumentRepository()
-    django_client = MockDjangoClient()
-    retriever = MockRetriever(doc_repo=doc_repo, django_client=django_client)
+async def test_unsupported_intent_does_not_call_django():
+    result = await make_retriever().get_context(
+        user_id=123, organization_id=456, query="goal progress",
+        usage=TokenUsage(), intent=Intent.UNSUPPORTED, top_k=1,
+    )
 
-    mock_items = [
-        RetrievedItem(
-            type="goal_progress", content="Goal 60%", source="django", metadata={}
+    assert all(i.type == "unstructured_doc" for i in result.items)
+
+
+@pytest.mark.anyio
+async def test_forbidden_user_raises_django_error():
+    with pytest.raises(DjangoClientError) as exc:
+        await make_retriever().get_context(
+            user_id=0, organization_id=456, query="x",
+            usage=TokenUsage(), intent=Intent.TRANSACTIONS,
         )
-    ]
-
-    with patch.object(
-        retriever, "get_context", new_callable=AsyncMock
-    ) as mock_get_context:
-        mock_get_context.return_value = CombinedRetrievalResult(items=mock_items)
-
-        result = await retriever.get_context(
-            user_id="123", organization_id="456", query="Goals information", top_k=1
-        )
-
-        assert len(result.items) == 1
+    assert exc.value.code == "FORBIDDEN"
