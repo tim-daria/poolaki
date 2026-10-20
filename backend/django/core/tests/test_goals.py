@@ -99,11 +99,7 @@ def test_create_goal_notifies_other_members_but_not_the_creator(
     assert [notification.user_id for notification in notifications] == [member.id]
     notification = notifications[0]
     assert notification.org_id == shared_org.id
-    assert notification.payload == {
-        "org_name": shared_org.name,
-        "created_by": owner.username,
-        "goal_name": "Trip",
-    }
+    assert notification.payload == _goal_payload(goal, owner, shared_org)
 
 
 def test_create_goal_in_personal_org_creates_no_notifications(
@@ -118,6 +114,105 @@ def test_create_goal_in_personal_org_creates_no_notifications(
     )
 
     assert response.status_code == 201
+    assert Notification.objects.count() == 0
+
+
+def _goal_payload(goal: Goal, actor: User, org: Organization) -> dict[str, object]:
+    return {"org_name": org.name, "user": actor.username, "goal_name": goal.name}
+
+
+def test_completing_goal_notifies_other_members_but_not_the_actor(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "completed"}, format="json"
+    )
+
+    assert response.status_code == 200
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_COMPLETED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    assert notifications[0].org_id == shared_org.id
+    assert notifications[0].payload == _goal_payload(goal, owner, shared_org)
+    assert not Notification.objects.filter(
+        user=owner, type=NotificationType.GOAL_COMPLETED
+    ).exists()
+
+
+def test_reverting_completed_goal_to_active_sends_no_notification(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        status=GoalStatus.COMPLETED,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "active"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert Notification.objects.count() == 0
+
+
+def test_archiving_goal_notifies_other_members_but_not_the_actor(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "archived"}, format="json"
+    )
+
+    assert response.status_code == 200
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_ARCHIVED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    assert notifications[0].org_id == shared_org.id
+    assert notifications[0].payload == _goal_payload(goal, owner, shared_org)
+    assert not Notification.objects.filter(user=owner, type=NotificationType.GOAL_ARCHIVED).exists()
+
+
+def test_archiving_in_personal_org_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=personal_org,
+        name="Savings",
+        target_amount=Decimal("100.00"),
+        target_date=None,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(personal_org.id, goal.id), {"status": "archived"}, format="json"
+    )
+
+    assert response.status_code == 200
     assert Notification.objects.count() == 0
 
 
