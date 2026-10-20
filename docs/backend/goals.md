@@ -182,7 +182,10 @@ Response example:
 }
 ```
 
-All organization members can create a goal.
+All organization members can create a goal. Every other member of the
+organization receives a `goal_created` notification (see
+[notifications.md](notifications.md)); in a personal budget there is nobody
+to notify.
 
 Status:
 
@@ -317,6 +320,11 @@ Request body:
 Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, from `completed` to `active`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
 
 When a goal is archived, any remaining goal balance is transferred back to the organization balance.
+
+Changing the status to `completed` or `archived` sends a `goal_completed` /
+`goal_archived` notification to every other member of the organization;
+reverting a completed goal to `active` sends nothing (see
+[notifications.md](notifications.md)).
 
 Only the organization owner and the goal creator can change the goal status.
 
