@@ -11,7 +11,6 @@ The organization balance and goal reservation are derived from those rows rather
 
 A transaction may be canceled by deleting a row in the `TRANSACTION` table.
 Before deletion, the feasibility of a reversal transaction should be verified.
-The cancellation event must be recorded in the activity log.
 
 ## Endpoint overview
 
@@ -168,8 +167,8 @@ Example response:
 `DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/`
 
 Deletes the matching transaction from the organization and returns `204 No
-Content`. The current implementation does not create an activity-log entry or
-perform a balance/reversal feasibility check before deletion.
+Content`. The current implementation does not perform a balance/reversal
+feasibility check before deletion.
 
 ### Goal reservation routes
 
