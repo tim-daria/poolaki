@@ -36,6 +36,22 @@ def allowed_entry_types(goal: Goal) -> set[EntryType]:
     return entry_types
 
 
+def _notify_goal_event(goal: Goal, org: Organization, actor: User, ntype: NotificationType) -> None:
+    """Notify every member of the goal's organization except the actor."""
+    notify_users(
+        list(
+            Membership.objects.filter(org=org).exclude(user=actor).values_list("user_id", flat=True)
+        ),
+        ntype,
+        {
+            "org_name": org.name,
+            "user": actor.username,
+            "goal_name": goal.name,
+        },
+        org=org,
+    )
+
+
 def _archive_goal(goal: Goal, created_by: User) -> Goal:
     """Zero a locked goal's balance and archive it within the caller's transaction."""
     org = Organization.objects.select_for_update().get(pk=goal.org_id)
@@ -67,6 +83,7 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
 
     goal.status = GoalStatus.ARCHIVED
     goal.save(update_fields=["status"])
+    _notify_goal_event(goal, org, created_by, NotificationType.GOAL_ARCHIVED)
     return goal
 
 
@@ -91,6 +108,7 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
 
     if current_status == GoalStatus.ACTIVE and new_status == GoalStatus.COMPLETED:
         locked_goal.completed_at = date.today()
+        _notify_goal_event(locked_goal, locked_goal.org, user, NotificationType.GOAL_COMPLETED)
     elif current_status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
         locked_goal.completed_at = None
 
@@ -101,7 +119,7 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
 
 
 @transaction.atomic
-def create_goal(org: Organization, created_by: User, data: dict[str, object]) -> Goal:
+def create_goal(org: Organization, user: User, data: dict[str, object]) -> Goal:
     """Create an active goal and notify every other member of the organization."""
     goal = Goal.objects.create(
         org=org,
@@ -109,21 +127,8 @@ def create_goal(org: Organization, created_by: User, data: dict[str, object]) ->
         target_amount=cast(Decimal, data["target_amount"]),
         target_date=cast(date | None, data["target_date"]),
         status=GoalStatus.ACTIVE,
-        created_by=created_by,
+        created_by=user,
     )
     # A personal budget has a single member, so there is nobody to notify.
-    notify_users(
-        list(
-            Membership.objects.filter(org=org)
-            .exclude(user=created_by)
-            .values_list("user_id", flat=True)
-        ),
-        NotificationType.GOAL_CREATED,
-        {
-            "org_name": org.name,
-            "created_by": created_by.username,
-            "goal_name": goal.name,
-        },
-        org=org,
-    )
+    _notify_goal_event(goal, org, user, NotificationType.GOAL_CREATED)
     return annotate_goal_balance(Goal.objects.select_related("created_by").filter(pk=goal.pk)).get()
