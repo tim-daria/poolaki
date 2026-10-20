@@ -1,4 +1,4 @@
-/** @file Rows of label, whole percent and value, with a share bar on desktop screens; the percents sum to 100. */
+/** @file Rows of label, whole percent and value, with a share bar on desktop screens; the percents sum to 100. One grid for the whole list, so the figure column is as wide as its widest value and the bars take the rest. */
 
 import { Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { shareLabel, wholePercents } from "../../lib/overview";
@@ -28,16 +28,17 @@ interface ShareListProps {
  */
 const MIN_BAR_SHARE = 1;
 
-/** Room for the longest compact figure, so the columns line up row to row. */
-const VALUE_WIDTH = 112;
-const PERCENT_WIDTH = 44;
-/** Desktop: the bar is the only column that gives up room as the card narrows. */
-const ROW_COLUMNS = `minmax(0, 0.8fr) minmax(48px, 2fr) ${PERCENT_WIDTH}px ${VALUE_WIDTH}px`;
+/**
+ * Percent and figure columns size to their widest row, so they line up row
+ * to row whatever the amounts. Desktop: the bar is the only column that gives
+ * up room as the figures widen or the card narrows.
+ */
+const ROW_COLUMNS = "minmax(0, 0.8fr) minmax(0, 2fr) max-content max-content";
 /**
  * Below desktop and on paper there is no bar: the donut beside the list
  * carries the proportions, and the percent and figure carry the reading.
  */
-const COMPACT_COLUMNS = `minmax(0, 1fr) ${PERCENT_WIDTH}px ${VALUE_WIDTH}px`;
+const COMPACT_COLUMNS = "minmax(0, 1fr) max-content max-content";
 
 export function ShareList({
   rows,
@@ -60,7 +61,23 @@ export function ShareList({
   };
 
   return (
-    <Stack component="ul" spacing={3} sx={{ listStyle: "none", m: 0, p: 0 }}>
+    // The list is the grid and each row a subgrid of it: the content-sized
+    // columns are then measured across every row, not per row.
+    <Box
+      component="ul"
+      sx={{
+        listStyle: "none",
+        m: 0,
+        p: 0,
+        display: "grid",
+        gridTemplateColumns: COMPACT_COLUMNS,
+        rowGap: 3,
+        columnGap: 1.5,
+        [DESKTOP]: { gridTemplateColumns: ROW_COLUMNS, columnGap: 2 },
+        // Last, so it outranks DESKTOP when printing from a wide window.
+        [PRINT]: { gridTemplateColumns: COMPACT_COLUMNS, columnGap: 1.5 },
+      }}
+    >
       {rows.map((row, i) => {
         const exact = formatExact?.(row.value);
         const shown = formatValue(row.value);
@@ -70,12 +87,9 @@ export function ShareList({
             key={row.id}
             sx={{
               display: "grid",
-              gridTemplateColumns: COMPACT_COLUMNS,
+              gridColumn: "1 / -1",
+              gridTemplateColumns: "subgrid",
               alignItems: "center",
-              gap: 1.5,
-              [DESKTOP]: { gridTemplateColumns: ROW_COLUMNS, gap: 2 },
-              // Last, so it outranks DESKTOP when printing from a wide window.
-              [PRINT]: { gridTemplateColumns: COMPACT_COLUMNS, gap: 1.5 },
             }}
           >
             <Stack
@@ -124,10 +138,10 @@ export function ShareList({
               })}
             </Money>
             {/* Mono at the row's own size and weight, as amounts read elsewhere.
-                Left-aligned: the euro signs line up, so the column scans as one. */}
+                Right-aligned: the digits end on one edge, as in a ledger. */}
             <Money
               sx={{
-                textAlign: "left",
+                textAlign: "right",
                 fontSize: "0.875rem",
                 whiteSpace: "nowrap",
               }}
@@ -139,6 +153,6 @@ export function ShareList({
           </Box>
         );
       })}
-    </Stack>
+    </Box>
   );
 }

@@ -292,15 +292,26 @@ export function splitCents(
   return { whole: text.slice(0, at), cents: text.slice(at) };
 }
 
+/** Six whole digits fit every column a figure sits in; from seven it is abbreviated. */
+const COMPACT_FROM = 1_000_000;
+
+/**
+ * Whether displayFigure abbreviates this amount. Components that show the
+ * exact figure alongside an abbreviated one ask this rather than restating
+ * the threshold.
+ */
+export function isAbbreviated(n: number): boolean {
+  // The rounded value decides, and is what gets abbreviated: 999.999,6
+  // would otherwise pass the threshold yet come back unabbreviated.
+  return Math.abs(Math.round(n)) >= COMPACT_FROM;
+}
+
 /** Whole euros up to six digits; past that the compact form ("1,0 Mrd."), so a figure never outgrows its column. */
 export function displayFigure(
   n: number,
   locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
 ): string {
-  // The rounded value decides, and is what gets abbreviated: 999.999,6
-  // would otherwise pass the threshold yet come back unabbreviated.
-  const whole = Math.round(n);
-  return Math.abs(whole) >= 1_000_000
-    ? compactAmount(whole, locale)
+  return isAbbreviated(n)
+    ? compactAmount(Math.round(n), locale)
     : displayWhole(n, locale);
 }

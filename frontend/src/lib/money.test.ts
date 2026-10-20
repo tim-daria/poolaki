@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   compactAmount,
   displayFigure,
+  isAbbreviated,
   displayWhole,
   filterTypedAmount,
   formatAmount,
@@ -210,6 +211,18 @@ describe("overview figures", () => {
   it("splitCents separates the decimal part for styling", () => {
     expect(splitCents(350794)).toEqual({ whole: "350.794", cents: ",00" });
     expect(splitCents(0.5, "us")).toEqual({ whole: "0", cents: ".50" });
+  });
+});
+
+describe("isAbbreviated", () => {
+  it.each([
+    [945, false],
+    [999999.4, false],
+    [999999.6, true],
+    [1000000, true],
+    [-1000000, true],
+  ])("isAbbreviated(%d) is %s", (amount, expected) => {
+    expect(isAbbreviated(amount)).toBe(expected);
   });
 });
 

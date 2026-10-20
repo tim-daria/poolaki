@@ -26,7 +26,10 @@ interface ColumnChartProps {
   /** The band labels, one per column. */
   labels: string[];
   series: ColumnSeries[];
+  /** Axis ticks: abbreviate here, the axis is narrow. */
   formatValue: (value: number) => string;
+  /** Tooltip rows, which have room for the full figure. Defaults to formatValue. */
+  formatTooltipValue?: (value: number) => string;
   /** Accessible name stating the figures; the bars themselves carry no text. */
   description: string;
   referenceLine?: ReferenceLine;
@@ -45,6 +48,7 @@ export function ColumnChart({
   labels,
   series,
   formatValue,
+  formatTooltipValue = formatValue,
   description,
   referenceLine,
   height = 240,
@@ -133,7 +137,7 @@ export function ColumnChart({
               color: s.color,
               data: s.data,
               valueFormatter: (value: number | null) =>
-                value === null ? "" : formatValue(value),
+                value === null ? "" : formatTooltipValue(value),
             }))}
           >
             {referenceLine && (
