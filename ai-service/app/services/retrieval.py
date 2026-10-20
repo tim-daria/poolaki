@@ -6,6 +6,7 @@ import time
 from abc import ABC, abstractmethod
 
 from app.clients.django import MockDjangoClient
+from app.config.settings import settings
 from app.services.intention import ENDPOINT_BY_INTENT, Intent
 from models.retrieval import CombinedRetrievalResult, RetrievedItem
 from models.usage import TokenUsage
@@ -27,7 +28,7 @@ class BaseRetriever(ABC):
         organization_id: int,
         query: str,
         intent: str | None = None,
-        top_k: int = 3,
+        top_k: int = settings.vector_top_k,
     ) -> CombinedRetrievalResult:
         pass
 

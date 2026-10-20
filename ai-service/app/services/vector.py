@@ -3,6 +3,8 @@ from typing import Any
 import asyncpg
 from fastapi import HTTPException
 
+from app.config.settings import settings
+
 
 class VectorRepository:
     """Repository to manage vector persistence and search of chunks using pgvector."""
@@ -42,14 +44,15 @@ class VectorRepository:
     async def query_similar_chunks(
         self,
         query_embedding: list[float],
-        limit: int = 5,
+        limit: int = settings.vector_top_k,
+        min_similarity: float = settings.min_similarity,
     ) -> list[dict[str, Any]]:
         """Searches for the most similar chunks to the query embedding using pgvector and returns a list with their similarity score."""
-        # similarity measures how close the vectors are; higher values indicate greater semantic match.
         query = """
             SELECT id, document_id, content, metadata,
                    1 - (embedding <=> $1::vector) AS similarity
             FROM chunks
+            WHERE 1 - (embedding <=> $1::vector) >= $3
             ORDER BY embedding <=> $1::vector
             LIMIT $2;
         """
@@ -89,7 +92,7 @@ class VectorRepository:
             if embedding is not None:
                 vector_str = "[" + ",".join(map(str, embedding)) + "]"
                 await connection.execute(
-                    "UPDATE chunks SET embedding = $1::vector WHERE id = $2; As a vector str ",
+                    "UPDATE chunks SET embedding = $1::vector WHERE id = $2;",
                     vector_str,
                     chunk_id,
                 )
