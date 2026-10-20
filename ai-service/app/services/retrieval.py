@@ -1,9 +1,16 @@
 # Hybrid RAG
+import asyncio
+import json
+import logging
+import time
 from abc import ABC, abstractmethod
 
 from app.clients.django import MockDjangoClient
+from app.services.intention import ENDPOINT_BY_INTENT, Intent
 from models.retrieval import CombinedRetrievalResult, RetrievedItem
+from models.usage import TokenUsage
 
+logger = logging.getLogger(__name__)
 
 class MockDocumentRepository:
     """TESTING ONLY: Mock temporal para simular búsqueda en base de datos vectorial."""
@@ -36,29 +43,30 @@ class MockRetriever(BaseRetriever):
 
     def _resolve_endpoint_from_intent(
         self,
-        intent: str | None,
+        intent: Intent | None,
     ) -> str | None:
-        if intent == "monthly_summary":
-            return "/api/internal/v1/analytics/monthly-summary"
-        if intent == "recent_transactions":
-            return "/api/internal/v1/transactions"
-        if intent == "goal_progress":
-            return "/api/internal/v1/goals/progress"
-        return None
+        path = ENDPOINT_BY_INTENT.get(intent)
+        return f"/api/internal/v1/{path}/" if path else None
 
     async def get_context(
         self,
         user_id: int,
         organization_id: int,
         query: str,
-        intent: str | None = None,
+        usage: TokenUsage,
+        intent: Intent | None = None,
         top_k: int = 3,
     ) -> CombinedRetrievalResult:
 
-        documents = await self._doc_repo.search_documents(
-            query=query,
-            top_k=top_k,
-        )
+        start = time.perf_counter()
+        endpoint = self._resolve_endpoint_from_intent(intent)
+        payload = {"user_id": user_id, "organization_id": organization_id}
+
+        tasks = [self._doc_repo.search_documents(query=query, usage=usage, top_k=top_k)]
+        if endpoint is not None:
+            tasks.append(self._django_client.fetch_backend_data(endpoint, payload))
+
+        results = await asyncio.gather(*tasks) #to run vectors in parallel
 
         items = [
             RetrievedItem(
@@ -67,30 +75,27 @@ class MockRetriever(BaseRetriever):
                 source="vector_db",
                 metadata={},
             )
-            for doc in documents
+            for doc in results[0]
         ]
 
-        endpoint = self._resolve_endpoint_from_intent(intent)
-
-        if endpoint is not None:
-            payload = {
-                "user_id": user_id,
-                "organization_id": organization_id,
-            }
-
-            structured_data = await self._django_client.fetch_backend_data(
-                endpoint,
-                payload,
+        if endpoint is not None and results[1]:
+            items.append(
+                RetrievedItem(
+                    type="structured_data",
+                    content=json.dumps(results[1], ensure_ascii=False),
+                    source="django_api",
+                    metadata={"endpoint": endpoint},
+                )
             )
 
-            if structured_data:
-                items.append(
-                    RetrievedItem(
-                        type="structured_data",
-                        content=str(structured_data),
-                        source="django_api",
-                        metadata=structured_data,
-                    )
-                )
-
+        logger.info(
+            "retrieval_done",
+            extra={
+                "intent": intent,
+                "endpoint": endpoint,
+                "docs": len(results[0]),
+                "has_structured": endpoint is not None and bool(results[1]),
+                "retrieval_ms": round((time.perf_counter() - start) * 1000),
+            },
+        )
         return CombinedRetrievalResult(items=items)
