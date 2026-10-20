@@ -19,8 +19,10 @@ class ReportView(APIView):
     GET
     Returns yearly aggregates for the organization: income/expense totals,
     a 12-month distribution (zero-filled), and the per-category breakdown
-    for the selected year. Contribution rows are excluded from every section
-    (savings analytics are deferred until the `withdraw` entry type exists).
+    for the selected year, plus `goal_balance` — the current balance across
+    all active and completed goals, independent of the selected year.
+    Contribution rows are excluded from every yearly section (savings are
+    reported net of withdrawals via `goal_balance`).
 
     Query parameters:
     - year (optional, integer 2000..2100): calendar year to report on.
