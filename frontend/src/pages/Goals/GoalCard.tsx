@@ -1,6 +1,11 @@
-/** @file Clickable card for a goal in any state: avatar, flags, saved/target, progress bar, deadline or overdraft, what an archived goal held; actions menu per state. */
+/** @file Clickable card for a goal in any state: avatar and flags, name, the saved amount on its own line, progress bar, then percent of target beside the deadline or overdraft; actions menu per state. Every line holds one figure at most, so the card keeps one shape whatever the amounts. */
 
-import { useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   Box,
   Chip,
@@ -23,6 +28,7 @@ import {
 } from "../../lib/goals";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { displayAmount } from "../../lib/money";
+import { Money } from "../../components/Money";
 import { monthYear } from "../../lib/date";
 import { GoalProgressBar } from "../../components/Goals/GoalProgressBar";
 import { GoalStatusAvatar } from "./GoalStatusAvatar";
@@ -60,8 +66,15 @@ function cardLook(goal: Goal) {
 
   // The text at the bar's right end. Off limits takes that spot from the
   // deadline: the overdraft is the one thing to act on.
-  const trailing = offLimits
-    ? { text: `Over by €${displayAmount(overBy(goal))}`, color: "error.main" }
+  const trailing: { text: ReactNode; color: string } | null = offLimits
+    ? {
+        text: (
+          <>
+            Over by <Money>€{displayAmount(overBy(goal))}</Money>
+          </>
+        ),
+        color: "error.main",
+      }
     : deadline
       ? { text: deadline, color: "text.secondary" }
       : null;
@@ -232,39 +245,41 @@ export function GoalCard({
 
         <Typography sx={{ fontWeight: 700 }}>{goal.name}</Typography>
 
+        <Typography
+          sx={{ fontWeight: 700, fontSize: "1.15rem", whiteSpace: "nowrap" }}
+        >
+          <Money>
+            {shownBalance === undefined
+              ? "€—"
+              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance))}`}
+          </Money>
+        </Typography>
+
+        <GoalProgressBar look={bar} />
+        {/* Wrap is the phone fallback only: the two halves cannot always
+            share a narrow card, and a second line beats a broken figure. */}
         <Box
           sx={{
             display: "flex",
-            alignItems: "baseline",
+            flexWrap: "wrap",
             justifyContent: "space-between",
+            columnGap: 1,
           }}
         >
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: "1.15rem",
-              // color: look.offLimits ? "error.main" : undefined,
-            }}
-          >
-            {shownBalance === undefined
-              ? "€—"
-              : `${negative ? "−" : ""}€${displayAmount(Math.abs(shownBalance))}`}{" "}
-          </Typography>
           {/* sx, not the color prop: MUI 9's Typography resolves only named
               colours ("error", "textSecondary") through the prop, not palette
               paths like "text.secondary". */}
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            of €{displayAmount(goal.target_amount)}{" "}
-          </Typography>
-        </Box>
-
-        <GoalProgressBar look={bar} />
-        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {bar.pct}% Completed
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", whiteSpace: "nowrap" }}
+          >
+            {bar.pct}% of <Money>€{displayAmount(goal.target_amount)}</Money>
           </Typography>
           {look.trailing && (
-            <Typography variant="body2" sx={{ color: look.trailing.color }}>
+            <Typography
+              variant="body2"
+              sx={{ color: look.trailing.color, whiteSpace: "nowrap" }}
+            >
               {look.trailing.text}
             </Typography>
           )}
