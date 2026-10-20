@@ -1,15 +1,56 @@
+"""Balance calculations and locked goal-invariant mutations."""
+
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol, cast
 
 from django.db.models import Case, DecimalField, ExpressionWrapper, F, Q, QuerySet, Sum, When
 from django.db.models.functions import Coalesce
+from rest_framework import serializers
 
-from core.models import EntryType, Goal, Membership, Organization, Transaction, User
+from core.models import EntryType, Goal, GoalStatus, Membership, Organization, Transaction, User
 from core.services.exceptions import PersonalOrganizationMissingError
 
 
 class AnnotatedGoal(Protocol):
     _goal_balance: Decimal
+
+
+@dataclass(frozen=True)
+class GoalBalanceMutation:
+    """Describe a goal entry change using amounts before and after mutation."""
+
+    entry_type: EntryType
+    before_amount: Decimal
+    after_amount: Decimal
+
+    @classmethod
+    def create(cls, entry_type: EntryType | str, amount: Decimal) -> "GoalBalanceMutation":
+        return cls(EntryType(entry_type), Decimal("0"), amount)
+
+    @classmethod
+    def update(
+        cls,
+        entry_type: EntryType | str,
+        before_amount: Decimal,
+        after_amount: Decimal,
+    ) -> "GoalBalanceMutation":
+        return cls(EntryType(entry_type), before_amount, after_amount)
+
+    @classmethod
+    def delete(cls, entry_type: EntryType | str, amount: Decimal) -> "GoalBalanceMutation":
+        return cls(EntryType(entry_type), amount, Decimal("0"))
+
+    @property
+    def delta(self) -> Decimal:
+        return goal_entry_effect(self.entry_type, self.after_amount) - goal_entry_effect(
+            self.entry_type, self.before_amount
+        )
+
+
+def goal_entry_effect(entry_type: EntryType | str, amount: Decimal) -> Decimal:
+    """Return the signed balance effect of one goal transaction entry."""
+    return amount if entry_type == EntryType.CONTRIBUTION else -amount
 
 
 def set_initial_balance(user: User, amount: Decimal) -> Organization:
@@ -77,6 +118,22 @@ def calculate_goal_balance(goal: Goal) -> Decimal:
         )
     )["balance"]
     return cast(Decimal, total)
+
+
+def lock_goal_and_validate_balance(
+    goal_id: int,
+    mutation: GoalBalanceMutation,
+    *,
+    error_message: str = "Transaction would violate the goal balance invariant.",
+) -> Goal:
+    """Lock a goal and reject changes that would violate its balance invariant."""
+    goal = Goal.objects.select_for_update().get(pk=goal_id)
+    resulting_balance = calculate_goal_balance(goal) + mutation.delta
+    if resulting_balance < Decimal("0") or (
+        goal.status == GoalStatus.ARCHIVED and resulting_balance != Decimal("0")
+    ):
+        raise serializers.ValidationError({"amount": [error_message]})
+    return goal
 
 
 def annotate_goal_balance(queryset: QuerySet[Goal]) -> QuerySet[Goal]:

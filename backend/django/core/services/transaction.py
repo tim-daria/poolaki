@@ -1,3 +1,5 @@
+"""Transaction query and mutation services."""
+
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -16,6 +18,7 @@ from core.models import (
     Transaction,
     User,
 )
+from core.services.balance import GoalBalanceMutation, lock_goal_and_validate_balance
 from core.services.notification import notify_users
 
 
@@ -97,20 +100,18 @@ def count_by_entry_type(qs: QuerySet[Transaction]) -> dict[str, int]:
     return counts
 
 
-@transaction.atomic
-def create_transaction_entry(
+def _create_transaction_entry(
     *,
     org: Organization,
+    goal_id: int | None,
     created_by: User,
     category_id: int | None,
-    goal_id: int | None,
     entry_type: str,
     amount: Decimal,
     description: str | None,
     transaction_date: date,
     is_tax_deductible: bool,
 ) -> Transaction:
-    org = Organization.objects.select_for_update().get(pk=org.pk)
     txn = Transaction.objects.create(
         org=org,
         created_by=created_by,
@@ -140,3 +141,40 @@ def create_transaction_entry(
         org=org,
     )
     return txn
+
+
+@transaction.atomic
+def create_transaction_entry(
+    *,
+    org: Organization,
+    created_by: User,
+    category_id: int | None,
+    goal_id: int | None,
+    entry_type: str,
+    amount: Decimal,
+    description: str | None,
+    transaction_date: date,
+    is_tax_deductible: bool,
+) -> Transaction:
+    if goal_id is not None and entry_type in (EntryType.CONTRIBUTION, EntryType.WITHDRAW):
+        lock_goal_and_validate_balance(
+            goal_id,
+            GoalBalanceMutation.create(entry_type, amount),
+            error_message=(
+                "Withdrawal amount cannot exceed the goal balance."
+                if entry_type == EntryType.WITHDRAW
+                else "Transaction would violate the goal balance invariant."
+            ),
+        )
+    org = Organization.objects.select_for_update().get(pk=org.pk)
+    return _create_transaction_entry(
+        org=org,
+        goal_id=goal_id,
+        created_by=created_by,
+        category_id=category_id,
+        entry_type=entry_type,
+        amount=amount,
+        description=description,
+        transaction_date=transaction_date,
+        is_tax_deductible=is_tax_deductible,
+    )

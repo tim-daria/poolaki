@@ -176,10 +176,10 @@ DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 
 Status:
 - `204 No Content` on successful deletion
-- `400 Bad Request` if the balance is insufficient to cancel income transaction
-  or the transaction is associated with an archived goal
-- `403 Forbidden` when the user is not the organization owner
-- `404 Not Found` for invalid transaction_id
+- `400 Bad Request` if deleting or updating a goal transaction would violate
+  the goal balance invariant
+- `404 Not Found` when the transaction does not belong to the requesting user
+  or organization
 
 Transactions associated with archived goals cannot be deleted.
 

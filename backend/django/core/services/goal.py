@@ -7,7 +7,7 @@ from django.db import transaction
 
 from core.models import EntryType, Goal, GoalStatus, Organization, User
 from core.services.balance import calculate_goal_balance
-from core.services.transaction import create_transaction_entry
+from core.services.transaction import _create_transaction_entry
 
 
 class GoalArchivalError(Exception):
@@ -31,11 +31,11 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
     org = Organization.objects.select_for_update().get(pk=goal.org_id)
     remaining_balance = calculate_goal_balance(goal)
     if remaining_balance < Decimal("0"):
-        create_transaction_entry(
+        _create_transaction_entry(
             org=org,
+            goal_id=goal.id,
             created_by=created_by,
             category_id=None,
-            goal_id=goal.id,
             entry_type=EntryType.CONTRIBUTION,
             amount=abs(remaining_balance),
             description=f"Archived {goal.name}",
@@ -43,11 +43,11 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             is_tax_deductible=False,
         )
     elif remaining_balance > Decimal("0"):
-        create_transaction_entry(
+        _create_transaction_entry(
             org=org,
+            goal_id=goal.id,
             created_by=created_by,
             category_id=None,
-            goal_id=goal.id,
             entry_type=EntryType.WITHDRAW,
             amount=remaining_balance,
             description=f"Archived {goal.name}",

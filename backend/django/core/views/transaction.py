@@ -11,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Goal, GoalStatus, Organization, Transaction, User
+from core.models import EntryType, Goal, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -19,10 +19,12 @@ from core.serializers import (
     TransactionResponseSerializer,
     TransactionUpdateSerializer,
 )
-from core.services.balance import calculate_goal_balance
+from core.services.balance import (
+    GoalBalanceMutation,
+    calculate_goal_balance,
+    lock_goal_and_validate_balance,
+)
 from core.services.goal import allowed_entry_types
-
-# from core.services.balance import calculate_org_balance
 from core.services.transaction import (
     TransactionFilters,
     create_transaction_entry,
@@ -173,15 +175,15 @@ class TransactionGetDeleteView(APIView):
         - 200 OK with the updated transaction for PATCH requests.
 
         DELETE
-        Deletes the requested transaction. Income transactions can be deleted only
-        when the organization's current balance is sufficient to cancel the income.
-        Transactions associated with archived goals cannot be deleted.
+        Deletes the requested transaction. Deleting a contribution or withdrawal
+        validates the resulting goal balance and rejects changes that violate the
+        goal invariant, including transactions associated with archived goals.
+        Income deletion is not restricted by the organization's balance.
 
     Returns:
         - 204 No content for successful DELETE requests.
-        - 400 Bad Request when an income transaction cannot be cancelled because
-                the organization's balance is insufficient or the transaction is
-                associated with an archived goal.
+        - 400 Bad Request when deleting a goal transaction would violate the goal
+                balance invariant.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -225,27 +227,50 @@ class TransactionGetDeleteView(APIView):
             serializer.is_valid(raise_exception=True)
             data = serializer.validated_data
 
+        with db_transaction.atomic():
+            if transaction.goal_id is not None and transaction.entry_type in (
+                EntryType.CONTRIBUTION,
+                EntryType.WITHDRAW,
+            ):
+                locked_goal = lock_goal_and_validate_balance(
+                    transaction.goal_id,
+                    GoalBalanceMutation.update(
+                        transaction.entry_type,
+                        transaction.amount,
+                        data["amount"],
+                    ),
+                )
+                transaction = get_object_or_404(
+                    Transaction.objects.select_for_update(),
+                    id=transaction_id,
+                    org_id=org_id,
+                    created_by=user,
+                    goal_id=locked_goal.id,
+                )
+            else:
+                transaction = get_object_or_404(
+                    Transaction.objects.select_for_update(),
+                    id=transaction_id,
+                    org_id=org_id,
+                    created_by=user,
+                )
+
             updated_fields = set()
             if "category_id" in data:
                 transaction.category = data["category_id"]
                 updated_fields.add("category")
-
             if "amount" in data:
                 transaction.amount = data["amount"]
                 updated_fields.add("amount")
-
             if "description" in data:
                 transaction.description = data["description"]
                 updated_fields.add("description")
-
             if "transaction_date" in data:
                 transaction.transaction_date = data["transaction_date"]
                 updated_fields.add("transaction_date")
-
             if "is_tax_deductible" in data:
                 transaction.is_tax_deductible = data["is_tax_deductible"]
                 updated_fields.add("is_tax_deductible")
-
             transaction.save(update_fields=updated_fields)
 
         return Response(
@@ -256,20 +281,24 @@ class TransactionGetDeleteView(APIView):
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
         with db_transaction.atomic():
             transaction = get_object_or_404(
-                Transaction.objects,
+                Transaction,
                 id=transaction_id,
                 org_id=org_id,
                 created_by=request.user,
             )
-            goal = (
-                Goal.objects.select_for_update().get(pk=transaction.goal_id)
-                if transaction.goal_id is not None
-                else None
-            )
-            if goal is not None and goal.status == GoalStatus.ARCHIVED:
-                return Response(
-                    {"detail": "Cannot delete transactions associated with archived goals."},
-                    status=status.HTTP_400_BAD_REQUEST,
+            if transaction.goal_id is not None and transaction.entry_type in (
+                EntryType.CONTRIBUTION,
+                EntryType.WITHDRAW,
+            ):
+                lock_goal_and_validate_balance(
+                    transaction.goal_id,
+                    GoalBalanceMutation.delete(transaction.entry_type, transaction.amount),
+                )
+                transaction = get_object_or_404(
+                    Transaction.objects.select_for_update(),
+                    id=transaction_id,
+                    org_id=org_id,
+                    created_by=request.user,
                 )
             # Check for negative organization balance after deleting transaction entry
             # org = get_object_or_404(
