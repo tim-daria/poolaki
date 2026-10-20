@@ -11,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Goal, Organization, Transaction, User
+from core.models import EntryType, Goal, GoalStatus, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -286,20 +286,27 @@ class TransactionGetDeleteView(APIView):
                 org_id=org_id,
                 created_by=request.user,
             )
-            if transaction.goal_id is not None and transaction.entry_type in (
-                EntryType.CONTRIBUTION,
-                EntryType.WITHDRAW,
-            ):
-                lock_goal_and_validate_balance(
-                    transaction.goal_id,
-                    GoalBalanceMutation.delete(transaction.entry_type, transaction.amount),
-                )
-                transaction = get_object_or_404(
-                    Transaction.objects.select_for_update(),
-                    id=transaction_id,
-                    org_id=org_id,
-                    created_by=request.user,
-                )
+            if transaction.goal_id is not None:
+                goal = Goal.objects.select_for_update().get(pk=transaction.goal_id)
+                if goal.status == GoalStatus.ARCHIVED:
+                    raise ValidationError(
+                        {
+                            "amount": [
+                                "Transactions associated with archived goals cannot be deleted."
+                            ]
+                        }
+                    )
+                if transaction.entry_type in (EntryType.CONTRIBUTION, EntryType.WITHDRAW):
+                    lock_goal_and_validate_balance(
+                        goal.id,
+                        GoalBalanceMutation.delete(transaction.entry_type, transaction.amount),
+                    )
+                    transaction = get_object_or_404(
+                        Transaction.objects.select_for_update(),
+                        id=transaction_id,
+                        org_id=org_id,
+                        created_by=request.user,
+                    )
             # Check for negative organization balance after deleting transaction entry
             # org = get_object_or_404(
             #     Organization.objects.select_for_update(),

@@ -1166,8 +1166,39 @@ def test_member_cannot_delete_archived_goal_transaction(
     response = api_client.delete(transaction_url(shared_org.id, contribution.id))
 
     assert response.status_code == 400
-    assert response.data == {"amount": ["Transaction would violate the goal balance invariant."]}
+    assert response.data == {
+        "amount": ["Transactions associated with archived goals cannot be deleted."]
+    }
     assert Transaction.objects.filter(id=contribution.id).exists()
+
+
+def test_member_cannot_delete_archived_goal_expense(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Archived trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ARCHIVED,
+    )
+    expense = Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        created_by=member,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.delete(transaction_url(shared_org.id, expense.id))
+
+    assert response.status_code == 400
+    assert response.data == {
+        "amount": ["Transactions associated with archived goals cannot be deleted."]
+    }
+    assert Transaction.objects.filter(id=expense.id).exists()
 
 
 # def test_member_cannot_delete_income_when_balance_is_insufficient(
