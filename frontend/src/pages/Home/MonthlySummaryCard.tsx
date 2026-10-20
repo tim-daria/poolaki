@@ -1,6 +1,6 @@
 /**
- * @file Month half of the top card: came in, spent and to savings as three
- * signed columns on one baseline, a hover-only note on what they mean, and a
+ * @file Month half of the top card: came in, spent and the goal total as
+ * three columns on one baseline, a hover-only note on what they mean, and a
  * footer with the month's net.
  */
 
@@ -54,12 +54,12 @@ function columnHeight(t: Theme, max: number): string {
 
 /** What the columns cover and how they relate to the balance figure beside them. */
 function monthInfo(month: string): string {
-  return `Everything that came in, was spent or was moved to savings since 1 ${month}. Your net balance changes by: came in – spent – to savings.`;
+  return `Everything that came in or was spent since 1 ${month}, and what your goals hold right now.`;
 }
 
 // Columns at half strength under full-colour labels, the same three tones the
-// Reports charts use. The sign says which way the money moved; savings carry
-// none, since they are set aside rather than gone.
+// Reports charts use. The sign says which way the money moved; the goal total
+// carries none, since it is held rather than gone.
 const COLUMNS = [
   {
     key: "income",
@@ -78,8 +78,8 @@ const COLUMNS = [
     text: "error.main",
   },
   {
-    key: "saved",
-    label: "To savings",
+    key: "inGoals",
+    label: "Total in goals",
     sign: "",
     bar: "accent.main",
     barOpacity: BAR_OPACITY,
@@ -126,7 +126,7 @@ function Column({
   const share = value > 0 ? value / scaleMax : 0;
   const height = (max: number) =>
     value > 0 ? Math.max(MIN_HEIGHT, share * max) : STUB_HEIGHT;
-  // Savings net of withdrawals can go below zero; the sign then comes from
+  // An overdrawn goal takes the total below zero; the sign then comes from
   // the value, not the column.
   const shownSign = value > 0 ? sign : value < 0 ? "-" : "";
   const magnitude = Math.abs(value);

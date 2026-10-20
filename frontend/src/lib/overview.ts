@@ -1,7 +1,7 @@
 /**
  * @file Overview page figures derived from the yearly report, this month's
- * transfer rows and the goals: the month's totals and footer, the balance
- * change, the column scale, spending split by category with donut shares,
+ * transfer rows and the goals: the month's totals, what the goals hold, the
+ * month's footer, the balance change, the column scale, spending split by category with donut shares,
  * recent entries and the goal nearest completion. React-free so the
  * arithmetic is unit-tested.
  */
@@ -32,11 +32,14 @@ export type MonthSummary = {
   saved: number;
   /** Income not yet spent or moved to a goal; negative when overspent. */
   left: number;
+  /** What every goal holds right now; a snapshot, not a month figure. */
+  inGoals: number;
 };
 
 /**
  * Totals for the month `today` falls in: income and expenses from the report,
- * savings from the month's transfer rows.
+ * savings from the month's transfer rows, plus the goal total the report
+ * carries.
  */
 export function monthSummary(
   report: YearlyReportResponse,
@@ -58,7 +61,13 @@ export function monthSummary(
   }
   // A withdrawal moves goal money back, so it undoes saving.
   const saved = cents(contribution - withdraw);
-  return { income, expenses, saved, left: cents(income - expenses - saved) };
+  return {
+    income,
+    expenses,
+    saved,
+    left: cents(income - expenses - saved),
+    inGoals: parseMoney(report.goal_balance),
+  };
 }
 
 /** What the summary's footer says; the component formats the amount. */

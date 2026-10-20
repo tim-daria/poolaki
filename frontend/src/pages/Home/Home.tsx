@@ -198,7 +198,7 @@ function Home() {
   const summary = report && monthSummary(report, monthRows, TODAY);
   const scaleMax = summary
     ? columnScaleMax(
-        [summary.income, summary.expenses, summary.saved],
+        [summary.income, summary.expenses, summary.inGoals],
         DEFAULT_SCALE_FLOOR,
       )
     : DEFAULT_SCALE_FLOOR;

@@ -46,6 +46,7 @@ function report(
       expense: "0.00",
     })),
     categories: [],
+    goal_balance: "0.00",
     ...overrides,
   };
 }
@@ -111,7 +112,13 @@ describe("monthSummary", () => {
       expenses: 1953,
       saved: 100,
       left: 1514,
+      inGoals: 0,
     });
+  });
+
+  it("reads the goal total from the report, whatever the month holds", () => {
+    const r = report({ goal_balance: "1540.50" });
+    expect(monthSummary(r, [], "2026-08-03").inGoals).toBe(1540.5);
   });
 
   it("counts a withdrawal against the saved total", () => {
@@ -124,6 +131,7 @@ describe("monthSummary", () => {
       expenses: 0,
       saved: 180,
       left: 820,
+      inGoals: 0,
     });
   });
 
@@ -283,6 +291,7 @@ describe("monthFooter", () => {
     expenses,
     saved,
     left: income - expenses - saved,
+    inGoals: 0,
   });
 
   it.each([
@@ -304,14 +313,26 @@ describe("column scale and balance change", () => {
 
   it("balanceChange is this month's net, or null while the month is empty", () => {
     expect(
-      balanceChange({ income: 3000, expenses: 1000, saved: 386, left: 1614 }),
+      balanceChange({
+        income: 3000,
+        expenses: 1000,
+        saved: 386,
+        left: 1614,
+        inGoals: 0,
+      }),
     ).toBe(1614);
     expect(
-      balanceChange({ income: 0, expenses: 0, saved: 0, left: 0 }),
+      balanceChange({ income: 0, expenses: 0, saved: 0, left: 0, inGoals: 0 }),
     ).toBeNull();
     // A month with only a withdrawal still moved the balance.
     expect(
-      balanceChange({ income: 0, expenses: 0, saved: -50, left: 50 }),
+      balanceChange({
+        income: 0,
+        expenses: 0,
+        saved: -50,
+        left: 50,
+        inGoals: 0,
+      }),
     ).toBe(50);
   });
 });
