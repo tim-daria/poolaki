@@ -2,11 +2,21 @@
 
 from datetime import date
 from decimal import Decimal
+from typing import cast
 
 from django.db import transaction
 
-from core.models import EntryType, Goal, GoalStatus, Organization, User
-from core.services.balance import calculate_goal_balance
+from core.models import (
+    EntryType,
+    Goal,
+    GoalStatus,
+    Membership,
+    NotificationType,
+    Organization,
+    User,
+)
+from core.services.balance import annotate_goal_balance, calculate_goal_balance
+from core.services.notification import notify_users
 from core.services.transaction import create_transaction_entry
 
 
@@ -88,3 +98,32 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
         setattr(locked_goal, field, value)
     locked_goal.save()
     return locked_goal
+
+
+@transaction.atomic
+def create_goal(org: Organization, created_by: User, data: dict[str, object]) -> Goal:
+    """Create an active goal and notify every other member of the organization."""
+    goal = Goal.objects.create(
+        org=org,
+        name=cast(str, data["name"]),
+        target_amount=cast(Decimal, data["target_amount"]),
+        target_date=cast(date | None, data["target_date"]),
+        status=GoalStatus.ACTIVE,
+        created_by=created_by,
+    )
+    # A personal budget has a single member, so there is nobody to notify.
+    notify_users(
+        list(
+            Membership.objects.filter(org=org)
+            .exclude(user=created_by)
+            .values_list("user_id", flat=True)
+        ),
+        NotificationType.GOAL_CREATED,
+        {
+            "org_name": org.name,
+            "created_by": created_by.username,
+            "goal_name": goal.name,
+        },
+        org=org,
+    )
+    return annotate_goal_balance(Goal.objects.select_related("created_by").filter(pk=goal.pk)).get()

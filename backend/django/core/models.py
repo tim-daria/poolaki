@@ -185,6 +185,7 @@ class NotificationType(models.TextChoices):
     INVITATION = "invitation", "Invitation"
     TRANSACTION_ADDED = "transaction_added", "Transaction added"
     GOAL_COMPLETED = "goal_completed", "Goal completed"
+    GOAL_CREATED = "goal_created", "Goal created"
     MEMBER_LEFT = "member_left", "Member left"
     MEMBER_REMOVED = "member_removed", "Member removed"
     REMOVED_FROM_ORG = "removed_from_org", "Removed from org"
