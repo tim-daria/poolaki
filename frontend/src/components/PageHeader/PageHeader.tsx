@@ -10,6 +10,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
 import { useRouteMeta } from "../../routeMeta";
+import { PRINT } from "../../lib/layout";
 
 const actionButtonSx = { px: 2.5, fontWeight: 700 } as const;
 
@@ -68,6 +69,7 @@ export function PageHeader({ children, fabSlot = null }: PageHeaderProps) {
           gap: 2,
           flexWrap: "wrap",
           p: 3,
+          [PRINT]: { display: "none" },
         }}
       >
         {/* minWidth: 0 lets a long heading wrap instead of overflowing. */}

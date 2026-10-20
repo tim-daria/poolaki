@@ -30,7 +30,7 @@ import {
   type GoalSavings,
 } from "../../lib/savings";
 import { yearOptions } from "../../lib/reportYears";
-import { PAGE_PADDING, TABLET } from "../../lib/layout";
+import { PAGE_PADDING, PRINT, TABLET } from "../../lib/layout";
 import {
   PageHeading,
   PageActionButton,
@@ -57,29 +57,11 @@ const pageSx = {
   [TABLET]: { ...PAGE_PADDING[TABLET], gap: 3 },
 } as const;
 
-/**
- * Selectors are anchored on `#root` where they override an `sx` rule: the id
- * outranks emotion's single class, so no `!important` is needed. Drawers
- * portal to `body` and unmount when closed, so they need no print rule.
- */
+/** Page setup only: the shell, header and cards each carry their own print rule. */
 const printStyles = {
-  "@media print": {
+  [PRINT]: {
     "@page": { size: "auto", margin: "12mm" },
     "*": { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" },
-    // The shell fixes its height to the viewport and scrolls inside;
-    // printing needs the document to flow.
-    "#root, #root > div": {
-      height: "auto",
-      minHeight: 0,
-      overflow: "visible",
-    },
-    "#root header, #root nav": { display: "none" },
-    // Shadows do not print; a hairline keeps each card's edge.
-    "#root .MuiPaper-root": {
-      boxShadow: "none",
-      border: "1px solid var(--mui-palette-divider)",
-      breakInside: "avoid",
-    },
   },
 } as const;
 
@@ -182,7 +164,7 @@ export function Component() {
       <GlobalStyles styles={printStyles} />
 
       {/* Heading visible only in print, where the app header is hidden. */}
-      <Box sx={{ display: "none", "@media print": { display: "block" } }}>
+      <Box sx={{ display: "none", [PRINT]: { display: "block" } }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: "bold" }}>
           Reports {year}
         </Typography>
@@ -226,7 +208,7 @@ export function Component() {
         startIcon={<PrintIcon />}
         onClick={() => window.print()}
         disabled={reportData === null}
-        sx={{ "@media print": { display: "none" } }}
+        sx={{ [PRINT]: { display: "none" } }}
       >
         Print
       </PageActionButton>
@@ -248,7 +230,7 @@ export function Component() {
           <Box
             sx={{
               display: "none",
-              "@media print": { display: "block", breakBefore: "page" },
+              [PRINT]: { display: "block", breakBefore: "page" },
             }}
           />
           <CategoriesCard
