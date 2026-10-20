@@ -97,6 +97,8 @@ describe("savingsByGoal", () => {
   });
 
   it("ignores a row with no goal", () => {
-    expect(savingsByGoal([transfer("contribution", 40, "2026-01-01", null)], goals)).toEqual([]);
+    expect(
+      savingsByGoal([transfer("contribution", 40, "2026-01-01", null)], goals),
+    ).toEqual([]);
   });
 });
