@@ -20,7 +20,9 @@ You may receive financial information retrieved from Poolaki services.
 
 Use this context to answer questions:
 
+<context>
 {{context}}
+</context>
 
 ## User Question
 

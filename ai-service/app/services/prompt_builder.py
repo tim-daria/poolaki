@@ -1,4 +1,8 @@
+from datetime import date
 from pathlib import Path
+
+from app.services.context_builder import NO_CONTEXT
+
 
 APP_DIR = Path(__file__).resolve().parent.parent
 PROMPTS_PATH = APP_DIR / "prompts"
@@ -21,13 +25,12 @@ class PromptBuilder:
         user_question: str,
         context: str = "",
     ) -> str:
-        if not context.strip():
-            formatted_context = "Not relevant data found for your question"
-        else:
-            formatted_context = context
+        formatted_context = context if context.strip() else NO_CONTEXT
 
         prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
-        return prompt.replace("{{user_question}}", user_question).replace(
-            "{{context}}", formatted_context
+        return (
+            prompt.replace("{{user_question}}""{{current_date}}", date.today().isoformat())
+            .replace("{{user_question}}", user_question)
+            .replace("{{context}}", formatted_context)
         )
