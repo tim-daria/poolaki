@@ -26,7 +26,9 @@ Use this context to answer questions:
 
 ## User Question
 
+<user_question>
 {{user_question}}
+</user_question>
 
 ## Response Guidelines
 

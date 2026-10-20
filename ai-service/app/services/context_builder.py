@@ -7,6 +7,7 @@ from models.retrieval import CombinedRetrievalResult, RetrievedItem
 from models.usage import TokenUsage
 
 NO_CONTEXT = "No relevant information was found."
+SOURCE_LABELS = {"django_api": "financial_data", "vector_db": "product_docs"}
 
 def estimate_tokens(text: str) -> int:
     # Simple estimation(~4 characteres per token)
@@ -25,12 +26,15 @@ class ContextBuilder:
 
         usage.context_est = estimate_tokens(context)
 
-        return context[: settings.max_context_tokens]
+        return context
 
     def _format_item(self, item: RetrievedItem, today: date) -> str:
         """Make each RetrievedItem into text for the context"""
+
+        label = SOURCE_LABELS.get(item.source, "data")
+
         if item.type != "structured_data":
-            return f"[{item.source}]\n{item.content}"  # (pgvector)
+            return f"[{label}]\n{item.content}"  # (pgvector)
 
         data = json.loads(item.content)
         endpoint = item.metadata.get("endpoint", "")
@@ -42,12 +46,12 @@ class ContextBuilder:
         if txs is not None:
             total = len(txs)
             while txs and estimate_tokens(json.dumps(data)) > settings.max_context_tokens:
-                txs = txs[: len(txs) // 2]  # newest-first (django)
+                txs = txs[: len(txs) // 2]  # newest-first (django) this // 2 is ok for MVP
                 data["transactions"] = txs
             if len(txs) < total:
                 note = f"\nNote: showing only the {len(txs)} most recent of {total} transactions."
 
-        return f"[{item.source}] {window}\n{json.dumps(data, ensure_ascii=False)}{note}"
+        return f"[{label}] {window}\n{json.dumps(data, ensure_ascii=False)}{note}"
 
     def _window(self, endpoint: str, data: dict, today: date) -> str:
         if "analytics/summary" in endpoint or "categories" in endpoint:
