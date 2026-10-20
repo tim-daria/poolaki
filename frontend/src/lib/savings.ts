@@ -47,10 +47,7 @@ export interface GoalSavings {
  * Net saved per goal, largest first. Goals left at zero or less are dropped:
  * a share of the year's saving is what the list shows.
  */
-export function savingsByGoal(
-  rows: Transfer[],
-  goals: Goal[],
-): GoalSavings[] {
+export function savingsByGoal(rows: Transfer[], goals: Goal[]): GoalSavings[] {
   const names = new Map(goals.map((g) => [g.id, g.name]));
   const totals = new Map<number, number>();
   for (const t of rows) {
