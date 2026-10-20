@@ -52,6 +52,7 @@ import { TransactionRow } from "./TransactionRow";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCategories } from "../../hooks/useCategories";
 import { useGoals } from "../../hooks/useGoals";
+import { PAGE_PADDING } from "../../lib/layout";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -137,7 +138,7 @@ function Transactions() {
   const refresh = () => setVersion((v) => v + 1);
 
   return (
-    <Box sx={{ px: 3, pb: 5 }}>
+    <Box sx={{ ...PAGE_PADDING, pb: 5 }}>
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
         Add transaction

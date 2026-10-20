@@ -6,7 +6,7 @@ import type { Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
 import { HomeCard, HomeCardAction } from "./HomeCard";
-import { TABLET } from "./layout";
+import { TABLET } from "../../lib/layout";
 
 interface Props {
   goals: Goal[];
@@ -80,8 +80,11 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
               whiteSpace: "nowrap",
             }}
           >
-            <Box component="span" sx={{ color: "text.primary" }}>
-              €{displayWhole(goal.balance)}
+            <Box
+              component="span"
+              sx={{ color: goal.balance < 0 ? "error.main" : "text.primary" }}
+            >
+              {goal.balance < 0 && "−"}€{displayWhole(Math.abs(goal.balance))}
             </Box>{" "}
             / €{displayWhole(goal.target_amount)}
           </Money>

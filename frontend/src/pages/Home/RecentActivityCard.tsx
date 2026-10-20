@@ -10,7 +10,7 @@ import type { Category } from "../../lib/categories";
 import type { Goal } from "../../lib/goals";
 import type { Transaction } from "../../lib/transactions";
 import { HomeCard, HomeCardAction } from "./HomeCard";
-import { DESKTOP } from "./layout";
+import { DESKTOP } from "../../lib/layout";
 
 interface Props {
   /** Newest first. */

@@ -19,7 +19,7 @@ import { GoalForm } from "../../components/Modals/GoalForm";
 import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
-import { TODAY, monthName } from "../../lib/date";
+import { TODAY, longDate, monthName } from "../../lib/date";
 import { getGoals, type Goal } from "../../lib/goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -36,7 +36,7 @@ import { NetBalanceCard } from "./NetBalanceCard";
 import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
-import { DESKTOP, TABLET } from "./layout";
+import { DESKTOP, PAGE_PADDING, TABLET } from "../../lib/layout";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -113,14 +113,7 @@ function Home() {
     <>
       {/* Personal workspaces have no members, so they show a greeting instead. */}
       {org.is_personal ? (
-        <PageTitle
-          title={greeting(now.getHours())}
-          subtitle={now.toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        />
+        <PageTitle title={greeting(now.getHours())} subtitle={longDate(now)} />
       ) : (
         <PageHeading>
           <OrgMembers />
@@ -150,12 +143,12 @@ function Home() {
   );
 
   const pageSx = {
-    px: 2,
+    ...PAGE_PADDING,
     pb: 5,
     display: "flex",
     flexDirection: "column",
     gap: 2,
-    [TABLET]: { px: 3, gap: 3 },
+    [TABLET]: { ...PAGE_PADDING[TABLET], gap: 3 },
   } as const;
 
   if (data === null) {

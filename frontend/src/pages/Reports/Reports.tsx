@@ -30,6 +30,7 @@ import {
 import { MonthlyChart } from "./MonthlyChart";
 import { Segmented } from "./Segmented";
 import { eur } from "./eur";
+import { PAGE_PADDING } from "../../lib/layout";
 
 const cardSx = {
   borderRadius: 4,
@@ -188,7 +189,7 @@ export function Component() {
       : `Share of all ${categoryFilter.toLowerCase()} in ${year} · ${eur(filterTotal)}`;
 
   return (
-    <Box sx={{ px: 3, pb: 5 }}>
+    <Box sx={{ ...PAGE_PADDING, pb: 5 }}>
       <GlobalStyles
         styles={{
           "@media print": {

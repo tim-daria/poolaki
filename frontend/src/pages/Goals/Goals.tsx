@@ -22,6 +22,7 @@ import { GoalSection } from "./GoalSection";
 import { NewGoalCard } from "./NewGoalCard";
 import { useAuth } from "../../context/useAuth";
 import { canEditGoal } from "../../lib/access";
+import { PAGE_PADDING } from "../../lib/layout";
 
 /** One section per state, in page order; Archived starts folded. */
 const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
@@ -68,7 +69,13 @@ function Goals() {
 
   return (
     <Box
-      sx={{ px: 3, pb: 5, display: "flex", flexDirection: "column", gap: 3 }}
+      sx={{
+        ...PAGE_PADDING,
+        pb: 5,
+        display: "flex",
+        flexDirection: "column",
+        gap: 3,
+      }}
     >
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>

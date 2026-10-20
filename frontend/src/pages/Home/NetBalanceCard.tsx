@@ -6,7 +6,7 @@ import { Money } from "../../components/Money";
 import { useElementSize } from "../../hooks/useElementSize";
 import { shortDate } from "../../lib/date";
 import { compactAmount, displayFigure, splitCents } from "../../lib/money";
-import { DESKTOP_QUERY } from "./layout";
+import { DESKTOP_QUERY } from "../../lib/layout";
 
 interface Props {
   balance: number;

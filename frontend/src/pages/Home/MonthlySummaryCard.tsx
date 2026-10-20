@@ -5,7 +5,7 @@ import { Money } from "../../components/Money";
 import { displayAmount, displayFigure } from "../../lib/money";
 import { monthFooter, type MonthSummary } from "../../lib/overview";
 import { HomeCardAction } from "./HomeCard";
-import { DESKTOP } from "./layout";
+import { DESKTOP } from "../../lib/layout";
 
 interface Props {
   summary: MonthSummary;
