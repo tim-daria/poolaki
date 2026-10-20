@@ -44,7 +44,6 @@ export function OrgSwitcher() {
         endIcon={
           <KeyboardArrowDownIcon
             sx={{
-              fontSize: "16px !important",
               color: "text.secondary",
               transition: (theme) => theme.transitions.create("transform"),
               transform: anchor ? "rotate(180deg)" : "none",
@@ -70,6 +69,9 @@ export function OrgSwitcher() {
           "& .MuiButton-endIcon": {
             m: 0,
             flexShrink: 0,
+            // MUI sizes the icon from this span, so the override lives here
+            // too; set on the icon itself it loses on specificity.
+            "& > *:nth-of-type(1)": { fontSize: 16 },
           },
         }}
       >
