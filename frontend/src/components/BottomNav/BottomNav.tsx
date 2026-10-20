@@ -4,7 +4,7 @@
 import { NavLink } from "react-router";
 import { Box, ButtonBase, Paper } from "@mui/material";
 import { NAV_ITEMS } from "./navItems";
-import { TABLET } from "../../lib/layout";
+import { PRINT, TABLET } from "../../lib/layout";
 
 /** Shell bottom bar height, without the home-indicator inset. */
 export const bottomNavHeight = 64;
@@ -26,6 +26,7 @@ export function BottomNav() {
         boxSizing: "content-box",
         borderTop: "1px solid",
         borderColor: "divider",
+        [PRINT]: { display: "none" },
       }}
     >
       {NAV_ITEMS.map((item) => (
