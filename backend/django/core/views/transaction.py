@@ -1,3 +1,5 @@
+"""API views for listing, creating, updating, and deleting transactions."""
+
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -8,7 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Organization, Transaction, User
+from core.models import EntryType, GoalStatus, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -148,11 +150,13 @@ class TransactionGetDeleteView(APIView):
         DELETE
         Deletes the requested transaction. Income transactions can be deleted only
         when the organization's current balance is sufficient to cancel the income.
+        Transactions associated with archived goals cannot be deleted.
 
     Returns:
         - 204 No content for successful DELETE requests.
         - 400 Bad Request when an income transaction cannot be cancelled because
-                the organization's balance is insufficient.
+                the organization's balance is insufficient or the transaction is
+                associated with an archived goal.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -222,11 +226,16 @@ class TransactionGetDeleteView(APIView):
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
         with db_transaction.atomic():
             transaction = get_object_or_404(
-                Transaction,
+                Transaction.objects.select_related("goal"),
                 id=transaction_id,
                 org_id=org_id,
                 created_by=request.user,
             )
+            if transaction.goal is not None and transaction.goal.status == GoalStatus.ARCHIVED:
+                return Response(
+                    {"detail": "Cannot delete transactions associated with archived goals."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             # Check for negative organization balance after deleting transaction entry
             # org = get_object_or_404(
             #     Organization.objects.select_for_update(),

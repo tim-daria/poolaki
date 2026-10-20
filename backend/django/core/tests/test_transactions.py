@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from core.models import (
     Category,
     CategoryType,
+    EntryType,
     Goal,
     GoalStatus,
     Membership,
@@ -264,6 +265,14 @@ def test_member_can_make_withdrawal_from_active_goal(
         target_date="2026-12-31",
         status=GoalStatus.ACTIVE,
     )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=member,
+        entry_type="contribution",
+        amount=Decimal("125.50"),
+        goal=goal,
+        transaction_date="2026-08-11",
+    )
     api_client.force_authenticate(user=member)
 
     response = api_client.post(
@@ -274,6 +283,105 @@ def test_member_can_make_withdrawal_from_active_goal(
 
     assert response.status_code == 201
     assert Transaction.objects.get(id=response.data["id"]).entry_type == "withdraw"
+
+
+def test_withdrawal_cannot_exceed_goal_balance(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="contribution",
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-11",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="withdraw", amount="100.01", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == ["Withdrawal amount cannot exceed the goal balance."]
+    assert not Transaction.objects.filter(goal=goal, entry_type=EntryType.WITHDRAW).exists()
+
+
+def test_withdrawal_can_equal_goal_balance(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="contribution",
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-11",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="withdraw", amount="100.00", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Transaction.objects.get(id=response.data["id"]).entry_type == EntryType.WITHDRAW
+
+
+def test_withdrawal_uses_balance_after_prior_withdrawals(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="contribution",
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-11",
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type="withdraw",
+        amount=Decimal("40.00"),
+        goal=goal,
+        transaction_date="2026-08-12",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        transactions_url(shared_org.id),
+        transaction_payload(entry_type="withdraw", amount="60.01", goal_id=goal.id),
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == ["Withdrawal amount cannot exceed the goal balance."]
 
 
 @pytest.mark.parametrize(
@@ -908,6 +1016,33 @@ def test_member_can_delete_income_when_balance_is_sufficient(
 
     assert response.status_code == 204
     assert not Transaction.objects.filter(id=transaction.id).exists()
+
+
+def test_member_cannot_delete_transaction_associated_with_archived_goal(
+    api_client: APIClient, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Archived trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ARCHIVED,
+    )
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        goal=goal,
+        created_by=member,
+        entry_type="expense",
+        amount=Decimal("25.00"),
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=member)
+
+    response = api_client.delete(transaction_url(shared_org.id, transaction.id))
+
+    assert response.status_code == 400
+    assert response.data == {"detail": "Cannot delete transactions associated with archived goals."}
+    assert Transaction.objects.filter(id=transaction.id).exists()
 
 
 # def test_member_cannot_delete_income_when_balance_is_insufficient(
