@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app.api.chat import router as chat_router
 from app.api.health import router as health_router
-from app.clients.django import MockDjangoClient
+from app.clients.django import DjangoClient
 from app.clients.llm import LLMClient
 from app.config.logging import configure_logging
 from app.db import close_db_pool, init_db_pool
@@ -32,7 +32,7 @@ llm_client = LLMClient()
 
 intention_service = IntentionService(llm_client)
 
-django_client = MockDjangoClient()
+django_client = DjangoClient()
 document_repository = MockDocumentRepository()
 
 retriever = MockRetriever(

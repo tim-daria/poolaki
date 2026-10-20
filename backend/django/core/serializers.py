@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, cast
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from core.models import (
@@ -472,7 +473,6 @@ class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     category_id = serializers.IntegerField()
     name = serializers.CharField()
-    # Contribution rows are excluded from the report for now
     type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
     total = serializers.DecimalField(max_digits=14, decimal_places=2)
     monthly = serializers.ListField(
@@ -492,3 +492,40 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
     goal_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):
+    """Inside internal endpoints user and org arrive
+    in the body (service-to-service convention), not in the session or URL."""
+
+    user_id = serializers.IntegerField()
+    organization_id = serializers.IntegerField()
+    year = serializers.IntegerField(
+        min_value=1900, max_value=2099, default=lambda: timezone.now().year
+    )
+
+
+class AiAnalyticsSummaryResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField()
+    balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    totals = ReportAmountsSerializer()
+    months = ReportMonthlySerializer(many=True)
+
+
+class AiCategoriesResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    year = serializers.IntegerField()
+    categories = ReportCategorySerializer(many=True)
+
+
+class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    description = serializers.CharField(allow_null=True)
+    entry_type = serializers.ChoiceField(choices=EntryType.choices)
+    category = serializers.CharField(allow_null=True)
+    goal = serializers.CharField(allow_null=True)
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class AiTransactionsResponseSerializer(serializers.Serializer[dict[str, Any]]):
+    transactions = AiTransactionSerializer(many=True)
