@@ -4,7 +4,8 @@ All endpoints in this document require authentication.
 
 ## Transactions endpoints
 
-Transactions are linked to an organization and can represent income, expenses, or goal contributions.
+Transactions are linked to an organization and can represent income, expenses,
+or transfers to and from goals.
 
 ### List transactions
 
@@ -19,12 +20,14 @@ Query parameters (all optional):
 
 - `entry_type`: `all` (default), `income`, `expense`, `contribution` or `withdraw` —
   the selected tab/column; every other parameter keeps working with it
+- `q`: case-insensitive substring search in the description or category name
+  (maximum 100 characters)
 - `date_from` / `date_to`: inclusive ISO date bounds on `transaction_date`
 - `category_id`: one category ID or a comma-separated list of them (e.g.
   `3,7`); rows in any listed category are returned, rows without a category
   are excluded
-- `goal_id`: ID of a goal belonging to the organization; matches both its
-  contributions and its expenses
+- `goal_id`: ID of a goal belonging to the organization; matches every
+  transaction linked to that goal
 - `tax_deductible`: `true` keeps only tax-deductible rows
 - `sort`: `newest` (default) or `oldest`; ties within a day are broken by `id`
 - `page`: 1-based page number, default `1`
@@ -53,12 +56,18 @@ Response example:
   "page": 1,
   "page_size": 15,
   "page_count": 3,
-  "counts": { "all": 42, "income": 5, "expense": 30, "contribution": 7 }
+  "counts": {
+    "all": 42,
+    "income": 5,
+    "expense": 30,
+    "contribution": 7,
+    "withdraw": 0
+  }
 }
 ```
 
-`counts` is the filtered set (date / category / goal / tax filters) split by
-entry type — one number per toggle. The selected toggle (`entry_type`) picks
+`counts` is the filtered set (search / date / category / goal / tax filters)
+split by entry type — one number per toggle. The selected toggle (`entry_type`) picks
 its part for the table: `total` is that part's size, `transactions` one page
 of it (`page` / `page_size` / `page_count`). Switching the toggle only
 changes the table; a page past `page_count` is an empty list, not an error.
@@ -81,8 +90,9 @@ Mandatory parameters:
 - `entry_type` (`income`, `expense`, `contribution`, `withdraw`)
 - `amount`
 - `transaction_date` (YYYY-MM-DD)
-- `category_id` — required for `income` and `expense`; `contribution` may be
-  uncategorized
+- `category_id` — required for `income` and `expense`; optional for
+  `contribution` and not applicable to `withdraw`
+- `goal_id` — required for `contribution` and `withdraw`
 
 Request body:
 
@@ -118,19 +128,23 @@ Response example:
 
 Rules:
 
-- `goal_id` must belong to the organization and cannot be set on an
-  `income` transaction (allowed on `expense` and `contribution`)
-- `category_id` must belong to the organization and its type must match
-  `entry_type`
-- A `withdraw` transaction must be linked to an active goal and its amount
-  cannot exceed the goal's current balance
+- `goal_id` and `category_id`, when supplied, must belong to the organization.
+- `category_id` must have the same type as `entry_type`; contribution
+  transactions may therefore use a contribution category, while withdrawals
+  cannot have a category.
+- An `income` transaction cannot be linked to a goal.
+- A `contribution` or `withdraw` transaction must be linked to an active goal.
+- An `expense` can be linked to a completed goal or to an active goal without
+  a target date. It cannot be linked to an archived goal or to an active goal
+  with a target date.
+- A `withdraw` transaction cannot exceed the goal's current balance.
 
 Status:
 
 - `201 Created` on success
 - `400 Bad Request` when a rule above is violated, including when a withdrawal
   exceeds the goal's current balance
-- `403 Forbidden` when the user is not the organization owner
+- `403 Forbidden` when the user is not a member of the organization
 
 Side effect (see [notifications.md](notifications.md)): every other member of
 the organization receives a `transaction_added` notification; the creator is
@@ -166,7 +180,60 @@ Status:
 
 - `200 OK` on success
 - `404 Not Found` for invalid transaction_id
-- `403 Forbidden` when the user is not the organization owner
+- `403 Forbidden` when the user is not a member of the organization
+
+### Update transaction
+
+```http
+PATCH /api/v1/organizations/{org_id}/transactions/{transaction_id}/
+```
+
+The transaction creator can partially update these fields:
+
+- `amount`
+- `description`
+- `transaction_date`
+- `is_tax_deductible`
+- `category_id`
+
+`entry_type` and `goal_id` cannot be changed after creation. A category, when
+set, must belong to the organization and match the transaction's entry type.
+Income and expense transactions cannot have their category cleared. Category
+clearing is allowed for contribution and withdraw transactions.
+
+Changing `amount` on a goal transaction must preserve the goal balance
+invariant. A withdrawal cannot exceed the resulting balance; an archived goal
+must retain a resulting balance of zero.
+
+Response example:
+
+```json
+{
+  "transaction": {
+    "id": 1,
+    "org_id": 2,
+    "goal_id": null,
+    "category_id": 4,
+    "entry_type": "expense",
+    "amount": "125.50",
+    "description": "Groceries",
+    "transaction_date": "2026-08-12",
+    "is_tax_deductible": false,
+    "created_by": "alice",
+    "created_at": "2026-08-20T10:40:28.139486+02:00"
+  }
+}
+```
+
+Status:
+
+- `200 OK` on success
+- `400 Bad Request` for invalid fields, a category from another organization,
+  a category with the wrong type, or a change that violates the goal balance
+  invariant
+- `403 Forbidden` when the user is not a member of the organization
+- `404 Not Found` when the transaction does not belong to the requesting user
+  or organization
 
 ### Delete transaction
 
@@ -176,19 +243,22 @@ DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 
 Status:
 - `204 No Content` on successful deletion
-- `400 Bad Request` if deleting or updating a goal transaction would violate
-  the goal balance invariant
+- `400 Bad Request` if deleting a contribution or withdraw would violate the
+  goal balance invariant, or if the transaction belongs to an archived goal
 - `404 Not Found` when the transaction does not belong to the requesting user
   or organization
 
-Transactions associated with archived goals cannot be deleted.
+Only the transaction creator can delete a transaction. Deleting a contribution
+or withdraw must leave the goal balance valid. Transactions associated with
+archived goals cannot be deleted. Deleting an income transaction is not
+restricted by the organization's balance.
 
 ## Frontend integration notes
 
 The Transactions page consumes the list endpoint through
 `fetchTransactionPage` (`frontend/src/lib/transactions.ts`): it sends the
 active filters (`entry_type`, `q`, `date_from`, `date_to`, `category_id`,
-`tax_deductible`, `sort`) and `page` / `page_size` as query parameters,
+`goal_id`, `tax_deductible`, `sort`) and `page` / `page_size` as query parameters,
 renders the pager from `total` / `page_count`, and takes the tab badges from
 `counts`. Only parameters that differ from the backend defaults are sent.
 
