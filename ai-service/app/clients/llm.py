@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 from app.config.settings import settings
+from models.usage import LLMUsage
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class LLMClient:
             },
         )
 
-    async def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, prompt: str) -> tuple[str, LLMUsage]: 
         models = [settings.llm_model]
 
         if settings.llm_fallback_model:
@@ -61,6 +62,12 @@ class LLMClient:
                     if not content:
                         raise LLMClientError("LLM response missing content")
 
+                    raw_usage = data.get("usage") or {}
+                    llm_usage = LLMUsage(
+                        input_tokens=raw_usage.get("prompt_tokens", 0),
+                        output_tokens=raw_usage.get("completion_tokens", 0),
+                    )
+
                     logger.info(
                         "LLM response successful",
                         extra={
@@ -73,7 +80,7 @@ class LLMClient:
                         },
                     )
 
-                    return content
+                    return content, llm_usage
 
                 except httpx.TimeoutException as exc:
                     last_error = exc

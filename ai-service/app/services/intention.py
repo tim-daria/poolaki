@@ -34,7 +34,9 @@ Classify the following financial question into exactly one of these intents:
 - unsupported: goals, investment advice, external data (e.g. crypto prices), bank import, future predictions, weekly or daily granularity, questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?").
 
 Question:
+<question>
 {question}
+</question>
 
 Return only the intent name.
 """
@@ -45,7 +47,7 @@ Return only the intent name.
 
 
         try:
-            return Intent(result.strip().lower())
+            return Intent(result.strip().lower().strip(".\"'`"))
         except ValueError:
             logger.warning("intent_unrecognized", extra={"raw": result[:50]})
             return Intent.UNSUPPORTED

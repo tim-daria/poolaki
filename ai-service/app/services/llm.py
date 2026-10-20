@@ -53,10 +53,12 @@ class LLMService:
             intent=intent, #Enum
         )
 
-        context = self._context_builder.build_context(retrieval_result, usage, today=date.today())
+        today = date.today()
+        context = self._context_builder.build_context(retrieval_result, usage, today=today)
 
         prompt = self._prompt_builder.build(
             user_question=question,
+            today=today.isoformat(),
             context=context,
         )
 

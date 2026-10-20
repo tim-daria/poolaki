@@ -1,4 +1,4 @@
-from datetime import date
+import re
 from pathlib import Path
 
 from app.services.context_builder import NO_CONTEXT
@@ -22,15 +22,21 @@ class PromptBuilder:
 
     def build(
         self,
+        today: str,
         user_question: str,
         context: str = "",
     ) -> str:
-        formatted_context = context if context.strip() else NO_CONTEXT
+
+        values = {
+            "current_date": today,
+            "context": context if context.strip() else NO_CONTEXT,
+            "user_question": user_question,
+        }
 
         prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
-        return (
-            prompt.replace("{{user_question}}""{{current_date}}", date.today().isoformat())
-            .replace("{{user_question}}", user_question)
-            .replace("{{context}}", formatted_context)
+        return re.sub(
+            r"\{\{(\w+)\}\}",
+            lambda m: values.get(m.group(1), m.group(0)),
+            prompt,
         )
