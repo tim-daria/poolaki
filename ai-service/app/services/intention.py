@@ -6,10 +6,16 @@ from app.clients.llm import LLMClient
 
 
 class Intent(str, Enum):
-    MONTHLY_SUMMARY = "monthly_summary"
-    RECENT_TRANSACTIONS = "recent_transactions"
-    GOAL_PROGRESS = "goal_progress"
+    MONTHLY_SUMMARY = "monthly_summary"         # analytics/summary
+    CATEGORY_SPENDING = "category_spending"     # categories
+    TRANSACTIONS = "transactions"               # transactions
+    UNSUPPORTED = "unsupported"
 
+ENDPOINT_BY_INTENT = {
+    Intent.MONTHLY_SUMMARY: "analytics/summary",
+    Intent.CATEGORY_SPENDING: "categories",
+    Intent.TRANSACTIONS: "transactions",
+}
 
 class IntentionService:
     def __init__(self, llm_client: LLMClient):
@@ -19,9 +25,10 @@ class IntentionService:
         prompt = f"""
 Classify the following financial question into exactly one of these intents:
 
-- monthly_summary
-- recent_transactions
-- goal_progress
+- monthly_summary: income/expense totals per month, balance, averages, month-to-month comparison, shared/organization spending.
+- category_spending: spending/income by category, biggest category, list of categories, which category fits a transaction.
+- transactions: top/largest expenses, last expense, listing recent transactions.
+- unsupported: goals, investment advice, external data (e.g. crypto prices), bank import, future predictions, weekly or daily granularity, questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?").
 
 Question:
 {question}
