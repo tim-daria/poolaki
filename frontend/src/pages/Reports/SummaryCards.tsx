@@ -2,11 +2,9 @@
 
 import { Box, Paper, Typography } from "@mui/material";
 import type { YearlyReportResponse } from "../../lib/reports";
-import { displayAmount, parseMoney } from "../../lib/money";
+import { displayAmount, displayFigure, parseMoney } from "../../lib/money";
 import { TABLET } from "../../lib/layout";
 import { Money } from "../../components/Money";
-
-const euros = (n: number) => `€${displayAmount(n)}`;
 
 interface SummaryCardsProps {
   totals: YearlyReportResponse["totals"];
@@ -20,9 +18,12 @@ function Tile({
   color,
 }: {
   label: string;
-  amount: string;
+  amount: number;
   color: "success.main" | "error.main" | "primary.main";
 }) {
+  // Compact past six digits, as every other figure on Home and Reports; the
+  // exact amount stays on hover and for assistive tech.
+  const exact = `€${displayAmount(amount)}`;
   return (
     <Paper
       component="section"
@@ -38,38 +39,43 @@ function Tile({
         variant="mono"
         sx={{ color, fontWeight: 500, display: "block" }}
       >
-        <Money>{amount}</Money>
+        <Money title={exact} aria-label={exact}>
+          €{displayFigure(amount)}
+        </Money>
       </Typography>
     </Paper>
   );
 }
 
+/** Room for "€999,9 Mrd." in the mono headline plus the card padding. */
+const TILE_MIN_WIDTH = 220;
+
 export function SummaryCards({ totals, setAside }: SummaryCardsProps) {
-  const tiles = setAside === null ? 2 : 3;
   return (
     <Box
       sx={{
         display: "grid",
         gap: 2,
         gridTemplateColumns: "minmax(0, 1fr)",
+        // Tiles only share a row when each gets room for a compact figure.
         [TABLET]: {
           gap: 3,
-          gridTemplateColumns: `repeat(${tiles}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(${TILE_MIN_WIDTH}px, 1fr))`,
         },
       }}
     >
       <Tile
         label="Income"
-        amount={euros(parseMoney(totals.income))}
+        amount={parseMoney(totals.income)}
         color="success.main"
       />
       <Tile
         label="Expenses"
-        amount={euros(parseMoney(totals.expense))}
+        amount={parseMoney(totals.expense)}
         color="error.main"
       />
       {setAside !== null && (
-        <Tile label="Set aside" amount={euros(setAside)} color="primary.main" />
+        <Tile label="Set aside" amount={setAside} color="primary.main" />
       )}
     </Box>
   );
