@@ -2,7 +2,6 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import cast
 
 from django.db import transaction
 
@@ -10,13 +9,12 @@ from core.models import (
     EntryType,
     Goal,
     GoalStatus,
-    Membership,
     NotificationType,
     Organization,
     User,
 )
 from core.services.balance import annotate_goal_balance, calculate_goal_balance
-from core.services.notification import notify_users
+from core.services.notification import notify_org_members_except
 from core.services.transaction import create_transaction_entry
 
 
@@ -38,17 +36,15 @@ def allowed_entry_types(goal: Goal) -> set[EntryType]:
 
 def _notify_goal_event(goal: Goal, org: Organization, actor: User, ntype: NotificationType) -> None:
     """Notify every member of the goal's organization except the actor."""
-    notify_users(
-        list(
-            Membership.objects.filter(org=org).exclude(user=actor).values_list("user_id", flat=True)
-        ),
+    notify_org_members_except(
+        org,
+        actor,
         ntype,
         {
             "org_name": org.name,
             "user": actor.username,
             "goal_name": goal.name,
         },
-        org=org,
     )
 
 
@@ -119,13 +115,19 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
 
 
 @transaction.atomic
-def create_goal(org: Organization, user: User, data: dict[str, object]) -> Goal:
+def create_goal(
+    org: Organization,
+    user: User,
+    name: str,
+    target_amount: Decimal,
+    target_date: date | None,
+) -> Goal:
     """Create an active goal and notify every other member of the organization."""
     goal = Goal.objects.create(
         org=org,
-        name=cast(str, data["name"]),
-        target_amount=cast(Decimal, data["target_amount"]),
-        target_date=cast(date | None, data["target_date"]),
+        name=name,
+        target_amount=target_amount,
+        target_date=target_date,
         status=GoalStatus.ACTIVE,
         created_by=user,
     )

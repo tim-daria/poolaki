@@ -48,7 +48,14 @@ class GoalListCreateView(APIView):
         serializer = GoalCreateSerializer(data=request.data, context={"org_id": org_id})
         serializer.is_valid(raise_exception=True)
         org = get_object_or_404(Organization, pk=org_id)
-        goal = create_goal(org, request.user, serializer.validated_data)
+        data = serializer.validated_data
+        goal = create_goal(
+            org,
+            request.user,
+            name=data["name"],
+            target_amount=data["target_amount"],
+            target_date=data["target_date"],
+        )
         return Response(GoalResponseSerializer(goal).data, status=status.HTTP_201_CREATED)
 
 
