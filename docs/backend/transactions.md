@@ -122,11 +122,14 @@ Rules:
   `income` transaction (allowed on `expense` and `contribution`)
 - `category_id` must belong to the organization and its type must match
   `entry_type`
+- A `withdraw` transaction must be linked to an active goal and its amount
+  cannot exceed the goal's current balance
 
 Status:
 
 - `201 Created` on success
-- `400 Bad Request` when a rule above is violated
+- `400 Bad Request` when a rule above is violated, including when a withdrawal
+  exceeds the goal's current balance
 - `403 Forbidden` when the user is not the organization owner
 
 Side effect (see [notifications.md](notifications.md)): every other member of
@@ -174,8 +177,11 @@ DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 Status:
 - `204 No Content` on successful deletion
 - `400 Bad Request` if the balance is insufficient to cancel income transaction
+  or the transaction is associated with an archived goal
 - `403 Forbidden` when the user is not the organization owner
 - `404 Not Found` for invalid transaction_id
+
+Transactions associated with archived goals cannot be deleted.
 
 ## Frontend integration notes
 

@@ -281,7 +281,9 @@ Status:
 GET /api/v1/organizations/{org_id}/goals/{goal_id}/balance/
 ```
 
-Returns the current balance for the goal based on the transactions linked to it. The balance represents the total contributions assigned to the goal and is used to track progress toward the target amount.
+Returns the current net balance for the goal based on the transactions linked to
+it. Contributions increase the balance, while withdrawals and expenses decrease
+it. The balance is used to track progress toward the target amount.
 
 Response example:
 
@@ -436,9 +438,12 @@ All organization members can make a withdrawal.
 Status:
 
 - `201 Created` on success
-- `400 Bad Request` when the goal is not active or validation fails
+- `400 Bad Request` when the goal is not active, the withdrawal exceeds the
+  current goal balance, or validation fails
 - `403 Forbidden` when the user is not allowed to withdraw from the goal
 - `404 Not Found` when the goal does not exist in the organization
+
+A withdrawal amount may equal the current goal balance but cannot exceed it.
 
 ### Make expense
 
