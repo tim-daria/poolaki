@@ -251,12 +251,17 @@ class TransactionGetDeleteView(APIView):
     def delete(self, request: Request, org_id: int, transaction_id: int) -> Response:
         with db_transaction.atomic():
             transaction = get_object_or_404(
-                Transaction.objects.select_related("goal"),
+                Transaction.objects,
                 id=transaction_id,
                 org_id=org_id,
                 created_by=request.user,
             )
-            if transaction.goal is not None and transaction.goal.status == GoalStatus.ARCHIVED:
+            goal = (
+                Goal.objects.select_for_update().get(pk=transaction.goal_id)
+                if transaction.goal_id is not None
+                else None
+            )
+            if goal is not None and goal.status == GoalStatus.ARCHIVED:
                 return Response(
                     {"detail": "Cannot delete transactions associated with archived goals."},
                     status=status.HTTP_400_BAD_REQUEST,
