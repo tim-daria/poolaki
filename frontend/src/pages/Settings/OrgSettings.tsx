@@ -145,6 +145,7 @@ function WorkspaceSettings({ org }: { org: Organization }) {
         err instanceof WorkspaceRequestError
           ? err.message
           : "Could not leave the workspace",
+        "error",
       );
       setBusy(false);
       setLeaving(null);
@@ -347,6 +348,7 @@ function MembersSection({
         err instanceof WorkspaceRequestError
           ? err.message
           : "Could not cancel the invitation",
+        "error",
       );
     } finally {
       reload();
@@ -368,6 +370,7 @@ function MembersSection({
         err instanceof WorkspaceRequestError
           ? err.message
           : `Could not remove ${removing.username}`,
+        "error",
       );
     } finally {
       reload();

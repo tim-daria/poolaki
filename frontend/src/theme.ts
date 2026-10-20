@@ -230,6 +230,8 @@ export const theme = createTheme({
       // The icon column is laid out against the first line of the message
       // rather than the whole block: `1lh` box with its own padding keeps a
       // one-line alert centred and a wrapping one top-aligned with its text.
+      // The column inherits the message font size so `1lh` is the text line,
+      // not the icon's own 22px line; the glyph size moves to the svg.
       // Centralised here so no Alert has to repeat it in `sx`.
       styleOverrides: {
         icon: {
@@ -238,6 +240,8 @@ export const theme = createTheme({
           height: "1lh",
           boxSizing: "content-box",
           alignItems: "center",
+          fontSize: "inherit",
+          "& > svg": { fontSize: 22 },
         },
       },
     },

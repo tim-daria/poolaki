@@ -1,22 +1,24 @@
 /**
- * @file One Snackbar for the whole app, so every modal confirms success the
- * same way instead of each rendering its own.
+ * @file One Snackbar for the whole app, so every modal reports success or
+ * failure the same way instead of each rendering its own.
  */
 
 import { useState, type ReactNode } from "react";
 import { Alert, Snackbar } from "@mui/material";
-import { ToastContext } from "./ToastContext";
+import { ToastContext, type ToastSeverity } from "./ToastContext";
 
 /** Long enough to read, short enough not to need dismissing. */
 const AUTO_HIDE_MS = 4000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  // Kept after close so the text does not blank out during the fade.
+  // Kept after close so the text and colour do not change during the fade.
   const [message, setMessage] = useState("");
+  const [severity, setSeverity] = useState<ToastSeverity>("success");
 
-  const showToast = (next: string) => {
+  const showToast = (next: string, nextSeverity: ToastSeverity = "success") => {
     setMessage(next);
+    setSeverity(nextSeverity);
     setOpen(true);
   };
 
@@ -32,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          severity="success"
+          severity={severity}
           variant="filled"
           onClose={() => setOpen(false)}
           sx={{ width: "100%" }}
