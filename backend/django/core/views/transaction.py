@@ -3,6 +3,7 @@
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 # from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -10,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, GoalStatus, Organization, Transaction, User
+from core.models import EntryType, Goal, GoalStatus, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -18,6 +19,8 @@ from core.serializers import (
     TransactionResponseSerializer,
     TransactionUpdateSerializer,
 )
+from core.services.balance import calculate_goal_balance
+from core.services.goal import allowed_entry_types
 
 # from core.services.balance import calculate_org_balance
 from core.services.transaction import (
@@ -111,17 +114,39 @@ class TransactionListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         org = get_object_or_404(Organization, pk=org_id)
         data = serializer.validated_data
-        transaction = create_transaction_entry(
-            org=org,
-            created_by=request.user,
-            category_id=data.get("category_id").pk if data.get("category_id") else None,
-            goal_id=data.get("goal_id").pk if data.get("goal_id") else None,
-            entry_type=data["entry_type"],
-            amount=data["amount"],
-            description=data.get("description"),
-            transaction_date=data["transaction_date"],
-            is_tax_deductible=data["is_tax_deductible"],
-        )
+        goal = data.get("goal_id")
+        if data["entry_type"] == EntryType.WITHDRAW and isinstance(goal, Goal):
+            with db_transaction.atomic():
+                locked_goal = Goal.objects.select_for_update().get(pk=goal.pk)
+                if data["entry_type"] not in allowed_entry_types(locked_goal):
+                    raise ValidationError("Withdrawals can only be made from active goals.")
+                if data["amount"] > calculate_goal_balance(locked_goal):
+                    raise ValidationError(
+                        {"amount": ("Withdrawal amount cannot exceed the goal balance.",)}
+                    )
+                transaction = create_transaction_entry(
+                    org=org,
+                    created_by=request.user,
+                    category_id=data.get("category_id").pk if data.get("category_id") else None,
+                    goal_id=locked_goal.pk,
+                    entry_type=data["entry_type"],
+                    amount=data["amount"],
+                    description=data.get("description"),
+                    transaction_date=data["transaction_date"],
+                    is_tax_deductible=data["is_tax_deductible"],
+                )
+        else:
+            transaction = create_transaction_entry(
+                org=org,
+                created_by=request.user,
+                category_id=data.get("category_id").pk if data.get("category_id") else None,
+                goal_id=goal.pk if isinstance(goal, Goal) else None,
+                entry_type=data["entry_type"],
+                amount=data["amount"],
+                description=data.get("description"),
+                transaction_date=data["transaction_date"],
+                is_tax_deductible=data["is_tax_deductible"],
+            )
 
         return Response(
             TransactionResponseSerializer(transaction).data,

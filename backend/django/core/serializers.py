@@ -15,7 +15,7 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import calculate_goal_balance, get_annotated_goal_balance
+from core.services.balance import get_annotated_goal_balance
 from core.services.goal import allowed_entry_types
 
 
@@ -238,17 +238,6 @@ class TransactionCreateSerializer(serializers.Serializer[Transaction]):
                 ),
             }
             raise serializers.ValidationError({"goal_id": (error_messages[str(entry_type)],)})
-
-        amount = attrs["amount"]
-        if (
-            entry_type == EntryType.WITHDRAW
-            and isinstance(goal, Goal)
-            and isinstance(amount, Decimal)
-            and amount > calculate_goal_balance(goal)
-        ):
-            raise serializers.ValidationError(
-                {"amount": ("Withdrawal amount cannot exceed the goal balance.",)}
-            )
 
         return attrs
 

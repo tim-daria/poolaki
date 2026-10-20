@@ -1,6 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 
 import pytest
+from django.db import close_old_connections
+from django.db.models import Sum
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -18,6 +21,7 @@ from core.models import (
     Transaction,
     User,
 )
+from core.services.balance import calculate_goal_balance
 
 pytestmark = pytest.mark.django_db
 
@@ -344,6 +348,46 @@ def test_withdrawal_can_equal_goal_balance(
 
     assert response.status_code == 201
     assert Transaction.objects.get(id=response.data["id"]).entry_type == EntryType.WITHDRAW
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_withdrawals_cannot_overdraw_goal(owner: User, shared_org: Organization) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type=EntryType.CONTRIBUTION,
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-11",
+    )
+
+    def withdraw(_: int) -> int:
+        close_old_connections()
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        response = client.post(
+            transactions_url(shared_org.id),
+            transaction_payload(entry_type=EntryType.WITHDRAW, amount="100.00", goal_id=goal.id),
+            format="json",
+        )
+        close_old_connections()
+        return response.status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        statuses = list(executor.map(withdraw, range(2)))
+
+    assert sorted(statuses) == [201, 400]
+    assert Transaction.objects.filter(goal=goal, entry_type=EntryType.WITHDRAW).aggregate(
+        total=Sum("amount")
+    )["total"] == Decimal("100.00")
+    assert calculate_goal_balance(Goal.objects.get(pk=goal.pk)) == Decimal("0.00")
 
 
 def test_withdrawal_uses_balance_after_prior_withdrawals(
