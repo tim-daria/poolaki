@@ -29,11 +29,6 @@ describe("date", () => {
     expect(shortDate("2027-01-01")).toBe("1 Jan 2027");
   });
 
-  it("fullDate always includes the year", async () => {
-    const { fullDate } = await loadWithClock("2026-03-15T12:00:00Z");
-    expect(fullDate("2026-08-05")).toBe("5 Aug 2026");
-  });
-
   it("monthHeading names the month, with the year only outside the current one", async () => {
     const { monthHeading } = await loadWithClock("2026-03-15T12:00:00Z");
     expect(monthHeading("2026-07-01")).toBe("July");
@@ -50,5 +45,21 @@ describe("date", () => {
   it("monthName is the long English month", async () => {
     const { monthName } = await loadWithClock("2026-03-15T12:00:00Z");
     expect(monthName("2026-08-31")).toBe("August");
+  });
+
+  it("monthBounds spans the first to the last day, whatever the month's length", async () => {
+    const { monthBounds } = await loadWithClock("2026-03-15T12:00:00Z");
+    expect(monthBounds("2026-10-18")).toEqual({
+      from: "2026-10-01",
+      to: "2026-10-31",
+    });
+    expect(monthBounds("2028-02-10")).toEqual({
+      from: "2028-02-01",
+      to: "2028-02-29",
+    });
+    expect(monthBounds("2026-12-31")).toEqual({
+      from: "2026-12-01",
+      to: "2026-12-31",
+    });
   });
 });

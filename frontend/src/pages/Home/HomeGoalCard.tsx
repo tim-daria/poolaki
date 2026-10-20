@@ -1,32 +1,43 @@
 /** @file Goal card: the active goal closest to completion, or an invitation to create the first one. */
 
-import { Box, Button, LinearProgress, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  LinearProgress,
+  Stack,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 import { Money } from "../../components/Money";
-import type { Goal } from "../../lib/goals";
+import { targetReached, type Goal } from "../../lib/goals";
 import { displayWhole } from "../../lib/money";
 import { activeGoals, closestGoal, goalPercent } from "../../lib/overview";
-import { HomeCard, HomeCardAction } from "./HomeCard";
+import { TitledCard, CardAction } from "../../components/Card/Card";
 import { TABLET } from "../../lib/layout";
 
 interface Props {
   goals: Goal[];
   onCreateGoal: () => void;
+  /** Placement in the page grid. */
+  sx?: SxProps<Theme>;
 }
 
-export function HomeGoalCard({ goals, onCreateGoal }: Props) {
+export function HomeGoalCard({ goals, onCreateGoal, sx }: Props) {
   const active = activeGoals(goals);
   const goal = closestGoal(goals);
 
   if (!goal) {
     return (
-      <HomeCard title="Goal" sx={{ [TABLET]: { flex: 1 } }}>
-        <Stack spacing={1.5}>
-          <Typography sx={{ fontWeight: 600 }}>
+      <TitledCard title="Goal" sx={sx}>
+        {/* One line and a button: the same height as the filled state, so
+            the sidebar does not jump when the first goal is created. */}
+        <Stack
+          spacing={1}
+          sx={{ alignItems: "center", [TABLET]: { my: "auto" } }}
+        >
+          <Typography sx={{ color: "text.secondary", textAlign: "center" }}>
             Save toward something
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            A trip, a new laptop, an emergency fund. Set an amount and watch it
-            fill up as you save.
           </Typography>
           <Button
             variant="outlined"
@@ -34,31 +45,30 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
             sx={{
               minHeight: 44,
               fontWeight: 600,
-              alignSelf: { xs: "stretch", sm: "flex-start" },
+              width: { xs: "100%", sm: "auto" },
             }}
           >
             Create a goal
           </Button>
         </Stack>
-      </HomeCard>
+      </TitledCard>
     );
   }
 
   const percent = goalPercent(goal);
   const remaining = Math.max(0, goal.target_amount - goal.balance);
+  // Only active goals reach the card, so a full one is waiting to be
+  // marked completed: the copy says it is done rather than almost there.
+  const reached = targetReached(goal);
 
   return (
-    <HomeCard
-      title="Almost there"
+    <TitledCard
+      sx={sx}
+      title={reached ? "Goal reached" : "Almost there"}
       to="savings"
       action={
-        <HomeCardAction>
-          {active.length === 1 ? "Manage" : "All goals"}
-        </HomeCardAction>
+        <CardAction>{active.length === 1 ? "Manage" : "All goals"}</CardAction>
       }
-      // Fills its cell when paired with the spending card; the content
-      // centres in the extra room.
-      sx={{ [TABLET]: { flex: 1 } }}
     >
       <Stack spacing={1.25} sx={{ [TABLET]: { my: "auto" } }}>
         <Box
@@ -107,9 +117,15 @@ export function HomeGoalCard({ goals, onCreateGoal }: Props) {
           variant="body2"
           sx={{ color: "text.secondary", textAlign: "left" }}
         >
-          <Money>€{displayWhole(remaining)}</Money> to go · {percent}%
+          {reached ? (
+            "Ready to use"
+          ) : (
+            <>
+              <Money>€{displayWhole(remaining)}</Money> to go · {percent}%
+            </>
+          )}
         </Typography>
       </Stack>
-    </HomeCard>
+    </TitledCard>
   );
 }

@@ -16,15 +16,6 @@ function parseLocalDate(iso: string): Date {
   return new Date(`${iso}T00:00:00`);
 }
 
-/** "5 Aug 2026", always with the year. */
-export function fullDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${iso}T00:00:00`));
-}
-
 /** "5 Aug", with the year appended only when it is not the current one. */
 export function shortDate(iso: string): string {
   const d = parseLocalDate(iso);
@@ -67,4 +58,11 @@ export function monthName(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { month: "long" }).format(
     new Date(`${iso}T00:00:00`),
   );
+}
+
+/** First and last day of the month `iso` falls in, as inclusive ISO bounds for the API. */
+export function monthBounds(iso: string): { from: string; to: string } {
+  const [y, m] = iso.split("-").map(Number);
+  // Day 0 of the next month is the last day of this one.
+  return { from: `${iso.slice(0, 7)}-01`, to: localIso(new Date(y, m, 0)) };
 }

@@ -9,6 +9,7 @@ from core.models import Membership, Organization, User
 from core.permissions import IsOrgMember, IsOrgOwner
 from core.serializers import (
     InitialBalanceSerializer,
+    OrganizationBalanceSerializer,
     OrganizationCreateSerializer,
     OrganizationNameSerializer,
 )
@@ -259,9 +260,6 @@ class OrganizationBalanceView(APIView):
         balance = calculate_org_balance(org)
 
         return Response(
-            {
-                "org_id": org_id,
-                "balance": balance,
-            },
+            OrganizationBalanceSerializer({"org_id": org_id, "balance": balance}).data,
             status=status.HTTP_200_OK,
         )

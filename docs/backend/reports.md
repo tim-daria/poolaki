@@ -68,7 +68,10 @@ Status:
 
 - **Yearly sections are income and expenses only.** Contribution and
   withdraw rows move money between cash and goals, so they never appear in
-  `totals`, `monthly` or `categories`.
+  `totals`, `monthly` or `categories`. The Home page takes this month's
+  income, expenses and the top-spending split from this endpoint, and its
+  savings figure from the month's `contribution` and `withdraw` rows via the
+  transactions list.
 - **`goal_balance` is the savings figure, net of withdrawals.** It is the
   current balance across all active and completed goals (contributions minus
   withdrawals and expenses paid from them). It is a "right now" snapshot: it
@@ -104,3 +107,6 @@ Status:
   month chart needs no extra request.
 - Amounts are strings with exactly 2 decimal places, same as the rest of the
   API.
+- **Sums have a scale, not a width.** A row is capped at 14 digits; a sum
+  of rows is not, so every total here (and the organization balance) is
+  serialized with two decimals and no digit limit.

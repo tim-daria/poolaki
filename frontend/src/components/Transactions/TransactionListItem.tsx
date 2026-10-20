@@ -51,7 +51,6 @@ export function TransactionList({ withPerson, children, sx }: ListProps) {
       sx={{
         containerType: "inline-size",
         containerName: "transaction-list",
-        height: "100%",
       }}
     >
       <Box

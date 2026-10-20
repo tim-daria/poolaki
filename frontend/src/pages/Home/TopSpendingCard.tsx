@@ -1,65 +1,77 @@
 /** @file Top spending card: this month's expenses as a donut of the top three categories plus Other. */
 
-import { Box, Stack, Typography, useTheme } from "@mui/material";
-import { Money } from "../../components/Money";
-import { displayFigure, displayWhole } from "../../lib/money";
 import {
-  donutShares,
-  shareLabel,
-  type SpendingSlice,
-} from "../../lib/overview";
-import { HomeCard, HomeCardAction } from "./HomeCard";
-import { TABLET } from "../../lib/layout";
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
+import { Money } from "../../components/Money";
+import { DonutChart } from "../../components/Charts/DonutChart";
+import { displayFigure, displayWhole } from "../../lib/money";
+import { shareLabel, type SpendingSlice } from "../../lib/overview";
+import {
+  TitledCard,
+  CardAction,
+  CardProblem,
+} from "../../components/Card/Card";
+import { DESKTOP, TABLET } from "../../lib/layout";
+import { REPORT_UNAVAILABLE } from "../../lib/reports";
 
 interface Props {
-  slices: SpendingSlice[];
+  /** Null when the report did not load; the card then says so. */
+  slices: SpendingSlice[] | null;
+  /**
+   * Placement in the page grid. On desktop the ring has no size of its own:
+   * the caller must give the card a definite height (Home's `1fr` grid row),
+   * or the ring collapses.
+   */
+  sx?: SxProps<Theme>;
 }
 
-/** The ring is this size everywhere; the legend takes what is left. */
+/** Ring size below desktop; on desktop it fills the row it is given. */
 const SIZE = 112;
-/** In viewBox units of 100; the stroke is ~13% of the box. */
-const STROKE = 13;
-const RADIUS = 50 - STROKE / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-/** Gap between segments, as a share of the ring; only with two or more. */
-const GAP = 0.02;
 
 /** Below this much content width the ring stacks over the legend. */
 const STACKED = "@container spending-card (max-width: 259px)";
 
-/** Room for the centre figure inside the hole, in viewBox units. */
-const HOLE_WIDTH = 66;
-/** Width of one glyph in the mono font, as a fraction of the font size. */
-const GLYPH_EM = 0.62;
-const FIGURE_MAX_SIZE = 14;
+const ringSx = {
+  flexShrink: 0,
+  width: SIZE,
+  height: SIZE,
+  // Stretches to the row; the size container keeps the ring out of the row's
+  // intrinsic height, so the sidebar never outgrows the card beside it.
+  [DESKTOP]: {
+    width: "auto",
+    height: "auto",
+    alignSelf: "stretch",
+    aspectRatio: "1 / 1",
+  },
+} as const;
 
-/** The largest size at which `text` fits the hole, capped so short figures keep the usual size. */
-function figureFontSize(text: string): number {
-  return Math.min(FIGURE_MAX_SIZE, HOLE_WIDTH / (text.length * GLYPH_EM));
-}
-
-export function TopSpendingCard({ slices }: Props) {
+export function TopSpendingCard({ slices, sx }: Props) {
   const theme = useTheme();
   const colors = theme.palette.chart;
+
+  if (slices === null) {
+    return (
+      <TitledCard
+        title="Top spending"
+        sx={[{ [TABLET]: { flex: 1 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+      >
+        <CardProblem>{REPORT_UNAVAILABLE}</CardProblem>
+      </TitledCard>
+    );
+  }
+
   const total = slices.reduce((sum, s) => sum + s.amount, 0);
   const empty = total === 0;
-  const shares = donutShares(slices.map((s) => s.amount));
-  const gap = slices.length >= 2 ? GAP : 0;
 
   // Other is always the lightest; the rest darken by rank.
   const color = (slice: SpendingSlice, i: number) =>
     slice.label === "Other" ? colors[colors.length - 1] : colors[i];
-
-  let offset = 0;
-  const segments = slices.map((s, i) => {
-    const length = Math.max(0, shares[i] - gap) * CIRCUMFERENCE;
-    const start = (offset + gap / 2) * CIRCUMFERENCE;
-    offset += shares[i];
-    return { key: s.label, color: color(s, i), length, start };
-  });
-
-  const centre = `€${displayFigure(total)}`;
-  const centreSize = figureFontSize(centre);
 
   const description = empty
     ? "No spending this month"
@@ -72,17 +84,21 @@ export function TopSpendingCard({ slices }: Props) {
         .join(", ")}`;
 
   return (
-    <HomeCard
+    <TitledCard
       title="Top spending"
       to={empty ? undefined : "reports"}
-      action={!empty && <HomeCardAction>See all</HomeCardAction>}
-      sx={{
-        containerType: "inline-size",
-        containerName: "spending-card",
-        // Beside a taller card it grows to match; the ring and legend stay
-        // centred in the extra room.
-        [TABLET]: { flex: 1 },
-      }}
+      action={!empty && <CardAction>See all</CardAction>}
+      sx={[
+        {
+          containerType: "inline-size",
+          containerName: "spending-card",
+          // Beside a taller card it grows to match; the ring and legend stay
+          // centred in the extra room.
+          [TABLET]: { flex: 1 },
+        },
+        // The caller places the card in the page grid.
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     >
       {/* Ring beside legend; a narrow card stacks them. `gap`, not Stack
           spacing, since spacing is a margin on one axis. */}
@@ -95,67 +111,20 @@ export function TopSpendingCard({ slices }: Props) {
           [STACKED]: { flexDirection: "column", gap: 2.5 },
         }}
       >
-        <Box
-          role="img"
-          aria-label={description}
-          sx={{ flexShrink: 0, width: SIZE, height: SIZE }}
-        >
-          {/* The centre figure is SVG text, sized by its length so a long
-              total stays inside the hole. */}
-          <svg viewBox="0 0 100 100" width="100%" height="100%">
-            {/* Rotated so the first segment starts at 12 o'clock. */}
-            <g transform="rotate(-90 50 50)">
-              {empty ? (
-                <circle
-                  cx="50"
-                  cy="50"
-                  r={RADIUS}
-                  fill="none"
-                  stroke="var(--mui-palette-divider)"
-                  strokeWidth={STROKE}
-                />
-              ) : (
-                segments.map((seg) => (
-                  <circle
-                    key={seg.key}
-                    cx="50"
-                    cy="50"
-                    r={RADIUS}
-                    fill="none"
-                    stroke={seg.color}
-                    strokeWidth={seg.length > 0 ? STROKE : 0}
-                    strokeDasharray={`${seg.length} ${CIRCUMFERENCE - seg.length}`}
-                    strokeDashoffset={-seg.start}
-                  />
-                ))
-              )}
-            </g>
-            <text
-              x="50"
-              y="48"
-              textAnchor="middle"
-              fontSize={centreSize}
-              fontWeight="600"
-              fontFamily={theme.typography.mono.fontFamily}
-              fill={
-                empty
-                  ? "var(--mui-palette-text-disabled)"
-                  : "var(--mui-palette-text-primary)"
-              }
-            >
-              {centre}
-            </text>
-            <text
-              x="50"
-              y="60"
-              textAnchor="middle"
-              fontSize={centreSize * 0.55}
-              fill="var(--mui-palette-text-secondary)"
-            >
-              spent
-            </text>
-          </svg>
-        </Box>
+        {/* Non-interactive: the card is the link, and a tooltip inside it
+            would be a second control on one surface. */}
+        <DonutChart
+          interactive={false}
+          slices={slices.map((s, i) => ({
+            id: s.label,
+            label: s.label,
+            value: s.amount,
+            color: color(s, i),
+          }))}
+          center={{ value: `€${displayFigure(total)}`, label: "spent" }}
+          description={description}
+          sx={ringSx}
+        />
 
         {empty ? (
           <Typography sx={{ color: "text.secondary" }}>
@@ -209,6 +178,6 @@ export function TopSpendingCard({ slices }: Props) {
           </Stack>
         )}
       </Stack>
-    </HomeCard>
+    </TitledCard>
   );
 }

@@ -459,24 +459,27 @@ class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
     question = serializers.CharField(min_length=1, max_length=1000, trim_whitespace=True)
 
 
+# Rows are capped at 14 digits by the model. A sum of them has no fixed
+# width, so a sum declares only its scale: max_digits=None makes DRF
+# quantize to two decimals without checking how many digits are in front.
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
-    income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+    income = serializers.DecimalField(max_digits=None, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
-    income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+    income = serializers.DecimalField(max_digits=None, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     category_id = serializers.IntegerField()
     name = serializers.CharField()
     type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
-    total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    total = serializers.DecimalField(max_digits=None, decimal_places=2)
     monthly = serializers.ListField(
-        child=serializers.DecimalField(max_digits=14, decimal_places=2),
+        child=serializers.DecimalField(max_digits=None, decimal_places=2),
         min_length=12,
         max_length=12,
     )
@@ -491,7 +494,13 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     totals = ReportAmountsSerializer()
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
-    goal_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    goal_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
+
+
+class OrganizationBalanceSerializer(serializers.Serializer[dict[str, Any]]):
+    org_id = serializers.IntegerField()
+    # A sum, like the report's: scale only, see the note above.
+    balance = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):

@@ -1,7 +1,6 @@
 /** @file Home page figures: monthly totals, category split, recent rows and the closest goal. */
 
 import { describe, expect, it } from "vitest";
-import type { Category } from "./categories";
 import type { Goal } from "./goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -11,25 +10,57 @@ import {
   columnScaleMax,
   donutShares,
   monthFooter,
-  previousMonthOf,
-  previousMonthSummary,
   shareLabel,
-  daysLeftInMonth,
   goalPercent,
   monthSummary,
   recentTransactions,
   spendingByCategory,
   wholePercents,
 } from "./overview";
+import type { CategoryReport, YearlyReportResponse } from "./reports";
 import type { Transaction } from "./transactions";
 
-const CATEGORIES: Category[] = [
-  { id: 1, name: "Groceries", type: "expense" },
-  { id: 2, name: "Dining", type: "expense" },
-  { id: 3, name: "Shopping", type: "expense" },
-  { id: 4, name: "Transport", type: "expense" },
-  { id: 5, name: "Housing", type: "expense" },
-];
+const ZERO_MONTHS = Array<string>(12).fill("0.00");
+
+/** A category whose spending is `amount` in August and nothing elsewhere. */
+function august(
+  name: string,
+  amount: number,
+  type: CategoryReport["type"] = "expense",
+): CategoryReport {
+  const monthly = [...ZERO_MONTHS];
+  monthly[7] = amount.toFixed(2);
+  return { category_id: 0, name, type, total: monthly[7], monthly };
+}
+
+/** A year that is empty apart from what the overrides say. */
+function report(
+  overrides: Partial<YearlyReportResponse> = {},
+): YearlyReportResponse {
+  return {
+    year: 2026,
+    totals: { income: "0.00", expense: "0.00" },
+    monthly: Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      income: "0.00",
+      expense: "0.00",
+    })),
+    categories: [],
+    goal_balance: "0.00",
+    ...overrides,
+  };
+}
+
+/** The report with August's income and expense set. */
+function augustReport(income: number, expense: number): YearlyReportResponse {
+  const r = report();
+  r.monthly[7] = {
+    month: 8,
+    income: income.toFixed(2),
+    expense: expense.toFixed(2),
+  };
+  return r;
+}
 
 function tx(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -65,54 +96,55 @@ function goal(overrides: Partial<Goal> = {}): Goal {
 }
 
 describe("monthSummary", () => {
-  it("totals only the current month, per entry type", () => {
+  it("reads income and expenses from the report's month, savings from the rows", () => {
     const rows = [
-      tx({ entry_type: "income", amount: 3567 }),
-      tx({ amount: 1953 }),
       tx({ entry_type: "contribution", category: null, amount: 100 }),
-      tx({ amount: 999, transaction_date: "2026-07-31" }),
+      // Outside the month: ignored even if the caller fetched it.
+      tx({
+        entry_type: "contribution",
+        category: null,
+        amount: 999,
+        transaction_date: "2026-07-31",
+      }),
     ];
-    expect(monthSummary(rows, "2026-08-03")).toEqual({
+    expect(monthSummary(augustReport(3567, 1953), rows, "2026-08-03")).toEqual({
       income: 3567,
       expenses: 1953,
       saved: 100,
       left: 1514,
+      inGoals: 0,
     });
+  });
+
+  it("reads the goal total from the report, whatever the month holds", () => {
+    const r = report({ goal_balance: "1540.50" });
+    expect(monthSummary(r, [], "2026-08-03").inGoals).toBe(1540.5);
   });
 
   it("counts a withdrawal against the saved total", () => {
     const rows = [
-      tx({ entry_type: "income", amount: 1000 }),
       tx({ entry_type: "contribution", category: null, amount: 300 }),
       tx({ entry_type: "withdraw", category: null, amount: 120 }),
     ];
-    expect(monthSummary(rows, "2026-08-03")).toEqual({
+    expect(monthSummary(augustReport(1000, 0), rows, "2026-08-03")).toEqual({
       income: 1000,
       expenses: 0,
       saved: 180,
       left: 820,
+      inGoals: 0,
     });
   });
 
   it("snaps float sums to cents", () => {
-    const rows = [tx({ amount: 0.1 }), tx({ amount: 0.2 })];
-    expect(monthSummary(rows, "2026-08-01").expenses).toBe(0.3);
+    const rows = [
+      tx({ entry_type: "contribution", amount: 0.1 }),
+      tx({ entry_type: "contribution", amount: 0.2 }),
+    ];
+    expect(monthSummary(report(), rows, "2026-08-01").saved).toBe(0.3);
   });
 
   it("reports a negative remainder when overspent", () => {
-    expect(monthSummary([tx({ amount: 50 })], "2026-08-01").left).toBe(-50);
-  });
-});
-
-describe("daysLeftInMonth", () => {
-  it("counts the days after today", () => {
-    expect(daysLeftInMonth("2026-08-03")).toBe(28);
-    expect(daysLeftInMonth("2026-08-31")).toBe(0);
-  });
-
-  it("handles February in leap years", () => {
-    expect(daysLeftInMonth("2028-02-01")).toBe(28);
-    expect(daysLeftInMonth("2026-02-01")).toBe(27);
+    expect(monthSummary(augustReport(0, 50), [], "2026-08-01").left).toBe(-50);
   });
 });
 
@@ -137,25 +169,36 @@ describe("wholePercents", () => {
 });
 
 describe("spendingByCategory", () => {
-  it("groups this month's expenses by category, largest first", () => {
-    const rows = [
-      tx({ category: 1, amount: 510.2 }),
-      tx({ category: 5, amount: 1255 }),
-      tx({ category: 1, amount: 0 }),
-      tx({ entry_type: "income", category: 8, amount: 5000 }),
-      tx({ category: 4, amount: 80, transaction_date: "2026-07-01" }),
-    ];
-    expect(spendingByCategory(rows, "2026-08-20", CATEGORIES)).toEqual([
+  it("lists this month's expense categories, largest first", () => {
+    const r = report({
+      categories: [
+        august("Groceries", 510.2),
+        august("Housing", 1255),
+        august("Salary", 5000, "income"),
+        // Spent in another month only: not a slice this month.
+        {
+          ...august("Transport", 0),
+          monthly: ["80.00", ...ZERO_MONTHS.slice(1)],
+        },
+      ],
+    });
+    expect(spendingByCategory(r, "2026-08-20")).toEqual([
       { label: "Housing", amount: 1255, percent: 71 },
       { label: "Groceries", amount: 510.2, percent: 29 },
     ]);
   });
 
   it("merges the tail into Other", () => {
-    const rows = [1, 2, 3, 4, 5].map((category) =>
-      tx({ category, amount: category * 10 }),
-    );
-    const slices = spendingByCategory(rows, "2026-08-20", CATEGORIES, 3);
+    const r = report({
+      categories: [
+        "Groceries",
+        "Dining",
+        "Shopping",
+        "Transport",
+        "Housing",
+      ].map((name, i) => august(name, (i + 1) * 10)),
+    });
+    const slices = spendingByCategory(r, "2026-08-20", 3);
     expect(slices.map((s) => s.label)).toEqual([
       "Housing",
       "Transport",
@@ -166,38 +209,29 @@ describe("spendingByCategory", () => {
   });
 
   it("merges even a single leftover category, so the pie never exceeds maxSlices + 1", () => {
-    const rows = [1, 2, 3, 4].map((category) =>
-      tx({ category, amount: category * 10 }),
-    );
-    const slices = spendingByCategory(rows, "2026-08-20", CATEGORIES, 3);
+    const r = report({
+      categories: ["Groceries", "Dining", "Shopping", "Transport"].map(
+        (name, i) => august(name, (i + 1) * 10),
+      ),
+    });
+    const slices = spendingByCategory(r, "2026-08-20", 3);
     expect(slices).toHaveLength(4);
     expect(slices[3]).toMatchObject({ label: "Other", amount: 10 });
   });
 
-  it("breaks an equal-amount tie by the earlier first expense, whatever the row order", () => {
-    const later = tx({
-      category: 2,
-      amount: 50,
-      transaction_date: "2026-08-10",
-    });
-    const earlier = tx({
-      category: 1,
-      amount: 50,
-      transaction_date: "2026-08-03",
-    });
-    const labels = (rows: ReturnType<typeof tx>[]) =>
-      spendingByCategory(rows, "2026-08-20", CATEGORIES).map((s) => s.label);
-    expect(labels([later, earlier])).toEqual(["Groceries", "Dining"]);
-    expect(labels([earlier, later])).toEqual(["Groceries", "Dining"]);
+  it("breaks an equal-amount tie by name, whatever the report order", () => {
+    const labels = (categories: CategoryReport[]) =>
+      spendingByCategory(report({ categories }), "2026-08-20").map(
+        (s) => s.label,
+      );
+    const dining = august("Dining", 50);
+    const groceries = august("Groceries", 50);
+    expect(labels([groceries, dining])).toEqual(["Dining", "Groceries"]);
+    expect(labels([dining, groceries])).toEqual(["Dining", "Groceries"]);
   });
 
-  it("labels rows without a known category", () => {
-    const [slice] = spendingByCategory(
-      [tx({ category: null })],
-      "2026-08-20",
-      CATEGORIES,
-    );
-    expect(slice.label).toBe("Uncategorised");
+  it("is empty for a month without spending", () => {
+    expect(spendingByCategory(report(), "2026-08-20")).toEqual([]);
   });
 });
 
@@ -251,35 +285,13 @@ describe("goals", () => {
   });
 });
 
-describe("months", () => {
-  it("previousMonthOf steps back across a year boundary", () => {
-    expect(previousMonthOf("2026-08-20")).toBe("2026-07");
-    expect(previousMonthOf("2026-01-05")).toBe("2025-12");
-  });
-
-  it("previousMonthSummary totals only the month before", () => {
-    const rows = [
-      tx({
-        entry_type: "income",
-        amount: 1000,
-        transaction_date: "2026-07-03",
-      }),
-      tx({ amount: 250, transaction_date: "2026-07-20" }),
-      tx({ amount: 999, transaction_date: "2026-08-01" }),
-    ];
-    expect(previousMonthSummary(rows, "2026-08-20")).toMatchObject({
-      income: 1000,
-      expenses: 250,
-    });
-  });
-});
-
 describe("monthFooter", () => {
   const s = (income: number, expenses: number, saved: number) => ({
     income,
     expenses,
     saved,
     left: income - expenses - saved,
+    inGoals: 0,
   });
 
   it.each([
@@ -299,23 +311,29 @@ describe("column scale and balance change", () => {
     expect(columnScaleMax([500], 2500)).toBe(2500);
   });
 
-  it("balanceChange is this month's net, only once history exists", () => {
-    const thisMonth = [
-      tx({
-        entry_type: "income",
-        amount: 3000,
-        transaction_date: "2026-08-02",
+  it("balanceChange is this month's net, or null while the month is empty", () => {
+    expect(
+      balanceChange({
+        income: 3000,
+        expenses: 1000,
+        saved: 386,
+        left: 1614,
+        inGoals: 0,
       }),
-      tx({ amount: 1000, transaction_date: "2026-08-10" }),
-      tx({
-        entry_type: "contribution",
-        amount: 386,
-        transaction_date: "2026-08-12",
+    ).toBe(1614);
+    expect(
+      balanceChange({ income: 0, expenses: 0, saved: 0, left: 0, inGoals: 0 }),
+    ).toBeNull();
+    // A month with only a withdrawal still moved the balance.
+    expect(
+      balanceChange({
+        income: 0,
+        expenses: 0,
+        saved: -50,
+        left: 50,
+        inGoals: 0,
       }),
-    ];
-    expect(balanceChange(thisMonth, "2026-08-20")).toBeNull();
-    const withHistory = [...thisMonth, tx({ transaction_date: "2026-07-01" })];
-    expect(balanceChange(withHistory, "2026-08-20")).toBe(1614);
+    ).toBe(50);
   });
 });
 

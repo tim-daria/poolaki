@@ -1,6 +1,13 @@
 /** @file Recent activity card: the latest entries, sized for five rows on desktop. */
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Stack,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 import {
   ROW_GAP,
   TransactionList,
@@ -9,34 +16,34 @@ import {
 import type { Category } from "../../lib/categories";
 import type { Goal } from "../../lib/goals";
 import type { Transaction } from "../../lib/transactions";
-import { HomeCard, HomeCardAction } from "./HomeCard";
+import { TitledCard, CardAction } from "../../components/Card/Card";
 import { DESKTOP } from "../../lib/layout";
 
 interface Props {
-  /** Newest first. */
+  /** Newest first, at most RECENT_ROWS: the caller limits via recentTransactions. */
   rows: Transaction[];
   categories: Category[];
   goals: Goal[];
   /** Adds the person column. */
   shared: boolean;
   onAdd: () => void;
+  /** Placement in the page grid. */
+  sx?: SxProps<Theme>;
 }
 
 export const RECENT_ROWS = 5;
 
-/** A row's height: its two lines of text. */
-const ROW_HEIGHT = 44;
+/** A row's two lines: body1 and body2 line heights, in rem so it follows the root font. */
+const ROW_HEIGHT = "2.75rem";
 
 /**
- * On desktop the list keeps the room of a full five rows whatever it holds,
- * and grows with the card when the sidebar beside it is taller: a full list
- * then spreads its rows into that room, a short one keeps its rhythm. A
- * phone card fits its rows.
+ * On desktop the list keeps the room of a full five rows whatever it holds;
+ * rows keep their rhythm from the top. A phone card fits its rows.
  */
 const listSx = {
   [DESKTOP]: {
     flex: 1,
-    minHeight: RECENT_ROWS * ROW_HEIGHT + (RECENT_ROWS - 1) * ROW_GAP,
+    minHeight: `calc(${RECENT_ROWS} * ${ROW_HEIGHT} + ${(RECENT_ROWS - 1) * ROW_GAP}px)`,
   },
 } as const;
 
@@ -46,10 +53,11 @@ export function RecentActivityCard({
   goals,
   shared,
   onAdd,
+  sx,
 }: Props) {
   if (rows.length === 0) {
     return (
-      <HomeCard title="Recent activity">
+      <TitledCard title="Recent activity" sx={sx}>
         <Stack
           spacing={1}
           sx={[
@@ -80,26 +88,20 @@ export function RecentActivityCard({
             Add transaction
           </Button>
         </Stack>
-      </HomeCard>
+      </TitledCard>
     );
   }
 
   return (
-    <HomeCard
+    <TitledCard
+      sx={sx}
       title="Recent activity"
       to="transactions"
-      action={<HomeCardAction>See all</HomeCardAction>}
+      action={<CardAction>See all</CardAction>}
     >
       <Box sx={listSx}>
-        <TransactionList
-          withPerson={shared}
-          sx={{
-            height: "100%",
-            alignContent:
-              rows.length >= RECENT_ROWS ? "space-between" : "start",
-          }}
-        >
-          {rows.slice(0, RECENT_ROWS).map((t) => (
+        <TransactionList withPerson={shared}>
+          {rows.map((t) => (
             <TransactionListItem
               key={t.id}
               transaction={t}
@@ -110,6 +112,6 @@ export function RecentActivityCard({
           ))}
         </TransactionList>
       </Box>
-    </HomeCard>
+    </TitledCard>
   );
 }
