@@ -33,6 +33,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "poolaki.localhost",
+    "backend",
     "django",
     "django.localhost",
     "localhost",
