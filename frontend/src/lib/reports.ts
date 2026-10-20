@@ -22,6 +22,7 @@ export interface YearlyReportResponse {
   };
   monthly: MonthlyReport[];
   categories: CategoryReport[];
+  goal_balance: string;
 }
 
 /** GET /api/v1/organizations/${org_id}/reports/?year=${year} */

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,10 @@ class PromptBuilder:
 
         prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
-        return prompt.replace("{{user_question}}", user_question).replace(
-            "{{context}}", formatted_context
+        current_date = datetime.now(UTC).astimezone().date().isoformat()
+
+        return (
+            prompt.replace("{{user_question}}", user_question)
+            .replace("{{context}}", formatted_context)
+            .replace("{{current_date}}", current_date)
         )
