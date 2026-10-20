@@ -4,16 +4,24 @@ from typing import Any
 from django.db.models import Q, QuerySet, Sum
 from django.db.models.functions import Coalesce, ExtractMonth
 
-from core.models import Category, CategoryType, EntryType, Organization, Transaction
+from core.models import (
+    Category,
+    CategoryType,
+    EntryType,
+    Goal,
+    GoalStatus,
+    Organization,
+    Transaction,
+)
+from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
 
 _ZERO = Decimal("0")
 
-# Contributions are out of the report until the planned `withdraw` entry
-# type exists: savings metrics only make sense net of withdrawals, so
-# contribution and withdraw must be designed together. Any entry type not
-# listed here is ignored by every report section.
-
 _REPORTED_TYPES = (EntryType.INCOME, EntryType.EXPENSE)
+
+# Goals that still hold spendable funds. Archived goals are settled (their
+# balance is zeroed at archival), so they never contribute.
+_REPORTED_GOAL_STATUSES = (GoalStatus.ACTIVE, GoalStatus.COMPLETED)
 
 # category list order: type blocks in metric order, total desc within a block
 _TYPE_ORDER = {entry_type.value: idx for idx, entry_type in enumerate(_REPORTED_TYPES)}
@@ -117,13 +125,22 @@ def get_org_category_breakdown(
     )
 
 
+def _goal_balance(org: Organization) -> Decimal:
+    """Current balance across all active and completed goals (one aggregate
+    query); a snapshot that ignores the reported year."""
+    goals = annotate_goal_balance(Goal.objects.filter(org=org, status__in=_REPORTED_GOAL_STATUSES))
+    return sum((get_annotated_goal_balance(goal) for goal in goals), _ZERO)
+
+
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:
     """Build the yearly report payload; every section is computed only from
-    the reported entry types (contribution rows are excluded by design)."""
+    the reported entry types (contribution rows are excluded by design),
+    plus the current goal balance as a year-independent snapshot."""
     base = _reported_transactions(org, year)
     return {
         "year": year,
         "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
         "categories": get_org_category_breakdown(org, year),
+        "goal_balance": _goal_balance(org),
     }

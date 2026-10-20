@@ -491,6 +491,7 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     totals = ReportAmountsSerializer()
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
+    goal_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):
