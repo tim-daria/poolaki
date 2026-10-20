@@ -1,6 +1,13 @@
 /** @file Onboarding checklist shown on Home until every step is done or the banner is dismissed. */
 
-import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
+import {
+  alpha,
+  Box,
+  ButtonBase,
+  IconButton,
+  Paper,
+  Typography,
+} from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -19,7 +26,10 @@ export function SetupBanner({ steps, onDismiss }: Props) {
   const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <Box
+    // The card variant gives it the cards' padding and radius, so the tiles
+    // share a left edge with the card below.
+    <Paper
+      variant="card"
       component="section"
       aria-label="Set up your workspace"
       sx={{
@@ -27,10 +37,9 @@ export function SetupBanner({ steps, onDismiss }: Props) {
         flexWrap: "wrap",
         alignItems: "center",
         gap: 2,
-        p: 2,
-        pl: 3,
-        borderRadius: 4,
-        bgcolor: "primary.light",
+        // The page itself is primary.light, so the panel needs a step deeper
+        // to read as a surface; the secondary tint at low alpha keeps it soft.
+        bgcolor: (theme) => alpha(theme.palette.secondary.light, 0.3),
       }}
     >
       <Box sx={{ flex: "1 1 200px" }}>
@@ -120,10 +129,12 @@ export function SetupBanner({ steps, onDismiss }: Props) {
         aria-label="Dismiss setup"
         onClick={onDismiss}
         size="small"
-        sx={{ ml: "auto", alignSelf: { xs: "flex-start", md: "center" } }}
+        // Pulled into the corner by its own padding, so it sits on the edge
+        // of the content box rather than inset by a button's worth of space.
+        sx={{ ml: "auto", alignSelf: "flex-start", mt: -1, mr: -1 }}
       >
         <CloseIcon fontSize="small" />
       </IconButton>
-    </Box>
+    </Paper>
   );
 }
