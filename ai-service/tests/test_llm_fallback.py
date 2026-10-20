@@ -3,7 +3,6 @@ import pytest
 
 from app.clients.llm import LLMClient
 from app.config.settings import settings
-from models.usage import LLMUsage
 
 
 @pytest.mark.asyncio
@@ -13,9 +12,10 @@ async def test_llm_fallback():
         httpx.Response(503),
         httpx.Response(
             200,
-            json={"choices": [{"message": {"content": "Fallback!"}}],
-                  "usage": {"prompt_tokens": 7, "completion_tokens": 2},
-                  },
+            json={
+                "choices": [{"message": {"content": "Fallback!"}}],
+                "usage": {"prompt_tokens": 7, "completion_tokens": 2},
+            },
         ),
     ]
 

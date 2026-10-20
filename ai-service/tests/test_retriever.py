@@ -9,14 +9,20 @@ from models.usage import TokenUsage
 
 
 def make_retriever() -> MockRetriever:
-    return MockRetriever(doc_repo=MockDocumentRepository(), django_client=MockDjangoClient())
+    return MockRetriever(
+        doc_repo=MockDocumentRepository(), django_client=MockDjangoClient()
+    )
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_retriever_combines_vector_docs_and_django_data():
     result = await make_retriever().get_context(
-        user_id=123, organization_id=456, query="How much did I spend?",
-        usage=TokenUsage(), intent=Intent.MONTHLY_SUMMARY, top_k=2,
+        user_id=123,
+        organization_id=456,
+        query="How much did I spend?",
+        usage=TokenUsage(),
+        intent=Intent.MONTHLY_SUMMARY,
+        top_k=2,
     )
 
     types = [i.type for i in result.items]
@@ -28,21 +34,28 @@ async def test_retriever_combines_vector_docs_and_django_data():
     assert len(json.loads(structured.content)["months"]) == 12
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_unsupported_intent_does_not_call_django():
     result = await make_retriever().get_context(
-        user_id=123, organization_id=456, query="goal progress",
-        usage=TokenUsage(), intent=Intent.UNSUPPORTED, top_k=1,
+        user_id=123,
+        organization_id=456,
+        query="goal progress",
+        usage=TokenUsage(),
+        intent=Intent.UNSUPPORTED,
+        top_k=1,
     )
 
     assert all(i.type == "unstructured_doc" for i in result.items)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_forbidden_user_raises_django_error():
     with pytest.raises(DjangoClientError) as exc:
         await make_retriever().get_context(
-            user_id=0, organization_id=456, query="x",
-            usage=TokenUsage(), intent=Intent.TRANSACTIONS,
+            user_id=0,
+            organization_id=456,
+            query="x",
+            usage=TokenUsage(),
+            intent=Intent.TRANSACTIONS,
         )
     assert exc.value.code == "FORBIDDEN"

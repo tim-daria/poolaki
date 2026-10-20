@@ -8,7 +8,11 @@ from models.usage import LLMUsage
 
 client = TestClient(app)
 USAGE = LLMUsage(input_tokens=10, output_tokens=5)
-BODY = {"user_id": 123, "organization_id": 1, "question": "How much did I spend this month?"}
+BODY = {
+    "user_id": 123,
+    "organization_id": 1,
+    "question": "How much did I spend this month?",
+}
 
 
 def test_chat_endpoint_with_mock_rag():
@@ -16,8 +20,8 @@ def test_chat_endpoint_with_mock_rag():
         mock_get_context.return_value = CombinedRetrievalResult(items=[])
         with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
             mock_llm.side_effect = [
-                "monthly_summary",  # Intent classification
-                "You spent €850 this month.",  # Final answer
+                ("monthly_summary", USAGE),  # Intent classification
+                ("You spent €850 this month.", USAGE),  # Final answer
             ]
 
             response = client.post("/api/v1/chat", json=BODY)
@@ -25,6 +29,7 @@ def test_chat_endpoint_with_mock_rag():
             assert response.status_code == 200
             assert "€850" in response.json()["answer"]
             assert response.json()["metadata"]["intent"] == "monthly_summary"
+
 
 def test_unknown_intent_label_becomes_unsupported():
     with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:

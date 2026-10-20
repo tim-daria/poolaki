@@ -8,14 +8,19 @@ from models.usage import LLMUsage, TokenUsage
 
 def make_service(answer: str) -> IntentionService:
     llm = AsyncMock()
-    llm.generate_response.return_value = (answer, LLMUsage(input_tokens=20, output_tokens=2))
+    llm.generate_response.return_value = (
+        answer,
+        LLMUsage(input_tokens=20, output_tokens=2),
+    )
     return IntentionService(llm)
 
 
 @pytest.mark.asyncio
 async def test_classify_counts_tokens():
     usage = TokenUsage()
-    intent = await make_service("monthly_summary").classify("How much did I spend?", usage)
+    intent = await make_service("monthly_summary").classify(
+        "How much did I spend?", usage
+    )
 
     assert intent == Intent.MONTHLY_SUMMARY
     assert (usage.intent_in, usage.intent_out) == (20, 2)
@@ -23,7 +28,10 @@ async def test_classify_counts_tokens():
 
 @pytest.mark.asyncio
 async def test_classify_tolerates_quotes_and_dots():
-    assert await make_service('"transactions".').classify("q", TokenUsage()) == Intent.TRANSACTIONS
+    assert (
+        await make_service('"transactions".').classify("q", TokenUsage())
+        == Intent.TRANSACTIONS
+    )
 
 
 @pytest.mark.asyncio
