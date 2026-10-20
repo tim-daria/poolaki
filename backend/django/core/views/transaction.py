@@ -202,45 +202,50 @@ class TransactionGetDeleteView(APIView):
         user = request.user
         assert isinstance(user, User)
 
-        transaction = get_object_or_404(
-            Transaction,
-            id=transaction_id,
-            org_id=org_id,
-            created_by=user,
-        )
-
-        serializer = TransactionUpdateSerializer(
-            data=request.data,
-            context={
-                "org_id": org_id,
-                "transaction": transaction,
-            },
-        )
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        updated_fields = set()
-        if "category_id" in data:
-            transaction.category = data["category_id"]
-            updated_fields.add("category")
-
-        if "amount" in data:
-            transaction.amount = data["amount"]
-            updated_fields.add("amount")
-
-        if "description" in data:
-            transaction.description = data["description"]
-            updated_fields.add("description")
-
-        if "transaction_date" in data:
-            transaction.transaction_date = data["transaction_date"]
-            updated_fields.add("transaction_date")
-
-        if "is_tax_deductible" in data:
-            transaction.is_tax_deductible = data["is_tax_deductible"]
-            updated_fields.add("is_tax_deductible")
-
         with db_transaction.atomic():
+            transaction = get_object_or_404(
+                Transaction.objects.select_for_update(),
+                id=transaction_id,
+                org_id=org_id,
+                created_by=user,
+            )
+            goal = (
+                Goal.objects.select_for_update().get(pk=transaction.goal_id)
+                if transaction.goal_id is not None
+                else None
+            )
+            serializer = TransactionUpdateSerializer(
+                data=request.data,
+                context={
+                    "org_id": org_id,
+                    "transaction": transaction,
+                    "goal": goal,
+                },
+            )
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+
+            updated_fields = set()
+            if "category_id" in data:
+                transaction.category = data["category_id"]
+                updated_fields.add("category")
+
+            if "amount" in data:
+                transaction.amount = data["amount"]
+                updated_fields.add("amount")
+
+            if "description" in data:
+                transaction.description = data["description"]
+                updated_fields.add("description")
+
+            if "transaction_date" in data:
+                transaction.transaction_date = data["transaction_date"]
+                updated_fields.add("transaction_date")
+
+            if "is_tax_deductible" in data:
+                transaction.is_tax_deductible = data["is_tax_deductible"]
+                updated_fields.add("is_tax_deductible")
+
             transaction.save(update_fields=updated_fields)
 
         return Response(

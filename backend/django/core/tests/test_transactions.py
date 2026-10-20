@@ -1004,6 +1004,81 @@ def test_transaction_patch_rejects_negative_amount(
     assert transaction.description == "Original description"
 
 
+def test_transaction_patch_rejects_withdrawal_that_exceeds_goal_balance(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ACTIVE,
+    )
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type=EntryType.WITHDRAW,
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-10",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"amount": "5000.00"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == ["Withdrawal amount cannot exceed the goal balance."]
+    transaction.refresh_from_db()
+    assert transaction.amount == Decimal("100.00")
+
+
+def test_transaction_patch_preserves_archived_goal_balance(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("1000.00"),
+        target_date="2026-12-31",
+        status=GoalStatus.ARCHIVED,
+    )
+    Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type=EntryType.CONTRIBUTION,
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-09",
+    )
+    transaction = Transaction.objects.create(
+        org=shared_org,
+        created_by=owner,
+        entry_type=EntryType.WITHDRAW,
+        amount=Decimal("100.00"),
+        goal=goal,
+        transaction_date="2026-08-10",
+        description="Archived Trip",
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        transaction_url(shared_org.id, transaction.id),
+        {"amount": "5000.00"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["amount"] == [
+        "Transactions associated with archived goals must keep the goal balance at zero."
+    ]
+    transaction.refresh_from_db()
+    assert transaction.amount == Decimal("100.00")
+
+
 def test_non_creator_cannot_delete_transaction(
     api_client: APIClient, owner: User, member: User, shared_org: Organization
 ) -> None:

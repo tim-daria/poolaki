@@ -15,7 +15,7 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import get_annotated_goal_balance
+from core.services.balance import calculate_goal_balance, get_annotated_goal_balance
 from core.services.goal import allowed_entry_types
 
 
@@ -356,6 +356,34 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
             )
+
+        if "amount" in attrs and transaction.goal_id is not None:
+            goal = self.context.get("goal") or transaction.goal
+            current_balance = calculate_goal_balance(goal)
+            old_signed_amount = (
+                transaction.amount
+                if transaction.entry_type == EntryType.CONTRIBUTION
+                else -transaction.amount
+            )
+            new_amount = cast(Decimal, attrs["amount"])
+            new_signed_amount = (
+                new_amount if transaction.entry_type == EntryType.CONTRIBUTION else -new_amount
+            )
+            resulting_balance = current_balance - old_signed_amount + new_signed_amount
+
+            if goal.status == GoalStatus.ARCHIVED and resulting_balance != Decimal("0"):
+                raise serializers.ValidationError(
+                    {
+                        "amount": (
+                            "Transactions associated with archived goals must keep the goal "
+                            "balance at zero.",
+                        )
+                    }
+                )
+            if transaction.entry_type == EntryType.WITHDRAW and resulting_balance < Decimal("0"):
+                raise serializers.ValidationError(
+                    {"amount": ("Withdrawal amount cannot exceed the goal balance.",)}
+                )
         return attrs
 
     def validate_category_id(self, category: Category | None) -> Category | None:
