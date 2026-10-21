@@ -36,7 +36,7 @@ test.describe.serial("AI assistant chat", () => {
     await openAssistant();
     await ask("How much did I save this month?");
     await expect(
-      page.getByText(/placeholder answer|assistant|approach/i),
+      page.locator(".MuiDrawer-root").getByText(/placeholder answer|approach|unavailable/i),
     ).toBeVisible();
     await closeAssistant();
   });
