@@ -59,7 +59,7 @@ class VectorRepository:
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
         async with self._pool.acquire() as connection:
-            rows = await connection.fetch(query, vector_str, limit)
+            rows = await connection.fetch(query, vector_str, limit, min_similarity)
 
             results = []
             for row in rows:
