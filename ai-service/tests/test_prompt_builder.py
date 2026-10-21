@@ -17,8 +17,9 @@ def test_prompt_builder():
 
 def test_prompt_contains_current_date():
     builder = PromptBuilder()
+    now = datetime.now(UTC).astimezone()
     prompt = builder.build("What is the current month?", "")
-    assert datetime.now(UTC).astimezone().strftime("%A %-d %B %Y") in prompt
+    assert f"{now:%A} {now.day} {now:%B %Y}" in prompt
     assert "{{current_date}}" not in prompt
 
 

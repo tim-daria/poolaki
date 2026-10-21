@@ -30,8 +30,10 @@ class PromptBuilder:
         prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
         # "Wednesday 21 October 2026": the app's en-GB day-month-year form, so the
-        # model echoes a readable date rather than an ISO literal.
-        current_date = datetime.now(UTC).astimezone().strftime("%A %-d %B %Y")
+        # model echoes a readable date rather than an ISO literal. `now.day`
+        # rather than the glibc-only `%-d`, which raises on Windows.
+        now = datetime.now(UTC).astimezone()
+        current_date = f"{now:%A} {now.day} {now:%B %Y}"
 
         return (
             prompt.replace("{{user_question}}", user_question)
