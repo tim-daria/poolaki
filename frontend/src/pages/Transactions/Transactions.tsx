@@ -1,6 +1,6 @@
 /**
  * @file Transactions page: a card with type tabs, search/sort/filter toolbar,
- * active-filter chips, the table and pagination.
+ * active-filter chips, the list and pagination.
  */
 
 import { useEffect, useState } from "react";
@@ -16,14 +16,10 @@ import {
   Paper,
   Stack,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Tabs,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -48,21 +44,28 @@ import {
 import { useTransactionFilters } from "./useTransactionFilters";
 import { FilterPanel } from "./FilterPanel";
 import { tintedWhenActive } from "./styles";
-import { TransactionRow } from "./TransactionRow";
+import {
+  TransactionList,
+  TransactionListItem,
+} from "../../components/Transactions/TransactionListItem";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCategories } from "../../hooks/useCategories";
+import { useGoals } from "../../hooks/useGoals";
+import { useMembers } from "../../hooks/useMembers";
+import { PAGE_PADDING, PHONE_QUERY, TABLET } from "../../lib/layout";
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
 ];
 
-/** "Transfers" is the user-facing name for a contribution. */
+/** "Transfers" is the user-facing name for a contribution; withdrawals get a tab of their own. */
 const TABS: { value: TabValue; label: string }[] = [
   { value: "all", label: "All" },
   { value: "expense", label: "Expenses" },
   { value: "income", label: "Income" },
   { value: "contribution", label: "Transfers" },
+  { value: "withdraw", label: "Withdrawals" },
 ];
 
 /** Chip label for an open or closed date range. */
@@ -72,19 +75,17 @@ function rangeLabel(from: string, to: string): string {
   return `Until ${shortDate(to)}`;
 }
 
+/** The toolbar's pill outline, shared with the Filters button's look. */
 const pillInputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 999,
-    bgcolor: "background.default",
     "& fieldset": { borderColor: "divider" },
   },
 } as const;
 
-const headCellSx = {
-  typography: "label",
-  color: "text.secondary",
-  borderBottomColor: "divider",
-  py: 1.5,
+/** A well marks the one control you type into; a pick reads as a button. */
+const searchWellSx = {
+  "& .MuiOutlinedInput-root": { bgcolor: "background.default" },
 } as const;
 
 /** Chips in the active-filters row. */
@@ -93,6 +94,9 @@ const activeChipSx = { bgcolor: "primary.light", fontWeight: 500 } as const;
 function Transactions() {
   const org = useCurrentOrg();
   const categories = useCategories();
+  const goals = useGoals();
+  const members = useMembers();
+  const phone = useMediaQuery(PHONE_QUERY);
   type Loaded =
     { data: TransactionPage; error: null } | { data: null; error: string };
   const [result, setResult] = useState<Loaded | null>(null);
@@ -100,7 +104,8 @@ function Transactions() {
   const error = result?.error ?? null;
   const [version, setVersion] = useState(0);
   const filtersApi = useTransactionFilters();
-  const { filters, update, toggleCategory, clear, activeCount } = filtersApi;
+  const { filters, update, toggleCategory, toggleMember, clear, activeCount } =
+    filtersApi;
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const requestKey = JSON.stringify(filters) + version;
   const [adding, setAdding] = useState(false);
@@ -132,9 +137,10 @@ function Transactions() {
   }, [org.id, filters, version, requestKey]);
 
   const refresh = () => setVersion((v) => v + 1);
+  const withPerson = !org.is_personal;
 
   return (
-    <Box sx={{ px: 3, pb: 5 }}>
+    <Box sx={{ ...PAGE_PADDING, pb: 5 }}>
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
         Add transaction
@@ -155,9 +161,10 @@ function Transactions() {
       {!data && !error && <CircularProgress />}
 
       {data && (
-        // A container card, no role: the tabs and table inside carry their
+        // A container card, no role: the tabs and list inside carry their
         // own semantics, and the page heading above names it. Zero padding
-        // because the tabs and toolbar pad themselves.
+        // because the tabs and toolbar pad themselves, with the card's own
+        // step between phone and tablet.
         <Paper variant="card" sx={{ p: 0, overflow: "hidden" }}>
           {/* -------- Type tabs -------- */}
           <Tabs
@@ -166,7 +173,7 @@ function Transactions() {
             variant="scrollable"
             allowScrollButtonsMobile
             sx={{
-              px: 3,
+              px: "var(--card-padding)",
               borderBottom: "1px solid",
               borderColor: "divider",
               "& .MuiTabs-indicator": {
@@ -218,15 +225,31 @@ function Transactions() {
             ))}
           </Tabs>
 
-          <Stack spacing={2} sx={{ px: 3, pt: 2.5, pb: 1 }}>
+          <Stack spacing={2} sx={{ px: "var(--card-padding)", pt: 2.5, pb: 1 }}>
             {/* -------- Toolbar -------- */}
-            <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
               <TextField
                 value={filters.q}
                 onChange={(e) => update({ q: e.target.value })}
-                placeholder="Search name or category"
+                placeholder="Search name, category or member"
                 size="small"
-                sx={[{ flex: 1, minWidth: 220 }, pillInputSx]}
+                // On a phone the search owns the first row and the sort
+                // grows to close the second, so both rows end on one edge.
+                sx={[
+                  {
+                    flex: 1,
+                    minWidth: 220,
+                    flexBasis: "100%",
+                    [TABLET]: { flexBasis: "auto" },
+                  },
+                  pillInputSx,
+                  searchWellSx,
+                ]}
                 slotProps={{
                   htmlInput: { maxLength: QUERY_MAX_LENGTH },
                   input: {
@@ -245,7 +268,16 @@ function Transactions() {
                 // source of options, so the cast cannot widen past Sort.
                 onChange={(e) => update({ sort: e.target.value as Sort })}
                 size="small"
-                sx={[{ minWidth: 170 }, pillInputSx]}
+                sx={[
+                  // No floor on a phone: the row is too narrow for one next
+                  // to the Filters button, and growing already fills it.
+                  {
+                    flex: 1,
+                    minWidth: 0,
+                    [TABLET]: { flex: "0 0 auto", minWidth: 170 },
+                  },
+                  pillInputSx,
+                ]}
               >
                 {SORTS.map((s) => (
                   <MenuItem key={s.value} value={s.value}>
@@ -306,6 +338,17 @@ function Transactions() {
                     sx={activeChipSx}
                   />
                 ))}
+                {filters.members.map((id) => (
+                  <Chip
+                    key={`member-${id}`}
+                    label={
+                      members.find((m) => m.user_id === id)?.username ??
+                      `Member ${id}`
+                    }
+                    onDelete={() => toggleMember(id)}
+                    sx={activeChipSx}
+                  />
+                ))}
                 {filters.taxDeductible && (
                   <Chip
                     label="Tax refundable"
@@ -324,47 +367,36 @@ function Transactions() {
 
             <FilterPanel
               categories={categories}
+              members={members}
               anchor={filterAnchor}
               onClose={() => setFilterAnchor(null)}
               matchCount={data.total}
               {...filtersApi}
             />
 
-            {/* -------- Table -------- */}
-            <Box sx={{ overflowX: "auto" }}>
-              <Table
+            {/* -------- List -------- */}
+            {data.rows.length > 0 && (
+              <TransactionList
+                withPerson={withPerson}
+                aria-label="Transactions"
                 sx={{
-                  minWidth: 560,
+                  py: 1,
                   opacity: loading ? 0.6 : 1,
                   transition: "opacity 150ms",
                 }}
               >
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={[headCellSx, { width: 120 }]}>
-                      Date
-                    </TableCell>
-                    <TableCell sx={headCellSx}>Name</TableCell>
-                    <TableCell sx={[headCellSx, { width: 200 }]}>
-                      Category
-                    </TableCell>
-                    <TableCell sx={[headCellSx, { width: 200 }]} align="right">
-                      Amount
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.rows.map((t) => (
-                    <TransactionRow
-                      categories={categories}
-                      key={t.id}
-                      transaction={t}
-                      onClick={setEditing}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
+                {data.rows.map((t) => (
+                  <TransactionListItem
+                    key={t.id}
+                    transaction={t}
+                    categories={categories}
+                    goals={goals}
+                    withPerson={withPerson}
+                    onClick={setEditing}
+                  />
+                ))}
+              </TransactionList>
+            )}
 
             {/* Distinguishes an empty workspace from filters that match
                 nothing: the second is the user's own doing and is undone by
@@ -401,6 +433,8 @@ function Transactions() {
                     page={data.page}
                     onChange={(_, page) => update({ page })}
                     shape="rounded"
+                    siblingCount={phone ? 0 : 1}
+                    size={phone ? "small" : "medium"}
                     sx={{
                       "& .MuiPaginationItem-root": {
                         fontSize: "0.95rem",

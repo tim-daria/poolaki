@@ -103,6 +103,13 @@ test.describe.serial("Goals", () => {
     });
     await contribute(vacation, "200.00", "2026-09-01");
     await patchGoalViaApi(page, orgId, vacation, { status: "archived" });
+
+    const bike = await createGoalViaApi(page, orgId, {
+      name: "Old bike",
+      target_amount: "300.00",
+      target_date: null,
+    });
+    await patchGoalViaApi(page, orgId, bike, { status: "archived" });
   });
 
   test.afterAll(async () => {
@@ -123,12 +130,12 @@ test.describe.serial("Goals", () => {
     await page.getByRole("button", { name: `Actions for ${goalName}` }).click();
   };
 
-  test("Add saving opens blank, with no deadline preset, and creates a goal", async () => {
-    await page.getByRole("button", { name: "Add saving" }).click();
+  test("Add goal opens blank, with no deadline preset, and creates a goal", async () => {
+    await page.getByRole("button", { name: "Add goal" }).click();
     const dialog = page.getByRole("dialog");
 
     await expect(
-      dialog.getByRole("heading", { name: "Add saving" }),
+      dialog.getByRole("heading", { name: "Add goal" }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await expect(dialog.getByLabel("Target amount")).toHaveValue("");
@@ -150,7 +157,7 @@ test.describe.serial("Goals", () => {
   });
 
   test("unsaved input is guarded and the name is normalised on blur", async () => {
-    await page.getByRole("button", { name: "Add saving" }).click();
+    await page.getByRole("button", { name: "Add goal" }).click();
     const dialog = page.getByRole("dialog");
     const name = dialog.getByLabel("Name");
 
@@ -168,7 +175,7 @@ test.describe.serial("Goals", () => {
     await expect(dialog).toBeHidden();
 
     // Reopening starts blank again.
-    await page.getByRole("button", { name: "Add saving" }).click();
+    await page.getByRole("button", { name: "Add goal" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue("");
     await dialog.getByRole("button", { name: "Cancel" }).click();
   });
@@ -196,9 +203,9 @@ test.describe.serial("Goals", () => {
       "Winter tyres",
     ]);
     expect(await names(completed())).toEqual(["Trip to Barcelona"]);
-    expect(await names(archived())).toEqual(["Vacation fund"]);
+    expect(await names(archived())).toEqual(["Vacation fund", "Old bike"]);
     await expect(
-      page.getByRole("button", { name: "Start a new saving" }),
+      page.getByRole("button", { name: "Start a new goal" }),
     ).toHaveCount(0);
 
     // Active: progress from the API balance, the deadline from the goal.
@@ -219,7 +226,7 @@ test.describe.serial("Goals", () => {
     await expect(cue).toHaveText("Target reached");
     await cue.click();
     await expect(
-      page.getByRole("dialog").getByRole("heading", { name: "Edit saving" }),
+      page.getByRole("dialog").getByRole("heading", { name: "Edit goal" }),
     ).toBeVisible();
     await page
       .getByRole("dialog")
@@ -235,7 +242,7 @@ test.describe.serial("Goals", () => {
     // Archived: dimmed, no actions; the refund left it at zero.
     const vacation = archived().getByRole("group", { name: "Vacation fund" });
     await expect(vacation.getByText("0% Completed")).toBeVisible();
-    await expect(archived().getByTestId("ArchiveOutlinedIcon")).toHaveCount(1);
+    await expect(archived().getByTestId("ArchiveOutlinedIcon")).toHaveCount(2);
     await expect(
       archived().getByRole("button", { name: /^Actions for / }),
     ).toHaveCount(0);
@@ -247,11 +254,15 @@ test.describe.serial("Goals", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Contribute to saving" }),
+      dialog.getByRole("heading", { name: "Contribute" }),
     ).toBeVisible();
     // The tab is a ToggleButton, so it exposes aria-pressed.
     await expect(
-      dialog.getByRole("button", { name: "Saving", pressed: true }),
+      dialog.getByRole("button", {
+        name: "Savings",
+        exact: true,
+        pressed: true,
+      }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
     // Format-agnostic on purpose: the currency plan moves the symbol.
@@ -266,7 +277,11 @@ test.describe.serial("Goals", () => {
 
     await active().getByRole("group", { name: "New laptop" }).click();
     await expect(
-      dialog.getByRole("button", { name: "Saving", pressed: true }),
+      dialog.getByRole("button", {
+        name: "Savings",
+        exact: true,
+        pressed: true,
+      }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
     await dialog.getByRole("button", { name: "Cancel" }).click();
@@ -291,6 +306,19 @@ test.describe.serial("Goals", () => {
       .getByRole("listitem")
       .filter({ hasText: "Archived Vacation fund" });
     await expect(refund).toContainText("-€200,00");
+    await dialog.getByRole("button", { name: "close" }).click();
+    await expect(dialog).toBeHidden();
+
+    // Archived with nothing saved: no refund row, so the figure is zero, not a dash.
+    await archived().getByRole("group", { name: "Old bike" }).click();
+    await expect(
+      dialog.getByRole("heading", { name: "Old bike" }),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("€0,00")).toHaveText("€0");
+    await expect(dialog.getByText("returned to balance")).toBeVisible();
+    await expect(
+      dialog.getByText("Contributions will show up here."),
+    ).toBeVisible();
     await dialog.getByRole("button", { name: "close" }).click();
     await expect(dialog).toBeHidden();
   });
@@ -355,7 +383,7 @@ test.describe.serial("Goals", () => {
     await expect(
       dialog.getByRole("heading", { name: "New laptop" }),
     ).toBeVisible();
-    await expect(dialog.getByText("Saving · by Dec 2027")).toBeVisible();
+    await expect(dialog.getByText("Goal · by Dec 2027")).toBeVisible();
     await expect(dialog.getByLabel("€1.790,00")).toHaveText("€1.790");
     await expect(dialog.getByText("of €2.000")).toBeVisible();
     await expect(dialog.getByText("90%", { exact: true })).toBeVisible();
@@ -375,7 +403,7 @@ test.describe.serial("Goals", () => {
       await openMenu("Winter tyres");
       await page.getByRole("menuitem", { name: "Edit" }).click();
       await expect(
-        dialog.getByRole("heading", { name: "Edit saving" }),
+        dialog.getByRole("heading", { name: "Edit Goal" }),
       ).toBeVisible();
       await expect(dialog.getByLabel("Name")).toHaveValue("Winter tyres");
       await expect(dialog.getByLabel("Target amount")).toHaveValue("480,00");
@@ -389,7 +417,7 @@ test.describe.serial("Goals", () => {
       await dialog.getByRole("button", { name: "Save changes" }).click();
       await expect(
         dialog.getByText(
-          "A goal with this name already exists in this organization.",
+          "A goal with this name already exists in this workspace.",
         ),
       ).toBeVisible();
     });
@@ -418,7 +446,7 @@ test.describe.serial("Goals", () => {
     );
 
     await dialog.getByRole("button", { name: "Archive" }).click();
-    const confirm = page.getByRole("dialog", { name: "Archive this saving?" });
+    const confirm = page.getByRole("dialog", { name: "Archive this goal?" });
     await expect(confirm).toContainText("returns €3.000,00");
     await confirm.getByRole("button", { name: "Archive" }).click();
 
@@ -440,6 +468,31 @@ test.describe.serial("Goals", () => {
     ).toContainText("-€3.000,00");
   });
 
+  test("Withdraw opens the form on Withdraw with the goal chosen, and caps the amount", async () => {
+    await openMenu("New laptop");
+    await page.getByRole("menuitem", { name: "Withdraw" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "Withdraw" }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: /^Withdraw back/, pressed: true }),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Goal")).toContainText("New laptop");
+
+    // More than the goal holds is refused before any request.
+    await dialog.getByLabel("Amount").fill("2000");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(
+      dialog.getByText("Only €1.790,00 is in this goal."),
+    ).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
   test("the actions menu does not trigger the card", async () => {
     await openMenu("New laptop");
     await expect(
@@ -459,12 +512,12 @@ test.describe.serial("Goals", () => {
     await page.goto(`${empty}/savings`);
     await expect(active().getByRole("group")).toHaveCount(0);
 
-    const prompt = page.getByRole("button", { name: "Start a new saving" });
+    const prompt = page.getByRole("button", { name: "Start a new goal" });
     await expect(prompt).toBeVisible();
     await prompt.click();
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Add saving" }),
+      dialog.getByRole("heading", { name: "Add goal" }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();

@@ -26,6 +26,11 @@ Query parameters (all optional):
 - `goal_id`: ID of a goal belonging to the organization; matches both its
   contributions and its expenses
 - `tax_deductible`: `true` keeps only tax-deductible rows
+- `q`: case-insensitive substring match on the description, the category
+  name and the username of the member who added the row
+- `created_by`: one user ID or a comma-separated list of them; rows created
+  by any listed member are returned. Every ID must be a member of the
+  organization
 - `sort`: `newest` (default) or `oldest`; ties within a day are broken by `id`
 - `page`: 1-based page number, default `1`
 - `page_size`: rows per page, default `15`, maximum `100`
@@ -57,7 +62,7 @@ Response example:
 }
 ```
 
-`counts` is the filtered set (date / category / goal / tax filters) split by
+`counts` is the filtered set (date / category / goal / tax / member filters) split by
 entry type — one number per toggle. The selected toggle (`entry_type`) picks
 its part for the table: `total` is that part's size, `transactions` one page
 of it (`page` / `page_size` / `page_count`). Switching the toggle only
@@ -67,7 +72,8 @@ Status:
 
 - `200 OK` on success
 - `400 Bad Request` for malformed parameters, `date_to` earlier than
-  `date_from`, or a `goal_id` / `category_id` from another organization
+  `date_from`, a `goal_id` / `category_id` from another organization, or a
+  `created_by` that is not a member of it
 - `403 Forbidden` when the user is not a member of the organization
 
 ### Create transaction
@@ -127,7 +133,7 @@ Status:
 
 - `201 Created` on success
 - `400 Bad Request` when a rule above is violated
-- `403 Forbidden` when the user is not the organization owner
+- `403 Forbidden` when the user is not a member of the organization
 
 Side effect (see [notifications.md](notifications.md)): every other member of
 the organization receives a `transaction_added` notification; the creator is
@@ -162,8 +168,8 @@ Response example:
 Status:
 
 - `200 OK` on success
-- `404 Not Found` for invalid transaction_id
-- `403 Forbidden` when the user is not the organization owner
+- `404 Not Found` for an invalid transaction_id, or one created by another member: rows are scoped to their creator, so nobody else can change them, the organization owner included
+- `403 Forbidden` when the user is not a member of the organization
 
 ### Delete transaction
 
@@ -174,8 +180,8 @@ DELETE /api/v1/organizations/{org_id}/transactions/{transaction_id}/
 Status:
 - `204 No Content` on successful deletion
 - `400 Bad Request` if the balance is insufficient to cancel income transaction
-- `403 Forbidden` when the user is not the organization owner
-- `404 Not Found` for invalid transaction_id
+- `403 Forbidden` when the user is not a member of the organization
+- `404 Not Found` for an invalid transaction_id, or one created by another member (creator only, see above)
 
 ## Frontend integration notes
 

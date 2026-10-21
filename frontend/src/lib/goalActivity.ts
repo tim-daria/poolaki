@@ -58,7 +58,7 @@ export function goalFigures(g: Goal, rows: SplitEntry[]): GoalFigures {
 }
 
 export type GoalSubtitle = {
-  /** "Saving", "Ready to spend", "Used up", "Off limits", "Archived", with a note after " · ". */
+  /** "Goal", "Ready to spend", "Used up", "Off limits", "Archived", with a note after " · ". */
   text: string;
   /** A red tail after the text, when the goal is overdue. */
   alert: string | null;
@@ -85,15 +85,13 @@ export function goalSubtitle(g: Goal, today: string = TODAY): GoalSubtitle {
       if (g.balance < 0) return OFF_LIMITS;
       if (goalFlags(g, today).includes("overdue") && g.target_date)
         return {
-          text: "Saving",
+          text: "Goal",
           alert: `overdue since ${monthYear(g.target_date)}`,
         };
       if (targetReached(g))
-        return { text: "Saving · target reached", alert: null };
+        return { text: "Goal · target reached", alert: null };
       return {
-        text: g.target_date
-          ? `Saving · by ${monthYear(g.target_date)}`
-          : "Saving",
+        text: g.target_date ? `Goal · by ${monthYear(g.target_date)}` : "Goal",
         alert: null,
       };
   }
@@ -239,15 +237,17 @@ export async function getGoalActivity(
 }
 
 /**
- * What an archived goal held when it was archived. Archived goals accept no
- * rows, so the newest row is the archive's own: a withdrawal returned that
- * much to the balance, a contribution settled that much overdraft. Null
- * for a goal with no rows, or one that is not archived.
+ * What an archived goal held when it was archived. Archiving zeroes the goal,
+ * and the server writes its own row only when there was something to settle:
+ * a withdrawal returned that much to the balance, a contribution settled that
+ * much overdraft. Archived goals accept no rows after that, so the newest row
+ * is the archive's own, and a goal with no rows, or whose newest row is an
+ * expense, held nothing.
  */
-export function heldAtArchive(entries: ActivityEntry[]): number | null {
+export function heldAtArchive(entries: ActivityEntry[]): number {
   const last = [...entries].sort(chronological).at(-1);
-  if (!last) return null;
+  if (!last) return 0;
   if (last.kind === "withdrawn") return last.amount;
   if (last.kind === "added") return -last.amount;
-  return null;
+  return 0;
 }

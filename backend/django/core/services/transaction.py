@@ -27,6 +27,7 @@ class TransactionFilters:
     date_to: date | None = None
     category_ids: tuple[int, ...] | None = None
     goal_id: int | None = None
+    created_by_ids: tuple[int, ...] | None = None
     tax_deductible: bool = False
     q: str = ""
     entry_type: EntryType | None = None
@@ -56,10 +57,16 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         qs = qs.filter(category_id__in=filters.category_ids)
     if filters.goal_id is not None:
         qs = qs.filter(goal_id=filters.goal_id)
+    if filters.created_by_ids:
+        qs = qs.filter(created_by_id__in=filters.created_by_ids)
     if filters.tax_deductible:
         qs = qs.filter(is_tax_deductible=True)
     if filters.q:
-        qs = qs.filter(Q(description__icontains=filters.q) | Q(category__name__icontains=filters.q))
+        qs = qs.filter(
+            Q(description__icontains=filters.q)
+            | Q(category__name__icontains=filters.q)
+            | Q(created_by__username__icontains=filters.q)
+        )
     if filters.sort == "oldest":
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.

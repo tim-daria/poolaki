@@ -40,16 +40,37 @@ export function useTransactionFilters() {
         : [...f.categories, id],
     }));
 
+  const toggleMember = (id: number) =>
+    update((f) => ({
+      members: f.members.includes(id)
+        ? f.members.filter((m) => m !== id)
+        : [...f.members, id],
+    }));
+
   /** Clears the filter panel's fields. Search, tab and sort survive. */
   const clear = () =>
-    update({ from: "", to: "", categories: [], taxDeductible: false });
+    update({
+      from: "",
+      to: "",
+      categories: [],
+      members: [],
+      taxDeductible: false,
+    });
 
   const activeCount =
     Number(Boolean(filters.from || filters.to)) +
     filters.categories.length +
+    filters.members.length +
     Number(filters.taxDeductible);
 
-  return { filters, update, toggleCategory, clear, activeCount };
+  return {
+    filters,
+    update,
+    toggleCategory,
+    toggleMember,
+    clear,
+    activeCount,
+  };
 }
 
 export type TransactionFiltersApi = ReturnType<typeof useTransactionFilters>;

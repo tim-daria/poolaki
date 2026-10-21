@@ -13,13 +13,17 @@ test.describe.serial("AI assistant chat", () => {
   });
 
   const openAssistant = async () => {
-    await page.getByRole("button", { name: "AI Assistant" }).click();
-    await expect(page.getByText("Ask AI")).toBeVisible();
+    await page.getByRole("button", { name: "Ask AI" }).click();
+    await expect(
+      page.getByRole("heading", { name: "AI Assistant" }),
+    ).toBeVisible();
   };
 
   const closeAssistant = async () => {
     await page.getByRole("button", { name: "Close assistant" }).click();
-    await expect(page.getByText("Ask AI")).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: "AI Assistant" }),
+    ).toBeHidden();
   };
 
   const ask = async (question: string) => {

@@ -6,7 +6,7 @@ import { Money } from "../../components/Money";
 import { useElementSize } from "../../hooks/useElementSize";
 import { shortDate } from "../../lib/date";
 import { compactAmount, displayFigure, splitCents } from "../../lib/money";
-import { DESKTOP_QUERY } from "./layout";
+import { DESKTOP_QUERY } from "../../lib/layout";
 
 interface Props {
   balance: number;
@@ -14,7 +14,6 @@ interface Props {
   change: number | null;
   /** First day of the month, ISO. */
   monthStart: string;
-  showMonthChange?: boolean;
 }
 
 /** Width of one glyph in the mono font, as a fraction of the font size. */
@@ -22,12 +21,7 @@ const GLYPH_EM = 0.6;
 const MAX_PX = { desktop: 44, mobile: 32 };
 const MIN_PX = 28;
 
-export function NetBalanceCard({
-  balance,
-  change,
-  monthStart,
-  showMonthChange = true,
-}: Props) {
+export function NetBalanceCard({ balance, change, monthStart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const { width } = useElementSize(ref);
   const desktop = useMediaQuery(DESKTOP_QUERY);
@@ -42,7 +36,7 @@ export function NetBalanceCard({
   const fitted = width > 0 ? width / (full.length * GLYPH_EM) : max;
   const fontSize = Math.max(MIN_PX, Math.min(max, fitted));
   const abbreviated = width > 0 && fitted < MIN_PX;
-  const shownChange = showMonthChange && change !== null;
+  const shownChange = change !== null;
 
   return (
     <Box
@@ -94,8 +88,12 @@ export function NetBalanceCard({
         </Box>
       </Box>
 
-      <Typography sx={{ color: "text.secondary", mt: "auto" }}>
-        Funds available to spend
+      <Typography
+        sx={{ color: negative ? "error.main" : "text.secondary", mt: "auto" }}
+      >
+        {negative
+          ? "Below zero: more went out than you had"
+          : "Available to spend"}
       </Typography>
     </Box>
   );

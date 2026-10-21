@@ -188,7 +188,7 @@ export function GoalForm({ open, goal, onClose, onSaved }: Props) {
   return (
     <ModalShell
       open={open}
-      title={editing ? "Edit saving" : "Add saving"}
+      title={editing ? "Edit goal" : "Add goal"}
       onClose={guard.requestClose}
     >
       {/* The form wraps content AND actions, or Enter never reaches submit. */}
@@ -327,7 +327,7 @@ export function GoalForm({ open, goal, onClose, onSaved }: Props) {
       />
       <ConfirmDialog
         open={confirmingArchive}
-        title="Archive this saving?"
+        title="Archive this goal?"
         message={note}
         confirmLabel="Archive"
         onConfirm={handleArchive}
