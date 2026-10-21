@@ -1,6 +1,7 @@
 import { Navigate } from "react-router";
 import { useOrgList } from "../context/useOrgList";
 import { NoOrganizationsScreen } from "./NoOrganizationsScreen";
+import { OrgListFailedScreen } from "./OrgListFailedScreen";
 
 /**
  * Handles the root route ("/") by resolving the best workspace to land on and
@@ -13,9 +14,12 @@ import { NoOrganizationsScreen } from "./NoOrganizationsScreen";
  */
 
 export function OrgRedirect() {
-  const { organizations, loading } = useOrgList();
+  const { organizations, loading, error, refresh } = useOrgList();
 
   if (loading) return <div>Loading…</div>;
+  // Before the empty check: a failed fetch leaves the list empty too, and
+  // "you have no workspaces" would be a guess.
+  if (error) return <OrgListFailedScreen onRetry={refresh} />;
 
   const target = organizations.find((o) => o.is_personal) ?? organizations[0];
 

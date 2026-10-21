@@ -154,9 +154,7 @@ test.describe.serial("Settings", () => {
     await expect(guest.getByRole("button", { name: "Quit" })).toBeEnabled();
     await expect(guest.getByText("Delete workspace")).toBeHidden();
     // The route turns the header's Ask AI button off.
-    await expect(
-      guest.getByRole("button", { name: "AI Assistant" }),
-    ).toBeHidden();
+    await expect(guest.getByRole("button", { name: "Ask AI" })).toBeHidden();
   });
 
   // On the guest: a password change ends the user's other sessions, which

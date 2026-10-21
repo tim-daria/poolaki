@@ -2,7 +2,7 @@
 
 import { NavLink } from "react-router";
 import { Box, ButtonBase } from "@mui/material";
-import { NAV_ITEMS } from "../navItems";
+import { NAV_ITEMS } from "../BottomNav/navItems";
 
 /**
  * Active styling comes from react-router's NavLink, which appends `.active`

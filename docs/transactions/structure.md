@@ -24,7 +24,7 @@ of that organization.
 
 Server-side filtered and paginated. Query parameters: `entry_type`
 (`all` / `income` / `expense` / `contribution`), `date_from` / `date_to`
-(inclusive), `category_id`, `goal_id`, `tax_deductible`, `sort`
+(inclusive), `category_id`, `goal_id`, `tax_deductible`, `created_by`, `sort`
 (`newest` / `oldest`), `page`, `page_size` (default 15, max 100). The full
 contract, including 400 cases, is documented in
 [backend/transactions.md](../backend/transactions.md).

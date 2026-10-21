@@ -22,6 +22,13 @@ Use this context to answer questions:
 
 {{context}}
 
+## Data Scope
+
+- The transaction context covers the last 3 calendar months only.
+- The monthly summary and category context cover the current calendar year only.
+- If the user asks about a period outside these ranges, say that you only
+  have data for these periods — do not guess or estimate.
+
 ## User Question
 
 {{user_question}}

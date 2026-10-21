@@ -169,24 +169,24 @@ describe("goalSubtitle", () => {
       { text: "Ready to spend", alert: null },
     ],
     [
-      "saving, overdue",
+      "goal, overdue",
       { status: "active", balance: 1790, target_date: "2025-12-31" },
-      { text: "Saving", alert: "overdue since Dec 2025" },
+      { text: "Goal", alert: "overdue since Dec 2025" },
     ],
     [
-      "saving with a deadline",
+      "goal with a deadline",
       { status: "active", balance: 1790, target_date: "2026-12-31" },
-      { text: "Saving · by Dec 2026", alert: null },
+      { text: "Goal · by Dec 2026", alert: null },
     ],
     [
-      "saving with no deadline",
+      "goal with no deadline",
       { status: "active", balance: 1790, target_date: null },
-      { text: "Saving", alert: null },
+      { text: "Goal", alert: null },
     ],
     [
-      "saving past the target",
+      "goal past the target",
       { status: "active", balance: 2500, target_date: "2025-12-31" },
-      { text: "Saving · target reached", alert: null },
+      { text: "Goal · target reached", alert: null },
     ],
   ])("%s", (_, overrides, expected) => {
     expect(goalSubtitle(goal(overrides), TODAY)).toEqual(expected);
@@ -282,8 +282,18 @@ describe("heldAtArchive", () => {
     expect(heldAtArchive([saved, spent, settled])).toBe(-340);
   });
 
-  it("is null with no rows", () => {
-    expect(heldAtArchive([])).toBeNull();
+  it("is zero with no rows: nothing was held, so the server wrote none", () => {
+    expect(heldAtArchive([])).toBe(0);
+  });
+
+  it("is zero when the newest row is an expense: the goal was already empty", () => {
+    const spent = entry({
+      id: 2,
+      kind: "spent",
+      date: "2026-06-01",
+      amount: 200,
+    });
+    expect(heldAtArchive([saved, spent])).toBe(0);
   });
 });
 

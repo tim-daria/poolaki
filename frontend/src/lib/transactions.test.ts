@@ -3,11 +3,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   changeType,
+  deleteTransaction,
   describeProblem,
   emptyDraft,
   toDraft,
+  transferDraft,
   validateDraft,
   fetchTransactionPage,
+  fetchTransactions,
   updateTransaction,
   TransactionError,
   type Transaction,
@@ -15,6 +18,7 @@ import {
   type TransactionPageFilters,
 } from "./transactions";
 import { DEFAULT_FILTERS } from "./transactionFilters";
+import type { Goal } from "./goals";
 
 function draft(overrides: Partial<TransactionDraft> = {}): TransactionDraft {
   return {
@@ -65,6 +69,30 @@ const EMPTY_PAGE = {
   page_count: 1,
   counts: { all: 0, income: 0, expense: 0, contribution: 0 },
 };
+
+describe("fetchTransactions", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks for a page of the newest rows", async () => {
+    const fetch = stubFetch({ transactions: [] });
+    await fetchTransactions(7, { pageSize: 5 });
+    expect(fetch.mock.calls[0][0]).toBe(
+      "/api/v1/organizations/7/transactions/?page_size=5",
+    );
+  });
+
+  it("bounds the rows to a month when asked", async () => {
+    const fetch = stubFetch({ transactions: [] });
+    await fetchTransactions(7, {
+      from: "2026-10-01",
+      to: "2026-10-31",
+      pageSize: 100,
+    });
+    expect(fetch.mock.calls[0][0]).toBe(
+      "/api/v1/organizations/7/transactions/?page_size=100&date_from=2026-10-01&date_to=2026-10-31",
+    );
+  });
+});
 
 describe("fetchTransactionPage", () => {
   it("sends no params for the default filters", async () => {
@@ -179,12 +207,61 @@ describe("updateTransaction", () => {
     );
   });
 
+  it("says whose row it is on a 404: the server hides other members' rows", async () => {
+    stubFetch({ detail: "Not found." }, 404);
+    await expect(updateTransaction(1, 7, draft(), "tok")).rejects.toThrow(
+      "added by someone else, or no longer exists",
+    );
+  });
+
   it("rejects with the status on any other failure", async () => {
     stubFetch({}, 500);
     await expect(updateTransaction(ORG, ID, draft(), "tok")).rejects.toThrow(
       "Failed to update transaction (500)",
     );
   });
+});
+
+describe("deleteTransaction", () => {
+  it("DELETEs with the CSRF token", async () => {
+    // A 204 carries no body, which the Response constructor enforces.
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetch);
+    await deleteTransaction(1, 7, "tok");
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("/api/v1/organizations/1/transactions/7/");
+    expect(init).toMatchObject({
+      method: "DELETE",
+      headers: { "X-CSRFToken": "tok" },
+    });
+  });
+
+  it("says whose row it is on a 404", async () => {
+    stubFetch({ detail: "Not found." }, 404);
+    await expect(deleteTransaction(1, 7, "tok")).rejects.toThrow(
+      TransactionError,
+    );
+    stubFetch({ detail: "Not found." }, 404);
+    await expect(deleteTransaction(1, 7, "tok")).rejects.toThrow(
+      "added by someone else, or no longer exists",
+    );
+  });
+});
+
+describe("transferDraft", () => {
+  it.each<["contribution" | "withdraw"]>([["contribution"], ["withdraw"]])(
+    "starts on the Saving tab with the goal chosen, going %s",
+    (direction) => {
+      expect(transferDraft(9, direction)).toMatchObject({
+        entry_type: direction,
+        goal: 9,
+        category: null,
+        amount: "",
+      });
+    },
+  );
 });
 
 describe("toDraft", () => {
@@ -279,6 +356,39 @@ describe("validateDraft", () => {
 
   it("finally requires a date", () => {
     expect(validateDraft(draft({ transaction_date: "" }))).toBe("Pick a date.");
+  });
+
+  describe("caps a withdrawal at what the goal holds", () => {
+    const goal: Goal = {
+      id: 9,
+      name: "Trip",
+      target_amount: 2000,
+      balance: 30,
+      spendable: false,
+      progress: 0.02,
+      overdue: false,
+      completed_at: null,
+      created_by: "ana",
+      target_date: null,
+      status: "active",
+      created_at: "2026-04-01T09:00:00Z",
+    };
+    const withdraw = (amount: string) =>
+      draft({ entry_type: "withdraw", goal: 9, category: null, amount });
+
+    it("refuses more than the balance, naming the amount", () => {
+      expect(validateDraft(withdraw("50"), [goal])).toBe(
+        "Only €30,00 is in this goal.",
+      );
+    });
+
+    it("allows exactly the balance", () => {
+      expect(validateDraft(withdraw("30"), [goal])).toBeNull();
+    });
+
+    it("lets the server decide when the goal is not in the list", () => {
+      expect(validateDraft(withdraw("50"), [])).toBeNull();
+    });
   });
 });
 

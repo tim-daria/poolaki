@@ -12,7 +12,7 @@ import type { Organization } from "../lib/organizations";
 export function OrgListProvider() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   /** Using try/catch instead of try/finally because React Compiler cannot process
    * a try block without a catch. Bailing out would cause the compiler to skip
@@ -43,7 +43,7 @@ export function OrgListProvider() {
     return () => ac.abort();
   }, []);
 
-  const value = { organizations, loading, refresh: () => load() };
+  const value = { organizations, loading, error, refresh: () => load() };
 
   return (
     <OrgListContext.Provider value={value}>

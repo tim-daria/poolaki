@@ -1,13 +1,16 @@
+/** @file Terminal screen for a workspace list that could not be fetched, with a retry. */
+
 import { useState } from "react";
+import { Button } from "@mui/material";
+import { ErrorScreen } from "./ErrorScreen";
 
 interface Props {
   onRetry: () => Promise<void>;
 }
 
 /**
- * The workspace list itself couldn't be fetched. Distinct from
- * NoOrganizationsScreen: we don't know what the user has, so telling them they
- * have nothing would be a lie.
+ * Distinct from NoOrganizationsScreen: we don't know what the user has, so
+ * telling them they have nothing would be a lie.
  *
  * Holds its own pending flag instead of raising the provider's `loading`: that
  * flag gates the whole subtree, so a retry from here would unmount whatever is
@@ -24,16 +27,20 @@ export function OrgListFailedScreen({ onRetry }: Props) {
   }
 
   return (
-    <div role="alert">
-      <h2>Couldn&apos;t load your workspaces</h2>
-      <p>Something went wrong on our side. Please try again.</p>
-      <button
-        type="button"
-        onClick={() => void handleRetry()}
-        disabled={retrying}
-      >
-        {retrying ? "Retrying…" : "Retry"}
-      </button>
-    </div>
+    <ErrorScreen
+      role="alert"
+      title="Couldn't load your workspaces"
+      actions={
+        <Button
+          variant="contained"
+          onClick={() => void handleRetry()}
+          disabled={retrying}
+        >
+          {retrying ? "Retrying…" : "Retry"}
+        </Button>
+      }
+    >
+      Something went wrong on our side. Please try again.
+    </ErrorScreen>
   );
 }

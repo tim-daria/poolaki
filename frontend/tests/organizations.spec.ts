@@ -152,10 +152,13 @@ test.describe.serial("Workspaces", () => {
 
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /no workspaces/i }),
+      page.getByRole("heading", { name: /couldn't load your workspaces/i }),
     ).toBeVisible();
 
+    // Retry after the route is released recovers without a reload.
     await page.unrouteAll({ behavior: "ignoreErrors" });
+    await page.getByRole("button", { name: "Retry" }).click();
+    await expect(page).toHaveURL(/\/o\/\d+/);
   });
 
   test("whitespace-only workspace name is rejected", async () => {

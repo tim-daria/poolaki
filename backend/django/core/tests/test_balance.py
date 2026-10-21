@@ -2,8 +2,10 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from django.urls import reverse
+from rest_framework.test import APIClient
 
-from core.models import Goal, Organization, Transaction
+from core.models import Goal, Organization, Transaction, User
 from core.services.balance import calculate_org_balance
 
 pytestmark = pytest.mark.django_db
@@ -102,3 +104,21 @@ def test_calculate_org_balance_ignores_other_organizations(
     )
 
     assert calculate_org_balance(personal_org) == Decimal("100.00")
+
+
+def test_balance_endpoint_serializes_a_sum_wider_than_one_amount(
+    api_client: APIClient,
+    personal_user: tuple[User, Organization],
+) -> None:
+    """The balance is a sum like the report's and carries no 14-digit cap."""
+    user, org = personal_user
+    api_client.force_authenticate(user=user)
+    for day in (date(2025, 1, 5), date(2025, 1, 6)):
+        Transaction.objects.create(
+            org=org, entry_type="income", amount=Decimal("999999999999.99"), transaction_date=day
+        )
+
+    response = api_client.get(reverse("organization-balance", kwargs={"org_id": org.id}))
+
+    assert response.status_code == 200
+    assert response.json() == {"org_id": org.id, "balance": "1999999999999.98"}
