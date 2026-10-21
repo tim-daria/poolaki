@@ -198,3 +198,17 @@ Every code review, whether of a PR, a branch or the current diff, follows [REVIE
 
 </details>
 
+
+<details>
+<summary><strong>Accessibility of cards and other surfaces</strong></summary>
+
+A card's look comes from the theme's `card` and `clickableCard` Paper variants. Its semantics come from the element it renders as and the roles it carries; the look never decides them.
+
+1. **Match the element to the behaviour.** Navigation renders an `<a>` (`component={RouterLink}`). An action renders a `<button>` (`component={ButtonBase}`). A container renders nothing interactive: a `div`, or a `section` with `aria-label`/`aria-labelledby` when its heading is outside it. Never `role="button"` or `role="link"` on a `div` when the real element would do.
+2. **One interactive thing per interactive surface.** A link or button must not contain another control. If a card needs a nested control (a menu, an inline action), the card itself cannot be a link or button: make it a focusable `role="group"` with Enter/Space handlers (see `GoalCard`), or make only part of it clickable.
+3. **Name what it opens.** An interactive card takes its accessible name from its title: text content, or `aria-label`/`aria-labelledby` on the element. A decorative cue such as "See all" inside a link card is plain text, so the link has one name and one target.
+4. **Keyboard parity.** Every interactive surface is focusable, activates on Enter (and Space for buttons), and shows a visible focus ring. Real links and buttons get this from the element; a `role="group"` card must add `tabIndex={0}`, the key handlers and the ring by hand.
+5. **Decoration is CSS only.** Shadows, rings and hover colours never toggle `aria-*` attributes, live regions or roles.
+6. **Charts and figures carry text.** A drawn value (bar, ring, gauge) is `aria-hidden` or has a `role="img"` with an `aria-label` that states the numbers; the same numbers appear as text nearby. An abbreviated figure keeps the exact amount in `title` and `aria-label`.
+
+</details>

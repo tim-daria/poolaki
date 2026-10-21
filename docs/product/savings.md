@@ -34,6 +34,8 @@ A contribution is a specific type of transaction used to move money from the gen
 
 **Archived:** Indicates the user no longer wishes to save for that purpose. Archived goals cannot receive further contributions, and any saved money returns to the general available balance. The historical data remains visible on the savings page.
 
+**Off limits:** A goal whose balance has gone below zero, because expenses paid from it exceeded what it held. The card marks it with an "Off limits" chip, a red negative amount and "Over by €X" in place of the deadline; its progress reads 0%. The general available balance does not reflect the overdraft while the goal is open: it is settled from the balance only when the goal is archived, as a contribution labelled "Overdraft settlement" in the transactions list. Topping the goal up with a contribution clears the state earlier.
+
 ## Shared Accounts and Permissions
 
 - All members in a shared account can create goals.
@@ -42,7 +44,7 @@ A contribution is a specific type of transaction used to move money from the gen
 
 - Only the creator of the goal or the organization owner can archive a goal.
 
-- Notifications are sent to all members when a goal is created or archived.
+- Notifications are sent to all members except the actor when a goal is created, completed, or archived.
 
 ## Expenses Linked to Goals
 
@@ -56,7 +58,7 @@ Linking an expense deducts the money from that specific savings total while keep
 
 **Home Page:** Displays a summary of active goals.
 
-**Savings Page:** Displays all goals, individual saved amounts, completion percentages, status filters, and the "Add Savings" option.
+**Savings Page:** Displays all goals, individual saved amounts, completion percentages, status filters, and the "Add Goal" option.
 
 **Transactions Page:** Lists contributions and linked expenses individually. Transactions can be filtered by type, and editing a contribution adjusts the corresponding goal balance automatically.
 

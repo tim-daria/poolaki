@@ -6,13 +6,19 @@
  */
 
 import { TODAY } from "./date";
-import { parseMoney, toMoneyString, validateAmount } from "./money";
+import {
+  displayAmount,
+  parseMoney,
+  toMoneyString,
+  validateAmount,
+} from "./money";
 import { formatName } from "./text";
 import {
   PAGE_SIZE,
   type Tab,
   type TransactionFilters,
 } from "./transactionFilters";
+import { goalById, type Goal } from "./goals";
 
 /** Contributions and withdrawals are transfers to or from a goal. */
 export type EntryType = "income" | "expense" | "contribution" | "withdraw";
@@ -25,6 +31,8 @@ export function isTransfer(entry_type: EntryType): boolean {
 /** The two entry types that are filed under a category. */
 export type TransactionType = "income" | "expense";
 
+export type TransactionPageFilters = TransactionFilters & { goal?: number };
+
 export type Transaction = {
   id: number;
   entry_type: EntryType;
@@ -36,7 +44,7 @@ export type Transaction = {
   /** ISO date string: YYYY-MM-DD */
   transaction_date: string;
   is_tax_deductible: boolean;
-  /** Goal ID. Present on contributions and withdrawals. */
+  /** Goal ID. Only present on contributions. */
   goal: number | null;
   /** Creator's username; null once that account is deleted. */
   created_by: string | null;
@@ -105,7 +113,7 @@ export type TransactionDraft = {
    * or if entry_type is contribution.
    */
   category: number | null;
-  /** Goal ID. Required on a contribution, always null on the other two. */
+  /** Goal ID. Required on a contribution, optional on an expense (paid from the goal), null on income. */
   goal: number | null;
   description: string;
   amount: string;
@@ -126,9 +134,12 @@ export function emptyDraft(): TransactionDraft {
   };
 }
 
-/** Add flow pre-set to a goal: the Saving tab with `goal` chosen, everything else as emptyDraft. */
-export function contributionDraft(goal: number): TransactionDraft {
-  return changeType({ ...emptyDraft(), goal }, "contribution");
+/** Add flow pre-set to a goal: the Saving tab with `goal` chosen and the direction set; everything else as emptyDraft. */
+export function transferDraft(
+  goal: number,
+  direction: "contribution" | "withdraw",
+): TransactionDraft {
+  return changeType({ ...emptyDraft(), goal }, direction);
 }
 
 /**
@@ -151,7 +162,8 @@ export function toDraft(t: Transaction): TransactionDraft {
 
 /**
  * Updates entry_type and resets incompatible fields (category, goal, tax deductible)
- * in a single update to prevent rendering or submitting invalid state.
+ * in a single update to prevent rendering or submitting invalid state. An
+ * expense's goal is dropped too: "pay from a goal" is opted into per expense.
  */
 export function changeType(
   draft: TransactionDraft,
@@ -173,8 +185,17 @@ export function changeType(
  * unselected values (null), and entry_type-specific requirements
  * (description and category for income/expense; goal for contribution).
  */
-export function validateDraft(draft: TransactionDraft): string | null {
+export function validateDraft(
+  draft: TransactionDraft,
+  goals: Goal[] = [],
+): string | null {
   if (isTransfer(draft.entry_type)) {
+    if (draft.entry_type === "withdraw") {
+      const goal = goalById(goals, draft.goal);
+      if (goal && Number(draft.amount) > goal.balance) {
+        return `Only €${displayAmount(goal.balance)} is in this goal.`;
+      }
+    }
     if (draft.goal === null) return "Pick a goal.";
   } else {
     if (!draft.description.trim()) return "Description is required.";
@@ -299,15 +320,26 @@ export function describeProblem(body: unknown): string | null {
   return message;
 }
 
-/** GET /api/v1/organizations/${org_id}/transactions/ */
+export interface TransactionQuery {
+  /** Rows per page, newest first; the API caps it at 100. */
+  pageSize?: number;
+  /** Inclusive ISO date bounds. */
+  from?: string;
+  to?: string;
+}
+
+/** GET /api/v1/organizations/${org_id}/transactions/?… newest first. */
 export async function fetchTransactions(
   org_id: number,
+  query: TransactionQuery,
   signal?: AbortSignal,
 ): Promise<Transaction[]> {
-  // Stopgap until this fetch goes server-driven: client-side filtering and
-  // tab counts need the full set, so request the API's largest page.
+  const params = new URLSearchParams();
+  if (query.pageSize) params.set("page_size", String(query.pageSize));
+  if (query.from) params.set("date_from", query.from);
+  if (query.to) params.set("date_to", query.to);
   const res = await fetch(
-    `/api/v1/organizations/${org_id}/transactions/?page_size=100`,
+    `/api/v1/organizations/${org_id}/transactions/?${params}`,
     { credentials: "include", signal },
   );
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
@@ -369,6 +401,10 @@ export async function updateTransaction(
       describeProblem(body) ?? "Could not save the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
   if (!res.ok) throw new Error(`Failed to update transaction (${res.status})`);
   const body: { transaction: TransactionDTO } = await res.json();
   return fromDTO(body.transaction);
@@ -396,13 +432,20 @@ export async function deleteTransaction(
       describeProblem(body) ?? "Could not delete the transaction",
     );
   }
+  if (res.status === 404)
+    throw new TransactionError(
+      "This transaction was added by someone else, or no longer exists",
+    );
+
   if (!res.ok) throw new Error(`Failed to delete transaction (${res.status})`);
 }
 
 /** GET /api/v1/organizations/${org_id}/transactions/?… */
 export async function fetchTransactionPage(
   org_id: number,
-  f: TransactionFilters,
+  // `goal` is a caller-side filter: the Transactions page has no UI or URL
+  // param for it, so it stays out of TransactionFilters.
+  f: TransactionPageFilters,
   signal?: AbortSignal,
 ): Promise<TransactionPage> {
   const params = new URLSearchParams();
@@ -414,7 +457,9 @@ export async function fetchTransactionPage(
   if (f.from) params.set("date_from", f.from);
   if (f.to) params.set("date_to", f.to);
   if (f.categories.length) params.set("category_id", f.categories.join(","));
+  if (f.members.length) params.set("created_by", f.members.join(","));
   if (f.taxDeductible) params.set("tax_deductible", "true");
+  if (f.goal !== undefined) params.set("goal_id", String(f.goal));
   if (f.page > 1) {
     params.set("page", String(f.page));
     params.set("page_size", String(PAGE_SIZE));
@@ -425,6 +470,12 @@ export async function fetchTransactionPage(
     `/api/v1/organizations/${org_id}/transactions/${query ? `?${query}` : ""}`,
     { credentials: "include", signal },
   );
+  if (res.status === 400) {
+    const body: unknown = await res.json().catch(() => null);
+    throw new TransactionError(
+      describeProblem(body) ?? "Could not load transactions",
+    );
+  }
   if (!res.ok) throw new Error(`Failed to load transactions (${res.status})`);
 
   const data: {

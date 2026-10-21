@@ -43,13 +43,13 @@ export function AuthLayout({ footer, children }: AuthLayoutProps) {
       </Stack>
 
       <Paper
-        elevation={0}
+        variant="card"
         sx={{
           width: "100%",
           maxWidth: 460,
           p: { xs: 3, sm: 5 },
-          borderRadius: 3,
-          boxShadow: "0 24px 60px -32px rgba(28, 26, 32, 0.35)",
+          // The one card that floats: it is alone on its page.
+          boxShadow: (t) => `0 24px 60px -32px ${t.palette.shadow.main}`,
         }}
       >
         {children}

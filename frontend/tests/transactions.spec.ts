@@ -6,9 +6,15 @@
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import {
+  createGoalViaApi,
+  createTransactionViaApi,
   createWorkspaceViaApi,
   freezeClock,
+  inviteMember,
+  makeUsers,
   openAsSharedOwner,
+  patchGoalViaApi,
+  registerUser,
   toOrgId,
 } from "./helpers.js";
 
@@ -45,9 +51,8 @@ async function getOrganizationCategories(
 /**
  * Every count below is fixed by FIXTURES: 24 rows, 17 expenses, 4 incomes,
  * 2 contributions and 1 withdrawal, 3 tax refundable, 15 per page. The
- * Transfers tab and its badge cover contributions only: the backend filters
- * and counts a single entry_type, so the withdrawal is listed under All
- * alone until a `transfer` tab value exists. Category names match the
+ * Transfers tab covers contributions and the Withdrawals tab withdrawals:
+ * the backend filters and counts one entry_type per tab. Category names match the
  * defaults created for the registered organization. The date presets and the
  * year-less day labels assume the clock is frozen at FROZEN_TODAY (Sep 2026).
  */
@@ -138,27 +143,6 @@ async function postTransaction(
   }
 }
 
-async function createGoal(page: Page, orgId: number): Promise<number> {
-  const csrftoken =
-    (await page.context().cookies()).find((c) => c.name === "csrftoken")
-      ?.value ?? "";
-  const res = await page.request.post(`/api/v1/organizations/${orgId}/goals/`, {
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
-    data: {
-      name: "Transactions fixture goal",
-      target_amount: "1000.00",
-      target_date: "2026-12-31",
-    },
-  });
-
-  if (res.status() !== 201) {
-    throw new Error(`goal POST failed: ${res.status()} ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as { id: number };
-  return data.id;
-}
-
 /**
  * Records every moment focus and `aria-hidden` overlap — the state Chrome
  * reports as "Blocked aria-hidden on an element because its descendant
@@ -247,21 +231,30 @@ async function fillDate(scope: Locator, label: string, iso: string) {
 
 test.describe.serial("Transactions", () => {
   let page: Page;
+  /** Shown as "by <name>" on every fixture row: the workspace is shared. */
+  let ownerName: string;
   let transactionsUrl: string;
   /** Name → id for this workspace's categories; the ids differ per workspace. */
   let categories: Map<string, number>;
-  /** The one real goal in this workspace; the form's picker is still seeded. */
+  let orgId: number;
+  /** A dated, active goal: contributions only, never spendable. */
   let goalId: number;
 
   test.beforeAll(async ({ browser }) => {
-    page = (await openAsSharedOwner(browser)).page;
+    const owner = await openAsSharedOwner(browser);
+    page = owner.page;
+    ownerName = owner.user.username;
     await freezeClock(page);
     // A workspace of its own: every count below assumes exactly FIXTURES, and
     // the shared owner's personal workspace is open to other specs.
     const workspace = await createWorkspaceViaApi(page, `Ledger ${Date.now()}`);
-    const orgId = toOrgId(workspace);
+    orgId = toOrgId(workspace);
     categories = await getOrganizationCategories(page, orgId);
-    goalId = await createGoal(page, orgId);
+    goalId = await createGoalViaApi(page, orgId, {
+      name: "Transactions fixture goal",
+      target_amount: "1000.00",
+      target_date: "2027-12-31",
+    });
     transactionsUrl = `${workspace}/transactions`;
     // Sequential on purpose: ids must ascend in list order.
     for (const row of FIXTURES) {
@@ -282,7 +275,8 @@ test.describe.serial("Transactions", () => {
     ).toBeVisible();
   });
 
-  const rows = (): Locator => page.locator("tbody tr");
+  const rows = (): Locator =>
+    page.getByRole("list", { name: "Transactions" }).getByRole("listitem");
   const tab = (name: string) =>
     page.getByRole("tab", { name: new RegExp(name) });
   const showing = (text: string) => page.getByText(`Showing ${text}`);
@@ -292,9 +286,8 @@ test.describe.serial("Transactions", () => {
     await expect(tab("All")).toContainText("24");
     await expect(tab("Expenses")).toContainText("17");
     await expect(tab("Income")).toContainText("4");
-    // Contributions only; the withdrawal is not a Transfers row yet (see the
-    // FIXTURES comment).
     await expect(tab("Transfers")).toContainText("2");
+    await expect(tab("Withdrawals")).toContainText("1");
 
     await expect(rows()).toHaveCount(15);
     await expect(showing("15 of 24")).toBeVisible();
@@ -303,17 +296,27 @@ test.describe.serial("Transactions", () => {
     await expect(rows().first()).toContainText("5 Aug");
     await expect(rows().first()).toContainText("REWE");
     await expect(rows().first()).toContainText("-€255,00");
+    await expect(rows().first()).toContainText(`by ${ownerName}`);
   });
 
   test("colours rows by entry type", async () => {
-    // Income carries a plus; a transfer is filed under Savings and unsigned.
+    // Income carries a plus; a transfer is an arrow into or out of savings.
     const salary = rows().filter({ hasText: "Salary" }).first();
     await expect(salary).toContainText("+€3.240,00");
 
-    const transfer = rows().filter({ hasText: "To savings" }).first();
-    await expect(transfer).toContainText("Savings");
-    await expect(transfer).toContainText("€300,00");
-    await expect(transfer).not.toContainText("-€300,00");
+    const contribution = rows().filter({ hasText: "To savings" }).first();
+    await expect(contribution).toContainText("Savings");
+    await expect(contribution).toContainText("→€300,00");
+
+    // The one withdrawal sits on page 2; its own tab has it at the top, under
+    // its own chip.
+    await tab("Withdrawals").click();
+    await expect(rows()).toHaveCount(1);
+    await expect(rows().first()).toContainText("←€300,00");
+    await expect(
+      rows().first().getByText("Withdraw", { exact: true }),
+    ).toBeVisible();
+    await tab("All").click();
   });
 
   test("paginates and keeps the page in the URL", async () => {
@@ -338,7 +341,9 @@ test.describe.serial("Transactions", () => {
     await expect(rows()).toHaveCount(4);
     await expect(showing("4 of 4")).toBeVisible();
     // Everything fits on one page, so the pager is gone.
-    await expect(page.getByRole("navigation")).toBeHidden();
+    await expect(
+      page.getByRole("navigation", { name: /pagination/i }),
+    ).toBeHidden();
     for (const row of await rows().all()) {
       await expect(row).toContainText("+€");
     }
@@ -349,7 +354,7 @@ test.describe.serial("Transactions", () => {
   });
 
   test("search matches name or category and updates the tab counts", async () => {
-    const search = page.getByPlaceholder("Search name or category");
+    const search = page.getByPlaceholder("Search name, category or member");
 
     await search.fill("rewe");
     await expect(page).toHaveURL(/[?&]q=rewe/);
@@ -488,7 +493,7 @@ test.describe.serial("Transactions", () => {
     ).toBeDisabled();
 
     // A row keeps its type for life: the switch is off and says why.
-    for (const name of ["Expense", "Income", "Saving"]) {
+    for (const name of ["Expense", "Income", "Savings"]) {
       await expect(dialog.getByRole("button", { name })).toBeDisabled();
     }
     await expect(
@@ -673,26 +678,114 @@ test.describe.serial("Transactions", () => {
     await expect(page.getByRole("option", { name: "Food" })).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    await dialog.getByRole("button", { name: "Saving" }).click();
+    await dialog.getByRole("button", { name: "Savings" }).click();
     await expect(dialog.getByLabel("Category")).toHaveCount(0);
     await expect(dialog.getByText("(optional)")).toBeVisible();
 
-    // The picker is seeded (lib/goals.seed.ts) and none of those ids is meant
-    // to exist here, but on a fresh database this workspace's own fixture goal
-    // can land on seed id 1. Pick a seed goal that cannot be it, so the
-    // backend reliably refuses the transfer and the form shows the reason
-    // instead of closing.
-    const foreign =
-      goalId === 1
-        ? { name: /Emergency fund/, saved: "€3.000,00 of €3.000,00 saved" }
-        : { name: /New laptop/, saved: "€1.790,00 of €2.000,00 saved" };
+    // The picker lists this workspace's goals from the API: only the fixture
+    // goal exists here, and choosing it shows what it holds under the field.
     await dialog.getByLabel("Goal").click();
-    await page.getByRole("option", { name: foreign.name }).click();
-    await expect(dialog.getByText(foreign.saved)).toBeVisible();
+    await page
+      .getByRole("option", { name: "Transactions fixture goal" })
+      .click();
+    await expect(dialog.getByText(/of €1\.000,00 saved/)).toBeVisible();
 
     await dialog.getByLabel("Amount").fill("10");
-    await dialog.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(dialog.getByRole("alert")).toContainText("Goal");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+  });
+
+  test("an expense can be paid from a goal, with a live split preview", async () => {
+    // Spendable means completed, or active with no deadline. Cat mansion
+    // holds 15.000; Emergency fund is spendable but empty. The contribution is
+    // dated far back so it lands on the last page and no count above moves.
+    const catMansion = await createGoalViaApi(page, orgId, {
+      name: "Cat mansion",
+      target_amount: "1500000.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: catMansion,
+      description: "",
+      amount: "15000.00",
+      transaction_date: "2024-01-01",
+    });
+    await createGoalViaApi(page, orgId, {
+      name: "Emergency fund",
+      target_amount: "3000.00",
+      target_date: null,
+    });
+    await page.goto(transactionsUrl);
+
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+
+    // Collapsed by default: one quiet chip, no picker.
+    const chip = dialog.getByRole("button", { name: "Pay from a goal" });
+    await expect(chip).toBeVisible();
+    await expect(dialog.getByLabel("Pay from goal")).toHaveCount(0);
+
+    await chip.click();
+    await expect(chip).toHaveCount(0);
+    const picker = dialog.getByLabel("Pay from goal");
+    await expect(picker).toBeVisible();
+
+    // Only goals the server lets an expense draw from are listed.
+    await picker.click();
+    await expect(
+      page.getByRole("option", { name: /Cat mansion/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: /Emergency fund/ }),
+    ).toContainText("€0,00 left · will go below zero");
+    await expect(
+      page.getByRole("option", { name: /Transactions fixture goal/ }),
+    ).toHaveCount(0);
+    await page.getByRole("option", { name: /Cat mansion/ }).click();
+    await expect(picker).toContainText("€15.000,00 left");
+
+    // Goal has enough.
+    await dialog.getByLabel("Amount").fill("980");
+    await expect(dialog.getByText("€980,00 from Cat mansion")).toBeVisible();
+    await expect(
+      dialog.getByText("€14.020,00 will be left in the goal."),
+    ).toBeVisible();
+
+    // Goal runs out with this expense.
+    await dialog.getByLabel("Amount").fill("15220");
+    await expect(dialog.getByText("€220,00 over")).toBeVisible();
+    await expect(dialog.getByText("Cat mansion's balance")).toBeVisible();
+    await expect(
+      dialog.getByText(
+        "The goal will be overdrawn by €220,00. Your net balance won't change yet.",
+      ),
+    ).toBeVisible();
+
+    // Goal already empty.
+    await picker.click();
+    await page.getByRole("option", { name: /Emergency fund/ }).click();
+    // Refocusing the money field after the menu closes appends; clear first.
+    await dialog.getByLabel("Amount").clear();
+    await dialog.getByLabel("Amount").fill("120");
+    await expect(dialog.getByText("€120,00 over")).toBeVisible();
+    await expect(dialog.getByText("Emergency fund's balance")).toBeVisible();
+    await expect(
+      dialog.getByText(/The goal will be overdrawn by €120,00/),
+    ).toBeVisible();
+
+    // Remove collapses back to the chip, and the goal is dropped from the draft.
+    await dialog.getByRole("button", { name: "Remove" }).click();
+    await expect(picker).toHaveCount(0);
+    await expect(chip).toBeVisible();
+
+    // Leaving the Expense tab hides the chip; coming back shows it collapsed.
+    await dialog.getByRole("button", { name: "Income" }).click();
+    await expect(chip).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Expense" }).click();
+    await expect(chip).toBeVisible();
+
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await page.getByRole("button", { name: "Discard" }).click();
   });
@@ -791,15 +884,156 @@ test.describe.serial("Transactions", () => {
 
   test("a filtered view survives reload", async () => {
     await tab("Expenses").click();
-    await page.getByPlaceholder("Search name or category").fill("rent");
+    await page.getByPlaceholder("Search name, category or member").fill("rent");
     await expect(showing("2 of 2")).toBeVisible();
 
     await page.reload();
 
     await expect(tab("Expenses")).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByPlaceholder("Search name or category")).toHaveValue(
-      "rent",
-    );
+    await expect(
+      page.getByPlaceholder("Search name, category or member"),
+    ).toHaveValue("rent");
     await expect(showing("2 of 2")).toBeVisible();
+  });
+
+  // The three tests below add rows; they run last so the counts above hold.
+
+  test("an expense paid from a goal names the goal under its row", async () => {
+    const museum = await createGoalViaApi(page, orgId, {
+      name: "Museum fund",
+      target_amount: "500.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: museum,
+      description: "",
+      amount: "100.00",
+      transaction_date: "2026-08-03",
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Entertainment")!,
+      goal_id: museum,
+      description: "Museum tickets",
+      amount: "30.00",
+      transaction_date: "2026-08-04",
+    });
+    await page.goto(transactionsUrl);
+
+    const row = rows().filter({ hasText: "Museum tickets" });
+    await expect(row).toContainText("Paid from Museum fund");
+    await expect(row).toContainText("-€30,00");
+  });
+
+  test("archiving an overdrawn goal books a labelled settlement row", async () => {
+    const trip = await createGoalViaApi(page, orgId, {
+      name: "Weekend trip",
+      target_amount: "50.00",
+      target_date: null,
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "contribution",
+      category_id: null,
+      goal_id: trip,
+      description: "",
+      amount: "50.00",
+      transaction_date: "2026-08-02",
+    });
+    await createTransactionViaApi(page, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Food")!,
+      goal_id: trip,
+      description: "Dinner",
+      amount: "90.00",
+      transaction_date: "2026-08-03",
+    });
+    await patchGoalViaApi(page, orgId, trip, { status: "archived" });
+    await page.goto(transactionsUrl);
+
+    // Dated today by the server, so it is the newest row.
+    const settlement = rows().filter({ hasText: "Archived Weekend trip" });
+    await expect(settlement).toContainText("Overdraft settlement");
+    await expect(settlement).toContainText("→€40,00");
+  });
+
+  test("a goal can be created from the Savings picker and is selected", async () => {
+    await page.getByRole("button", { name: "Add transaction" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Savings", exact: true }).click();
+    await dialog.getByLabel("Goal").click();
+    await page.getByRole("option", { name: "New goal…" }).click();
+
+    const goalDialog = page
+      .getByRole("dialog")
+      .filter({ has: page.getByRole("heading", { name: "Add goal" }) });
+    await goalDialog.getByLabel("Name").fill("Picker goal");
+    await goalDialog.getByLabel("Target amount").fill("100");
+    await goalDialog.getByRole("button", { name: "Create" }).click();
+    await expect(page.getByText("Goal added")).toBeVisible();
+
+    await expect(dialog.getByLabel("Goal")).toContainText("Picker goal");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("rows can be filtered by the member who added them", async ({
+    browser,
+  }) => {
+    // A second member, so the panel offers the Members section at all: a
+    // workspace with one member hides it.
+    const [guest] = makeUsers("txguest", "unused");
+    const guestPage = await browser.newPage();
+    await registerUser(guestPage, guest);
+    const invitation = (await inviteMember(page, orgId, guest.username)) as {
+      id: number;
+    };
+    const csrftoken =
+      (await guestPage.context().cookies()).find((c) => c.name === "csrftoken")
+        ?.value ?? "";
+    const accepted = await guestPage.request.post(
+      `/api/v1/invitations/${invitation.id}/accept/`,
+      { headers: { "X-CSRFToken": csrftoken } },
+    );
+    if (accepted.status() !== 200) {
+      throw new Error(`accept failed: ${accepted.status()}`);
+    }
+    await createTransactionViaApi(guestPage, orgId, {
+      entry_type: "expense",
+      category_id: categories.get("Food")!,
+      goal_id: null,
+      description: "Guest lunch",
+      amount: "14.00",
+      transaction_date: "2026-08-06",
+    });
+    await guestPage.close();
+
+    await page.goto(transactionsUrl);
+    await expect(rows().filter({ hasText: "Guest lunch" })).toContainText(
+      `by ${guest.username}`,
+    );
+
+    await filtersButton().click();
+    const panel = page
+      .getByRole("presentation")
+      .filter({ hasText: "Categories" });
+    await expect(panel.getByText("Members", { exact: true })).toBeVisible();
+    await panel.getByText(guest.username, { exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+
+    await expect(rows()).toHaveCount(1);
+    await expect(rows().first()).toContainText("Guest lunch");
+    await expect(filtersButton()).toContainText("1");
+    const chip = page.locator(".MuiChip-deletable", {
+      hasText: guest.username,
+    });
+    await expect(chip).toBeVisible();
+
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(chip).toBeHidden();
+    await expect(rows()).toHaveCount(15);
   });
 });

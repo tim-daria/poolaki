@@ -205,6 +205,36 @@ def test_list_transactions_filters_by_tax_deductible(
     assert [item["id"] for item in response.data["transactions"]] == [deductible.id]
 
 
+def test_list_transactions_filters_by_created_by(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    by_member = make_transaction(shared_org, created_by=member)
+    make_transaction(shared_org, created_by=owner)
+    make_transaction(shared_org)
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(transactions_url(shared_org.id), {"created_by": member.id})
+
+    assert [item["id"] for item in response.data["transactions"]] == [by_member.id]
+
+
+def test_list_transactions_filters_by_multiple_created_by(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    by_member = make_transaction(shared_org, created_by=member)
+    by_owner = make_transaction(shared_org, created_by=owner)
+    make_transaction(shared_org)
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(
+        transactions_url(shared_org.id), {"created_by": f"{owner.id},{member.id}"}
+    )
+
+    assert sorted(item["id"] for item in response.data["transactions"]) == sorted(
+        [by_member.id, by_owner.id]
+    )
+
+
 def test_list_transactions_sorts_oldest_first_with_id_tie_break(
     api_client: APIClient, owner: User, shared_org: Organization
 ) -> None:
@@ -332,3 +362,14 @@ def test_list_transactions_rejects_category_list_with_foreign_category(
 
     assert response.status_code == 400
     assert response.data["category_id"] == ["Category does not belong to this organization."]
+
+
+def test_list_transactions_rejects_created_by_outside_organization(
+    api_client: APIClient, owner: User, stranger: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.get(transactions_url(shared_org.id), {"created_by": stranger.id})
+
+    assert response.status_code == 400
+    assert response.data["created_by"] == ["User is not a member of this organization."]

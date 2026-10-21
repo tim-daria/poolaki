@@ -51,7 +51,7 @@ export function GoalSection({
           }}
         />
       </ButtonBase>
-      <Collapse in={open}>
+      <Collapse in={open} unmountOnExit>
         <Box
           id={panelId}
           component="section"

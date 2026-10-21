@@ -5,8 +5,16 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from core.models import EntryType, Goal, GoalStatus, Organization, User
-from core.services.balance import calculate_goal_balance
+from core.models import (
+    EntryType,
+    Goal,
+    GoalStatus,
+    NotificationType,
+    Organization,
+    User,
+)
+from core.services.balance import annotate_goal_balance, calculate_goal_balance
+from core.services.notification import notify_org_members_except
 from core.services.transaction import create_transaction_entry
 
 
@@ -26,6 +34,20 @@ def allowed_entry_types(goal: Goal) -> set[EntryType]:
     return entry_types
 
 
+def _notify_goal_event(goal: Goal, org: Organization, actor: User, ntype: NotificationType) -> None:
+    """Notify every member of the goal's organization except the actor."""
+    notify_org_members_except(
+        org,
+        actor,
+        ntype,
+        {
+            "org_name": org.name,
+            "user": actor.username,
+            "goal_name": goal.name,
+        },
+    )
+
+
 def _archive_goal(goal: Goal, created_by: User) -> Goal:
     """Zero a locked goal's balance and archive it within the caller's transaction."""
     org = Organization.objects.select_for_update().get(pk=goal.org_id)
@@ -38,7 +60,7 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             goal_id=goal.id,
             entry_type=EntryType.CONTRIBUTION,
             amount=abs(remaining_balance),
-            description=f"Goal {goal.name} archived",
+            description=f"Archived {goal.name}",
             transaction_date=date.today(),
             is_tax_deductible=False,
         )
@@ -50,13 +72,14 @@ def _archive_goal(goal: Goal, created_by: User) -> Goal:
             goal_id=goal.id,
             entry_type=EntryType.WITHDRAW,
             amount=remaining_balance,
-            description=f"Goal {goal.name} archived",
+            description=f"Archived {goal.name}",
             transaction_date=date.today(),
             is_tax_deductible=False,
         )
 
     goal.status = GoalStatus.ARCHIVED
     goal.save(update_fields=["status"])
+    _notify_goal_event(goal, org, created_by, NotificationType.GOAL_ARCHIVED)
     return goal
 
 
@@ -81,6 +104,7 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
 
     if current_status == GoalStatus.ACTIVE and new_status == GoalStatus.COMPLETED:
         locked_goal.completed_at = date.today()
+        _notify_goal_event(locked_goal, locked_goal.org, user, NotificationType.GOAL_COMPLETED)
     elif current_status == GoalStatus.COMPLETED and new_status == GoalStatus.ACTIVE:
         locked_goal.completed_at = None
 
@@ -88,3 +112,25 @@ def update_goal(goal: Goal, data: dict[str, object], user: User) -> Goal:
         setattr(locked_goal, field, value)
     locked_goal.save()
     return locked_goal
+
+
+@transaction.atomic
+def create_goal(
+    org: Organization,
+    user: User,
+    name: str,
+    target_amount: Decimal,
+    target_date: date | None,
+) -> Goal:
+    """Create an active goal and notify every other member of the organization."""
+    goal = Goal.objects.create(
+        org=org,
+        name=name,
+        target_amount=target_amount,
+        target_date=target_date,
+        status=GoalStatus.ACTIVE,
+        created_by=user,
+    )
+    # A personal budget has a single member, so there is nobody to notify.
+    _notify_goal_event(goal, org, user, NotificationType.GOAL_CREATED)
+    return annotate_goal_balance(Goal.objects.select_related("created_by").filter(pk=goal.pk)).get()

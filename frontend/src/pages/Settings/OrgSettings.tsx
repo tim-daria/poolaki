@@ -73,7 +73,7 @@ function OrgSettings() {
   const { organizations } = useOrgList();
   const org = organizations.find((o) => String(o.id) === workspaceId);
 
-  if (!org) return <NoAccessScreen orgId={workspaceId} />;
+  if (!org) return <NoAccessScreen />;
 
   // Keyed so switching between workspace URLs never carries one workspace's
   // members, dialogs or drafts into another: the route element is shared.

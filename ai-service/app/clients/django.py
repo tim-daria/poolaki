@@ -1,6 +1,12 @@
+import logging
 from typing import Any
 
+import httpx
 from pydantic import BaseModel, Field
+
+from app.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class RetrievalRequest(BaseModel):
@@ -59,3 +65,36 @@ class MockDjangoClient:
         #    }
 
         return {}
+
+
+class DjangoClient:
+    """Real HTTP client for the /api/internal/v1/ namespace"""
+
+    def __init__(self) -> None:
+        self._client = httpx.AsyncClient(base_url=settings.django_base_url)
+
+    async def fetch_backend_data(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        try:
+            response = await self._client.post(endpoint, json=payload)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            # Degrade: the answer is still built from vector context
+            logger.warning(
+                "Django backend request failed",
+                extra={
+                    "endpoint": endpoint,
+                    "status_code": (
+                        exc.response.status_code
+                        if isinstance(exc, httpx.HTTPStatusError)
+                        else None
+                    ),
+                },
+            )
+            return {}
+
+        return response.json()
+
+    async def close(self) -> None:
+        await self._client.aclose()

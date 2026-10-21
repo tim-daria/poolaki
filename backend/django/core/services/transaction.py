@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
@@ -10,13 +10,12 @@ from django.db.models.query import QuerySet
 
 from core.models import (
     EntryType,
-    Membership,
     NotificationType,
     Organization,
     Transaction,
     User,
 )
-from core.services.notification import notify_users
+from core.services.notification import notify_org_members_except
 
 
 @dataclass(frozen=True)
@@ -27,6 +26,7 @@ class TransactionFilters:
     date_to: date | None = None
     category_ids: tuple[int, ...] | None = None
     goal_id: int | None = None
+    created_by_ids: tuple[int, ...] | None = None
     tax_deductible: bool = False
     q: str = ""
     entry_type: EntryType | None = None
@@ -56,10 +56,16 @@ def build_transaction_queryset(org_id: int, filters: TransactionFilters) -> Quer
         qs = qs.filter(category_id__in=filters.category_ids)
     if filters.goal_id is not None:
         qs = qs.filter(goal_id=filters.goal_id)
+    if filters.created_by_ids:
+        qs = qs.filter(created_by_id__in=filters.created_by_ids)
     if filters.tax_deductible:
         qs = qs.filter(is_tax_deductible=True)
     if filters.q:
-        qs = qs.filter(Q(description__icontains=filters.q) | Q(category__name__icontains=filters.q))
+        qs = qs.filter(
+            Q(description__icontains=filters.q)
+            | Q(category__name__icontains=filters.q)
+            | Q(created_by__username__icontains=filters.q)
+        )
     if filters.sort == "oldest":
         return qs.order_by("transaction_date", "id")
     # id breaks ties within a day; newest first is the page default.
@@ -87,6 +93,51 @@ def list_transactions(
         paginator.num_pages,
         counts,
     )
+
+
+def last_three_months_start(today: date) -> date:
+    """First day of the month two months before `today`'s month; with `today`
+    it spans the last 3 calendar months (the AI transactions window)."""
+    year, month = today.year, today.month - 2
+    if month < 1:
+        year -= 1
+        month += 12
+    return date(year, month, 1)
+
+
+def get_org_ai_transactions(org: Organization) -> list[dict[str, Any]]:
+    """Income/expense transactions of the last 3 calendar months (inclusive),
+    newest first. Contribution/withdraw are goal transfers, not income/expense
+    events, and are excluded. Ordering matches the public list (id breaks ties)."""
+    today = date.today()
+    filters = TransactionFilters(
+        date_from=last_three_months_start(today), date_to=today, sort="newest"
+    )
+    qs = build_transaction_queryset(org.id, filters).filter(
+        entry_type__in=(EntryType.INCOME, EntryType.EXPENSE)
+    )
+    fields = (
+        "id",
+        "transaction_date",
+        "description",
+        "entry_type",
+        "category__name",
+        "goal__name",
+        "amount",
+    )
+    raw = qs.values(*fields)
+    return [
+        {
+            "id": row["id"],
+            "date": row["transaction_date"],
+            "description": row["description"],
+            "entry_type": row["entry_type"],
+            "category": row["category__name"],
+            "goal": row["goal__name"],
+            "amount": row["amount"],
+        }
+        for row in raw
+    ]
 
 
 def count_by_entry_type(qs: QuerySet[Transaction]) -> dict[str, int]:
@@ -123,12 +174,9 @@ def create_transaction_entry(
         is_tax_deductible=is_tax_deductible,
     )
     # A personal budget has a single member, so no notifications about new transaction.
-    notify_users(
-        list(
-            Membership.objects.filter(org=org)
-            .exclude(user=created_by)
-            .values_list("user_id", flat=True)
-        ),
+    notify_org_members_except(
+        org,
+        created_by,
         NotificationType.TRANSACTION_ADDED,
         {
             "org_name": org.name,
@@ -137,6 +185,5 @@ def create_transaction_entry(
             "amount": str(txn.amount),
             "entry_type": txn.entry_type,
         },
-        org=org,
     )
     return txn
