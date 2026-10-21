@@ -475,12 +475,16 @@ class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
     income = serializers.DecimalField(max_digits=None, decimal_places=2)
     expense = serializers.DecimalField(max_digits=None, decimal_places=2)
+    contribution = serializers.DecimalField(max_digits=None, decimal_places=2)
+    withdraw = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
     income = serializers.DecimalField(max_digits=None, decimal_places=2)
     expense = serializers.DecimalField(max_digits=None, decimal_places=2)
+    contribution = serializers.DecimalField(max_digits=None, decimal_places=2)
+    withdraw = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
@@ -488,6 +492,19 @@ class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     name = serializers.CharField()
     type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
     total = serializers.DecimalField(max_digits=None, decimal_places=2)
+    monthly = serializers.ListField(
+        child=serializers.DecimalField(max_digits=None, decimal_places=2),
+        min_length=12,
+        max_length=12,
+    )
+
+
+class ReportGoalSerializer(serializers.Serializer[dict[str, Any]]):
+    goal_id = serializers.IntegerField()
+    name = serializers.CharField()
+    status = serializers.ChoiceField(choices=GoalStatus.choices)
+    target_amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    balance = serializers.DecimalField(max_digits=None, decimal_places=2)
     monthly = serializers.ListField(
         child=serializers.DecimalField(max_digits=None, decimal_places=2),
         min_length=12,
@@ -505,6 +522,7 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
     goal_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
+    goals = ReportGoalSerializer(many=True)
 
 
 class OrganizationBalanceSerializer(serializers.Serializer[dict[str, Any]]):
@@ -548,3 +566,6 @@ class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
 
 class AiTransactionsResponseSerializer(serializers.Serializer[dict[str, Any]]):
     transactions = AiTransactionSerializer(many=True)
+
+
+"""Serialize API request and response payloads for the core application."""

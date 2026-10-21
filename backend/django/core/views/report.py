@@ -17,12 +17,9 @@ class ReportView(APIView):
     Yearly finance report for the reporting page.
 
     GET
-    Returns yearly aggregates for the organization: income/expense totals,
-    a 12-month distribution (zero-filled), and the per-category breakdown
-    for the selected year, plus `goal_balance` — the current balance across
-    all active and completed goals, independent of the selected year.
-    Contribution rows are excluded from every yearly section (savings are
-    reported net of withdrawals via `goal_balance`).
+    Returns yearly aggregates for the organization: income/expense and
+    contribution/withdraw totals, a zero-filled 12-month distribution, the
+    per-category breakdown, and active/completed goal balances for each month.
 
     Query parameters:
     - year (optional, integer 2000..2100): calendar year to report on.
