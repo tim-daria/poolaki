@@ -25,6 +25,10 @@ export interface YearlyReportResponse {
   goal_balance: string;
 }
 
+/** What Home's cards and the Reports page say when the report did not load. */
+export const REPORT_UNAVAILABLE =
+  "Couldn't load the report. Please try again later.";
+
 /** GET /api/v1/organizations/${org_id}/reports/?year=${year} */
 export async function fetchYearlyReport(
   org_id: number,

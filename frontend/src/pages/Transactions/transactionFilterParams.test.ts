@@ -17,7 +17,7 @@ describe("parseFilters", () => {
   it("reads every field", () => {
     expect(
       parse(
-        "tab=income&q=rent&sort=oldest&from=2026-01-01&to=2026-01-31&cat=1,3&tax=1&page=2",
+        "tab=income&q=rent&sort=oldest&from=2026-01-01&to=2026-01-31&cat=1,3&by=8&tax=1&page=2",
       ),
     ).toEqual({
       tab: "income",
@@ -26,9 +26,14 @@ describe("parseFilters", () => {
       from: "2026-01-01",
       to: "2026-01-31",
       categories: [1, 3],
+      members: [8],
       taxDeductible: true,
       page: 2,
     });
+  });
+
+  it("accepts the withdrawals tab", () => {
+    expect(parse("tab=withdraw").tab).toBe("withdraw");
   });
 
   it("falls back to defaults for unknown tab and sort values", () => {
@@ -41,6 +46,11 @@ describe("parseFilters", () => {
   it("keeps only positive integer category ids", () => {
     expect(parse("cat=1,x,-2,0,3.5,4").categories).toEqual([1, 4]);
     expect(parse("cat=").categories).toEqual([]);
+  });
+
+  it("keeps only positive integer member ids", () => {
+    expect(parse("by=2,x,-1,0,9").members).toEqual([2, 9]);
+    expect(parse("by=").members).toEqual([]);
   });
 
   it("treats tax as a flag that is only on for '1'", () => {
@@ -73,9 +83,10 @@ describe("serializeFilters", () => {
       ...DEFAULT_FILTERS,
       tab: "expense",
       categories: [2, 5],
+      members: [4],
       page: 3,
     });
-    expect(p.toString()).toBe("tab=expense&cat=2%2C5&page=3");
+    expect(p.toString()).toBe("tab=expense&cat=2%2C5&by=4&page=3");
   });
 
   it("round-trips through parseFilters", () => {
@@ -86,6 +97,7 @@ describe("serializeFilters", () => {
       from: "2026-02-01",
       to: "",
       categories: [7],
+      members: [3, 4],
       taxDeductible: true,
       page: 2,
     };

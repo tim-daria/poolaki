@@ -12,6 +12,7 @@ from core.models import (
     Goal,
     GoalStatus,
     Invitation,
+    Membership,
     Notification,
     Organization,
     Transaction,
@@ -77,7 +78,7 @@ class GoalCreateSerializer(serializers.Serializer[Goal]):
 
         if Goal.objects.filter(org_id=org_id, name=name).exists():
             raise serializers.ValidationError(
-                {"name": "A goal with this name already exists in this organization."}
+                {"name": "A goal with this name already exists in this workspace."}
             )
 
         target_date = cast(date | None, attrs["target_date"])
@@ -114,7 +115,7 @@ class GoalUpdateSerializer(serializers.Serializer[Goal]):
             and Goal.objects.filter(org_id=goal.org_id, name=name).exclude(pk=goal.pk).exists()
         ):
             raise serializers.ValidationError(
-                {"name": "A goal with this name already exists in this organization."}
+                {"name": "A goal with this name already exists in this workspace."}
             )
 
         target_date = cast(date | None, attrs.get("target_date"))
@@ -283,9 +284,10 @@ class TransactionResponseSerializer(serializers.ModelSerializer[Transaction]):
 class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     """GET /organizations/{org_id}/transactions/ query parameters.
 
-    `entry_type="all"` is the unfiltered sentinel; `goal_id` and `category_id`
-    must belong to `context["org_id"]`. `category_id` accepts one ID or a
-    comma-separated list; dates are inclusive bounds.
+    `entry_type="all"` is the unfiltered sentinel; `goal_id`, `category_id` and
+    `created_by` must belong to `context["org_id"]`. `category_id` and
+    `created_by` accept one ID or a comma-separated list; dates are inclusive
+    bounds.
     """
 
     entry_type = serializers.ChoiceField(
@@ -296,6 +298,7 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
     category_id = IntListField(required=False)
     goal_id = serializers.IntegerField(required=False, min_value=1)
     tax_deductible = serializers.BooleanField(required=False, default=False)
+    created_by = IntListField(required=False)
     q = serializers.CharField(required=False, allow_blank=True, max_length=100)
     sort = serializers.ChoiceField(choices=["newest", "oldest"], required=False, default="newest")
     page = serializers.IntegerField(required=False, default=1, min_value=1)
@@ -321,6 +324,13 @@ class TransactionListQuerySerializer(serializers.Serializer[Transaction]):
         ).count() < len(set(category_ids)):
             raise serializers.ValidationError(["Category does not belong to this organization."])
         return category_ids
+
+    def validate_created_by(self, user_ids: list[int]) -> list[int]:
+        if Membership.objects.filter(
+            user_id__in=user_ids, org_id=self.context.get("org_id")
+        ).count() < len(set(user_ids)):
+            raise serializers.ValidationError(["User is not a member of this organization."])
+        return user_ids
 
 
 class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
@@ -459,24 +469,27 @@ class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
     question = serializers.CharField(min_length=1, max_length=1000, trim_whitespace=True)
 
 
+# Rows are capped at 14 digits by the model. A sum of them has no fixed
+# width, so a sum declares only its scale: max_digits=None makes DRF
+# quantize to two decimals without checking how many digits are in front.
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
-    income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+    income = serializers.DecimalField(max_digits=None, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
-    income = serializers.DecimalField(max_digits=14, decimal_places=2)
-    expense = serializers.DecimalField(max_digits=14, decimal_places=2)
+    income = serializers.DecimalField(max_digits=None, decimal_places=2)
+    expense = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     category_id = serializers.IntegerField()
     name = serializers.CharField()
     type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
-    total = serializers.DecimalField(max_digits=14, decimal_places=2)
+    total = serializers.DecimalField(max_digits=None, decimal_places=2)
     monthly = serializers.ListField(
-        child=serializers.DecimalField(max_digits=14, decimal_places=2),
+        child=serializers.DecimalField(max_digits=None, decimal_places=2),
         min_length=12,
         max_length=12,
     )
@@ -491,7 +504,13 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     totals = ReportAmountsSerializer()
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
-    goal_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    goal_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
+
+
+class OrganizationBalanceSerializer(serializers.Serializer[dict[str, Any]]):
+    org_id = serializers.IntegerField()
+    # A sum, like the report's: scale only, see the note above.
+    balance = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):
