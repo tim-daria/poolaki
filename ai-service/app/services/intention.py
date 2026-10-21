@@ -17,8 +17,8 @@ class Intent(str, Enum):
 
 
 ENDPOINT_BY_INTENT = {
-    Intent.MONTHLY_SUMMARY: "analytics/summary",
-    Intent.CATEGORY_SPENDING: "categories",
+    Intent.SUMMARY: "analytics/summary",
+    Intent.CATEGORIES: "categories",
     Intent.TRANSACTIONS: "transactions",
 }
 

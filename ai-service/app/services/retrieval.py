@@ -4,8 +4,9 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from typing import Any, Protocol
 
-from app.clients.django import DjangoClient, DjangoClientError
+from app.clients.django import DjangoClientError
 from app.config.settings import settings
 from app.services.intention import ENDPOINT_BY_INTENT, Intent
 from models.retrieval import CombinedRetrievalResult, RetrievedItem
@@ -15,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 # Errors that must reach the user (403/400); anything else degrades to vectors only
 PROPAGATED_ERROR_CODES = {"FORBIDDEN", "INVALID_REQUEST"}
+
+
+class BackendClient(Protocol):
+    async def fetch_backend_data(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any]: ...
+
 
 class MockDocumentRepository:
     """TESTING ONLY: Temporal mock to simulate vector search."""
@@ -43,7 +51,7 @@ class Retriever(BaseRetriever):
     def __init__(
         self,
         doc_repo: MockDocumentRepository,
-        django_client: DjangoClient,
+        django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
         self._django_client = django_client
@@ -52,6 +60,8 @@ class Retriever(BaseRetriever):
         self,
         intent: Intent | None,
     ) -> str | None:
+        if intent is None:
+            return None
         path = ENDPOINT_BY_INTENT.get(intent)
         return f"/api/internal/v1/{path}/" if path else None
 
@@ -71,15 +81,24 @@ class Retriever(BaseRetriever):
         payload = {"user_id": user_id, "organization_id": organization_id}
 
         # Vectors always run; Django only if the intent has an endpoint
-        tasks = [self._doc_repo.search_documents(query=query, usage=usage, top_k=top_k)]
+        vector_task = self._doc_repo.search_documents(
+            query=query, usage=usage, top_k=top_k
+        )
+
+        outcome: dict[str, Any] | BaseException | None = None
         if endpoint is not None:
-            tasks.append(self._django_client.fetch_backend_data(endpoint, payload))
+            docs_result, outcome = await asyncio.gather(
+                vector_task,
+                self._django_client.fetch_backend_data(endpoint, payload),
+                return_exceptions=True,
+            )
+        else:
+            docs_result = (await asyncio.gather(vector_task, return_exceptions=True))[0]
+            outcome = None
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)  # to run vectors in parallel
-
-        docs = results[0]
-        if isinstance(docs, Exception):
-            raise docs  # a vector failure is a real error
+        if isinstance(docs_result, BaseException):
+            raise docs_result  # a vector failure is a real error
+        docs: list[str] = docs_result
 
         items = [
             RetrievedItem(
@@ -94,7 +113,6 @@ class Retriever(BaseRetriever):
         structured = None
         degraded = False
         if endpoint is not None:
-            outcome = results[1]
             if (
                 isinstance(outcome, DjangoClientError)
                 and outcome.code in PROPAGATED_ERROR_CODES
@@ -133,7 +151,7 @@ class Retriever(BaseRetriever):
             extra={
                 "intent": intent,
                 "endpoint": endpoint,
-                "docs": len(docs),
+                "docs": docs,
                 "has_structured": bool(structured),
                 "degraded": degraded,
                 "retrieval_ms": round((time.perf_counter() - start) * 1000),

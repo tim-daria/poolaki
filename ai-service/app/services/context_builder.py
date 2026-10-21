@@ -7,7 +7,11 @@ from models.retrieval import CombinedRetrievalResult, RetrievedItem
 from models.usage import TokenUsage
 
 NO_CONTEXT = "No relevant information was found."
-SOURCE_LABELS = {"django_api": "financial_data", "vector_db": "product_docs", "system": "system_note"}
+SOURCE_LABELS = {
+    "django_api": "financial_data",
+    "vector_db": "product_docs",
+    "system": "system_note",
+}
 
 
 def estimate_tokens(text: str) -> int:

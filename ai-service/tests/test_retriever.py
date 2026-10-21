@@ -2,16 +2,26 @@ import json
 
 import pytest
 
-from app.clients.django import DjangoClientError, MockDjangoClient
+from app.clients.django import DjangoClientError
 from app.services.intention import Intent
-from app.services.retrieval import MockDocumentRepository, MockRetriever
+from app.services.retrieval import MockDocumentRepository, Retriever
 from models.usage import TokenUsage
 
 
-def make_retriever() -> MockRetriever:
-    return MockRetriever(
-        doc_repo=MockDocumentRepository(), django_client=MockDjangoClient()
-    )
+class FakeDjango:
+    """Local fake: returns contract-shaped data or raises the given error."""
+
+    def __init__(self, error: DjangoClientError | None = None):
+        self._error = error
+
+    async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict:
+        if self._error:
+            raise self._error
+        return {"year": 2026, "balance": "3500.00", "months": []}
+
+
+def make_retriever(error: DjangoClientError | None = None) -> Retriever:
+    return Retriever(doc_repo=MockDocumentRepository(), django_client=FakeDjango(error))
 
 
 @pytest.mark.asyncio
@@ -21,7 +31,7 @@ async def test_retriever_combines_vector_docs_and_django_data():
         organization_id=456,
         query="How much did I spend?",
         usage=TokenUsage(),
-        intent=Intent.MONTHLY_SUMMARY,
+        intent=Intent.SUMMARY,
         top_k=2,
     )
 
@@ -31,12 +41,14 @@ async def test_retriever_combines_vector_docs_and_django_data():
 
     structured = next(i for i in result.items if i.type == "structured_data")
     assert structured.metadata["endpoint"] == "/api/internal/v1/analytics/summary/"
-    assert len(json.loads(structured.content)["months"]) == 12
+    assert json.loads(structured.content)["year"] == 2026
 
 
 @pytest.mark.asyncio
 async def test_unsupported_intent_does_not_call_django():
-    result = await make_retriever().get_context(
+    retriever = make_retriever(DjangoClientError("FORBIDDEN", "no", 403))
+
+    result = await retriever.get_context(
         user_id=123,
         organization_id=456,
         query="goal progress",
@@ -50,8 +62,10 @@ async def test_unsupported_intent_does_not_call_django():
 
 @pytest.mark.asyncio
 async def test_forbidden_user_raises_django_error():
+    retriever = make_retriever(DjangoClientError("FORBIDDEN", "no", 403))
+
     with pytest.raises(DjangoClientError) as exc:
-        await make_retriever().get_context(
+        await retriever.get_context(
             user_id=0,
             organization_id=456,
             query="x",
@@ -59,3 +73,19 @@ async def test_forbidden_user_raises_django_error():
             intent=Intent.TRANSACTIONS,
         )
     assert exc.value.code == "FORBIDDEN"
+
+
+@pytest.mark.asyncio
+async def test_backend_failure_degrades_with_system_note():
+    retriever = make_retriever(DjangoClientError("INTERNAL_ERROR", "down", 502))
+
+    result = await retriever.get_context(
+        user_id=1,
+        organization_id=1,
+        query="x",
+        usage=TokenUsage(),
+        intent=Intent.SUMMARY,
+        top_k=1,
+    )
+
+    assert [i.type for i in result.items] == ["unstructured_doc", "system_note"]

@@ -18,11 +18,9 @@ def make_service(answer: str) -> IntentionService:
 @pytest.mark.asyncio
 async def test_classify_counts_tokens():
     usage = TokenUsage()
-    intent = await make_service("monthly_summary").classify(
-        "How much did I spend?", usage
-    )
+    intent = await make_service("summary").classify("How much did I spend?", usage)
 
-    assert intent == Intent.MONTHLY_SUMMARY
+    assert intent == Intent.SUMMARY
     assert (usage.intent_in, usage.intent_out) == (20, 2)
 
 

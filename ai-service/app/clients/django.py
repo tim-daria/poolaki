@@ -7,6 +7,7 @@ from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+
 class DjangoClientError(Exception):
     """Error in the API contract format: {"error": {"code", "message"}}."""
 

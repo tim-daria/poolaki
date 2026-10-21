@@ -16,13 +16,14 @@ BODY = {
 }
 EMPTY = CombinedRetrievalResult(items=[])
 
+
 def test_chat_endpoint_with_mock_rag():
     with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
         mock_get_context.return_value = EMPTY
         with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
             mock_llm.side_effect = [
-                ("summary", USAGE),                    # intent classification
-                ("You spent €850 this month.", USAGE), # final answer
+                ("summary", USAGE),  # intent classification
+                ("You spent €850 this month.", USAGE),  # final answer
             ]
 
             response = client.post("/api/v1/chat", json=BODY)
@@ -38,7 +39,10 @@ def test_unknown_intent_label_becomes_unsupported():
         with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
             mock_llm.side_effect = [
                 ("something weird", USAGE),
-                ("I can't help with that, but I can help with your monthly totals.", USAGE),
+                (
+                    "I can't help with that, but I can help with your monthly totals.",
+                    USAGE,
+                ),
             ]
 
             response = client.post("/api/v1/chat", json=BODY)
