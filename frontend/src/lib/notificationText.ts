@@ -13,7 +13,9 @@ import type {
   OwnershipTransferredPayload,
   RemovedFromOrgPayload,
   TransactionAddedPayload,
+  GoalCreatedPayload,
   GoalCompletedPayload,
+  GoalArchivedPayload,
 } from "../context/NotificationContext";
 
 type Payload = Record<string, unknown>;
@@ -72,7 +74,23 @@ export function isTransactionAddedPayload(
   return typeof p.added_by === "string" && typeof p.org_name === "string";
 }
 
+export function isGoalCreatedPayload(p: Payload): p is GoalCreatedPayload {
+  return (
+    typeof p.user === "string" &&
+    typeof p.org_name === "string" &&
+    typeof p.goal_name === "string"
+  );
+}
+
 export function isGoalCompletedPayload(p: Payload): p is GoalCompletedPayload {
+  return (
+    typeof p.user === "string" &&
+    typeof p.org_name === "string" &&
+    typeof p.goal_name === "string"
+  );
+}
+
+export function isGoalArchivedPayload(p: Payload): p is GoalArchivedPayload {
   return (
     typeof p.user === "string" &&
     typeof p.org_name === "string" &&
@@ -95,11 +113,21 @@ export function typeText(type: NotificationType, p: Payload): string {
       return isTransactionAddedPayload(p)
         ? `${p.added_by} added a transaction in ${p.org_name}`
         : "A new transaction was added";
+    case "goal_created":
+      if (isGoalCreatedPayload(p)) {
+        return `${p.user} created the goal "${p.goal_name}" in ${p.org_name}`;
+      }
+      return "A new goal was created";
     case "goal_completed":
       if (isGoalCompletedPayload(p)) {
         return `${p.user} completed the goal "${p.goal_name}" in ${p.org_name}`;
       }
       return "A spending goal has been achieved";
+    case "goal_archived":
+      if (isGoalArchivedPayload(p)) {
+        return `${p.user} archived the goal "${p.goal_name}" in ${p.org_name}`;
+      }
+      return "A goal was archived";
     case "member_left":
       return isMemberLeftPayload(p)
         ? `${p.user} left ${p.org_name}`
@@ -148,8 +176,12 @@ export function actorName(type: NotificationType, p: Payload): string {
       return isOrganizationDeletedPayload(p) ? p.last_member : UNKNOWN_ACTOR;
     case "transaction_added":
       return isTransactionAddedPayload(p) ? p.added_by : UNKNOWN_ACTOR;
+    case "goal_created":
+      return isGoalCreatedPayload(p) ? p.user : UNKNOWN_ACTOR;
     case "goal_completed":
       return isGoalCompletedPayload(p) ? p.user : UNKNOWN_ACTOR;
+    case "goal_archived":
+      return isGoalArchivedPayload(p) ? p.user : UNKNOWN_ACTOR;
     default:
       return UNKNOWN_ACTOR;
   }
