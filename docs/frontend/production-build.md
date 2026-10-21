@@ -1,7 +1,11 @@
 # Checking the Production Build
 
-The local stack serves the frontend from the Vite dev server; the deploy
-serves the bundle that `npm run build` produces. The two behave differently
+The local stack serves the frontend from the Vite dev server, and so does
+the deploy today — the multistage build that would serve the bundle is
+planned, not shipped (see
+[backend-integration.md](backend-integration.md#production-the-multistage-build)).
+This page is about the bundle that `npm run build` produces, which is what
+the deploy _will_ serve and what performance should be judged against. The two behave differently
 enough that performance and console output should be judged against the
 bundle, not the dev server. This page says how to serve the bundle locally
 and what to expect.
@@ -10,12 +14,12 @@ and what to expect.
 
 ## Dev server versus bundle
 
-| | Dev server (`npm run dev`) | Bundle (`npm run build`) |
-| --- | --- | --- |
-| Where | Local compose stack, every profile. [entrypoint.sh](../../frontend/entrypoint.sh) runs it. | The deploy. CI runs the build as a gate only and serves nothing. |
-| Modules | Served unbundled and transformed on demand. | Minified, code-split per route. |
-| React | `StrictMode` renders every component twice. | Single render. |
-| Extras | HMR client, source maps, dev-only warnings. | None. |
+|         | Dev server (`npm run dev`)                                                                               | Bundle (`npm run build`)                                                 |
+| ------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Where   | Every compose profile today, the deploy included. [entrypoint.sh](../../frontend/entrypoint.sh) runs it. | The planned deploy. CI runs the build as a gate only and serves nothing. |
+| Modules | Served unbundled and transformed on demand.                                                              | Minified, code-split per route.                                          |
+| React   | `StrictMode` renders every component twice.                                                              | Single render.                                                           |
+| Extras  | HMR client, source maps, dev-only warnings.                                                              | None.                                                                    |
 
 Anything measured with the Performance panel on the dev server is roughly
 double the real cost, and some warnings exist only there.
@@ -36,11 +40,11 @@ docker compose run --rm --use-aliases --entrypoint sh frontend \
 
 Then open <http://poolaki.localhost:8080> as usual.
 
-| Flag | Reason |
-| --- | --- |
-| `--use-aliases` | Keeps the `frontend` name on the network, so Caddy finds the preview container. Without it Caddy answers 502. |
-| `--entrypoint sh` | Replaces the dev-server entrypoint for this one container. |
-| `--host 0.0.0.0` | The preview must listen on the container's network interface, not only on loopback. |
+| Flag              | Reason                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--use-aliases`   | Keeps the `frontend` name on the network, so Caddy finds the preview container. Without it Caddy answers 502. |
+| `--entrypoint sh` | Replaces the dev-server entrypoint for this one container.                                                    |
+| `--host 0.0.0.0`  | The preview must listen on the container's network interface, not only on loopback.                           |
 
 The build takes about a minute. Until the preview listens, Caddy answers
 502; reload once the terminal shows the `Local:` and `Network:` lines.
