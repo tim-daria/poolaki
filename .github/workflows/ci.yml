@@ -169,11 +169,6 @@ jobs:
       #     path: ~/.cache/ms-playwright
       #     key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
-      # - name: Install Playwright browsers
-      #   # --with-deps also installs OS-level shared libraries (fonts, audio,
-      #   # etc.) that Chromium needs. Only installs what the cache missed.
-      #   run: npx playwright install --with-deps chromium
-
       # - name: Playwright component tests
       #   run: npm run test:components
 
@@ -203,7 +198,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox
 
       - name: Create .env for CI
         working-directory: .

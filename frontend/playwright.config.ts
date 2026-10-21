@@ -1,5 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Safari's engine stands in for Safari: real Safari needs macOS, and WebKit
+// catches the engine-level differences (date inputs, dvh, print) where Safari
+// diverges. It is opt-in: the stack serves plain HTTP and Django marks its
+// cookies Secure; Chromium and Firefox exempt *.localhost from that rule,
+// WebKit does not, so sign-in fails there until the dev stack has HTTPS. See
+// docs/frontend/browser-support.md.
+const browsers = [
+  { name: "chromium", device: "Desktop Chrome" },
+  { name: "firefox", device: "Desktop Firefox" },
+  ...(process.env.E2E_WEBKIT
+    ? [{ name: "webkit", device: "Desktop Safari" }]
+    : []),
+] as const;
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -26,17 +40,25 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  // Only test with Chromium — Firefox and WebKit can be added later.
-  // In CI you're already installing only Chromium, so this must match.
+  // All three engines run; CI and docs/frontend/playwright.md install all
+  // three (`npx playwright install` with no browser list).
+  // Each engine gets its own setup project, which runs first, also for a
+  // single spec: it registers the shared owner that engine's specs sign in
+  // as (see "Shared owner" in tests/helpers.ts). One owner per engine keeps
+  // every project under the backend's 10-workspaces-per-user cap.
   projects: [
-    // Runs first, also for a single spec: registers the shared owner the
-    // other specs sign in as (see "Shared owner" in tests/helpers.ts).
-    { name: "setup", testMatch: /\.setup\.ts$/ },
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-      dependencies: ["setup"],
-    },
+    ...browsers.flatMap(({ name, device }) => [
+      {
+        name: `setup-${name}`,
+        testMatch: /\.setup\.ts$/,
+        use: { ...devices[device] },
+      },
+      {
+        name,
+        use: { ...devices[device] },
+        dependencies: [`setup-${name}`],
+      },
+    ]),
   ],
 
   // Uncomment this if you want Playwright to start Vite for you locally
