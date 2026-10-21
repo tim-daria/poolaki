@@ -44,7 +44,7 @@ A contribution is a specific type of transaction used to move money from the gen
 
 - Only the creator of the goal or the organization owner can archive a goal.
 
-- Notifications are sent to all members when a goal is created or archived.
+- Notifications are sent to all members except the actor when a goal is created, completed, or archived.
 
 ## Expenses Linked to Goals
 

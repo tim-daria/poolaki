@@ -9,10 +9,11 @@ import {
   Avatar,
   Box,
   Button,
+  Chip,
   Collapse,
   Divider,
+  IconButton,
   Link,
-  List,
   ListItemButton,
   Stack,
   Tooltip,
@@ -21,6 +22,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import CloseIcon from "@mui/icons-material/Close";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import MailOutlineIcon from "@mui/icons-material/MailOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutlined";
@@ -29,10 +31,8 @@ import {
   SettingsCard,
   SettingsRow,
 } from "../../components/Settings/SettingsCard";
-import {
-  outlinedActionSx,
-  settingsColumnSx,
-} from "../../components/Settings/styles";
+import { outlinedActionSx } from "../../components/Settings/styles";
+import { LEGAL_LINKS } from "../../components/BottomNav/navItems";
 import { PageTitle } from "../../components/PageHeader/PageHeader";
 import { ChangePasswordForm } from "../../components/Modals/ChangePasswordForm";
 import { CreateOrgForm } from "../../components/Modals/CreateOrgForm";
@@ -45,6 +45,7 @@ import { CAN_DELETE_ACCOUNT, CAN_EDIT_PROFILE } from "../../lib/account";
 import { avatarColor } from "../../lib/avatarColor";
 import { getCsrfToken } from "../../lib/csrf";
 import { initials } from "../../lib/initials";
+import { DESKTOP, PAGE_PADDING, PHONE, TABLET } from "../../lib/layout";
 import {
   InvitationResolveError,
   acceptInvitation,
@@ -60,103 +61,137 @@ import {
   fetchPendingInvitations,
 } from "../../lib/organizations";
 
+const accountButtonSx = {
+  ...outlinedActionSx,
+  alignSelf: "flex-start",
+} as const;
+
 function Settings() {
   const { user } = useAuth();
   const theme = useTheme();
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   return (
-    <Box sx={settingsColumnSx}>
+    <Box sx={{ ...PAGE_PADDING, pb: 5 }}>
       <PageTitle />
 
-      <SettingsCard>
-        <Typography component="h2" sx={{ fontWeight: 700, mb: 2 }}>
-          Profile
-        </Typography>
-        <SettingsRow
-          title={
-            <Stack
-              direction="row"
-              spacing={2}
-              component="span"
-              sx={{ alignItems: "center" }}
-            >
+      {/* Account cards stack on the left, workspaces take the wider right
+          column; below desktop everything is one column. On desktop the
+          account cards share the workspaces card's height between them. */}
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2.5,
+          [DESKTOP]: {
+            gridTemplateColumns: "minmax(280px, 4fr) minmax(0, 9fr)",
+          },
+        }}
+      >
+        <Stack spacing={2.5} sx={{ [DESKTOP]: { "& > *": { flex: 1 } } }}>
+          <SettingsCard>
+            <Typography component="h2" sx={sectionTitleSx}>
+              Profile
+            </Typography>
+            <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
               <Avatar
                 sx={{
-                  width: 52,
-                  height: 52,
+                  width: 60,
+                  height: 60,
                   fontWeight: 600,
                   bgcolor: avatarColor(user?.username, theme.palette.avatar),
                 }}
               >
                 {initials(user?.username ?? "")}
               </Avatar>
-              <Box component="span" sx={{ minWidth: 0 }}>
-                <Box component="span" sx={{ display: "block" }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600 }}>
                   {user?.username}
-                </Box>
+                </Typography>
                 <Typography
-                  component="span"
                   variant="body2"
-                  sx={{
-                    color: "text.secondary",
-                    display: "block",
-                    wordBreak: "break-all",
-                  }}
+                  sx={{ color: "text.secondary", wordBreak: "break-all" }}
                 >
                   {user?.email}
                 </Typography>
               </Box>
             </Stack>
-          }
-          action={
             <ComingSoon enabled={CAN_EDIT_PROFILE}>
               <Button
                 variant="outlined"
+                fullWidth
                 disabled={!CAN_EDIT_PROFILE}
-                sx={outlinedActionSx}
+                sx={{ ...outlinedActionSx, mt: 2.5 }}
               >
                 Edit profile
               </Button>
             </ComingSoon>
-          }
-        />
-        <Divider sx={{ my: 2.5 }} />
-        <SettingsRow
-          title="Password"
-          subtitle="Keep your account secure"
-          action={
-            <Button
-              variant="outlined"
-              onClick={() => setPasswordOpen(true)}
-              sx={outlinedActionSx}
-            >
-              Change
-            </Button>
-          }
-        />
-      </SettingsCard>
+          </SettingsCard>
 
-      <WorkspacesCard />
-
-      <SettingsCard>
-        <SettingsRow
-          title="Delete account"
-          subtitle="Removes your data and workspaces you own"
-          action={
-            <ComingSoon enabled={CAN_DELETE_ACCOUNT}>
+          <SettingsCard>
+            <Stack spacing={2}>
+              <Box>
+                <Typography component="h2" sx={sectionTitleSx}>
+                  Password
+                </Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  Keep your account secure
+                </Typography>
+              </Box>
               <Button
                 variant="outlined"
-                color="error"
-                disabled={!CAN_DELETE_ACCOUNT}
-                sx={{ fontWeight: 600 }}
+                onClick={() => setPasswordOpen(true)}
+                sx={accountButtonSx}
               >
-                Delete
+                Change password
               </Button>
-            </ComingSoon>
-          }
-        />
-      </SettingsCard>
+            </Stack>
+          </SettingsCard>
+
+          <SettingsCard>
+            <Stack spacing={2}>
+              <Box>
+                <Typography component="h2" sx={sectionTitleSx}>
+                  Delete account
+                </Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  Removes your data and the workspaces you own
+                </Typography>
+              </Box>
+              <ComingSoon enabled={CAN_DELETE_ACCOUNT}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={!CAN_DELETE_ACCOUNT}
+                  sx={{ fontWeight: 600, alignSelf: "flex-start" }}
+                >
+                  Delete account
+                </Button>
+              </ComingSoon>
+            </Stack>
+          </SettingsCard>
+        </Stack>
+
+        <WorkspacesCard />
+      </Box>
+
+      <Stack
+        component="footer"
+        direction="row"
+        spacing={2}
+        sx={{ mt: 3, flexWrap: "wrap" }}
+      >
+        {LEGAL_LINKS.map(({ to, label }) => (
+          <Link
+            key={to}
+            component={RouterLink}
+            to={to}
+            underline="hover"
+            sx={{ color: "text.secondary" }}
+          >
+            {label}
+          </Link>
+        ))}
+      </Stack>
 
       <ChangePasswordForm
         open={passwordOpen}
@@ -165,6 +200,8 @@ function Settings() {
     </Box>
   );
 }
+
+const sectionTitleSx = { fontWeight: 700, fontSize: "1.15rem" } as const;
 
 type Counts = Record<number, { members: number; invited: number }>;
 
@@ -214,26 +251,24 @@ function WorkspacesCard() {
         title="Workspaces"
         titleVariant="section"
         action={
-          <Tooltip title={atLimit ? `Up to ${MAX_ORGS} workspaces` : ""}>
-            <span>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setCreating(true)}
-                disabled={atLimit}
-                sx={{ fontWeight: 600 }}
-              >
-                New workspace
-              </Button>
-            </span>
-          </Tooltip>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {organizations.length} workspace
+            {organizations.length === 1 ? "" : "s"}
+          </Typography>
         }
       />
 
       <InvitationsBanner />
 
-      <List disablePadding sx={{ mt: 1.5 }}>
-        {sorted.map((org, i) => (
+      <Box
+        sx={{
+          mt: 2,
+          display: "grid",
+          gap: 2,
+          [TABLET]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
+        }}
+      >
+        {sorted.map((org) => (
           <WorkspaceRow
             key={org.id}
             org={org}
@@ -243,51 +278,70 @@ function WorkspacesCard() {
               counts[org.id]?.members,
               counts[org.id]?.invited,
             )}
-            divider={i < sorted.length - 1}
           />
         ))}
-      </List>
+        <Tooltip title={atLimit ? `Up to ${MAX_ORGS} workspaces` : ""}>
+          <span>
+            <ListItemButton
+              onClick={() => setCreating(true)}
+              disabled={atLimit}
+              sx={{ ...workspaceTileSx, borderStyle: "dashed", width: "100%" }}
+            >
+              <Box sx={workspaceIconSx}>
+                <AddIcon fontSize="small" />
+              </Box>
+              <Typography sx={{ fontWeight: 600 }}>
+                Create a workspace
+              </Typography>
+            </ListItemButton>
+          </span>
+        </Tooltip>
+      </Box>
 
       <CreateOrgForm open={creating} onClose={() => setCreating(false)} />
     </SettingsCard>
   );
 }
 
+/** Each workspace is a bordered tile; the grid, not a divider, separates them. */
+const workspaceTileSx = {
+  py: 1.5,
+  px: 1.5,
+  gap: 2,
+  borderRadius: 2,
+  border: "1px solid",
+  borderColor: "divider",
+} as const;
+
+const workspaceIconSx = {
+  width: 40,
+  height: 40,
+  borderRadius: 2,
+  bgcolor: "primary.light",
+  color: "primary.dark",
+  display: "grid",
+  placeItems: "center",
+  flexShrink: 0,
+} as const;
+
 interface WorkspaceRowProps {
   org: Organization;
   to: string;
   subtitle: string;
-  divider: boolean;
 }
 
-function WorkspaceRow({ org, to, subtitle, divider }: WorkspaceRowProps) {
+function WorkspaceRow({ org, to, subtitle }: WorkspaceRowProps) {
   const Icon = org.is_personal ? PersonOutlineIcon : GroupOutlinedIcon;
   return (
-    <ListItemButton
-      component={RouterLink}
-      to={to}
-      divider={divider}
-      sx={{ py: 1.5, px: 1, gap: 2, borderRadius: 2 }}
-    >
-      <Box
-        sx={{
-          width: 40,
-          height: 40,
-          borderRadius: 2,
-          bgcolor: "primary.light",
-          color: "primary.dark",
-          display: "grid",
-          placeItems: "center",
-          flexShrink: 0,
-        }}
-      >
+    <ListItemButton component={RouterLink} to={to} sx={workspaceTileSx}>
+      <Box sx={workspaceIconSx}>
         <Icon fontSize="small" />
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontWeight: 600 }} noWrap>
           {org.name}
         </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+        <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
           {subtitle}
         </Typography>
       </Box>
@@ -297,8 +351,8 @@ function WorkspaceRow({ org, to, subtitle, divider }: WorkspaceRowProps) {
 }
 
 /**
- * Invitations addressed to the user, answerable in place. Kept here rather
- * than sending them to the bell: that panel lives in the Header, and the
+ * Invitations addressed to the user, each answerable in place. Kept here
+ * rather than sent to the bell: that panel lives in the Header, and the
  * notification list is capped and mixed with other types.
  */
 function InvitationsBanner() {
@@ -359,48 +413,88 @@ function InvitationsBanner() {
         py: 1.25,
       }}
     >
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+      {/* gap, not spacing: spacing sets margins on children, which would
+          override the close button's ml: auto. */}
+      <Stack direction="row" sx={{ alignItems: "center", gap: 1.5 }}>
         <MailOutlineIcon fontSize="small" sx={{ color: "accent.main" }} />
-        <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-          {n} pending invitation{n === 1 ? "" : "s"} waiting for you
-        </Typography>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          sx={{ fontWeight: 600, color: "text.primary" }}
-        >
-          {expanded ? "Hide" : "View"}
-        </Link>
+        {expanded ? (
+          <>
+            <Typography component="h3" sx={{ fontWeight: 700 }}>
+              Invitations
+            </Typography>
+            <Chip label={n} size="small" />
+            <IconButton
+              aria-label="Hide invitations"
+              size="small"
+              onClick={() => setExpanded(false)}
+              sx={{ ml: "auto" }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
+              {n} pending invitation{n === 1 ? "" : "s"} waiting for you
+            </Typography>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => setExpanded(true)}
+              aria-expanded={expanded}
+              sx={{ fontWeight: 600, color: "text.primary" }}
+            >
+              View
+            </Link>
+          </>
+        )}
       </Stack>
       <Collapse in={expanded}>
-        <Stack spacing={1} sx={{ pt: 1.5 }}>
+        <Divider sx={{ mt: 1.5 }} />
+        <Stack divider={<Divider />} spacing={2} sx={{ pt: 2 }}>
           {invitations.map((inv) => (
             <Stack
               key={inv.id}
               direction="row"
-              sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
+              sx={{ alignItems: "center", gap: 2, flexWrap: "wrap" }}
             >
-              <Typography variant="body2" sx={{ flex: 1, minWidth: 160 }}>
-                <strong>{inv.organization_name}</strong>
-                {inv.invited_by && ` · from ${inv.invited_by}`}
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => respond(inv, false)}
-                disabled={busyId !== null}
+              <Box sx={{ ...workspaceIconSx, bgcolor: "background.paper" }}>
+                <GroupOutlinedIcon fontSize="small" />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600 }} noWrap>
+                  {inv.organization_name}
+                </Typography>
+                {inv.invited_by && (
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    from {inv.invited_by}
+                  </Typography>
+                )}
+              </Box>
+              {/* Phones: the buttons take a full line of their own, split
+                  evenly between them. */}
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{ [PHONE]: { width: "100%", "& > *": { flex: 1 } } }}
               >
-                Decline
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => respond(inv, true)}
-                disabled={busyId !== null}
-              >
-                Accept
-              </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => respond(inv, false)}
+                  disabled={busyId !== null}
+                  sx={outlinedActionSx}
+                >
+                  Decline
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => respond(inv, true)}
+                  disabled={busyId !== null}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Accept
+                </Button>
+              </Stack>
             </Stack>
           ))}
           {error && (

@@ -7,7 +7,15 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Goal, GoalStatus, Organization, Transaction, User
+from core.models import (
+    Goal,
+    GoalStatus,
+    Notification,
+    NotificationType,
+    Organization,
+    Transaction,
+    User,
+)
 from core.serializers import GoalResponseSerializer
 from core.services.balance import annotate_goal_balance
 
@@ -24,6 +32,10 @@ def goal_url(org_id: int, goal_id: int) -> str:
 
 def goal_balance_url(org_id: int, goal_id: int) -> str:
     return reverse("goal-balance", kwargs={"org_id": org_id, "goal_id": goal_id})
+
+
+def _goal_payload(goal: Goal, actor: User, org: Organization) -> dict[str, object]:
+    return {"org_name": org.name, "user": actor.username, "goal_name": goal.name}
 
 
 def test_list_goals_filters_by_status(
@@ -66,6 +78,142 @@ def test_list_goals_filters_by_status(
     response = api_client.get(goals_url(shared_org.id), {"status": "unknown"})
     assert response.status_code == 400
     assert response.data == {"status": ['"unknown" is not a valid choice.']}
+
+
+def test_create_goal_notifies_other_members_but_not_the_creator(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        goals_url(shared_org.id),
+        {"name": "Trip", "target_amount": "1500.00", "target_date": "2027-09-01"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.data["balance"] == "0.00"
+    goal = Goal.objects.get(org=shared_org, name="Trip")
+    assert goal.status == GoalStatus.ACTIVE
+    assert goal.created_by_id == owner.id
+
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_CREATED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    notification = notifications[0]
+    assert notification.org_id == shared_org.id
+    assert notification.payload == _goal_payload(goal, owner, shared_org)
+
+
+def test_create_goal_in_personal_org_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(
+        goals_url(personal_org.id),
+        {"name": "Savings", "target_amount": "100.00", "target_date": None},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Notification.objects.count() == 0
+
+
+def test_completing_goal_notifies_other_members_but_not_the_actor(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "completed"}, format="json"
+    )
+
+    assert response.status_code == 200
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_COMPLETED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    assert notifications[0].org_id == shared_org.id
+    assert notifications[0].payload == _goal_payload(goal, owner, shared_org)
+    assert not Notification.objects.filter(
+        user=owner, type=NotificationType.GOAL_COMPLETED
+    ).exists()
+
+
+def test_reverting_completed_goal_to_active_sends_no_notification(
+    api_client: APIClient, owner: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        status=GoalStatus.COMPLETED,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "active"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert Notification.objects.count() == 0
+
+
+def test_archiving_goal_notifies_other_members_but_not_the_actor(
+    api_client: APIClient, owner: User, member: User, shared_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=shared_org,
+        name="Trip",
+        target_amount=Decimal("100.00"),
+        target_date=date(2027, 1, 1),
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(shared_org.id, goal.id), {"status": "archived"}, format="json"
+    )
+
+    assert response.status_code == 200
+    notifications = list(
+        Notification.objects.filter(type=NotificationType.GOAL_ARCHIVED).order_by("user_id")
+    )
+    assert [notification.user_id for notification in notifications] == [member.id]
+    assert notifications[0].org_id == shared_org.id
+    assert notifications[0].payload == _goal_payload(goal, owner, shared_org)
+    assert not Notification.objects.filter(user=owner, type=NotificationType.GOAL_ARCHIVED).exists()
+
+
+def test_archiving_in_personal_org_creates_no_notifications(
+    api_client: APIClient, owner: User, personal_org: Organization
+) -> None:
+    goal = Goal.objects.create(
+        org=personal_org,
+        name="Savings",
+        target_amount=Decimal("100.00"),
+        target_date=None,
+        created_by=owner,
+    )
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.patch(
+        goal_url(personal_org.id, goal.id), {"status": "archived"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert Notification.objects.count() == 0
 
 
 def test_owner_can_archive_goal_and_return_remaining_balance(
