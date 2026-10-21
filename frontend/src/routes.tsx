@@ -115,7 +115,6 @@ export const router = createBrowserRouter([
                           subtitle:
                             "Manage security settings and active workspaces",
                           assistant: false,
-                          width: "narrow",
                         },
                         lazy: () => import("./pages/Settings/Settings"),
                       },

@@ -5,14 +5,7 @@
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link as RouterLink } from "react-router";
-import {
-  Box,
-  Button,
-  Link,
-  Stack,
-  Typography,
-  type ButtonProps,
-} from "@mui/material";
+import { Box, Button, Link, Typography, type ButtonProps } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { PageHeaderContext, usePageHeaderSlots } from "./PageHeaderContext";
@@ -80,13 +73,19 @@ export function PageHeader({ children, fabSlot = null }: PageHeaderProps) {
         {/* minWidth: 0 lets a long heading wrap instead of overflowing. */}
         <Box ref={setTitleSlot} sx={{ minWidth: 0 }} />
 
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: "center", flexShrink: 0 }}
-        >
-          <Box ref={setActionSlot} sx={{ display: "contents" }} />
-        </Stack>
+        {/* The slot is the flex row itself and vanishes when nothing is
+            portaled in: an empty item would still wrap under a long
+            title and add the row gap beneath it. */}
+        <Box
+          ref={setActionSlot}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flexShrink: 0,
+            "&:empty": { display: "none" },
+          }}
+        />
       </Box>
 
       {children}

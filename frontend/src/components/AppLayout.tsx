@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { AiChatDrawer } from "./AiChat/AiChatDrawer";
-import { Outlet, useParams, Link as RouterLink } from "react-router";
-import { Box, Link, useMediaQuery } from "@mui/material";
+import { Outlet, useParams } from "react-router";
+import { Box, useMediaQuery } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { BottomNav } from "./BottomNav/BottomNav";
-import { LEGAL_LINKS } from "./BottomNav/navItems";
 import { NAV_MOBILE_QUERY, PAGE_PADDING } from "../lib/layout";
 import { useScrollingDown } from "../hooks/useScrollingDown";
 
@@ -108,29 +107,6 @@ export function AppLayout() {
             <PageHeader fabSlot={isMobile ? fabSlot : null}>
               <Outlet />
             </PageHeader>
-          </Box>
-
-          {/* Below the page on every size; the bottom bar does not carry them. */}
-          <Box
-            component="footer"
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 2,
-              py: 2,
-            }}
-          >
-            {LEGAL_LINKS.map(({ to, label }) => (
-              <Link
-                key={to}
-                component={RouterLink}
-                to={to}
-                underline="hover"
-                sx={{ fontSize: "0.75rem", color: "text.secondary" }}
-              >
-                {label}
-              </Link>
-            ))}
           </Box>
         </Box>
         {isMobile && (
