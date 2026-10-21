@@ -38,9 +38,9 @@ Zero is rejected rather than stored: an expense of nothing is a mistake, and the
 sign of a transaction lives in `entry_type`, never in `amount`.
 
 **One exception: an opening balance may be zero.** A workspace that starts with
-an empty account is an ordinary thing to create, so `CreateOrgForm` validates
-with `validateOpeningBalance` (floor 0) while transactions, goal targets and
-contributions use `validateAmount` (floor 0.01). Two named functions rather than
+an empty account is an ordinary thing to create, so `StartingBalanceForm`
+validates with `validateOpeningBalance` (floor 0) while transactions, goal
+targets and contributions use `validateAmount` (floor 0.01). Two named functions rather than
 a `min` option on one, so that allowing a zero is a deliberate choice of rule and
 not a parameter someone can pass by accident. Everything else about the two
 fields — the filter, the paste parser, the formatting, the ceiling — is
@@ -174,8 +174,9 @@ components/Form/useMoneyField.ts   the behaviour: filter, paste, focus, blur
 components/Form/MoneyField.tsx     the MUI TextField wearing it
 ```
 
-Wearing it today: `Modals/TransactionForm` (amount) and `Modals/CreateOrgForm`
-(initial balance).
+Wearing it today: `Modals/TransactionForm` (amount), `Modals/GoalForm`
+(target and contribution) and `Modals/StartingBalanceForm` (opening balance
+of a personal workspace).
 
 The hook is headless so the rules cannot fork between form stacks: a plain
 `<input>` spreads the same return value that `MoneyField` hands to MUI.
@@ -200,15 +201,12 @@ arrive from a paste or from an edit form seeded by the API.
 
 ## Still to do
 
-- **Goals.** The goal target and contribution amounts still live in the legacy
-  `components/Modals/Modal.tsx`, which is being replaced by `ModalShell` forms.
-  They pick up `MoneyField` when that form lands — the field is ready, only the
-  form is not.
-- **Signup's balance field.** The shared-workspace one is done; the personal
-  workspace still asks for a starting balance in `pages/Register`, which goes
-  through `lib/initialBalance.ts` and its own `parseFloat`. Same rule as
-  `CreateOrgForm` — `MoneyField` plus `validateOpeningBalance`.
-- **Table display.** `TransactionsTable` prints `t.amount.toFixed(2)`, so large
-  amounts show ungrouped. Moving it to `formatAmount` also means the search box
-  in `Transactions.tsx`, which matches against that same `toFixed(2)` string,
-  has to decide whether typing `1234` should still find `1.234,56`.
+- **`CreateOrgForm`'s initial balance.** The shared-workspace form still has
+  a plain text field and its own `parseFloat`. Same rule as
+  `StartingBalanceForm`: `MoneyField` plus `validateOpeningBalance`.
+
+Done since this page was first written: goal amounts moved to `GoalForm` on
+`MoneyField`; signup no longer asks for a balance (the personal workspace's
+opening balance is set from the Overview setup banner); the transactions table
+formats through `displayAmount`, so large amounts are grouped and the search
+box matches on the server, not on a formatted string.

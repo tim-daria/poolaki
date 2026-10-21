@@ -6,36 +6,93 @@ _This project has been created as part of the 42 curriculum by albetanc, cwick, 
 
 ## Description
 
-**poolaki** is a multi-user web application for tracking and sharing expenses.
-Users can sign up, log in securely, record expenses, and (depending on the modules
-we ship) split, categorize, and analyze their spending together in real time.
+**poolaki** is a multi-user web application for tracking personal and shared finances.
 
-This repository is the team monorepo: the **backend** and **frontend** live side by
-side and are deployed together with a single command via containers.
+Each user gets a personal budget on sign-up and can create shared workspaces
+(organizations), invite other users, and manage members with `owner` and `member`
+roles. All data is scoped to a workspace.
 
-Key planned features:
-- Secure user accounts (email + password, hashed & salted)
-- Personal and shared expense tracking
-- Categories, filtering, and reporting
-- Financial goals
-- AI-powered conversations over financial data
-- Multi-user / concurrent usage with no data races
+Features:
+- **Accounts.** Email/password registration and login, plus 42 OAuth (`intra42`). Sessions are handled by django-allauth; passwords are hashed and salted.
+- **Transactions.** Income, expenses, and goal contributions per workspace, with description, amount, date, and category. Filtering by period and category.
+- **Categories.** Workspace-scoped labels typed as income, expense, or contribution.
+- **Goals.** Savings targets with a target amount and date. Contributions are transactions linked to a goal; progress and status (`active`, `completed`, `archived`) are tracked per goal.
+- **Reports.** Yearly report per workspace: income/expense totals, monthly distribution, per-category breakdown, and current balance.
+- **Notifications.** In-app inbox for invitations, transactions added in shared workspaces, and goal milestones. The client polls; no websockets.
+- **AI assistant.** Natural-language questions about expenses, income, balance, goals, trends, and shared workspaces, answered by a separate FastAPI service that reads data only through the Django API.
+- **Concurrency.** Multiple users can work in the same workspace at once; integrity is enforced by PostgreSQL constraints and transactions.
 
-## Instructions
+This repository is the team monorepo: `frontend/` (React SPA), `backend/` (Django API,
+Caddy, monitoring, backups), `ai-service/` (FastAPI), and `vault/` (secrets) are
+deployed together with a single `make` command via Docker Compose.
 
-> Prerequisites and run steps will be filled in as the stack is finalized.
+## Instructions (❗ ADD PROD )
+
+### Prerequisites
+
+- Docker Engine with the Compose plugin (`docker compose`)
+- `make`
+- `jq` (used by `make readVault`, `make wafLog`, `make auditLog`)
+- Optional, for running tests on the host: Node.js 24 and `npm`, Python 3.12+ and `uv`
+
+### Setup
 
 ```bash
-# clone
 git clone git@github.com:tim-daria/poolaki.git
 cd poolaki
-
-# configure environment (never commit real secrets)
 cp .env.example .env
-
-# run (single command — to be wired up)
-docker compose up --build
 ```
+
+Fill in every variable in `.env`. The file is read by Compose and by the Vault
+container, which seeds the secrets store from it on first start. Never commit it.
+
+### Run
+
+```bash
+make            # dev stack: caddy, backend, frontend, db, vault, vault_agent, ai-service, cloudflared
+make prod       # dev stack + prometheus, grafana, postgres_exporter, cadvisor, db_backup
+make re         # rebuild images, then start (use after changing a Dockerfile or dependencies)
+make down       # stop and remove all containers (both profiles)
+make rmVolumes  # same as down, plus delete volumes (database, Vault state, Grafana data)
+```
+
+Vault initialises and unseals itself on first start; the backend waits for it.
+
+### URLs
+
+| Service    | URL                                  | Profile |
+| ---------- | ------------------------------------ | ------- |
+| App        | <http://poolaki.localhost:8080>      | dev     |
+| Django admin | <http://poolaki.localhost:8080/admin/> | dev   |
+| Vault UI   | <http://localhost:8200/ui>           | dev     |
+| Grafana    | <http://grafana.localhost:8080>      | prod    |
+| Prometheus | <http://prometheus.localhost:8080>   | prod    |
+
+### Useful targets
+
+```bash
+make logs        # compose logs for the dev stack
+make status      # running containers
+make Tdjango     # shell in the backend container (also: Tnode, Tdb, Tvault, Tai, Tcaddy)
+make readVault   # print Vault status and stored credentials (debugging only)
+make wafLog      # last Coraza WAF audit entry
+```
+
+### Tests
+
+```bash
+# backend (clean PostgreSQL container, venv, pytest)
+./ci-precheck.sh
+
+# frontend unit tests
+cd frontend && npm ci && npm run test
+
+# frontend end-to-end tests (requires the running stack)
+cd frontend && npm run test:e2e
+```
+
+See [docs/frontend/vitest.md](docs/frontend/vitest.md) and
+[docs/frontend/playwright.md](docs/frontend/playwright.md) for details.
 
 ## Contributing
 
@@ -45,8 +102,191 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Backend API documentation: [Backend Readme](backend/README.md) and [other backend documents](docs/backend)
 - AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
+- Frontend documentation: [Frontend documents](docs/frontend), and other [frontend documents](docs/frontend)
+
+## Additional Sections [... NEEDS TO BE FILLED ...]
+
+<details>
+<summary><strong>❗Team Information</strong></summary>
+
+For each team member mentioned at the top of the README.md, you must provide:
+◦ Assigned role(s): PO, PM, Tech Lead, Developers, etc.
+◦ Brief description of their responsibilities.
+
+</details>
+
+<details>
+<summary><strong>❗Project Management</strong></summary>
+
+◦ How the team organized the work (task distribution, meetings, etc.).
+◦ Tools used for project management (GitHub Issues, Trello, etc.).
+◦ Communication channels used (Discord, Slack, etc.).
+
+</details>
+
+<details>
+<summary><strong>❗Technical Stack</strong></summary>
+
+**Frontend**
+
+| Technology | Role |
+| --- | --- |
+| React 19 + TypeScript 6 | UI, compiled with the React Compiler (Babel plugin) |
+| Vite 8 | Dev server and production bundler |
+| React Router 7 | Client-side routing, lazy route chunks |
+| MUI 9 (Material, X Charts, X Date Pickers) + Emotion | Component library; all styling flows from one `createTheme` in `src/theme.ts` |
+| dayjs | Date handling |
+| react-markdown + remark-gfm | Rendering AI chat replies |
+| Vitest, Playwright, ESLint, Prettier | Unit tests, end-to-end tests, lint, format |
+
+**Backend**
+
+| Technology | Role |
+| --- | --- |
+| Django 6 + Django REST Framework | Business logic, users, organizations, transactions, goals, reports; versioned JSON API under `/api/v1/` |
+| django-allauth (headless) | Email/password sessions and 42 OAuth (`intra42`) through the `/_allauth/` API |
+| psycopg 3 | PostgreSQL driver |
+| django-prometheus | Request and DB metrics for Prometheus |
+| pytest, pytest-django, ruff, mypy (strict), uv | Tests, lint, typing, dependency management |
+
+**AI service**
+
+| Technology | Role |
+| --- | --- |
+| FastAPI + Uvicorn | Separate microservice for conversations over financial data |
+| httpx | Calls to an OpenAI-compatible `/chat/completions` endpoint and to the Django API |
+| asyncpg + pgvector | Stores document chunks and embeddings for retrieval (RAG) |
+| pydantic-settings | Configuration |
+
+**Database**
+
+PostgreSQL 18 (`pgvector/pgvector:pg18` image). Chosen because:
+- Relational, transactional storage fits money: foreign keys, constraints, and ACID writes prevent inconsistent balances under concurrent users.
+- First-class Django ORM support, including migrations.
+- The `vector` extension lets the AI service store and search embeddings in the same database instead of adding a separate vector store.
+- Dynamic, short-lived credentials are issued per service by Vault's database secrets engine.
+
+**Infrastructure**
+
+| Technology | Role |
+| --- | --- |
+| Docker Compose | Single-command deployment of all services; `prod` profile adds monitoring and backups |
+| Caddy + Coraza WAF (OWASP Core Rule Set) | Reverse proxy on port 8080, routes `/api`, `/_allauth`, `/admin` to Django and everything else to the frontend |
+| HashiCorp Vault + Vault Agent | Secrets storage; AppRole-scoped read access; dynamic PostgreSQL credentials with TTL |
+| Cloudflare Tunnel (`cloudflared`) | Publishes the app at `poolaki.de` without opening inbound ports |
+| Prometheus, Grafana, postgres_exporter, cAdvisor | Metrics, dashboards, email alerts |
+| `db_backup` container | Daily `pg_dump` to `backend/backups` |
+| GitHub Actions | CI per changed area: backend ruff/mypy/pytest, frontend format/lint/vitest/build, Playwright e2e against the compose stack |
+
+**Justification of major choices**
+
+- **Django for the core.** Mature auth, ORM, migrations, and admin reduce the amount of security-sensitive code written by hand. Django is the single owner of users and financial data.
+- **Separate FastAPI service for AI.** AI workloads scale and change independently of business rules; the LLM provider can be swapped without touching the backend. The service never reads user data from the database directly, only through the Django API, so tenant isolation is enforced in one place (see [docs/ai/decisions.md](docs/ai/decisions.md)).
+- **React + MUI.** Typed components and a central theme keep the UI consistent; no hardcoded colours or spacing outside the theme (see [docs/frontend/mui-and-styles.md](docs/frontend/mui-and-styles.md)).
+- **Vite over a heavier framework.** The app is a client-side SPA behind an API; it needs a fast dev server and route-level code splitting, not SSR.
+- **Vault instead of plain `.env`.** Secrets are encrypted at rest, each service reads only its own paths, and leaked database credentials expire on their own (see [docs/backend/vault.md](docs/backend/vault.md)).
+- **Caddy with Coraza.** One container gives routing, per-host logging, and a WAF in front of both the API and the SPA.
+- **Cloudflare Tunnel.** TLS and public exposure handled by Cloudflare; the host needs no open inbound ports.
+
+</details>
+
+<details>
+<summary><strong>❗Database Schema</strong></summary>
+
+◦ Visual representation or description of the database structure.
+◦ Tables/collections and their relationships.
+◦ Key fields and data types.
+
+</details>
+
+<details>
+<summary><strong>❗Features List</strong></summary>
+
+◦ Complete list of implemented features.
+◦ Which team member(s) worked on each feature.
+◦ Brief description of each feature’s functionality.
+
+</details>
+
+<details>
+<summary><strong>❗Modules</strong></summary>
+
+◦ List of all chosen modules (Major and Minor).
+◦ Point calculation (Major = 2pts, Minor = 1pt).
+◦ Justification for each module choice, especially for custom "Modules of
+choice".
+◦ How each module was implemented.
+◦ Which team member(s) worked on each module.
+
+</details>
+
+<details>
+<summary><strong>❗Individual Contributions</strong></summary>
+
+◦ Detailed breakdown of what each team member contributed.
+◦ Specific features, modules, or components implemented by each person.
+◦ Any challenges faced and how they were overcome.
+
+<details>
+<summary><strong>Tanya (🎀 tsemenov) — Frontend</strong></summary>
+
+**Scope.** Owner of `frontend/`: product design, UX/UI, architecture, tests, CI job, and `docs/frontend/`.
+
+**Design and user flow**
+- Designed the app structure and user flow: sign-up or 42 login, personal budget with an initial balance, workspace switcher, then Home, Transactions, Goals, Reports and Settings. Shared workspaces follow the same flow after an invitation.
+- Made mockups for every page and modal before implementation, and iterated on them with the team.
+- Built a design system in the MUI theme: colour tokens, two type stacks, spacing, card variants ([docs/frontend/design-system.md](docs/frontend/design-system.md)).
+- Made every page responsive: top navigation on desktop, bottom navigation and bottom sheets on phones, print layout for reports.
+
+**Implementation**
+- Built the auth flow, routing, app shell, workspaces and invitations, Transactions and Home. Helped with Goals, Reports and the AI chat UI.
+- Shared pieces: theme, `Money` formatting, toasts, segmented controls, card header.
+
+**Tooling and quality**
+- React Compiler and Vite setup, Vitest unit tests, Playwright e2e suite, frontend CI job, `AGENTS.md` guidelines and frontend docs.
+
+**Challenges**
+- **Making the app intuitive.** Goals, shared workspaces and overdrafts are not simple concepts, so the interface had to explain them in plain language. Our rule was to hide or disable actions that aren't allowed, rather than let them fail.
+- **Composition and user flow.** Deciding what each page shows first, what stays one tap away, and where the single main action goes.
+- **Desktop and mobile.** One design had to work on both screens. Cards, modals, tables and charts were reworked for phones, not just shrunk.
+- **Consistency.** Keeping the look uniform across many pages, which is why every style decision lives in the theme.
+</details>
+</details>
 
 ## Resources
 
 - Project subject: 42 `ft_transcendence`
-- _(documentation, articles, and a note on how AI was used will be added here)_
+  
+- [django-allauth: Headless API ](https://allauth.org/docs/draft-api/)
+- [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
+- [Mozilla Web Docs](https://developer.mozilla.org/en-US/)
+- [React Official Documentation](https://react.dev/)
+- [React Router Official Documentation](https://reactrouter.com/)
+- [Vite Official Documentation](https://vite.dev/guide/)
+- [GitHub Secrets How-To](https://docs.github.com/en/actions/concepts/security/secrets)
+- [Playwright Documentation](https://playwright.dev/)
+- [Vitest Documentation](https://vitest.dev/)
+- [Laws of UX](https://lawsofux.com/)
+
+[ ❗... ADD MORE... ]
+
+## AI Usage
+
+AI tools were used in this project for the following purposes:
+
+- **Planning:** structuring and prioritising the work.
+- **Learning:** finding resources and understanding new concepts.
+- **Design:** generating mockups.
+- **Code review:** reviewing changes and spotting issues.
+- **Code optimisation:** refactoring and simplifying existing code.
+- **Migration:** moving pages to MUI correctly and consistently.
+- **Testing:** drafting and extending unit and end-to-end tests.
+- **Documentation:** drafting and editing project documentation.
+- **Commits and pull requests:** writing and polishing commit messages and PR descriptions.
+
+[ ❗... ADD MORE... ]
+
+Security practices for writing workflows and using GitHub Actions features
+Using secrets in GitHub Actions
+
+Software Testing Course
