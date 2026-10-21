@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_goal_completed_at_alter_transaction_entry_type'),
+        ('core', '0006_remove_activitylog_core_activi_org_id_2ce91c_idx_and_more'),
     ]
 
     operations = [
