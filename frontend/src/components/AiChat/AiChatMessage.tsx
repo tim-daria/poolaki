@@ -18,13 +18,17 @@ export function AiChatMessage({ message }: { message: ChatMessage }) {
         elevation={0}
         sx={{
           maxWidth: "80%",
+          minWidth: 0,
           px: 1.5,
           py: 1,
           borderRadius: 2,
           bgcolor: isUser ? "primary.light" : "background.paper",
         }}
       >
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+        <Typography
+          variant="body2"
+          sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+        >
           <MarkdownMessage content={message.content} />
         </Typography>
       </Paper>
