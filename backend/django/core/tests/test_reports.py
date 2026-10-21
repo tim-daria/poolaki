@@ -15,8 +15,7 @@ def month_row(month: int, income: str = "0.00", expense: str = "0.00") -> dict[s
         "month": month,
         "income": income,
         "expense": expense,
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
 
 
@@ -180,8 +179,7 @@ def test_year_without_data_returns_zeros(
     assert data["totals"] == {
         "income": "0.00",
         "expense": "0.00",
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
     assert [entry["month"] for entry in data["monthly"]] == list(range(1, 13))
     assert all(entry[key] == "0.00" for entry in data["monthly"] for key in ("income", "expense"))
@@ -227,8 +225,7 @@ def test_totals_sum_income_and_expense_and_ignore_initial_balance(
     assert data["totals"] == {
         "income": "120.10",
         "expense": "40.50",
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
 
 
@@ -267,10 +264,9 @@ def test_contribution_transactions_are_reported_but_excluded_from_categories(
     assert data["totals"] == {
         "income": "100.00",
         "expense": "30.00",
-        "contribution": "25.00",
-        "withdraw": "0.00",
+        "goals_balance": "25.00",
     }
-    assert data["monthly"][1] == {**month_row(2), "contribution": "25.00"}
+    assert data["monthly"][1] == {**month_row(2), "goals_balance": "25.00"}
     assert [(c["name"], c["type"]) for c in data["categories"]] == [
         ("Salary", "income"),
         ("Food", "expense"),
@@ -341,11 +337,9 @@ def test_monthly_reports_contributions_and_withdrawals(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["monthly"][9]["contribution"] == "105.00"
-    assert data["monthly"][9]["withdraw"] == "5.00"
-    assert data["monthly"][10]["contribution"] == "14.00"
-    assert data["totals"]["contribution"] == "119.00"
-    assert data["totals"]["withdraw"] == "5.00"
+    assert data["monthly"][9]["goals_balance"] == "100.00"
+    assert data["monthly"][10]["goals_balance"] == "14.00"
+    assert data["totals"]["goals_balance"] == "114.00"
 
 
 # ------------------------------------ #

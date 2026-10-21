@@ -46,35 +46,39 @@ def _reported_transactions(org: Organization, year: int) -> QuerySet[Transaction
     )
 
 
-def _metric_sums() -> dict[str, Any]:
-    return {
-        entry_type.value: Coalesce(Sum("amount", filter=Q(entry_type=entry_type)), _ZERO)
-        for entry_type in _REPORTED_TYPES
-    }
-
-
 def _metric_totals(base: QuerySet[Transaction]) -> dict[str, Decimal]:
-    """Yearly totals for income, expense, contributions, and withdrawals."""
-    return base.aggregate(**_metric_sums())
+    """Yearly income, expense, and net goal transfer totals."""
+    return base.aggregate(
+        income=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.INCOME)), _ZERO),
+        expense=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)), _ZERO),
+        goals_balance=Coalesce(Sum(_goal_balance_expression()), _ZERO),
+    )
 
 
 def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
-    """12 rows (month 1-12) with per-metric sums; empty months are zero-filled."""
+    """12 rows with income, expense, and net goal transfer sums."""
     monthly_rows = (
         base.annotate(month=ExtractMonth("transaction_date"))
         .values("month")
-        .annotate(**_metric_sums())
+        .annotate(
+            income=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.INCOME)), _ZERO),
+            expense=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)), _ZERO),
+            goals_balance=Coalesce(Sum(_goal_balance_expression()), _ZERO),
+        )
         .order_by("month")
     )
     rows_by_month = {row["month"]: row for row in monthly_rows}
     monthly = []
     for month in range(1, 13):
         row = rows_by_month.get(month)
-        entry: dict[str, Any] = {"month": month}
-        for entry_type in _REPORTED_TYPES:
-            key = entry_type.value
-            entry[key] = row[key] if row is not None else _ZERO
-        monthly.append(entry)
+        monthly.append(
+            {
+                "month": month,
+                "income": row["income"] if row is not None else _ZERO,
+                "expense": row["expense"] if row is not None else _ZERO,
+                "goals_balance": row["goals_balance"] if row is not None else _ZERO,
+            }
+        )
     return monthly
 
 

@@ -27,32 +27,28 @@ def test_response_carry_contract_shape(
     assert data["totals"] == {
         "income": "100.00",
         "expense": "0.00",
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
     assert [m["month"] for m in data["months"]] == list(range(1, 13))
     assert set(data["months"][0]) == {
         "month",
         "income",
         "expense",
-        "contribution",
-        "withdraw",
+        "goals_balance",
     }
     # months without activity are zero-filled
     assert data["months"][0] == {
         "month": 1,
         "income": "0.00",
         "expense": "0.00",
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
     june = next(m for m in data["months"] if m["month"] == 6)
     assert june == {
         "month": 6,
         "income": "100.00",
         "expense": "0.00",
-        "contribution": "0.00",
-        "withdraw": "0.00",
+        "goals_balance": "0.00",
     }
 
 

@@ -20,7 +20,7 @@ class ReportView(APIView):
 
     GET
     Returns yearly aggregates for the organization: income/expense and
-    contribution/withdraw totals, a zero-filled 12-month distribution, the
+    net goal transfer totals, a zero-filled 12-month distribution, the
     per-category breakdown, and active/completed goal balances. Each goal
     includes its current balance and a selected-year, month-end balance series.
     `goal_balance` is the selected-year aggregate balance across those goals.
