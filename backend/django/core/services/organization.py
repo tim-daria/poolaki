@@ -7,6 +7,7 @@ from core.models import (
     Invitation,
     InvitationStatus,
     Membership,
+    Notification,
     NotificationType,
     Organization,
     Role,
@@ -74,8 +75,9 @@ def leave_organization(user: User, org: Organization) -> bool:
     If the leaving user is the owner and other members remain,
     ownership is automatically transferred to the longest-standing
     remaining member (ties broken by user id). If the leaving user is
-    the last member, the organization is deleted and the recipients of
-    its pending invitations are notified.
+    the last member, the organization is deleted, the pending
+    invitations' notifications are resolved (marked read) and the
+    recipients are sent an organization_deleted notification.
 
     Returns:
         True if the organization was deleted.
@@ -105,6 +107,9 @@ def leave_organization(user: User, org: Organization) -> bool:
                 "invited_user_id", flat=True
             )
         )
+        Notification.objects.filter(
+            org=org, type=NotificationType.INVITATION, is_read=False
+        ).update(is_read=True)
         org.delete()
         notify_users(
             pending_invitee_ids,
