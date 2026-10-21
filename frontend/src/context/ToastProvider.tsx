@@ -15,10 +15,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   // Kept after close so the text and colour do not change during the fade.
   const [message, setMessage] = useState("");
   const [severity, setSeverity] = useState<ToastSeverity>("success");
+  // Bumped per toast and used as the Snackbar's key: MUI starts the auto-hide
+  // timer when `open` turns true, not when the message changes, so a toast
+  // that replaces one still showing would otherwise inherit its remaining
+  // time and could disappear almost at once. A new key remounts the Snackbar
+  // and gives every message the full duration.
+  const [toastId, setToastId] = useState(0);
 
   const showToast = (next: string, nextSeverity: ToastSeverity = "success") => {
     setMessage(next);
     setSeverity(nextSeverity);
+    setToastId((id) => id + 1);
     setOpen(true);
   };
 
@@ -26,6 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <Snackbar
+        key={toastId}
         open={open}
         autoHideDuration={AUTO_HIDE_MS}
         // Click-away is ignored: the toast is not a dialog, so clicking the

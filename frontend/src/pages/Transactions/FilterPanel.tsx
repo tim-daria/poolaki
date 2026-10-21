@@ -41,7 +41,7 @@ const PRESETS: { label: string; range: () => [string, string] }[] = [
     range: () => isoRange(dayjs().startOf("month"), dayjs().endOf("month")),
   },
   {
-    label: "Last month",
+    label: "Prev month",
     range: () => {
       const last = dayjs().subtract(1, "month");
       return isoRange(last.startOf("month"), last.endOf("month"));

@@ -104,10 +104,11 @@ const GRID = {
 
 /**
  * The figure above a bar. Up to six digits it is plain text. Past that it is
- * abbreviated and becomes a button: one tap floats the exact amount over the
- * column, in a card-styled pill so it reads above the bars, without
- * changing the column's height; the next tap shortens it again. The dotted
- * underline is the only cue that it can be tapped.
+ * abbreviated and becomes a button: one tap swaps in the exact amount as a
+ * card-styled pill that fills the figure's own line box, so it reads above
+ * the neighbouring bars without leaving the room the column reserves; the
+ * next tap shortens it again. The dotted underline is the only cue that it
+ * can be tapped.
  */
 function ColumnFigure({
   value,
@@ -142,7 +143,7 @@ function ColumnFigure({
     <ButtonBase
       aria-pressed={expanded}
       aria-label={exact}
-      title={exact}
+      title={expanded ? "Tap to shorten" : exact}
       onClick={() => setExpanded((e) => !e)}
       sx={{
         mb: FIGURE_GAP,
@@ -163,28 +164,26 @@ function ColumnFigure({
       >
         {shownSign}€{displayFigure(magnitude)}
       </Money>
+      {/* Bound to the hidden figure's line box, so it can never grow
+          past the room the column reserves for it. */}
       {expanded && (
-        <Stack
+        <Paper
+          variant="card"
           sx={{
             position: "absolute",
+            top: 0,
             bottom: 0,
             left: "50%",
             transform: "translateX(-50%)",
+            display: "flex",
             alignItems: "center",
-            gap: 0.5,
+            px: 1.5,
+            borderRadius: 999,
             zIndex: 1,
           }}
         >
-          <Typography
-            variant="caption"
-            sx={{ color: "text.secondary", whiteSpace: "nowrap" }}
-          >
-            tap again to shorten
-          </Typography>
-          <Paper variant="card" sx={{ py: 0.5, px: 1.5, borderRadius: 999 }}>
-            <Money sx={figureSx}>{exact}</Money>
-          </Paper>
-        </Stack>
+          <Money sx={figureSx}>{exact}</Money>
+        </Paper>
       )}
     </ButtonBase>
   );
