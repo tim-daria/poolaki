@@ -141,8 +141,17 @@ def get_org_category_breakdown(
 
 def _goal_balance_expression(amount_field: str = "amount") -> Case:
     return Case(
-        When(entry_type=EntryType.CONTRIBUTION, then=F(amount_field)),
-        When(entry_type=EntryType.WITHDRAW, then=-F(amount_field)),
+        When(
+            entry_type=EntryType.CONTRIBUTION,
+            goal__status__in=_REPORTED_GOAL_STATUSES,
+            category__isnull=False,
+            then=F(amount_field),
+        ),
+        When(
+            entry_type=EntryType.WITHDRAW,
+            goal__status__in=_REPORTED_GOAL_STATUSES,
+            then=-F(amount_field),
+        ),
         default=_ZERO,
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )

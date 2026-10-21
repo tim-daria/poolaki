@@ -56,7 +56,12 @@ def add_goal_transaction(
     amount: str,
     transaction_date: str,
     category: Category | None = None,
+    categorized: bool = True,
 ) -> Transaction:
+    if categorized and entry_type == "contribution" and category is None:
+        category, _ = Category.objects.get_or_create(
+            org=org, name=f"{goal.name} contribution", type="contribution"
+        )
     return Transaction.objects.create(
         org=org,
         goal=goal,
@@ -264,13 +269,28 @@ def test_contribution_transactions_are_reported_but_excluded_from_categories(
     assert data["totals"] == {
         "income": "100.00",
         "expense": "30.00",
-        "goals_balance": "25.00",
+        "goals_balance": "0.00",
     }
-    assert data["monthly"][1] == {**month_row(2), "goals_balance": "25.00"}
+    assert data["monthly"][1] == month_row(2)
     assert [(c["name"], c["type"]) for c in data["categories"]] == [
         ("Salary", "income"),
         ("Food", "expense"),
     ]
+
+
+def test_uncategorized_contributions_are_excluded_from_goal_balances(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    goal = add_goal(org, "Savings")
+    add_goal_transaction(org, goal, "contribution", "100.00", "2025-02-07", categorized=False)
+    add_goal_transaction(org, goal, "withdraw", "20.00", "2025-02-08")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["totals"]["goals_balance"] == "-20.00"
+    assert data["monthly"][1]["goals_balance"] == "-20.00"
+    assert data["goals"][0]["balance"] == "-20.00"
 
 
 def test_amounts_are_two_decimal_strings(
@@ -444,6 +464,10 @@ def test_goal_balance_sums_active_and_completed_goals(
 
     # active 150.00 + completed 150.00; the archived goal is excluded
     assert data["goal_balance"] == "300.00"
+    assert data["totals"]["goals_balance"] == "300.00"
+    assert data["monthly"][0]["goals_balance"] == "300.50"
+    assert data["monthly"][1]["goals_balance"] == "49.50"
+    assert data["monthly"][2]["goals_balance"] == "-50.00"
 
 
 def test_goal_balance_ignores_goal_expenses(
