@@ -16,13 +16,18 @@ The reports page provides visual and consolidated financial summaries, allowing 
 
 - **Annual Transactions Filter:** Features an annual for entire report, and as a default will use the current year.
 
-- **Summary cards**: Displays total savings, total available balance and total expenses during the filtered year.
+- **Summary cards:** Display income, expenses, contributions, and withdrawals
+  for the filtered year.
 
 - **Savings Consolidations:** Displays month-by-month consolidated savings for a selected year.
 
-- **Incomes vs. Expenses:** Consolidates total savings separately from general available funds.
+- **Goal progress:** Displays the current balance for each active or completed
+  goal and its month-end balance for every month in the selected year. The
+  aggregate goal balance is the current balance across those goals.
 
-- **Category table:** Displays the total transactions per category.
+- **Category table:** Displays income and expense totals per category, with a
+  zero-filled monthly series for the selected year. Contribution categories are
+  excluded.
 
 ## When the report fails
 

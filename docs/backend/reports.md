@@ -30,11 +30,10 @@ Response example:
     "income": "12000.00",
     "expense": "8400.50"
   },
-  "goal_balance": "1540.50",
   "monthly": [
-    { "month": 1, "income": "1000.00", "expense": "700.00" },
-    { "month": 2, "income": "0.00", "expense": "120.50" },
-    { "month": 3, "income": "0.00", "expense": "0.00" }
+    { "month": 1, "income": "1000.00", "expense": "700.00", "contribution": "241.00", "withdraw": "0.00" },
+    { "month": 2, "income": "0.00", "expense": "120.50", "contribution": "0.00", "withdraw": "0.00" },
+    { "month": 3, "income": "0.00", "expense": "0.00", "contribution": "0.00", "withdraw": "0.00" }
   ],
   "categories": [
     {
@@ -50,6 +49,25 @@ Response example:
       "type": "expense",
       "total": "2100.25",
       "monthly": ["180.50", "170.25", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "1750.00"]
+    },
+  ],
+  "goal_balance": "1540.50",
+  "goals": [
+    {
+      "goal_id": 15,
+      "name": "Travel",
+      "status": "active",
+      "target_amount": "222.00",
+      "balance": "22.00",
+      "monthly": [ "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "22.00", "22.00"]
+    },
+    {
+      "goal_id": 18,
+      "name": "Bike",
+      "status": "completed",
+      "target_amount": "3000.00",
+      "balance": "89.00",
+      "monthly": [ "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "11.00", "11.00", "89.00" ]
     }
   ]
 }
@@ -78,6 +96,12 @@ Status:
   ignores the `year` parameter and does not change when the year is
   switched. Archived goals are excluded — they are settled (zero balance)
   at archival. Goals without a balance simply contribute 0.
+- **`goals` adds per-goal progress to the report.** Each item in the array
+  includes `goal_id`, `name`, `status`, `target_amount`, the goal's current
+  `balance`, and a 12-month sequence showing the end-of-month balance for that
+  goal within the requested year. This keeps the report self-contained: the
+  frontend can display the organization savings snapshot and the active or
+  completed goals in one call without extra requests.
 - **Opening balance is not income.** `Organization.initial_balance` is the
   money the organization started with, not money earned this year, so it is
   excluded from every metric.
