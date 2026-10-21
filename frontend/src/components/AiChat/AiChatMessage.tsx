@@ -26,6 +26,7 @@ export function AiChatMessage({ message }: { message: ChatMessage }) {
         }}
       >
         <Typography
+          component="div"
           variant="body2"
           sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
         >

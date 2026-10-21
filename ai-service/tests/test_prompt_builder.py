@@ -20,3 +20,10 @@ def test_prompt_contains_current_date():
     prompt = builder.build("What is the current month?", "")
     assert datetime.now(UTC).astimezone().date().isoformat() in prompt
     assert "{{current_date}}" not in prompt
+
+
+def test_prompt_contains_formatting_rules():
+    builder = PromptBuilder()
+    prompt = builder.build("How much did I spend?", "")
+    assert "€5.000,00" in prompt
+    assert "**bold**" in prompt
