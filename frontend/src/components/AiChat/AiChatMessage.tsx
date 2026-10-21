@@ -2,6 +2,7 @@
 
 import { Box, Paper, Typography } from "@mui/material";
 import type { ChatMessage } from "../../lib/aiChat";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 export function AiChatMessage({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
@@ -24,7 +25,7 @@ export function AiChatMessage({ message }: { message: ChatMessage }) {
         }}
       >
         <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-          {message.content}
+          <MarkdownMessage content={message.content} />
         </Typography>
       </Paper>
     </Box>
