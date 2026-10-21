@@ -12,7 +12,9 @@ All endpoints require authentication.
 |----------------------|--------------------------------------------------------------------------|---------------------------------------------------------|
 | `invitation`         | "You have been invited to an organization"                               | `POST /api/v1/organizations/{org_id}/invitations/`         |
 | `transaction_added`  | "A new transaction was added"                                            | `POST /api/v1/organizations/{org_id}/transactions/` (sent to every member except the creator) |
-| `goal_completed`     | "A spending goal has been achieved"                                      | reserved                                                 |
+| `goal_created`       | "A new goal was created"                                                 | `POST /api/v1/organizations/{org_id}/goals/` (sent to every member except the creator) |
+| `goal_completed`     | "A spending goal has been achieved"                                      | `PATCH /api/v1/organizations/{org_id}/goals/{goal_id}/` (sent to every member except the actor) |
+| `goal_archived`      | "A goal was archived"                                                    | `PATCH /api/v1/organizations/{org_id}/goals/{goal_id}/` (sent to every member except the actor) |
 | `member_left`        | "A member left the organization"                                         | `POST /api/v1/organizations/{org_id}/leave/` |
 | `member_removed`     | "A member was removed from the organization"                             | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
 | `removed_from_org`   | "You were removed from an organization"                                  | `DELETE /api/v1/organizations/{org_id}/members/{user_id}/` |
@@ -94,6 +96,22 @@ The transaction-creation endpoint (`POST /api/v1/organizations/{org_id}/transact
 ```
 
 `amount` is a string; `transaction_id` points to the created transaction row.
+
+The goal endpoints produce `goal_created` (goal creation), `goal_completed`
+(status changed to `completed`) and `goal_archived` (status changed to
+`archived`) for every member of the organization **except the actor**;
+personal budgets never produce them:
+
+```json
+{
+  "org_name": "Trip",
+  "user": "bob",
+  "goal_name": "Laptop"
+}
+```
+
+`user` is the actor's username; `goal_name` is a snapshot of the goal's name
+at the moment of the event.
 
 Other types may add their own fields later; treat `payload` as type-specific.
 
