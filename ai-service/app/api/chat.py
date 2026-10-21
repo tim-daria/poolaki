@@ -2,7 +2,9 @@ import logging
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
+from app.clients.django import DjangoClientError
 from app.clients.llm import LLMClientError
 from app.services.llm import LLMService
 from models.chat import ChatMetadata, ChatRequest, ChatResponse
@@ -37,6 +39,12 @@ async def chat(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="LLM service temporarily unavailable",
         ) from exc
+    except DjangoClientError as exc:
+        # Only FORBIDDEN/INVALID_REQUEST reach here (the retriever degrades the rest)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": {"code": exc.code, "message": str(exc)}},
+        )
 
     logger.info(
         "chat_completed",
