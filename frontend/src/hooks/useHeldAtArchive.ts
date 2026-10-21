@@ -6,13 +6,13 @@ import { getGoalActivity, heldAtArchive } from "../lib/goalActivity";
 import type { Goal } from "../lib/goals";
 
 /**
- * Undefined while loading or for a goal that is not archived; null when the
- * rows do not say. The card mounts only when its section is unfolded, so
- * this fires once per unfold, per archived goal.
+ * Undefined while loading, after a failed load, or for a goal that is not
+ * archived. The card mounts only when its section is unfolded, so this fires
+ * once per unfold, per archived goal.
  */
-export function useHeldAtArchive(goal: Goal): number | null | undefined {
+export function useHeldAtArchive(goal: Goal): number | undefined {
   const org = useCurrentOrg();
-  const [held, setHeld] = useState<number | null | undefined>(undefined);
+  const [held, setHeld] = useState<number | undefined>(undefined);
   const archived = goal.status === "archived";
 
   useEffect(() => {

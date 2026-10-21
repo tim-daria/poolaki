@@ -9,6 +9,7 @@ import {
   Avatar,
   Badge,
   Box,
+  Button,
   Divider,
   IconButton,
   ListItemIcon,
@@ -19,14 +20,14 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../navItems";
+import { NAV_DESKTOP } from "../../lib/layout";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
@@ -48,18 +49,26 @@ const glyphSize = 28;
 
 interface HeaderProps {
   onLogout: () => void;
-  /** Opens the Sidebar's temporary Drawer; only reachable on mobile. */
-  onMenuClick: () => void;
-  showMenuButton: boolean;
+  /** Opens AI Assistant chat. */
+  onAssistantClick: () => void;
+  /** Routes can turn AI button off via `handle.assistant`. */
+  showAssistant: boolean;
+  /** Mobile: bottom bar instead of tabs and the bell inside the avatar menu. */
+  mobile: boolean;
 }
 
 /**
  * On desktop a three-column grid whose side columns are equal, so the tabs
  * sit on the page's centre line whatever the switcher and the controls
  * measure; `minmax(0, 1fr)` lets a long budget name truncate instead of
- * pushing into the tabs. On phones a plain row: hamburger, switcher, controls.
+ * pushing into the tabs. On phones a plain row: switcher, controls.
  */
-export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
+export function Header({
+  onLogout,
+  onAssistantClick,
+  showAssistant,
+  mobile,
+}: HeaderProps) {
   const { user } = useAuth();
   const org = useCurrentOrg();
   const navigate = useNavigate();
@@ -99,19 +108,10 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           [NAV_DESKTOP]: { justifySelf: "start" },
         }}
       >
-        {showMenuButton && (
-          <IconButton
-            aria-label="Open navigation"
-            edge="start"
-            onClick={onMenuClick}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
         <OrgSwitcher />
       </Box>
 
-      {!showMenuButton && <NavTabs />}
+      {!mobile && <NavTabs />}
 
       <Stack
         direction="row"
@@ -122,19 +122,31 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
         }}
       >
-        <IconButton
-          aria-label="Notifications"
-          // Not "menu": the panel is an inbox of content with per-row
-          // actions, not a list of commands. See NotificationPanel.
-          aria-haspopup="dialog"
-          aria-expanded={Boolean(notifAnchor)}
-          onClick={(e) => setNotifAnchor(e.currentTarget)}
-          sx={{ width: controlSize, height: controlSize }}
-        >
-          <Badge color="error" variant="dot" invisible={unreadCount === 0}>
-            <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
-          </Badge>
-        </IconButton>
+        {showAssistant && (
+          <Button
+            variant="outlined"
+            startIcon={<AutoAwesomeOutlinedIcon />}
+            onClick={onAssistantClick}
+            sx={{ mr: 1.5, fontWeight: 700, border: "1px solid" }}
+          >
+            Ask AI
+          </Button>
+        )}
+        {!mobile && (
+          <IconButton
+            aria-label="Notifications"
+            // Not "menu": the panel is an inbox of content with per-row
+            // actions, not a list of commands. See NotificationPanel.
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(notifAnchor)}
+            onClick={(e) => setNotifAnchor(e.currentTarget)}
+            sx={{ width: controlSize, height: controlSize }}
+          >
+            <Badge color="error" variant="dot" invisible={unreadCount === 0}>
+              <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
+            </Badge>
+          </IconButton>
+        )}
 
         <NotificationPanel
           anchorEl={notifAnchor}
@@ -151,17 +163,24 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           onClick={(e) => setAccountAnchor(e.currentTarget)}
           sx={{ width: controlSize, height: controlSize }}
         >
-          <Avatar
-            sx={{
-              width: avatarSize,
-              height: avatarSize,
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              bgcolor: avatarColor(user?.username, theme.palette.avatar),
-            }}
+          <Badge
+            color="error"
+            variant="dot"
+            overlap="circular"
+            invisible={!mobile || unreadCount === 0}
           >
-            {initial}
-          </Avatar>
+            <Avatar
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                bgcolor: avatarColor(user?.username, theme.palette.avatar),
+              }}
+            >
+              {initial}
+            </Avatar>
+          </Badge>
         </IconButton>
 
         <Menu
@@ -183,6 +202,27 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
             </MenuItem>
           )}
           {user && <Divider />}
+
+          {mobile && (
+            <MenuItem
+              onClick={() => {
+                // Anchor the inbox to the avatar, where the menu was.
+                setNotifAnchor(accountAnchor);
+                closeAccount();
+              }}
+            >
+              <ListItemIcon>
+                <Badge
+                  color="error"
+                  variant="dot"
+                  invisible={unreadCount === 0}
+                >
+                  <NotificationsNoneIcon fontSize="small" />
+                </Badge>
+              </ListItemIcon>
+              <ListItemText>Notifications</ListItemText>
+            </MenuItem>
+          )}
 
           {/* Scoped under the current workspace because the shell around
               the page needs one; the settings themselves are account-wide. */}

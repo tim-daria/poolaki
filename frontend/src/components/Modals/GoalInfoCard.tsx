@@ -1,5 +1,5 @@
 /**
- * @file Read-only view of one goal in a side drawer: name and status line,
+ * @file Read-only view of one goal in a drawer (a bottom sheet on phones): name and status line,
  * the one figure that matters for its state, a bar, and the activity list.
  * Opens from a goal card; it offers no actions.
  */
@@ -11,6 +11,7 @@ import { GoalActivityList } from "../Goals/GoalActivityList";
 import { GoalProgressBar } from "../Goals/GoalProgressBar";
 import { Money } from "../Money";
 import { useRestoreFocus } from "../../hooks/useRestoreFocus";
+import { useSheet } from "../../hooks/useSheet";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import {
   annotate,
@@ -39,6 +40,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
   const org = useCurrentOrg();
   const titleId = useId();
   const restoreFocus = useRestoreFocus(open);
+  const { anchor, paperSx } = useSheet(WIDTH, true);
 
   /**
    * The goal shown, captured on open. State, not the prop: the page clears
@@ -75,7 +77,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
 
   return (
     <Drawer
-      anchor="right"
+      anchor={anchor}
       open={open}
       onClose={onClose}
       // MUI would restore focus before the slide-out ends; handleExited does it.
@@ -92,9 +94,10 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
           role: "dialog",
           "aria-labelledby": titleId,
           sx: {
-            width: { xs: "100%", sm: WIDTH },
-            maxWidth: "100%",
+            ...paperSx,
             p: 3,
+            // Clear the home indicator under the sheet on phones.
+            pb: "calc(24px + env(safe-area-inset-bottom))",
             display: "flex",
             flexDirection: "column",
             gap: 3,
@@ -130,7 +133,7 @@ export function GoalInfoCard({ open, goal, onClose }: Props) {
               <Close />
             </IconButton>
           </Box>
-          <Headline goal={shown} rows={rows ?? []} />
+          <Headline goal={shown} rows={rows} />
           <GoalActivityList
             rows={rows ?? []}
             emptyText={shown.spendable ? SPENDING_EMPTY : SAVING_EMPTY}
@@ -166,10 +169,17 @@ function Subtitle({ goal }: { goal: Goal }) {
  * to the target, like the card. An archived goal leads with what it held
  * when archived, read from its rows, since the server reports zero.
  */
-function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+function Headline({
+  goal,
+  rows,
+}: {
+  goal: Goal;
+  /** Null while loading. */
+  rows: SplitEntry[] | null;
+}) {
   if (goal.status === "archived")
     return <ArchivedHeadline goal={goal} rows={rows} />;
-  const f = goalFigures(goal, rows);
+  const f = goalFigures(goal, rows ?? []);
   const spending = goal.spendable;
   const figure = spending ? goal.balance : f.saved;
   const exact = `${figure < 0 ? "-" : ""}€${displayAmount(Math.abs(figure))}`;
@@ -230,9 +240,16 @@ function Headline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
   );
 }
 
-function ArchivedHeadline({ goal, rows }: { goal: Goal; rows: SplitEntry[] }) {
+function ArchivedHeadline({
+  goal,
+  rows,
+}: {
+  goal: Goal;
+  rows: SplitEntry[] | null;
+}) {
   // Rows arrive after the drawer opens; until then the figure is unknown.
-  const held = rows.length ? heldAtArchive(rows) : undefined;
+  // Once they have, it is always a number: no rows means nothing was held.
+  const held = rows ? heldAtArchive(rows) : undefined;
   const known = typeof held === "number";
   const exact = known
     ? `${held < 0 ? "-" : ""}€${displayAmount(Math.abs(held))}`

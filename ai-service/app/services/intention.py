@@ -6,9 +6,10 @@ from app.clients.llm import LLMClient
 
 
 class Intent(str, Enum):
-    MONTHLY_SUMMARY = "monthly_summary"
-    RECENT_TRANSACTIONS = "recent_transactions"
-    GOAL_PROGRESS = "goal_progress"
+    SUMMARY = "summary"
+    CATEGORIES = "categories"
+    TRANSACTIONS = "transactions"
+    # GOAL_PROGRESS = "goal_progress"
 
 
 class IntentionService:
@@ -19,9 +20,9 @@ class IntentionService:
         prompt = f"""
 Classify the following financial question into exactly one of these intents:
 
-- monthly_summary
-- recent_transactions
-- goal_progress
+- summary
+- categories
+- transactions
 
 Question:
 {question}

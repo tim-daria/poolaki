@@ -41,13 +41,16 @@ class TransactionListCreateView(APIView):
     user is a member.
 
     Query parameters (all optional):
-    - q: case-insensitive substring search on description and category name.
+    - q: case-insensitive substring search on description, category name and
+      creator's username.
     - entry_type: "all" (default), "income", "expense", "contribution" or "withdraw".
     - date_from / date_to: inclusive ISO date bounds on transaction_date.
     - category_id: one category ID or a comma-separated list (e.g. "3,7");
       rows in any listed category are returned. All must belong to the org.
     - goal_id: ID of a goal belonging to the organization.
     - tax_deductible: "true" keeps only tax-deductible rows.
+    - created_by: one user ID or a comma-separated list; rows created by any
+      listed member are returned. All must be members of the org.
     - sort: "newest" (default) or "oldest".
     - page / page_size: 1-based paging, page_size capped at 100.
 
@@ -86,11 +89,13 @@ class TransactionListCreateView(APIView):
 
         entry_type = data["entry_type"]
         category_ids = data.get("category_id")
+        created_by_ids = data.get("created_by")
         filters = TransactionFilters(
             date_from=data.get("date_from"),
             date_to=data.get("date_to"),
             category_ids=tuple(category_ids) if category_ids else None,
             goal_id=data.get("goal_id"),
+            created_by_ids=tuple(created_by_ids) if created_by_ids else None,
             tax_deductible=data["tax_deductible"],
             q=data.get("q", "").strip(),
             entry_type=None if entry_type == "all" else EntryType(entry_type),

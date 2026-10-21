@@ -4,11 +4,10 @@
  * top spending and the nearest goal.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import { Alert, Box, CircularProgress, Paper } from "@mui/material";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { useCategories } from "../../hooks/useCategories";
 import {
   PageActionButton,
   PageHeading,
@@ -19,7 +18,7 @@ import { GoalForm } from "../../components/Modals/GoalForm";
 import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
-import { TODAY, monthName } from "../../lib/date";
+import { TODAY, longDate, monthBounds, monthName } from "../../lib/date";
 import { getGoals, type Goal } from "../../lib/goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -29,6 +28,10 @@ import {
   recentTransactions,
   spendingByCategory,
 } from "../../lib/overview";
+import {
+  fetchYearlyReport,
+  type YearlyReportResponse,
+} from "../../lib/reports";
 import { fetchTransactions, type Transaction } from "../../lib/transactions";
 import { HomeGoalCard } from "./HomeGoalCard";
 import { MonthlySummaryCard } from "./MonthlySummaryCard";
@@ -36,7 +39,8 @@ import { NetBalanceCard } from "./NetBalanceCard";
 import { RECENT_ROWS, RecentActivityCard } from "./RecentActivityCard";
 import { SetupBanner, type SetupStep } from "./SetupBanner";
 import { TopSpendingCard } from "./TopSpendingCard";
-import { DESKTOP, TABLET } from "./layout";
+import { DESKTOP, PAGE_PADDING, TABLET } from "../../lib/layout";
+import { fetchCategories, type Category } from "../../lib/categories";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good Morning!";
@@ -59,12 +63,22 @@ function readDismissed(orgId: number): boolean {
 
 type Modal = "transaction" | "goal" | "balance" | null;
 
-type Loaded = { rows: Transaction[]; balance: number; goals: Goal[] };
+type Loaded = {
+  /** This year's report: the month's income and expenses, spending by category. Null when it failed. */
+  report: YearlyReportResponse | null;
+  /** The newest RECENT_ROWS rows. */
+  recent: Transaction[];
+  /** This month's rows, for the savings figure the report does not carry yet. */
+  monthRows: Transaction[];
+  balance: number;
+  goals: Goal[];
+  categories: Category[];
+};
 
 function Home() {
   const org = useCurrentOrg();
-  const categories = useCategories();
   const now = new Date();
+  const monthInfoId = useId();
 
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,13 +96,28 @@ function Home() {
    */
   useEffect(() => {
     const controller = new AbortController();
+    const { from, to } = monthBounds(TODAY);
+    const report = fetchYearlyReport(
+      org.id,
+      Number(TODAY.slice(0, 4)),
+      controller.signal,
+    ).catch((e: unknown) => {
+      if (controller.signal.aborted) throw e;
+      // The cause goes to the console; the cards say only that it is missing.
+      console.error(e);
+      return null;
+    });
     Promise.all([
-      fetchTransactions(org.id, controller.signal),
+      report,
+      fetchTransactions(org.id, { pageSize: RECENT_ROWS }, controller.signal),
+      // TODO(report): drop once the report carries contribution and withdraw sums.
+      fetchTransactions(org.id, { from, to, pageSize: 100 }, controller.signal),
       fetchBalance(org.id, controller.signal),
-      getGoals(org.id),
+      getGoals(org.id, controller.signal),
+      fetchCategories(org.id, controller.signal),
     ])
-      .then(([rows, balance, goals]) => {
-        setData({ rows, balance, goals });
+      .then(([report, recent, monthRows, balance, goals, categories]) => {
+        setData({ report, recent, monthRows, balance, goals, categories });
         setError(null);
       })
       .catch((e: unknown) => {
@@ -113,14 +142,7 @@ function Home() {
     <>
       {/* Personal workspaces have no members, so they show a greeting instead. */}
       {org.is_personal ? (
-        <PageTitle
-          title={greeting(now.getHours())}
-          subtitle={now.toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        />
+        <PageTitle title={greeting(now.getHours())} subtitle={longDate(now)} />
       ) : (
         <PageHeading>
           <OrgMembers />
@@ -140,7 +162,11 @@ function Home() {
         onSaved={refresh}
         onDeleted={refresh}
       />
-      <GoalForm open={modal === "goal"} onClose={() => setModal(null)} />
+      <GoalForm
+        open={modal === "goal"}
+        onClose={() => setModal(null)}
+        onSaved={refresh}
+      />
       <StartingBalanceForm
         open={modal === "balance"}
         onClose={() => setModal(null)}
@@ -150,12 +176,12 @@ function Home() {
   );
 
   const pageSx = {
-    px: 2,
+    ...PAGE_PADDING,
     pb: 5,
     display: "flex",
     flexDirection: "column",
     gap: 2,
-    [TABLET]: { px: 3, gap: 3 },
+    [TABLET]: { ...PAGE_PADDING[TABLET], gap: 3 },
   } as const;
 
   if (data === null) {
@@ -168,12 +194,14 @@ function Home() {
     );
   }
 
-  const { rows, balance, goals } = data;
-  const summary = monthSummary(rows, TODAY);
-  const scaleMax = columnScaleMax(
-    [summary.income, summary.expenses, summary.saved],
-    DEFAULT_SCALE_FLOOR,
-  );
+  const { report, recent, monthRows, balance, goals, categories } = data;
+  const summary = report && monthSummary(report, monthRows, TODAY);
+  const scaleMax = summary
+    ? columnScaleMax(
+        [summary.income, summary.expenses, summary.inGoals],
+        DEFAULT_SCALE_FLOOR,
+      )
+    : DEFAULT_SCALE_FLOOR;
 
   // Personal workspaces only: a shared one has its balance from creation and
   // its members already know the app.
@@ -185,7 +213,7 @@ function Home() {
     },
     {
       label: "Add your first transaction",
-      done: rows.length > 0,
+      done: recent.length > 0,
       onClick: () => setModal("transaction"),
     },
     {
@@ -211,6 +239,7 @@ function Home() {
         component={RouterLink}
         to="reports"
         aria-label="Balance and month, see reports"
+        aria-describedby={monthInfoId}
         variant="clickableCard"
         sx={[
           {
@@ -232,7 +261,7 @@ function Home() {
         >
           <NetBalanceCard
             balance={balance}
-            change={balanceChange(rows, TODAY)}
+            change={summary && balanceChange(summary)}
             monthStart={`${TODAY.slice(0, 7)}-01`}
           />
         </Box>
@@ -261,66 +290,54 @@ function Home() {
           <MonthlySummaryCard
             summary={summary}
             month={monthName(TODAY)}
+            year={Number(TODAY.slice(0, 4))}
             scaleMax={scaleMax}
+            descriptionId={monthInfoId}
           />
         </Box>
       </Paper>
 
-      {/* Desktop: activity beside a sidebar, both columns one height. The
-          goal card keeps its size; the spending card and the activity list
-          take up whatever the other column adds. Phones: one column, with
-          the goal ahead of spending; the sidebar dissolves (display:
-          contents) so its cards can take their own order. */}
+      {/* One grid, three named areas. Phone: a column, the goal ahead of
+          spending. Tablet: the list full width, the two cards sharing a row.
+          Desktop: the list beside a sidebar of the two cards, spending on top
+          and stretching so the ring grows with the row it is given. */}
       <Box
         sx={{
           display: "grid",
           gap: 2,
           gridTemplateColumns: "minmax(0, 1fr)",
-          [DESKTOP]: {
+          gridTemplateAreas: `"activity" "goal" "spending"`,
+          [TABLET]: {
             gap: 3,
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateAreas: `"activity activity" "spending goal"`,
+          },
+          [DESKTOP]: {
             // The sidebar gives way on narrow desktops so the activity card
             // keeps room for its rows.
             gridTemplateColumns: "minmax(0, 1fr) min(380px, 40%)",
-            alignItems: "stretch",
+            gridTemplateRows: "1fr auto",
+            gridTemplateAreas: `"activity spending" "activity goal"`,
           },
         }}
       >
         <RecentActivityCard
-          rows={recentTransactions(rows, RECENT_ROWS)}
+          sx={{ gridArea: "activity" }}
+          rows={recentTransactions(recent, RECENT_ROWS)}
           categories={categories}
+          goals={goals}
           shared={!org.is_personal}
           onAdd={() => setModal("transaction")}
         />
-        <Box
-          sx={{
-            display: "contents",
-            // Tablet: the two cards share a row; desktop: a column beside the list.
-            [TABLET]: {
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 3,
-            },
-            [DESKTOP]: {
-              display: "flex",
-              flexDirection: "column",
-            },
-          }}
-        >
-          <Box
-            sx={{
-              order: 2,
-              [TABLET]: { order: 0, display: "flex" },
-              [DESKTOP]: { flex: 1 },
-            }}
-          >
-            <TopSpendingCard
-              slices={spendingByCategory(rows, TODAY, categories)}
-            />
-          </Box>
-          <Box sx={{ order: 1, [TABLET]: { order: 0, display: "flex" } }}>
-            <HomeGoalCard goals={goals} onCreateGoal={() => setModal("goal")} />
-          </Box>
-        </Box>
+        <TopSpendingCard
+          sx={{ gridArea: "spending" }}
+          slices={report && spendingByCategory(report, TODAY)}
+        />
+        <HomeGoalCard
+          sx={{ gridArea: "goal" }}
+          goals={goals}
+          onCreateGoal={() => setModal("goal")}
+        />
       </Box>
 
       {modals}

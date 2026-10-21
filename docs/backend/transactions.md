@@ -29,6 +29,11 @@ Query parameters (all optional):
 - `goal_id`: ID of a goal belonging to the organization; matches every
   transaction linked to that goal
 - `tax_deductible`: `true` keeps only tax-deductible rows
+- `q`: case-insensitive substring match on the description, the category
+  name and the username of the member who added the row
+- `created_by`: one user ID or a comma-separated list of them; rows created
+  by any listed member are returned. Every ID must be a member of the
+  organization
 - `sort`: `newest` (default) or `oldest`; ties within a day are broken by `id`
 - `page`: 1-based page number, default `1`
 - `page_size`: rows per page, default `15`, maximum `100`
@@ -66,8 +71,8 @@ Response example:
 }
 ```
 
-`counts` is the filtered set (search / date / category / goal / tax filters)
-split by entry type — one number per toggle. The selected toggle (`entry_type`) picks
+`counts` is the filtered set (date / category / goal / tax / member filters) split by
+entry type — one number per toggle. The selected toggle (`entry_type`) picks
 its part for the table: `total` is that part's size, `transactions` one page
 of it (`page` / `page_size` / `page_count`). Switching the toggle only
 changes the table; a page past `page_count` is an empty list, not an error.
@@ -76,7 +81,8 @@ Status:
 
 - `200 OK` on success
 - `400 Bad Request` for malformed parameters, `date_to` earlier than
-  `date_from`, or a `goal_id` / `category_id` from another organization
+  `date_from`, a `goal_id` / `category_id` from another organization, or a
+  `created_by` that is not a member of it
 - `403 Forbidden` when the user is not a member of the organization
 
 ### Create transaction
@@ -181,6 +187,7 @@ Status:
 - `200 OK` on success
 - `404 Not Found` for invalid transaction_id
 - `403 Forbidden` when the user is not a member of the organization
+- `404 Not Found` for an invalid transaction_id, or one created by another member: rows are scoped to their creator, so nobody else can change them, the organization owner included
 
 ### Update transaction
 
@@ -245,6 +252,7 @@ Status:
 - `204 No Content` on successful deletion
 - `400 Bad Request` if deleting a contribution or withdraw would violate the
   goal balance invariant, or if the transaction belongs to an archived goal
+- `403 Forbidden` when the user is not a member of the organization
 - `404 Not Found` when the transaction does not belong to the requesting user
   or organization
 
