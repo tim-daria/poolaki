@@ -1,0 +1,746 @@
+{
+  "transactions_bob": [
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "42.80",
+      "description": "Grocery shopping",
+      "transaction_date": "2026-8-02",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "28.50",
+      "description": "Monthly transit pass",
+      "transaction_date": "2026-8-03",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Housing",
+      "entry_type": "expense",
+      "amount": "1250.00",
+      "description": "Rent",
+      "transaction_date": "2026-8-04",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "24.00",
+      "description": "Movie tickets",
+      "transaction_date": "2026-8-06",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "68.99",
+      "description": "New running shoes",
+      "transaction_date": "2026-8-08",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Health",
+      "entry_type": "expense",
+      "amount": "19.50",
+      "description": "Pharmacy prescription",
+      "transaction_date": "2026-8-10",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "86.40",
+      "description": "Electricity bill",
+      "transaction_date": "2026-8-12",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Salary",
+      "entry_type": "income",
+      "amount": "3200.00",
+      "description": "Monthly salary",
+      "transaction_date": "2026-8-14",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Freelance",
+      "entry_type": "income",
+      "amount": "450.00",
+      "description": "Website design project",
+      "transaction_date": "2026-8-16",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Gift",
+      "entry_type": "income",
+      "amount": "35.00",
+      "description": "Birthday gift",
+      "transaction_date": "2026-8-18",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "25.00",
+      "description": "Community food bank donation",
+      "transaction_date": "2026-8-20",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "16.75",
+      "description": "Lunch at a cafe",
+      "transaction_date": "2026-8-22",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "52.30",
+      "description": "Fuel",
+      "transaction_date": "2026-8-24",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget", 
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "38.00",
+      "description": "Concert ticket",
+      "transaction_date": "2026-8-27",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "29.95",
+      "description": "Household supplies",
+      "transaction_date": "2026-8-30",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "42.50",
+      "description": "Rewe",
+      "transaction_date": "2026-09-02",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "19.80",
+      "description": "Deutschlandticket",
+      "transaction_date": "2026-09-03",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Salary",
+      "entry_type": "income",
+      "amount": "2450.00",
+      "description": "Monthly salary",
+      "transaction_date": "2026-09-04",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "28.75",
+      "description": "Lunch at café",
+      "transaction_date": "2026-09-05",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Housing",
+      "entry_type": "expense",
+      "amount": "1250.00",
+      "description": "Rent",
+      "transaction_date": "2026-09-06",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "74.20",
+      "description": "Electricity bill",
+      "transaction_date": "2026-09-08",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "15.99",
+      "description": "Streaming subscription",
+      "transaction_date": "2026-09-10",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Health",
+      "entry_type": "expense",
+      "amount": "23.40",
+      "description": "Pharmacy",
+      "transaction_date": "2026-09-12",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "61.30",
+      "description": "Aldi",
+      "transaction_date": "2026-09-14",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "42.00",
+      "description": "Fuel",
+      "transaction_date": "2026-09-16",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "89.95",
+      "description": "New shoes",
+      "transaction_date": "2026-09-18",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Freelance",
+      "entry_type": "income",
+      "amount": "120.00",
+      "description": "Freelance work",
+      "transaction_date": "2026-09-20",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "36.80",
+      "description": "Dinner with friends",
+      "transaction_date": "2026-09-23",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "27.50",
+      "description": "Cleaning supplies",
+      "transaction_date": "2026-09-26",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "32.00",
+      "description": "Cinema tickets",
+      "transaction_date": "2026-09-29",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "47.25",
+      "description": "Rewe groceries",
+      "transaction_date": "2026-10-02",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "19.80",
+      "description": "Deutschlandticket",
+      "transaction_date": "2026-10-03",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Salary",
+      "entry_type": "income",
+      "amount": "2450.00",
+      "description": "Monthly salary",
+      "transaction_date": "2026-10-05",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Housing",
+      "entry_type": "expense",
+      "amount": "1250.00",
+      "description": "Rent",
+      "transaction_date": "2026-10-06",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Utilities",
+      "entry_type": "expense",
+      "amount": "68.40",
+      "description": "Electricity bill",
+      "transaction_date": "2026-10-08",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "14.99",
+      "description": "Streaming subscription",
+      "transaction_date": "2026-10-09",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Health",
+      "entry_type": "expense",
+      "amount": "18.75",
+      "description": "Pharmacy",
+      "transaction_date": "2026-10-11",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "32.60",
+      "description": "Lunch at a café",
+      "transaction_date": "2026-10-13",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Shopping",
+      "entry_type": "expense",
+      "amount": "54.90",
+      "description": "Autumn jacket",
+      "transaction_date": "2026-10-15",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Transport",
+      "entry_type": "expense",
+      "amount": "36.20",
+      "description": "Fuel",
+      "transaction_date": "2026-10-17",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Freelance",
+      "entry_type": "income",
+      "amount": "180.00",
+      "description": "Website design project",
+      "transaction_date": "2026-10-19",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Food",
+      "entry_type": "expense",
+      "amount": "63.15",
+      "description": "Weekly groceries",
+      "transaction_date": "2026-10-21",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Gift",
+      "entry_type": "income",
+      "amount": "50.00",
+      "description": "Birthday gift from family",
+      "transaction_date": "2026-10-23",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Entertainment",
+      "entry_type": "expense",
+      "amount": "28.00",
+      "description": "Cinema tickets",
+      "transaction_date": "2026-10-26",
+      "is_tax_deductible": "False"
+    },
+    {
+      "org_name": "bob's budget",
+      "username": "bob",
+      "category_name": "Health",
+      "entry_type": "expense",
+      "amount": "35.00",
+      "description": "Doctor's appointment copay",
+      "transaction_date": "2026-10-29",
+      "is_tax_deductible": "False"
+    }
+    ],
+
+
+
+	"transactions_club": [
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-8-05",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-8-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Entertainment",
+			"entry_type": "expense",
+			"amount": "45",
+			"description": "New Game",
+			"transaction_date": "2026-8-4",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-8-3",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-8-15",
+			"is_tax_deductible": "False"
+		},
+
+
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-9-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-9-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-9-4",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Freelance",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Sold game",
+			"transaction_date": "2026-9-8",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-9-15",
+			"is_tax_deductible": "False"
+		},
+
+
+
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "45.00",
+			"description": "Snacks for all",
+			"transaction_date": "2026-10-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee walther",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee bob",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee elmo",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee john",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Utilities",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Monthly membership fee maria",
+			"transaction_date": "2026-10-1",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "maria",
+			"category_name": "Entertainment",
+			"entry_type": "expense",
+			"amount": "45",
+			"description": "New Game",
+			"transaction_date": "2026-10-6",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "bob",
+			"category_name": "Utilities",
+			"entry_type": "expense",
+			"amount": "12.00",
+			"description": "Insurance",
+			"transaction_date": "2026-10-4",
+			"is_tax_deductible": "True"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "elmo",
+			"category_name": "Freelance",
+			"entry_type": "income",
+			"amount": "35.00",
+			"description": "Sold game",
+			"transaction_date": "2026-10-12",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "walther",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "30.00",
+			"description": "Drinks for all",
+			"transaction_date": "2026-10-15",
+			"is_tax_deductible": "False"
+		},
+		{
+			"org_name": "Boardgame Club",
+			"username": "john",
+			"category_name": "Food",
+			"entry_type": "expense",
+			"amount": "75",
+			"description": "Ticket Boardgame Convention",
+			"transaction_date": "2026-10-22",
+			"is_tax_deductible": "False"
+		}
+	]
+}

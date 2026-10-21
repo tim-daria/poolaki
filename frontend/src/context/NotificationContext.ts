@@ -4,7 +4,9 @@ import { createContext } from "react";
 export type NotificationType =
   | "invitation"
   | "transaction_added"
+  | "goal_created"
   | "goal_completed"
+  | "goal_archived"
   | "member_left"
   | "member_removed"
   | "removed_from_org"
@@ -71,6 +73,20 @@ export type TransactionAddedPayload = {
 
 /** Sent when a goal is marked as completed. */
 export type GoalCompletedPayload = {
+  user: string;
+  org_name: string;
+  goal_name: string;
+};
+
+/** Sent when a new goal is created. */
+export type GoalCreatedPayload = {
+  user: string;
+  org_name: string;
+  goal_name: string;
+};
+
+/** Sent when a goal is archived. */
+export type GoalArchivedPayload = {
   user: string;
   org_name: string;
   goal_name: string;
