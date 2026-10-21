@@ -100,6 +100,7 @@ export const theme = createTheme({
         // Literal var() rather than a theme callback: MuiCssBaseline's
         // styleOverrides are typed as raw CSS, so a callback's `theme` is any.
         body: {
+          // AppLayout's root Box sets the same colour; keep the two in step.
           backgroundColor: "var(--mui-palette-primary-light)",
         },
       },

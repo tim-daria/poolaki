@@ -9,6 +9,7 @@ import {
   Avatar,
   Badge,
   Box,
+  Button,
   Divider,
   IconButton,
   ListItemIcon,
@@ -19,14 +20,14 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../navItems";
+import { NAV_DESKTOP } from "../../lib/layout";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
@@ -34,7 +35,7 @@ import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
 
 /** Shell header height. */
-export const headerHeight = 72;
+const headerHeight = 72;
 
 /**
  * One footprint for every round control on the bar, so the notification and
@@ -42,24 +43,32 @@ export const headerHeight = 72;
  * contents differ in size on purpose: a filled avatar disc reads heavier than
  * an outline glyph, so matching them pixel-for-pixel makes the avatar dominate.
  */
-const controlSize = 52;
+const controlSx = { width: 52, height: 52 } as const;
 const avatarSize = 38;
 const glyphSize = 28;
 
 interface HeaderProps {
   onLogout: () => void;
-  /** Opens the Sidebar's temporary Drawer; only reachable on mobile. */
-  onMenuClick: () => void;
-  showMenuButton: boolean;
+  /** Opens AI Assistant chat. */
+  onAssistantClick: () => void;
+  /** Routes can turn AI button off via `handle.assistant`. */
+  showAssistant: boolean;
+  /** Mobile: bottom bar instead of tabs and the bell inside the avatar menu. */
+  mobile: boolean;
 }
 
 /**
  * On desktop a three-column grid whose side columns are equal, so the tabs
  * sit on the page's centre line whatever the switcher and the controls
  * measure; `minmax(0, 1fr)` lets a long budget name truncate instead of
- * pushing into the tabs. On phones a plain row: hamburger, switcher, controls.
+ * pushing into the tabs. On phones a plain row: switcher, controls.
  */
-export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
+export function Header({
+  onLogout,
+  onAssistantClick,
+  showAssistant,
+  mobile,
+}: HeaderProps) {
   const { user } = useAuth();
   const org = useCurrentOrg();
   const navigate = useNavigate();
@@ -90,28 +99,22 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
         },
       }}
     >
+      {/* Phones: the switcher keeps to half the bar, so the controls on the
+          right never get squeezed by a long workspace name. */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 1,
           minWidth: 0,
-          [NAV_DESKTOP]: { justifySelf: "start" },
+          maxWidth: "50%",
+          [NAV_DESKTOP]: { justifySelf: "start", maxWidth: "none" },
         }}
       >
-        {showMenuButton && (
-          <IconButton
-            aria-label="Open navigation"
-            edge="start"
-            onClick={onMenuClick}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
         <OrgSwitcher />
       </Box>
 
-      {!showMenuButton && <NavTabs />}
+      {!mobile && <NavTabs />}
 
       <Stack
         direction="row"
@@ -122,19 +125,61 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
         }}
       >
-        <IconButton
-          aria-label="Notifications"
-          // Not "menu": the panel is an inbox of content with per-row
-          // actions, not a list of commands. See NotificationPanel.
-          aria-haspopup="dialog"
-          aria-expanded={Boolean(notifAnchor)}
-          onClick={(e) => setNotifAnchor(e.currentTarget)}
-          sx={{ width: controlSize, height: controlSize }}
-        >
-          <Badge color="error" variant="dot" invisible={unreadCount === 0}>
-            <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
-          </Badge>
-        </IconButton>
+        {showAssistant &&
+          (mobile ? (
+            <IconButton
+              aria-label="Ask AI"
+              onClick={onAssistantClick}
+              // No margin, like the bell beside the avatar on desktop: the
+              // two controls' insets around their discs are the gap.
+              sx={controlSx}
+            >
+              {/* The ring matches the avatar disc, not the hit area, so the
+                  two read as the same size. */}
+              <Box
+                sx={{
+                  width: avatarSize,
+                  height: avatarSize,
+                  // A flex child of the padded button; without this it
+                  // shrinks to the button's content box.
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  color: "text.primary",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                <AutoAwesomeOutlinedIcon fontSize="small" />
+              </Box>
+            </IconButton>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<AutoAwesomeOutlinedIcon />}
+              onClick={onAssistantClick}
+              // Full primary border; the outlined default is half-alpha.
+              sx={{ mr: 1.5, fontWeight: 700, borderColor: "primary.main" }}
+            >
+              Ask AI
+            </Button>
+          ))}
+        {!mobile && (
+          <IconButton
+            aria-label="Notifications"
+            // Not "menu": the panel is an inbox of content with per-row
+            // actions, not a list of commands. See NotificationPanel.
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(notifAnchor)}
+            onClick={(e) => setNotifAnchor(e.currentTarget)}
+            sx={controlSx}
+          >
+            <Badge color="error" variant="dot" invisible={unreadCount === 0}>
+              <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
+            </Badge>
+          </IconButton>
+        )}
 
         <NotificationPanel
           anchorEl={notifAnchor}
@@ -149,19 +194,26 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           aria-haspopup="menu"
           aria-expanded={Boolean(accountAnchor)}
           onClick={(e) => setAccountAnchor(e.currentTarget)}
-          sx={{ width: controlSize, height: controlSize }}
+          sx={controlSx}
         >
-          <Avatar
-            sx={{
-              width: avatarSize,
-              height: avatarSize,
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              bgcolor: avatarColor(user?.username, theme.palette.avatar),
-            }}
+          <Badge
+            color="error"
+            variant="dot"
+            overlap="circular"
+            invisible={!mobile || unreadCount === 0}
           >
-            {initial}
-          </Avatar>
+            <Avatar
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                bgcolor: avatarColor(user?.username, theme.palette.avatar),
+              }}
+            >
+              {initial}
+            </Avatar>
+          </Badge>
         </IconButton>
 
         <Menu
@@ -170,8 +222,10 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
           onClose={closeAccount}
           slotProps={{ paper: { sx: { minWidth: 200 } } }}
         >
+          {/* Identity, not a command: a Box so it is neither focusable nor
+              announced as a disabled item. Padding matches MenuItem. */}
           {user && (
-            <MenuItem disabled sx={{ opacity: "1 !important" }}>
+            <Box sx={{ px: 2, py: 0.75 }}>
               <ListItemText
                 primary={user.username}
                 secondary={user.email}
@@ -180,9 +234,30 @@ export function Header({ onLogout, onMenuClick, showMenuButton }: HeaderProps) {
                   secondary: { noWrap: true },
                 }}
               />
-            </MenuItem>
+            </Box>
           )}
           {user && <Divider />}
+
+          {mobile && (
+            <MenuItem
+              onClick={() => {
+                // Anchor the inbox to the avatar, where the menu was.
+                setNotifAnchor(accountAnchor);
+                closeAccount();
+              }}
+            >
+              <ListItemIcon>
+                <Badge
+                  color="error"
+                  variant="dot"
+                  invisible={unreadCount === 0}
+                >
+                  <NotificationsNoneIcon fontSize="small" />
+                </Badge>
+              </ListItemIcon>
+              <ListItemText>Notifications</ListItemText>
+            </MenuItem>
+          )}
 
           {/* Scoped under the current workspace because the shell around
               the page needs one; the settings themselves are account-wide. */}

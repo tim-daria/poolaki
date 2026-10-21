@@ -9,6 +9,8 @@ import { createContext, useContext } from "react";
 export interface PageHeaderSlots {
   titleSlot: HTMLElement | null;
   actionSlot: HTMLElement | null;
+  /** Phones only: a floating target above the bottom bar. Null on desktop. */
+  fabSlot: HTMLElement | null;
 }
 
 export const PageHeaderContext = createContext<PageHeaderSlots | null>(null);

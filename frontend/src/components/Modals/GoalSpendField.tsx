@@ -10,13 +10,14 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import { FieldLabel } from "../Form/FieldLabel";
 import { goalById, type Goal } from "../../lib/goals";
 import { goalLeft, splitExpense, type ExpenseSplit } from "../../lib/goalSpend";
 import { displayAmount } from "../../lib/money";
 
 const RULE =
-  "Money is taken from the goal first. If the goal runs out, the rest comes from your balance.";
+  "Money is taken from the goal first. If you spend more than it holds, the goal goes below zero instead of using your balance. The difference is settled from your balance when you archive the goal.";
 
 interface Props {
   /** Only goals the server lets an expense draw from. */
@@ -109,22 +110,32 @@ export function GoalSpendField({
           disabled={disabled}
           /* null means "not picked yet", but MUI needs "" for that. */
           value={value ?? ""}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) =>
+            onChange(e.target.value === "" ? null : Number(e.target.value))
+          }
           slotProps={{
             select: {
               labelId: "transaction-spend-goal-label",
               displayEmpty: true,
               renderValue: () =>
                 selected ? (
-                  <>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <SavingsOutlinedIcon
+                      fontSize="small"
+                      sx={{ color: "primary.main" }}
+                    />
                     {selected.name}
-                    <Box
-                      component="span"
-                      sx={{ ml: 1, color: "text.secondary" }}
-                    >
+                    <Box component="span" sx={{ color: "text.secondary" }}>
                       · €{displayAmount(goalLeft(selected))} left
                     </Box>
-                  </>
+                  </Box>
                 ) : (
                   <Box component="span" sx={{ color: "text.secondary" }}>
                     Select
@@ -147,7 +158,7 @@ export function GoalSpendField({
   );
 }
 
-/** "€40,00 left", or the warning that an empty goal cannot pay anything. */
+/** "€40,00 left", or the warning that an empty goal goes straight below zero. */
 function LeftLabel({ goal }: { goal: Goal }) {
   const left = goalLeft(goal);
   return (
@@ -160,48 +171,46 @@ function LeftLabel({ goal }: { goal: Goal }) {
       }}
     >
       €{displayAmount(left)} left
-      {left === 0 && " · will be paid from balance"}
+      {left === 0 && " · will go below zero"}
     </Typography>
   );
 }
 
-/** The two lines under the bar, one pair per split kind. */
+/**
+ * The headline and the line under it, per split kind. `over` is the amount
+ * the goal goes below zero by, coloured red by the component; null when the
+ * goal covers the expense.
+ */
 function previewCopy(split: ExpenseSplit, goal: string) {
-  const fromGoal = `€${displayAmount(split.fromGoal)} from ${goal}`;
-  const fromBalance = `€${displayAmount(split.fromBalance)} from balance`;
-  const over = displayAmount(Math.abs(split.leftAfter));
-  switch (split.kind) {
-    case "covered":
-      return {
-        goalPart: fromGoal,
-        balancePart: null,
-        detail: `€${displayAmount(split.leftAfter)} will be left in the goal.`,
-      };
-    case "runs_out":
-      return {
-        goalPart: fromGoal,
-        balancePart: fromBalance,
-        detail: `The goal runs out with this expense and goes over by €${over}.`,
-      };
-    case "empty":
-      return {
-        goalPart: null,
-        balancePart: fromBalance,
-        detail: `${goal} is empty. This still counts toward it and adds to “over by”.`,
-      };
+  if (split.kind === "covered") {
+    return {
+      over: null,
+      headline: `€${displayAmount(split.fromGoal)} from ${goal}`,
+      detail: `€${displayAmount(split.leftAfter)} will be left in the goal.`,
+    };
   }
+  const over = Math.abs(split.leftAfter);
+  return {
+    over,
+    headline: `${goal}'s balance`,
+    detail: `The goal will be overdrawn by €${displayAmount(over)}. Your net balance won't change yet.`,
+  };
 }
 
+/** The bar draws the covered share dark and the overdrawn share red; the text repeats the numbers. */
 function SplitPreview({ split, goal }: { split: ExpenseSplit; goal: Goal }) {
   const total = split.fromGoal + split.fromBalance;
   const goalShare = total > 0 ? (split.fromGoal / total) * 100 : 0;
   const copy = previewCopy(split, goal.name);
+  const label =
+    copy.over === null
+      ? copy.headline
+      : `€${displayAmount(copy.over)} over ${copy.headline}`;
   return (
     <Box sx={{ bgcolor: "background.default", borderRadius: 2, p: 1.5 }}>
-      {/* The numbers are repeated as text below; the bar only draws them. */}
       <Box
         role="img"
-        aria-label={`${copy.goalPart ?? ""}${copy.goalPart && copy.balancePart ? ", " : ""}${copy.balancePart ?? ""}`}
+        aria-label={label}
         sx={{
           display: "flex",
           height: 8,
@@ -211,24 +220,17 @@ function SplitPreview({ split, goal }: { split: ExpenseSplit; goal: Goal }) {
         }}
       >
         <Box sx={{ width: `${goalShare}%`, bgcolor: "primary.dark" }} />
-        <Box
-          sx={(theme) => ({
-            flex: 1,
-            backgroundColor: theme.palette.error.light,
-            backgroundImage: `repeating-linear-gradient(135deg, ${theme.palette.error.main} 0 3px, transparent 3px 6px)`,
-            // A fully covered expense has no balance part to hatch.
-            display: split.fromBalance > 0 ? "block" : "none",
-          })}
-        />
+        {split.fromBalance > 0 && (
+          <Box sx={{ flex: 1, bgcolor: "error.light" }} />
+        )}
       </Box>
       <Typography sx={{ mt: 1, fontWeight: 700, fontSize: "0.9rem" }}>
-        {copy.goalPart}
-        {copy.goalPart && copy.balancePart && " · "}
-        {copy.balancePart && (
+        {copy.over !== null && (
           <Box component="span" sx={{ color: "error.main" }}>
-            {copy.balancePart}
+            €{displayAmount(copy.over)} over{" "}
           </Box>
         )}
+        {copy.headline}
       </Typography>
       <Typography variant="body2" sx={{ mt: 0.5, color: "text.secondary" }}>
         {copy.detail}
