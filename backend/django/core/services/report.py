@@ -16,7 +16,7 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
+from core.services.balance import annotate_goal_balance
 
 _ZERO = Decimal("0")
 
@@ -138,7 +138,8 @@ def get_org_category_breakdown(
 def _goal_balance_expression(amount_field: str = "amount") -> Case:
     return Case(
         When(entry_type=EntryType.CONTRIBUTION, then=F(amount_field)),
-        default=-F(amount_field),
+        When(entry_type=EntryType.WITHDRAW, then=-F(amount_field)),
+        default=_ZERO,
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )
 
@@ -149,55 +150,57 @@ def _reported_goals(org: Organization) -> list[Goal]:
 
 
 def _goal_report(org: Organization, year: int, goals: list[Goal]) -> list[dict[str, Any]]:
-    """Return current and month-end balances for active and completed goals."""
+    """Return selected-year balances and monthly contribution-withdrawal changes."""
     start = date(year, 1, 1)
     end = date(year + 1, 1, 1)
-    opening_rows = (
-        Transaction.objects.filter(org=org, goal__in=goals, transaction_date__lt=start)
+    goal_transactions = Transaction.objects.filter(
+        org=org,
+        goal__in=goals,
+        entry_type__in=(EntryType.CONTRIBUTION, EntryType.WITHDRAW),
+    )
+    current_rows = (
+        goal_transactions.filter(transaction_date__gte=start, transaction_date__lt=end)
         .values("goal_id")
         .annotate(balance=Sum(_goal_balance_expression()))
     )
-    opening = {row["goal_id"]: row["balance"] or _ZERO for row in opening_rows}
+    current = {row["goal_id"]: row["balance"] or _ZERO for row in current_rows}
     monthly_rows = (
-        Transaction.objects.filter(
-            org=org,
-            goal__in=goals,
-            transaction_date__gte=start,
-            transaction_date__lt=end,
-        )
+        goal_transactions.filter(transaction_date__gte=start, transaction_date__lt=end)
         .annotate(month=ExtractMonth("transaction_date"))
         .values("goal_id", "month")
         .annotate(balance=Sum(_goal_balance_expression()))
     )
-    changes = {(row["goal_id"], row["month"]): row["balance"] or _ZERO for row in monthly_rows}
+    monthly = {(row["goal_id"], row["month"]): row["balance"] or _ZERO for row in monthly_rows}
 
     result = []
     for goal in goals:
-        balance = opening.get(goal.pk, _ZERO)
-        monthly = []
-        for month in range(1, 13):
-            balance += changes.get((goal.pk, month), _ZERO)
-            monthly.append(balance)
+        monthly_balances = [monthly.get((goal.pk, month), _ZERO) for month in range(1, 13)]
         result.append(
             {
                 "goal_id": goal.pk,
                 "name": goal.name,
                 "status": goal.status,
                 "target_amount": goal.target_amount,
-                "balance": get_annotated_goal_balance(goal),
-                "monthly": monthly,
+                "balance": current.get(goal.pk, _ZERO),
+                "monthly": monthly_balances,
             }
         )
     return result
 
 
-def _goal_balance(goals: list[Goal]) -> Decimal:
-    """Current balance across all active and completed goals."""
-    return sum((get_annotated_goal_balance(goal) for goal in goals), _ZERO)
+def _goal_balance(org: Organization, year: int, goals: list[Goal]) -> Decimal:
+    """Selected-year balance across all active and completed goals."""
+    total = Transaction.objects.filter(
+        org=org,
+        goal__in=goals,
+        transaction_date__year=year,
+        entry_type__in=(EntryType.CONTRIBUTION, EntryType.WITHDRAW),
+    ).aggregate(balance=Sum(_goal_balance_expression()))["balance"]
+    return total or _ZERO
 
 
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:
-    """Build the yearly report payload and year-independent goal snapshots."""
+    """Build the yearly report payload and goal snapshots."""
     base = _reported_transactions(org, year)
     goals = _reported_goals(org)
     return {
@@ -205,6 +208,6 @@ def get_org_report(org: Organization, year: int) -> dict[str, Any]:
         "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
         "categories": get_org_category_breakdown(org, year),
-        "goal_balance": _goal_balance(goals),
+        "goal_balance": _goal_balance(org, year, goals),
         "goals": _goal_report(org, year, goals),
     }
