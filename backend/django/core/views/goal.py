@@ -7,7 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Goal, GoalStatus, User
+from core.models import Goal, Organization, User
 from core.permissions import IsGoalCreatorOrOrgOwner, IsOrgMember
 from core.serializers import (
     GoalCreateSerializer,
@@ -16,7 +16,7 @@ from core.serializers import (
     GoalUpdateSerializer,
 )
 from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
-from core.services.goal import GoalArchivalError, update_goal
+from core.services.goal import GoalArchivalError, create_goal, update_goal
 
 
 class GoalListCreateView(APIView):
@@ -47,18 +47,15 @@ class GoalListCreateView(APIView):
         assert isinstance(request.user, User)
         serializer = GoalCreateSerializer(data=request.data, context={"org_id": org_id})
         serializer.is_valid(raise_exception=True)
-
-        goal = Goal.objects.create(
-            org_id=org_id,
-            name=serializer.validated_data["name"],
-            target_amount=serializer.validated_data["target_amount"],
-            target_date=serializer.validated_data["target_date"],
-            status=GoalStatus.ACTIVE,
-            created_by=request.user,
+        org = get_object_or_404(Organization, pk=org_id)
+        data = serializer.validated_data
+        goal = create_goal(
+            org,
+            request.user,
+            name=data["name"],
+            target_amount=data["target_amount"],
+            target_date=data["target_date"],
         )
-        goal = annotate_goal_balance(
-            Goal.objects.select_related("created_by").filter(pk=goal.pk)
-        ).get()
         return Response(GoalResponseSerializer(goal).data, status=status.HTTP_201_CREATED)
 
 
