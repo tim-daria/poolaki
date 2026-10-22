@@ -5,9 +5,9 @@ All endpoints in this document require authentication.
 ## Reports endpoint
 
 One read-only endpoint with the yearly finance report for the reporting page:
-income/expense totals, monthly distribution, per-category breakdown for one
-organization and one year, plus the current-month balance across active and
-completed goals (`goal_balance`).
+income/expense totals and goals debit, monthly distribution, per-category breakdown for one
+organization and one year, the current-month balance across active and
+completed goals (`goal_balance`) and per-goal breakdown for one organization and one year.
 
 ### Get yearly report
 
@@ -28,12 +28,13 @@ Response example:
   "year": 2025,
   "totals": {
     "income": "12000.00",
-    "expense": "8400.50"
+    "expense": "8400.50",
+    "goals_balance": "241.00"
   },
   "monthly": [
-    { "month": 1, "income": "1000.00", "expense": "700.00", "contribution": "241.00", "withdraw": "0.00" },
-    { "month": 2, "income": "0.00", "expense": "120.50", "contribution": "0.00", "withdraw": "0.00" },
-    { "month": 3, "income": "0.00", "expense": "0.00", "contribution": "0.00", "withdraw": "0.00" }
+    { "month": 1, "income": "1000.00", "expense": "700.00", "goals_balance": "241.00" },
+    { "month": 2, "income": "0.00", "expense": "120.50", "goals_balance": "0.00" },
+    { "month": 3, "income": "0.00", "expense": "0.00", "goals_balance": "0.00" }
   ],
   "categories": [
     {
@@ -51,7 +52,7 @@ Response example:
       "monthly": ["180.50", "170.25", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "1750.00"]
     },
   ],
-  "goal_balance": "1540.50",
+  "goal_balance": "241.00",
   "goals": [
     {
       "goal_id": 15,
@@ -84,23 +85,26 @@ Status:
 
 ## How the report is built
 
-- **Yearly sections are income and expenses only.** Contribution and
-  withdraw rows move money between cash and goals, so they never appear in
-  `totals`, `monthly` or `categories`. The Home page takes this month's
-  income, expenses and the top-spending split from this endpoint, and its
-  savings figure from the month's `contribution` and `withdraw` rows via the
-  transactions list.
+- **Yearly sections contain income, expenses and `goals_balance`.** Contribution
+  and withdraw rows move money between cash and goals, so they do not appear as
+  separate rows in `totals`, `monthly` or `categories`; their net effect is
+  represented by `goals_balance` in `totals` and each monthly item. The Home
+  page takes this month's income, expenses, top-spending split and savings
+  figure from this endpoint's `monthly[].goals_balance` and `goal_balance`.
+- **goal balance calculation.** In the report, `balance` for the specified period is
+  calculated as contributions minus withdrawals, excluding contributions with
+  `category = null` and the opening balance. This keeps the report
+  self-contained: the frontend can display the organization savings snapshot
+  and the active or completed goals in one call without extra requests.
 - **`goal_balance` is the current-month savings figure, net of withdrawals.**
   It is the aggregate of contributions minus withdrawals for the current
   calendar month across all active and completed goals. It ignores the `year`
   parameter. Archived goals are excluded — they are settled (zero balance) at
   archival. Goals without a balance simply contribute 0.
 - **`goals` adds per-goal progress to the report.** Each item in the array
-  includes `goal_id`, `name`, `status`, `target_amount`, the goal's current
-  `balance`, and a 12-month sequence showing the end-of-month balance for that
-  goal within the requested year. This keeps the report self-contained: the
-  frontend can display the organization savings snapshot and the active or
-  completed goals in one call without extra requests.
+  includes `goal_id`, `name`, `status`, `target_amount`, the goal's `balance`,
+  and a 12-month sequence showing the end-of-month balance for that goal within
+  the requested year.
 - **Opening balance is not income.** `Organization.initial_balance` is the
   money the organization started with, not money earned this year, so it is
   excluded from every metric.
