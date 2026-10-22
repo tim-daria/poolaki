@@ -139,6 +139,41 @@ the new workspace without remounting. They are not fixed when the tabs are creat
 
 ---
 
+## Why a reload shows "Loading…"
+
+A full page load (refresh, pasted link) passes through four gates, and each one
+starts only when the previous answer has arrived:
+
+1. **Router init.** The matched page is a `lazy:` chunk, so React Router renders
+   `hydrateFallbackElement` ("Loading…", `routes.tsx`) until it downloads. The
+   session request starts in parallel: `AuthProvider` sits above the router in
+   `main.tsx`.
+2. **Session.** `ProtectedRoute` renders `null` until `/auth/session` answers.
+   Blank page.
+3. **Workspace list.** `OrgListProvider` mounts only now and fetches the list.
+   `OrgLayout` shows "Loading…" meanwhile.
+4. **Page data.** The page mounts only now and fetches. Spinner inside the shell.
+
+Three serial round trips plus a chunk download before anything shows. In-app
+navigation skips 1–3 because those providers stay mounted, which is why a tab
+switch only shows the in-page spinner.
+
+**The order is not what protects access.** The guards decide what to _render_,
+not what to _request_. Every scoped endpoint re-checks `IsAuthenticated` and
+`IsOrgMember` on its own; the guards are UX, not security (see
+[backend-integration.md](backend-integration.md)). Sending the workspace or page
+requests earlier would only earn a 401/403 in a logged-out browser, and
+`ProtectedRoute` would still redirect. Starting them in parallel is safe; it is
+just not done yet (see "Open ideas").
+
+Dev only: a reload that happens _by itself_ the first time a page opens is Vite
+re-optimizing a dependency missing from `optimizeDeps.include` (`@mui/x-charts`,
+per-path icons) — see the comment in
+[../../frontend/vite.config.ts](../../frontend/vite.config.ts). The production
+build never does this.
+
+---
+
 ## Rules that must not be broken
 
 - **`NoAccessScreen` never redirects.** It links back to `/`. If it redirected,
@@ -174,11 +209,22 @@ IsOrgMember]`. How the frontend calls them is in
 Two things considered and not done, kept here so they are not re-proposed
 without the trade-off:
 
-- **Route `loader`s instead of `useEffect`.** Loaders read URL params directly
-  and integrate with `errorElement`. Not adopted: every page already shares one
-  effect shape with abort and refetch-on-mutation, and loaders would move the
-  loading state out of the page where the "keep old rows while refetching"
-  behaviour lives.
+- **Start the workspace-list request alongside the session check.** Small:
+  `AuthContext`, `OrgListProvider`, perhaps a shared bootstrap helper. Removes
+  one of the three serial round trips on reload (see "Why a reload shows
+  Loading…") with the render gates untouched. Not done for the MVP: the list
+  request has to fail silently before login, and the provider must still
+  unmount on logout ("Keep the providers inside `ProtectedRoute`"), so the fetch
+  and the provider would have to be split. Revisit when reload time is a
+  measured complaint rather than a known one.
+- **Route `loader`s instead of `useEffect`**, for session, workspace list and
+  page data alike. Loaders read URL params directly, integrate with
+  `errorElement`, and React Router would run all three in parallel during init
+  and render once with data — the full fix for the serial reload. Not adopted:
+  it touches every page's fetch code and both providers (tens of files), there
+  is no time for that in an MVP, and every page already shares one effect shape
+  with abort and refetch-on-mutation; loaders would move the loading state out
+  of the page where the "keep old rows while refetching" behaviour lives.
 - **A 403 `errorElement` on `/o/:orgId`.** Today a 403 from a scoped endpoint
   surfaces as the page's own error state; `NoAccessScreen` only covers an org
   missing from the list. Worth doing if membership revocation mid-session

@@ -68,7 +68,9 @@ when there is no user; `GuestRoute` redirects to `/` when there is one. The
 guards are the whole client-side auth story: everything below `ProtectedRoute`
 in `routes.tsx` may assume `user` exists. The server re-checks on every
 request regardless (`IsAuthenticated`, `IsOrgMember` in `core/permissions.py`);
-the guards are UX, not security.
+the guards are UX, not security. The same gating is why a full reload loads in
+series rather than in parallel — see "Why a reload shows Loading…" in
+[routing.md](routing.md).
 
 `useLogout` sends the `DELETE` _before_ clearing the local user. Order
 matters: `setUser(null)` unmounts the protected tree, and the request needs
@@ -187,6 +189,7 @@ the same anti-corruption idea as `fromDTO`, applied to the request.
 
 ### The error contract
 
+Which rules are checked on which side is in [../validation.md](../validation.md).
 Two kinds of failure, deliberately kept apart:
 
 - **The user did something fixable** — Django answered `400` or `403` with a
