@@ -1,19 +1,22 @@
-from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.main import app, get_embedding_service
+
+from fastapi.testclient import TestClient
+
+from app.dependencies import get_embedding_service
+from app.main import app
 
 client = TestClient(app)
+
 
 def test_ingest_endpoint() -> None:
     # Create a mock embedding service
     mock_service = AsyncMock()
-    
+
     # Override the FastAPI dependency
     app.dependency_overrides[get_embedding_service] = lambda: mock_service
 
     response = client.post(
-        "/ingest/",
-        json={"document_id": "doc-123", "text": "Hello world"}
+        "/ingest/", json={"document_id": "doc-123", "text": "Hello world"}
     )
 
     assert response.status_code == 200
