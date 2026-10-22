@@ -2,7 +2,6 @@ import logging
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
 
 from app.clients.django import DjangoClientError
 from app.clients.llm import LLMClientError
@@ -41,10 +40,11 @@ async def chat(
         ) from exc
     except DjangoClientError as exc:
         # Only FORBIDDEN/INVALID_REQUEST reach here (the retriever degrades the rest)
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"error": {"code": exc.code, "message": str(exc)}},
-        )
+        status_map = {"FORBIDDEN": 403, "INVALID_REQUEST": 400}
+        raise HTTPException(
+            status_code=status_map.get(exc.code, 502),
+            detail=exc.code,
+        ) from exc
 
     logger.info(
         "chat_completed",

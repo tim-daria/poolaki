@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.clients.django import DjangoClientError
 from app.main import app
 from models.retrieval import CombinedRetrievalResult
 from models.usage import LLMUsage
@@ -66,3 +67,19 @@ def test_final_prompt_contains_current_date():
             final_prompt = mock_llm.call_args_list[1].args[0]  # 2nd call = final prompt
             assert expected in final_prompt
             assert "{{current_date}}" not in final_prompt
+
+
+def test_forbidden_from_backend_returns_403():
+    with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
+        # side_effect with an exception: calling the mock raises it
+        mock_get_context.side_effect = DjangoClientError("FORBIDDEN", "no", 403)
+
+        with patch("app.clients.llm.LLMClient.generate_response") as mock_llm:
+            mock_llm.side_effect = [
+                ("summary", USAGE)
+            ]  # only intent classification runs
+
+            response = client.post("/api/v1/chat", json=BODY)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "FORBIDDEN"
