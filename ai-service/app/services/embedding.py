@@ -13,6 +13,10 @@ class EmbeddingService:
         self.db_pool = db_pool
         self._repository = VectorRepository(db_pool)
 
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for the given texts."""
+        return await self.llm_client.generate_embeddings(texts)
+
     def chunk_text(
         self, text: str, chunk_size: int = 1000, overlap: int = 200
     ) -> list[str]:
