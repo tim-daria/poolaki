@@ -311,7 +311,7 @@ For service contracts and communication details, see: [api-contract.md](docs/ai/
 - Django owns business rules and user data.
 - Communication happens through API contracts.
 
-For detailed decisions, see: [decisions.md](docs/ai/decisions.md)
+For detailed decisions, see: [decisions.md](../docs/ai/decisions.md)
 
 ## Documentation
 
