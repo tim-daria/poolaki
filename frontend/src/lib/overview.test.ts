@@ -103,19 +103,9 @@ function goal(overrides: Partial<Goal> = {}): Goal {
 }
 
 describe("monthSummary", () => {
-  it("reads income and expenses from the report's month, savings from the rows", () => {
-    const rows = [
-      tx({ entry_type: "contribution", category: null, amount: 100 }),
-      // Outside the month: ignored even if the caller fetched it.
-      tx({
-        entry_type: "contribution",
-        category: null,
-        amount: 999,
-        transaction_date: "2026-07-31",
-      }),
-    ];
+  it("reads income, expenses and savings from the report's month", () => {
     expect(
-      monthSummary(augustReport(3567, 1953), rows, [], "2026-08-03"),
+      monthSummary(augustReport(3567, 1953, 100), [], "2026-08-03"),
     ).toEqual({
       income: 3567,
       expenses: 1953,
@@ -130,9 +120,7 @@ describe("monthSummary", () => {
       goal({ id: 1, balance: 1540.5 }),
       goal({ id: 2, balance: 200, status: "completed" }),
     ];
-    expect(monthSummary(report(), [], goals, "2026-08-03").inGoals).toBe(
-      1740.5,
-    );
+    expect(monthSummary(report(), goals, "2026-08-03").inGoals).toBe(1740.5);
   });
 
   it("counts an overdrawn goal as empty rather than against the others", () => {
@@ -140,7 +128,7 @@ describe("monthSummary", () => {
       goal({ id: 1, balance: 300 }),
       goal({ id: 2, balance: -80 }),
     ];
-    expect(monthSummary(report(), [], goals, "2026-08-03").inGoals).toBe(300);
+    expect(monthSummary(report(), goals, "2026-08-03").inGoals).toBe(300);
   });
 
   it("leaves archived goals out of the goal total", () => {
@@ -148,7 +136,7 @@ describe("monthSummary", () => {
       goal({ id: 1, balance: 300 }),
       goal({ id: 2, balance: 999, status: "archived" }),
     ];
-    expect(monthSummary(report(), [], goals, "2026-08-03").inGoals).toBe(300);
+    expect(monthSummary(report(), goals, "2026-08-03").inGoals).toBe(300);
   });
 
   it("snaps the goal total to cents", () => {
@@ -156,37 +144,23 @@ describe("monthSummary", () => {
       goal({ id: 1, balance: 0.1 }),
       goal({ id: 2, balance: 0.2 }),
     ];
-    expect(monthSummary(report(), [], goals, "2026-08-03").inGoals).toBe(0.3);
+    expect(monthSummary(report(), goals, "2026-08-03").inGoals).toBe(0.3);
   });
 
-  it("counts a withdrawal against the saved total", () => {
-    const rows = [
-      tx({ entry_type: "contribution", category: null, amount: 300 }),
-      tx({ entry_type: "withdraw", category: null, amount: 120 }),
-    ];
-    expect(monthSummary(augustReport(1000, 0), rows, [], "2026-08-03")).toEqual(
+  it("adds a month that withdrew more than it saved back to the remainder", () => {
+    expect(monthSummary(augustReport(1000, 0, -120), [], "2026-08-03")).toEqual(
       {
         income: 1000,
         expenses: 0,
-        saved: 180,
-        left: 820,
+        saved: -120,
+        left: 1120,
         inGoals: 0,
       },
     );
   });
 
-  it("snaps float sums to cents", () => {
-    const rows = [
-      tx({ entry_type: "contribution", amount: 0.1 }),
-      tx({ entry_type: "contribution", amount: 0.2 }),
-    ];
-    expect(monthSummary(report(), rows, [], "2026-08-01").saved).toBe(0.3);
-  });
-
   it("reports a negative remainder when overspent", () => {
-    expect(monthSummary(augustReport(0, 50), [], [], "2026-08-01").left).toBe(
-      -50,
-    );
+    expect(monthSummary(augustReport(0, 50), [], "2026-08-01").left).toBe(-50);
   });
 });
 

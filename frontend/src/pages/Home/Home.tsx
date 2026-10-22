@@ -17,7 +17,7 @@ import { GoalForm } from "../../components/Modals/GoalForm";
 import { StartingBalanceForm } from "../../components/Modals/StartingBalanceForm";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { fetchBalance } from "../../lib/balance";
-import { TODAY, longDate, monthBounds, monthName } from "../../lib/date";
+import { TODAY, longDate, monthName } from "../../lib/date";
 import { getGoals, type Goal } from "../../lib/goals";
 import {
   DEFAULT_SCALE_FLOOR,
@@ -67,8 +67,6 @@ type Loaded = {
   report: YearlyReportResponse | null;
   /** The newest RECENT_ROWS rows. */
   recent: Transaction[];
-  /** This month's rows, for the savings figure the report does not carry yet. */
-  monthRows: Transaction[];
   balance: number;
   goals: Goal[];
   categories: Category[];
@@ -94,7 +92,6 @@ function Home() {
    */
   useEffect(() => {
     const controller = new AbortController();
-    const { from, to } = monthBounds(TODAY);
     const report = fetchYearlyReport(
       org.id,
       Number(TODAY.slice(0, 4)),
@@ -108,14 +105,12 @@ function Home() {
     Promise.all([
       report,
       fetchTransactions(org.id, { pageSize: RECENT_ROWS }, controller.signal),
-      // TODO(report): drop once the report carries contribution and withdraw sums.
-      fetchTransactions(org.id, { from, to, pageSize: 100 }, controller.signal),
       fetchBalance(org.id, controller.signal),
       getGoals(org.id, controller.signal),
       fetchCategories(org.id, controller.signal),
     ])
-      .then(([report, recent, monthRows, balance, goals, categories]) => {
-        setData({ report, recent, monthRows, balance, goals, categories });
+      .then(([report, recent, balance, goals, categories]) => {
+        setData({ report, recent, balance, goals, categories });
         setError(null);
       })
       .catch((e: unknown) => {
@@ -192,8 +187,8 @@ function Home() {
     );
   }
 
-  const { report, recent, monthRows, balance, goals, categories } = data;
-  const summary = report && monthSummary(report, monthRows, goals, TODAY);
+  const { report, recent, balance, goals, categories } = data;
+  const summary = report && monthSummary(report, goals, TODAY);
   const scaleMax = summary
     ? columnScaleMax(
         [summary.income, summary.expenses, summary.inGoals],

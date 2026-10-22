@@ -1,7 +1,7 @@
 /**
- * @file Overview page figures derived from the yearly report, this month's
- * transfer rows and the goals: the month's totals, what the goals hold, the
- * month's footer, the balance change, the column scale, spending split by category with donut shares,
+ * @file Overview page figures derived from the yearly report and the goals:
+ * the month's totals, what the goals hold, the month's footer, the balance
+ * change, the column scale, spending split by category with donut shares,
  * recent entries and the goal nearest completion. React-free so the
  * arithmetic is unit-tested.
  */
@@ -51,30 +51,18 @@ export function goalsTotal(goals: Goal[]): number {
 }
 
 /**
- * Totals for the month `today` falls in: income and expenses from the report,
- * savings from the month's transfer rows, plus what the goals hold.
+ * Totals for the month `today` falls in: income, expenses and net savings
+ * from the report's month, plus what the goals hold.
  */
 export function monthSummary(
   report: YearlyReportResponse,
-  rows: Transaction[],
   goals: Goal[],
   today: string,
 ): MonthSummary {
-  const month = monthOf(today);
-  const entry = report.monthly[Number(month.slice(5)) - 1];
+  const entry = report.monthly[Number(monthOf(today).slice(5)) - 1];
   const income = parseMoney(entry.income);
   const expenses = parseMoney(entry.expense);
-
-  // TODO(report): read these from the report once it carries transfer sums.
-  let contribution = 0;
-  let withdraw = 0;
-  for (const t of rows) {
-    if (monthOf(t.transaction_date) !== month) continue;
-    if (t.entry_type === "contribution") contribution += t.amount;
-    if (t.entry_type === "withdraw") withdraw += t.amount;
-  }
-  // A withdrawal moves goal money back, so it undoes saving.
-  const saved = cents(contribution - withdraw);
+  const saved = parseMoney(entry.goals_balance);
   return {
     income,
     expenses,
