@@ -25,10 +25,9 @@ class BackendClient(Protocol):
 
 
 class DocumentRepositoryProtocol(Protocol):
-    async def search_documents(
-        self, query: str, usage: TokenUsage, top_k: int = 3
-    ) -> list[str]:
-        return [f"doc_{i}" for i in range(top_k)]
+    async def search(
+        self, query: str, limit: int = settings.vector_top_k
+    ) -> list[dict[str, Any]]: ...
 
 
 class BaseRetriever(ABC):
@@ -79,9 +78,7 @@ class Retriever(BaseRetriever):
         payload = {"user_id": user_id, "organization_id": organization_id}
 
         # Vectors always run; Django only if the intent has an endpoint
-        vector_task = self._doc_repo.search_documents(
-            query=query, usage=usage, limit=top_k
-        )
+        vector_task = self._doc_repo.search(query=query, limit=top_k)
 
         outcome: dict[str, Any] | BaseException | None = None
         if endpoint is not None:
@@ -97,7 +94,7 @@ class Retriever(BaseRetriever):
         if isinstance(docs_result, BaseException):
             raise docs_result  # a vector failure is a real error
 
-        raw_docs = docs_result  #real raw content received back
+        raw_docs = docs_result  # real raw content received back
         docs: list[str] = [doc.get("content", "") for doc in raw_docs]
 
         items = [

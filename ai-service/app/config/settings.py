@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     max_context_tokens: int = 3000  # budget of <context> (estimated)
     min_similarity: float = 0.75  # min pgvector threshold (adjust with test)
     vector_top_k: int = 3  # semantic documents per query
+    chunk_size: int = 1000  # characters per document chunk
+    chunk_overlap: int = 200  # overlap between consecutive chunks
 
 
 settings = Settings()

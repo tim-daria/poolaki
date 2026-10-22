@@ -5,6 +5,8 @@ from typing import Any
 
 import asyncpg
 
+from app.config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,7 +17,7 @@ class VectorRepository:
         self.db_pool = db_pool
 
     async def query_similar_chunks(
-        self, query_embedding: list[float], limit: int = 5
+        self, query_embedding: list[float], limit: int = settings.vector_top_k
     ) -> list[dict[str, Any]]:
         """Query similar document chunks using cosine distance operator."""
         query = """

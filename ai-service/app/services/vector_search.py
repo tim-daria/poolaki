@@ -4,6 +4,7 @@ from typing import Any
 
 import asyncpg
 
+from app.config.settings import settings
 from app.services.embedding import EmbeddingService
 from app.services.vector import VectorRepository
 
@@ -18,7 +19,9 @@ class VectorSearchService:
         self.db_pool = db_pool
         self._repository = VectorRepository(db_pool)
 
-    async def search(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
+    async def search(
+        self, query: str, limit: int = settings.vector_top_k
+    ) -> list[dict[str, Any]]:
         start_time = time.time()
         try:
             if not query or not query.strip():
