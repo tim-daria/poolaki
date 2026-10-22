@@ -18,6 +18,7 @@ venv/
 dist/
 build/
 *.log
+ai-audit.md
 
 # OS / editor
 .DS_Store
