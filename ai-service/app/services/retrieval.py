@@ -96,6 +96,14 @@ class Retriever(BaseRetriever):
 
         raw_docs = docs_result  # real raw content received back
         docs: list[str] = [doc.get("content", "") for doc in raw_docs]
+        doc_similarities = [
+            {
+                "id": doc.get("id"),
+                "source": (doc.get("metadata") or {}).get("source"),
+                "similarity": doc.get("similarity"),
+            }
+            for doc in raw_docs
+        ]
 
         items = [
             RetrievedItem(
@@ -149,6 +157,8 @@ class Retriever(BaseRetriever):
                 "intent": intent,
                 "endpoint": endpoint,
                 "docs": docs,
+                "doc_similarities": doc_similarities,
+                "min_similarity": settings.min_similarity,
                 "has_structured": bool(structured),
                 "degraded": degraded,
                 "retrieval_ms": round((time.perf_counter() - start) * 1000),
