@@ -3,6 +3,7 @@
 This document defines the communication contract between the `Django` backend and the `AI Service`, while allowing both services to evolve independently.
 
 The contracts define:
+
 - Request and response schemas.
 - Data exchanged between services.
 - Validation rules.
@@ -12,17 +13,18 @@ The contracts define:
 For the high-level architecture and communication flow, see: [AI Service Architecture](architecture.md).
 
 ---
+
 ## High-Level Endpoint Summary
 
 Initial supported endpoints:
 
-| Flow | Method | Endpoint | Purpose |
-|---|---|---|---|
-| Frontend → Django | POST | `/api/v1/organizations/{org_id}/chat/` | Public chat endpoint (session auth) |
-| Django → AI | POST | `/api/v1/chat/` | Forward the user question to the AI Service |
-| AI → Django | POST | `/api/internal/v1/analytics/summary/` | Monthly income/expense for a year + current balance |
-| AI → Django | POST | `/api/internal/v1/transactions/` | Static transaction context: income/expense of the last 3 calendar months |
-| AI → Django | POST | `/api/internal/v1/categories/` | Organization income/expense categories, each with a monthly breakdown for a year |
+| Flow              | Method | Endpoint                               | Purpose                                                                          |
+| ----------------- | ------ | -------------------------------------- | -------------------------------------------------------------------------------- |
+| Frontend → Django | POST   | `/api/v1/organizations/{org_id}/chat/` | Public chat endpoint (session auth)                                              |
+| Django → AI       | POST   | `/api/v1/chat/`                        | Forward the user question to the AI Service                                      |
+| AI → Django       | POST   | `/api/internal/v1/analytics/summary/`  | Monthly income/expense for a year + current balance                              |
+| AI → Django       | POST   | `/api/internal/v1/transactions/`       | Static transaction context: income/expense of the last 3 calendar months         |
+| AI → Django       | POST   | `/api/internal/v1/categories/`         | Organization income/expense categories, each with a monthly breakdown for a year |
 
 The internal endpoints are intentionally few: each returns a self-contained data set that covers a family of intents, so the AI Service can answer most questions with a single call.
 
@@ -31,9 +33,11 @@ The `/api/internal/` namespace is reserved for service-to-service communication.
 For more backend definitions see the [backend README](../../../backend/README.md) and specifics on `docs/backend`.
 
 ---
+
 ## Communication Flows
 
 The AI integration consists of three main communication flows:
+
 - User request (`Frontend -> Django -> AI Service`).
 - Context retrieval (`AI Service -> Django`).
 - Response generation (`AI Service -> Django -> Frontend`)
@@ -63,19 +67,19 @@ Fields:
 | organization_id | integer | yes      | Organization associated with the request |
 | question        | string  | yes      | User natural language question           |
 
-
 ### Response Schema
 
 ```
 {
   "answer": "Your expenses increased mainly because of Food spending.",
   "metadata": {
-    "intent": "monthly_summary"
+    "intent": "summary"
   }
 }
 ```
 
 ---
+
 ## Flow 2: AI Service → Django
 
 These are the endpoints the `AI Service` uses to retrieve financial data from `Django`.
@@ -85,7 +89,6 @@ These are the endpoints the `AI Service` uses to retrieve financial data from `D
 Internal endpoints require:
 
 1. **User authorization.** `user_id` must be a member of `organization_id`. Otherwise → `403 FORBIDDEN`.
-
 
 ### 2.1. Financial Summary
 
@@ -97,11 +100,11 @@ Covers: "how much did I spend / earn this (last) month?", "am I spending more or
 
 #### Request Schema
 
-| Field           | Type    | Required | Description                              |
-| --------------- | ------- | -------- | ---------------------------------------- |
+| Field           | Type    | Required | Description                                             |
+| --------------- | ------- | -------- | ------------------------------------------------------- |
 | user_id         | integer | yes      | User identifier used for authorization and data scoping |
-| organization_id | integer | yes      | Organization identifier                  |
-| year            | integer | no       | Year to report on, 4-digit. Default: current year |
+| organization_id | integer | yes      | Organization identifier                                 |
+| year            | integer | no       | Year to report on, 4-digit. Default: current year       |
 
 #### Response Schema
 
@@ -135,10 +138,10 @@ Covers: category spending questions ("how much did I spend on food?", "what is m
 
 #### Request Schema
 
-| Field           | Type    | Required | Description                              |
-| --------------- | ------- | -------- | ---------------------------------------- |
-| user_id         | integer | yes      | User identifier used for authorization and data scoping |
-| organization_id | integer | yes      | Organization identifier                  |
+| Field           | Type    | Required | Description                                                            |
+| --------------- | ------- | -------- | ---------------------------------------------------------------------- |
+| user_id         | integer | yes      | User identifier used for authorization and data scoping                |
+| organization_id | integer | yes      | Organization identifier                                                |
 | year            | integer | no       | Year the per-category breakdown covers, 4-digit. Default: current year |
 
 #### Response Schema
@@ -180,10 +183,10 @@ Covers: "what are my top 5 expenses?", "when was the last time I made an expense
 
 #### Request Schema
 
-| Field           | Type    | Required | Description                              |
-| --------------- | ------- | -------- | ---------------------------------------- |
+| Field           | Type    | Required | Description                                             |
+| --------------- | ------- | -------- | ------------------------------------------------------- |
 | user_id         | integer | yes      | User identifier used for authorization and data scoping |
-| organization_id | integer | yes      | Organization identifier                  |
+| organization_id | integer | yes      | Organization identifier                                 |
 
 The body contains only `user_id` and `organization_id`. Unknown fields are ignored.
 
@@ -206,6 +209,7 @@ The single request the AI Service sends for every transaction intent:
 - Only `income` and `expense` are returned. `contribution` / `withdraw` are internal goal transfers, not income/expense events, and are excluded; goal funding questions are answered by the goals endpoint (2.4).
 
 The endpoint retrieves the full bounded list; the LLM answers from it:
+
 - latest expense = the first `expense` row (the list is newest-first);
 - top `N` / largest = filter by entry type and/or a date sub-period, then scan by amount.
 
@@ -239,12 +243,13 @@ Goal endpoints are part of the planned contract but are **not implemented** in t
 
 Planned:
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/internal/v1/goals/progress/` | Goal target, current balance, progress percentage |
-| POST | `/api/internal/v1/goals/forecast/` | Estimated completion date at the current saving pace |
+| Method | Endpoint                           | Purpose                                              |
+| ------ | ---------------------------------- | ---------------------------------------------------- |
+| POST   | `/api/internal/v1/goals/progress/` | Goal target, current balance, progress percentage    |
+| POST   | `/api/internal/v1/goals/forecast/` | Estimated completion date at the current saving pace |
 
 ---
+
 ## Data Requirements
 
 Internal endpoints use `POST` with `user_id` and `organization_id` in the request **body**. This keeps the service-to-service API consistent and allows additional context parameters to be added without changing endpoint paths.
@@ -256,6 +261,7 @@ Internal endpoints use `POST` with `user_id` and `organization_id` in the reques
 Additional request body fields are endpoint-specific and defined in each endpoint's Request Schema.
 
 ---
+
 ## Error Format
 
 All API errors should follow a consistent structure.
@@ -270,25 +276,27 @@ All API errors should follow a consistent structure.
 ```
 
 Error codes:
-| Code            | HTTP Status               | Description                          |
-| --------------- | ------------------------- | ------------------------------------ |
-| INVALID_REQUEST | 400 Bad Request           | Invalid request payload              |
-| UNAUTHORIZED    | 401 Unauthorized          | Missing or invalid internal token    |
+
+| Code            | HTTP Status               | Description                              |
+| --------------- | ------------------------- | ---------------------------------------- |
+| INVALID_REQUEST | 400 Bad Request           | Invalid request payload                  |
+| UNAUTHORIZED    | 401 Unauthorized          | Missing or invalid internal token        |
 | FORBIDDEN       | 403 Forbidden             | User is not a member of the organization |
-| DATA_NOT_FOUND  | 404 Not Found             | Requested information does not exist |
-| CONTEXT_ERROR   | 422 Unprocessable Entity  | Context generation failed            |
-| LLM_ERROR       | 502 Bad Gateway           | LLM provider failure                 |
-| INTERNAL_ERROR  | 500 Internal Server Error | Unexpected service failure           |
+| DATA_NOT_FOUND  | 404 Not Found             | Requested information does not exist     |
+| CONTEXT_ERROR   | 422 Unprocessable Entity  | Context generation failed                |
+| LLM_ERROR       | 502 Bad Gateway           | LLM provider failure                     |
+| INTERNAL_ERROR  | 500 Internal Server Error | Unexpected service failure               |
 
 ---
+
 ## Mapping Intents to Endpoints
 
 When the `AI Service` receives a request at the chat endpoint, it classifies the user intent to determine which backend APIs to call.
 
 For the complete list of supported intents and their endpoint mapping, refer to **[Supported AI Questions Documentation](../supported-questions.md)**.
 
-
 ---
+
 ## API Versioning
 
 All future APIs should use versioning.
