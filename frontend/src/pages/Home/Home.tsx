@@ -193,7 +193,7 @@ function Home() {
   }
 
   const { report, recent, monthRows, balance, goals, categories } = data;
-  const summary = report && monthSummary(report, monthRows, TODAY);
+  const summary = report && monthSummary(report, monthRows, goals, TODAY);
   const scaleMax = summary
     ? columnScaleMax(
         [summary.income, summary.expenses, summary.inGoals],

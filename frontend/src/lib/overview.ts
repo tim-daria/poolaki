@@ -32,18 +32,32 @@ export type MonthSummary = {
   saved: number;
   /** Income not yet spent or moved to a goal; negative when overspent. */
   left: number;
-  /** What every goal holds right now; a snapshot, not a month figure. */
+  /** What the goals hold right now; a snapshot, not a month figure. See `goalsTotal`. */
   inGoals: number;
 };
 
 /**
+ * Money held in goals: the balances of active and completed goals, with
+ * overdrawn ones counted as empty. A goal below zero owes money rather than
+ * holding it, so it must not shrink what the others have saved. Archived
+ * goals are out of play and excluded, as in the report's goal_balance.
+ */
+export function goalsTotal(goals: Goal[]): number {
+  return cents(
+    goals
+      .filter((g) => goalState(g) !== "archived")
+      .reduce((sum, g) => sum + Math.max(0, g.balance), 0),
+  );
+}
+
+/**
  * Totals for the month `today` falls in: income and expenses from the report,
- * savings from the month's transfer rows, plus the goal total the report
- * carries.
+ * savings from the month's transfer rows, plus what the goals hold.
  */
 export function monthSummary(
   report: YearlyReportResponse,
   rows: Transaction[],
+  goals: Goal[],
   today: string,
 ): MonthSummary {
   const month = monthOf(today);
@@ -66,7 +80,7 @@ export function monthSummary(
     expenses,
     saved,
     left: cents(income - expenses - saved),
-    inGoals: parseMoney(report.goal_balance),
+    inGoals: goalsTotal(goals),
   };
 }
 
