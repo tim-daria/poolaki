@@ -6,7 +6,7 @@ All endpoints in this document require authentication.
 
 One read-only endpoint with the yearly finance report for the reporting page:
 income/expense totals, monthly distribution, per-category breakdown for one
-organization and one year, plus the current balance across active and
+organization and one year, plus the current-month balance across active and
 completed goals (`goal_balance`).
 
 ### Get yearly report
@@ -90,12 +90,11 @@ Status:
   income, expenses and the top-spending split from this endpoint, and its
   savings figure from the month's `contribution` and `withdraw` rows via the
   transactions list.
-- **`goal_balance` is the savings figure, net of withdrawals.** It is the
-  current balance across all active and completed goals (contributions minus
-  withdrawals and expenses paid from them). It is a "right now" snapshot: it
-  ignores the `year` parameter and does not change when the year is
-  switched. Archived goals are excluded — they are settled (zero balance)
-  at archival. Goals without a balance simply contribute 0.
+- **`goal_balance` is the current-month savings figure, net of withdrawals.**
+  It is the aggregate of contributions minus withdrawals for the current
+  calendar month across all active and completed goals. It ignores the `year`
+  parameter. Archived goals are excluded — they are settled (zero balance) at
+  archival. Goals without a balance simply contribute 0.
 - **`goals` adds per-goal progress to the report.** Each item in the array
   includes `goal_id`, `name`, `status`, `target_amount`, the goal's current
   `balance`, and a 12-month sequence showing the end-of-month balance for that

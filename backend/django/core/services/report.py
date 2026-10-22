@@ -6,6 +6,7 @@ from typing import Any
 
 from django.db.models import Case, DecimalField, F, Q, QuerySet, Sum, When
 from django.db.models.functions import Coalesce, ExtractMonth
+from django.utils import timezone
 
 from core.models import (
     Category,
@@ -201,12 +202,19 @@ def _goal_report(org: Organization, year: int, goals: list[Goal]) -> list[dict[s
     return result
 
 
-def _goal_balance(org: Organization, year: int, goals: list[Goal]) -> Decimal:
-    """Selected-year balance across all active and completed goals."""
+def _goal_balance(org: Organization, goals: list[Goal]) -> Decimal:
+    """Current-month balance across all active and completed goals."""
+    month_start = timezone.localdate().replace(day=1)
+    next_month = (
+        date(month_start.year + 1, 1, 1)
+        if month_start.month == 12
+        else date(month_start.year, month_start.month + 1, 1)
+    )
     total = Transaction.objects.filter(
         org=org,
         goal__in=goals,
-        transaction_date__year=year,
+        transaction_date__gte=month_start,
+        transaction_date__lt=next_month,
         entry_type__in=(EntryType.CONTRIBUTION, EntryType.WITHDRAW),
     ).aggregate(balance=Sum(_goal_balance_expression()))["balance"]
     return total or _ZERO
@@ -221,6 +229,6 @@ def get_org_report(org: Organization, year: int) -> dict[str, Any]:
         "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
         "categories": get_org_category_breakdown(org, year),
-        "goal_balance": _goal_balance(org, year, goals),
+        "goal_balance": _goal_balance(org, goals),
         "goals": _goal_report(org, year, goals),
     }

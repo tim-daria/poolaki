@@ -23,7 +23,7 @@ class ReportView(APIView):
     net goal transfer totals, a zero-filled 12-month distribution, the
     per-category breakdown, and active/completed goal balances. Each goal
     includes its current balance and a selected-year, month-end balance series.
-    `goal_balance` is the selected-year aggregate balance across those goals.
+    `goal_balance` is the current-month aggregate balance across those goals.
 
     Query parameters:
     - year (optional, integer 2000..2100): calendar year to report on.
