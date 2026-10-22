@@ -3,6 +3,8 @@
  * module augmentations that register the custom `mono` variant and palette keys.
  */
 import { createTheme } from "@mui/material";
+import type { CSSObject } from "@mui/material/styles";
+import { PHONE } from "./lib/layout";
 
 // Lavender groups are module constants so `palette.chart` can reuse the same
 // swatches as resolved values.
@@ -21,6 +23,19 @@ const accent = {
   main: "#826ABC", // deep lavender
   light: "#9D84D7", // soft lavender
 };
+
+/**
+ * Styles for a ToggleButtonGroup's buttons. `.Mui-disabled` is repeated so
+ * the rule outranks MUI's three-class disabled rules, which otherwise restore
+ * a three-sided border and a -1px overlap on the non-first buttons of a
+ * disabled group, and the group's first/middle/last rules that square off the
+ * inner corners. Every group look goes through this, so a disabled group
+ * looks exactly like an enabled one.
+ */
+const grouped = (styles: CSSObject): CSSObject => ({
+  "& .MuiToggleButtonGroup-grouped, & .MuiToggleButtonGroup-grouped.Mui-disabled":
+    styles,
+});
 
 declare module "@mui/material/styles" {
   interface TypographyVariants {
@@ -153,36 +168,63 @@ export const theme = createTheme({
       },
     },
     MuiToggleButtonGroup: {
-      // The one segmented-control look: a `background.default` track with
-      // borderless, gapped buttons and a primary-filled selected one. Callers
+      // Two looks, both here so no ToggleButtonGroup repeats them in `sx`.
+      // Default: the segmented control, a `background.default` track with
+      // borderless, gapped buttons and a primary-filled selected one; callers
       // set only the group's radius (the buttons inherit it) and sizing.
-      // Centralised here so no ToggleButtonGroup has to repeat it in `sx`.
+      // `className="cards"`: side-by-side outlined cards with the chosen one
+      // outlined in primary, for the transfer direction picker.
       styleOverrides: {
         root: ({ theme }) => ({
           backgroundColor: theme.palette.background.default,
           padding: 4,
           gap: 4,
-          // `.Mui-disabled` repeated so this outranks MUI's three-class
-          // disabled rules, which otherwise restore a three-sided border and
-          // a -1px overlap on the non-first buttons of a disabled group. It
-          // also beats the group's first/middle/last rules that square off the
-          // inner corners.
-          "& .MuiToggleButtonGroup-grouped, & .MuiToggleButtonGroup-grouped.Mui-disabled":
-            {
-              border: 0,
-              marginLeft: 0,
-              borderRadius: "inherit",
-              fontWeight: 700,
-              color: theme.palette.text.primary,
-              "&.Mui-disabled": { color: theme.palette.text.disabled },
-              "&.Mui-selected": {
-                backgroundColor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
-                "&:hover": { backgroundColor: theme.palette.primary.main },
-              },
+          ...grouped({
+            border: 0,
+            marginLeft: 0,
+            borderRadius: "inherit",
+            fontWeight: 700,
+            color: theme.palette.text.primary,
+            "&.Mui-disabled": { color: theme.palette.text.disabled },
+            "&.Mui-selected": {
+              backgroundColor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText,
+              "&:hover": { backgroundColor: theme.palette.primary.main },
             },
+          }),
         }),
       },
+      variants: [
+        {
+          props: { className: "cards" },
+          style: {
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 16,
+            backgroundColor: "transparent",
+            padding: 0,
+            ...grouped({
+              border: "2px solid var(--mui-palette-divider)",
+              borderRadius: 8,
+              margin: 0,
+              padding: 12,
+              justifyContent: "flex-start",
+              textAlign: "left",
+              // Title only on a phone (the card hides its icon and note), so it centres.
+              [PHONE]: { justifyContent: "center", textAlign: "center" },
+              textTransform: "none",
+              "&.Mui-selected": {
+                borderColor: "var(--mui-palette-primary-main)",
+                backgroundColor: "var(--mui-palette-background-default)",
+                color: "var(--mui-palette-text-primary)",
+                "&:hover": {
+                  backgroundColor: "var(--mui-palette-background-default)",
+                },
+              },
+            }),
+          },
+        },
+      ],
     },
     MuiDialog: {
       styleOverrides: {

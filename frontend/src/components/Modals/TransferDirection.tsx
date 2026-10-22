@@ -48,33 +48,8 @@ export function TransferDirection({ value, onChange, disabled }: Props) {
       // Null when the pressed card was already selected; ignoring it keeps one card always on.
       onChange={(_, next: Direction | null) => next && onChange(next)}
       aria-label="Direction"
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: 2,
-        // Not a segmented control: no track behind the cards.
-        bgcolor: "transparent",
-        p: 0,
-        "& .MuiToggleButtonGroup-grouped": {
-          border: "2px solid",
-          borderColor: "divider",
-          borderRadius: 2,
-          m: 0,
-          p: 1.5,
-          justifyContent: "flex-start",
-          textAlign: "left",
-          // Title only on a phone (icon and note hidden below), so it centres.
-          [PHONE]: { justifyContent: "center", textAlign: "center" },
-          textTransform: "none",
-          "&.Mui-selected": {
-            borderColor: "primary.main",
-            borderWidth: 2,
-            bgcolor: "background.default",
-            color: "text.primary",
-            "&:hover": { bgcolor: "background.default" },
-          },
-        },
-      }}
+      // Not a segmented control: the theme's "cards" look (see theme.ts).
+      className="cards"
     >
       {OPTIONS.map(({ value: v, title, note, Icon }) => (
         <ToggleButton key={v} value={v}>
