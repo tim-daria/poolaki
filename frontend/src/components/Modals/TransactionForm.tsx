@@ -406,6 +406,12 @@ export function TransactionForm({
                     /* Collapsed, the field shows the name alone; the progress
                      figures go in the helper text below. */
                     slotProps={{
+                      // A select's `required` lands on its hidden native
+                      // input (aria-hidden, tabindex -1). The browser's own
+                      // validation would then focus that input on submit,
+                      // which assistive tech cannot reach. The display keeps
+                      // aria-required; validateDraft reports a missing pick.
+                      htmlInput: { required: false },
                       select: {
                         labelId: "transaction-goal-label",
                         displayEmpty: true,
@@ -468,6 +474,8 @@ export function TransactionForm({
                   value={draft.category ?? ""}
                   onChange={(e) => set("category", Number(e.target.value))}
                   slotProps={{
+                    // See the goal select above.
+                    htmlInput: { required: false },
                     select: {
                       labelId: "transaction-category-label",
                       displayEmpty: true,
