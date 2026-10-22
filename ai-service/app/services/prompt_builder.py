@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from pathlib import Path
 
 from app.services.context_builder import NO_CONTEXT
@@ -21,13 +22,14 @@ class PromptBuilder:
 
     def build(
         self,
-        today: str,
+        today: date,
         user_question: str,
         context: str = "",
     ) -> str:
 
         values = {
-            "current_date": today,
+            # "Wednesday 21 October 2026"; `today.day` instead of the glibc-only `%-d`
+            "current_date": f"{today:%A} {today.day} {today:%B %Y}",
             "context": context if context.strip() else NO_CONTEXT,
             "user_question": user_question,
         }

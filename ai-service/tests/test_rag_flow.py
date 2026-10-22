@@ -52,7 +52,8 @@ def test_unknown_intent_label_becomes_unsupported():
 
 
 def test_final_prompt_contains_current_date():
-    expected = datetime.now(UTC).astimezone().date().isoformat()
+    d = datetime.now(UTC).astimezone().date()
+    expected = f"{d:%A} {d.day} {d:%B %Y}"
 
     with patch("app.services.retrieval.Retriever.get_context") as mock_get_context:
         mock_get_context.return_value = EMPTY

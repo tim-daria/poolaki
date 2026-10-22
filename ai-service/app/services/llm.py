@@ -63,7 +63,7 @@ class LLMService:
 
         prompt = self._prompt_builder.build(
             user_question=question,
-            today=today.isoformat(),
+            today=today,
             context=context,
         )
 
