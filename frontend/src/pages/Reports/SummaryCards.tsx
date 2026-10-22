@@ -13,8 +13,8 @@ import { Money } from "../../components/Money";
 
 interface SummaryCardsProps {
   totals: YearlyReportResponse["totals"];
-  /** Net of the year's transfers. Null when they did not load; the tile is then absent. */
-  setAside: number | null;
+  /** Net of the year's transfers. */
+  setAside: number;
 }
 
 function Tile({
@@ -93,9 +93,7 @@ export function SummaryCards({ totals, setAside }: SummaryCardsProps) {
         amount={parseMoney(totals.expense)}
         color="error.main"
       />
-      {setAside !== null && (
-        <Tile label="Set aside" amount={setAside} color="primary.main" />
-      )}
+      <Tile label="Set aside" amount={setAside} color="primary.main" />
     </Box>
   );
 }

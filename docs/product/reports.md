@@ -16,8 +16,8 @@ The reports page provides visual and consolidated financial summaries, allowing 
 
 - **Annual Transactions Filter:** Features an annual for entire report, and as a default will use the current year.
 
-- **Summary cards:** Display income, expenses, contributions, and withdrawals
-  for the filtered year.
+- **Summary cards:** Display income, expenses, and the amount set aside
+  (contributions minus withdrawals) for the filtered year.
 
 - **Savings Consolidations:** Displays month-by-month consolidated savings for a selected year.
 

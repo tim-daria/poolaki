@@ -24,12 +24,14 @@ const MOCK_REPORT: YearlyReportResponse = {
   totals: {
     income: "1000.00",
     expense: "4110.00",
+    goals_balance: "241.00",
   },
   monthly: Array.from({ length: 12 }, (_, i) => ({
     month: i + 1,
     income: i === 5 ? "1000.00" : "0.00",
     expense:
       i === 0 ? "888.00" : i === 8 ? "2222.00" : i === 9 ? "1000.00" : "0.00",
+    goals_balance: i === 9 ? "241.00" : "0.00",
   })),
   categories: [
     {
@@ -54,6 +56,18 @@ const MOCK_REPORT: YearlyReportResponse = {
     },
   ],
   goal_balance: "1540.50",
+  goals: [
+    {
+      goal_id: 15,
+      name: "Travel",
+      status: "active",
+      target_amount: "222.00",
+      balance: "241.00",
+      monthly: Array.from({ length: 12 }, (_, i) =>
+        i === 9 ? "241.00" : "0.00",
+      ),
+    },
+  ],
 };
 
 describe("fetchYearlyReport", () => {
