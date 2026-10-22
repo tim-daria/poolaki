@@ -25,3 +25,17 @@ def test_placeholders_are_filled_in_one_pass():
     assert (
         prompt.count("SECRET DATA") == 1
     )  # the user's "{{context}}" was NOT re-substituted
+def test_prompt_contains_current_date():
+    builder = PromptBuilder()
+    now = datetime.now(UTC).astimezone()
+    prompt = builder.build("What is the current month?", "")
+    assert f"{now:%A} {now.day} {now:%B %Y}" in prompt
+    assert "{{current_date}}" not in prompt
+
+
+def test_prompt_contains_formatting_rules():
+    builder = PromptBuilder()
+    prompt = builder.build("How much did I spend?", "")
+    assert "€5.000,00" in prompt
+    assert "**bold**" in prompt
+    assert "21 October 2026" in prompt

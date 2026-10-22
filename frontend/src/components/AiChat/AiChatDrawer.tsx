@@ -155,7 +155,8 @@ export function AiChatDrawer({ open, onClose }: Props) {
             size="small"
             placeholder="Ask a question…"
             onKeyDown={onInputKeyDown}
-            disabled={sending}
+            // Stays enabled while sending: a disabled field drops focus and
+            // nothing would bring it back. submit() ignores input meanwhile.
             autoFocus
           />
           <IconButton

@@ -11,6 +11,7 @@ import {
   type Theme,
 } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
+import { PHONE } from "../../lib/layout";
 
 interface TitledCardProps {
   title: string;
@@ -46,30 +47,48 @@ export function TitledCard({
   const userSx = Array.isArray(sx) ? sx : [sx];
   const content = (
     <>
-      <Box>
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-            minHeight: 36,
-          }}
-        >
+      {/* Title and subtitle are one block, the action another: a wide
+          action (a segmented control on a phone) drops under both rather
+          than splitting them or squeezing the title onto two lines. */}
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
           <Typography
             component="h2"
-            sx={{ fontWeight: 700, fontSize: "1.15rem" }}
+            sx={{ fontWeight: 700, fontSize: "1.15rem", lineHeight: "36px" }}
           >
             {title}
           </Typography>
-          {action}
-        </Stack>
-        {subtitle && (
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {subtitle}
-          </Typography>
+          {subtitle && (
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
+        {action && (
+          // Centred on the title's line, whatever the subtitle adds below.
+          // On phones the slot takes whatever width its line leaves, so a
+          // control that wraps under the title can span the card.
+          <Box
+            sx={{
+              minHeight: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              [PHONE]: { flexGrow: 1 },
+            }}
+          >
+            {action}
+          </Box>
         )}
-      </Box>
+      </Stack>
       {children}
     </>
   );
