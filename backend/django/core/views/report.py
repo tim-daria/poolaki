@@ -1,3 +1,5 @@
+"""Expose the yearly organization finance report API."""
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -17,12 +19,11 @@ class ReportView(APIView):
     Yearly finance report for the reporting page.
 
     GET
-    Returns yearly aggregates for the organization: income/expense totals,
-    a 12-month distribution (zero-filled), and the per-category breakdown
-    for the selected year, plus `goal_balance` — the current balance across
-    all active and completed goals, independent of the selected year.
-    Contribution rows are excluded from every yearly section (savings are
-    reported net of withdrawals via `goal_balance`).
+    Returns yearly aggregates for the organization: income/expense and
+    net goal transfer totals, a zero-filled 12-month distribution, the
+    per-category breakdown, and active/completed goal balances. Each goal
+    includes its current balance and a selected-year, month-end balance series.
+    `goal_balance` is the current-month aggregate balance across those goals.
 
     Query parameters:
     - year (optional, integer 2000..2100): calendar year to report on.

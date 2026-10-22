@@ -6,7 +6,7 @@ The Poolaki AI Service is an independent microservice responsible for AI-related
 
 The service is built with FastAPI and is designed to keep AI capabilities decoupled from the Django backend. It will progressively support RAG orchestration, prompt management, retrieval, and LLM communication.
 
-Currently, this service provides RAG orchestration + intent classification + LLM integration (openRouter) and exposes a health check endpoint.
+Currently, this service provides RAG orchestration, intent classification, hybrid retrieval (internal Django API + pgvector), token/latency tracking and LLM integration, and exposes a health check endpoint.
 
 ---
 
@@ -37,7 +37,7 @@ AI response:
 
 The AI Service runs as an independent Docker container and communicates with the Django backend through HTTP APIs.
 
-**note:_** `Django` integration currently uses a temporary mock client for local development and end-to-end testing. It will be replaced by the internal Django API integration.
+**Note:** Structured financial data comes from the internal Django API (`/api/internal/v1/`): `analytics/summary/`, `categories/` and `transactions/`.
 
 Current architecture:
 
@@ -176,12 +176,21 @@ Example:
 AI_SERVICE_ENV=development
 AI_SERVICE_PORT=8000
 
-LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_API_KEY=<your-openrouter-api-key>
+LLM_BASE_URL=<url>
+LLM_API_KEY=<your-api-key>
 LLM_MODEL=<your-model>
+DJANGO_BASE_URL=http://backend:8000
+DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>
+
+# Optional (defaults shown)
+# LLM_FALLBACK_MODEL=<your-model>
+# MAX_CONTEXT_TOKENS=3000
+# MIN_SIMILARITY=0.75
+# VECTOR_TOP_K=3
+
 ```
 
-**Note:** include LLM provider configuration.
+**Note:** LLM_*, DJANGO_BASE_URL and DATABASE_URL are required; the service does not start without them.
 
 ## Instructions
 
@@ -237,6 +246,47 @@ docker compose exec caddy wget -qO- \
 
 **Note**: The chat endpoint currently supports intent classification, retrieval, context construction, prompt generation, and LLM response generation.
 
+### Error responses
+
+| Case                                                       | HTTP                                                                   |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Backend returns `FORBIDDEN` (user not in the organization) | 403                                                                    |
+| Backend returns `INVALID_REQUEST`                          | 400                                                                    |
+| All LLM attempts fail                                      | 503                                                                    |
+| Backend down or 5xx                                        | 200, degraded answer (vector context + "data temporarily unavailable") |
+
+## Observability: tokens and latency
+
+Each request logs one JSON event per stage plus a summary:
+
+    docker compose logs ai-service | grep -E "intent_classified|retrieval_done|llm_final_done|chat_completed"
+
+| Event               | Key fields                                                       | Meaning                                |
+| ------------------- | ---------------------------------------------------------------- | -------------------------------------- |
+| `intent_classified` | `intent`, `intent_ms`                                            | Intent LLM call                        |
+| `retrieval_done`    | `endpoint`, `docs`, `has_structured`, `degraded`, `retrieval_ms` | Vector search + Django call (parallel) |
+| `llm_final_done`    | `final_ms`                                                       | Final LLM call                         |
+| `chat_completed`    | `latency_ms`, token fields, `total_tokens`                       | Whole request                          |
+
+Token fields in `chat_completed`:
+
+| Field                      | Source                                                              |
+| -------------------------- | ------------------------------------------------------------------- |
+| `intent_in` / `intent_out` | Provider `usage` of the intent call                                 |
+| `embedding`                | Embedding tokens (0 until real embeddings land)                     |
+| `final_in` / `final_out`   | Provider `usage` of the final call                                  |
+| `context_est`              | Estimate (~4 chars/token) of the `<context>`; NOT part of the total |
+| `total_tokens`             | `intent_in + intent_out + embedding + final_in + final_out`         |
+
+How to read it:
+
+- `latency_ms` ≈ `intent_ms` + `retrieval_ms` + `final_ms` (plus small overhead).
+- Latency is usually dominated by the LLM provider, not by retrieval.
+- `final_in` includes a fixed cost (~1300 tokens) from the system prompt.
+- If a model does not report `usage`, its tokens appear as `0`.
+- `degraded: true` means Django failed and the answer used vector context only.
+- These values are logs only; they are not returned in the API response.
+
 ## API Documentation
 
 FastAPI automatically generates interactive API documentation.
@@ -253,7 +303,7 @@ ReDoc:
 /redoc
 ```
 
-For service contracts and communication details, see: [api-contract.md](docs/ai/api-contract.md)
+For service contracts and communication details, see: [api-contract.md](../docs/ai/api/api-contract.md)
 
 ## Development Guidelines
 
@@ -261,15 +311,17 @@ For service contracts and communication details, see: [api-contract.md](docs/ai/
 - Django owns business rules and user data.
 - Communication happens through API contracts.
 
-For detailed decisions, see: [decisions.md](docs/ai/decisions.md)
+For detailed decisions, see: [decisions.md](../docs/ai/decisions.md)
 
 ## Documentation
 
-- Architecture: `docs/architecture.md`
+- Architecture: [architecture.md](../docs/ai/architecture.md)
 
-- API Contract: `docs/api-contract.md`
+- RAG design: [rag-design.md](../docs/ai/rag-design.md)
 
-- Decisions: `docs/decisions.md`
+- API Contract: [api-contract.md](../docs/ai/api/api-contract.md)
+
+- Decisions: [decisions.md](../docs/ai/decisions.md)
 
 ## Versioning
 
@@ -278,7 +330,7 @@ The AI Service follows semantic versioning.
 Current version:
 
 ```
-0.1.0
+0.6.0
 ```
 
 Changes are documented in: [CHANGELOG.md](CHANGELOG.md)

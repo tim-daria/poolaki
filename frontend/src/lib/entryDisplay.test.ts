@@ -1,17 +1,24 @@
-/** @file Entry styling: signs and colours per type, the category label, the subtitle per goal state. */
+/** @file Entry styling: signs and colours per type, the overdraft settlement, the category label, the subtitle per goal state. */
 
 import { describe, expect, it } from "vitest";
 import type { Category } from "./categories";
 import {
   ENTRY_STYLE,
+  OVERDRAFT_STYLE,
   entryCategoryLabel,
+  entryStyle,
   entrySubtitle,
   entryTitle,
+  isOverdraftSettlement,
+  overdraftHint,
 } from "./entryDisplay";
 import type { Goal } from "./goals";
+import { displayAmount } from "./money";
 import type { EntryType, Transaction } from "./transactions";
 
 const FOOD: Category = { id: 3, name: "Food", type: "expense" };
+/** What the form files every contribution under. */
+const CONTRIBUTION_CATEGORY = 4;
 
 function goal(overrides: Partial<Goal> = {}): Goal {
   return {
@@ -57,6 +64,53 @@ describe("ENTRY_STYLE", () => {
   });
 });
 
+describe("isOverdraftSettlement", () => {
+  it("is the contribution without a category", () => {
+    expect(
+      isOverdraftSettlement(tx({ entry_type: "contribution", category: null })),
+    ).toBe(true);
+  });
+
+  it.each<[string, Partial<Transaction>]>([
+    [
+      "a filed contribution",
+      { entry_type: "contribution", category: CONTRIBUTION_CATEGORY },
+    ],
+    ["a withdrawal", { entry_type: "withdraw", category: null }],
+    ["an expense whose category was removed", { category: null }],
+  ])("is not %s", (_, overrides) => {
+    expect(isOverdraftSettlement(tx(overrides))).toBe(false);
+  });
+});
+
+describe("entryStyle", () => {
+  it("draws the settlement outlined, with a muted amount", () => {
+    const row = tx({ entry_type: "contribution", category: null });
+    expect(entryStyle(row)).toBe(OVERDRAFT_STYLE);
+    expect(OVERDRAFT_STYLE).toMatchObject({
+      chipBg: "transparent",
+      chipBorder: "accent.main",
+      color: "text.secondary",
+    });
+  });
+
+  it("draws a filed contribution as a contribution", () => {
+    const row = tx({
+      entry_type: "contribution",
+      category: CONTRIBUTION_CATEGORY,
+    });
+    expect(entryStyle(row)).toBe(ENTRY_STYLE.contribution);
+  });
+});
+
+describe("overdraftHint", () => {
+  it("names the amount the goal was over by", () => {
+    expect(overdraftHint(70)).toBe(
+      `This isn't a new expense. You spent €${displayAmount(70)} more than the goal held, and this moves that amount from your balance when the goal is archived.`,
+    );
+  });
+});
+
 describe("entryCategoryLabel", () => {
   it("names the category of an income or expense", () => {
     expect(entryCategoryLabel(tx(), [FOOD])).toBe("Food");
@@ -66,13 +120,22 @@ describe("entryCategoryLabel", () => {
   it("files a contribution under Savings and a withdrawal under Withdraw", () => {
     expect(
       entryCategoryLabel(
-        tx({ entry_type: "contribution", category: null }),
+        tx({ entry_type: "contribution", category: CONTRIBUTION_CATEGORY }),
         [],
       ),
     ).toBe("Savings");
     expect(
       entryCategoryLabel(tx({ entry_type: "withdraw", category: null }), []),
     ).toBe("Withdraw");
+  });
+
+  it("files the settlement under Overdraft", () => {
+    expect(
+      entryCategoryLabel(
+        tx({ entry_type: "contribution", category: null }),
+        [],
+      ),
+    ).toBe("Overdraft");
   });
 });
 
@@ -97,17 +160,28 @@ describe("entrySubtitle", () => {
     const topUp = tx({
       entry_type: "contribution",
       goal: 9,
+      category: CONTRIBUTION_CATEGORY,
+      description: "Archived Trip",
+    });
+    const earlierWithdrawal = tx({
+      entry_type: "withdraw",
+      goal: 9,
       category: null,
       description: "",
     });
     expect(entrySubtitle(topUp, [archived])).toBeNull();
+    expect(entrySubtitle(earlierWithdrawal, [archived])).toBeNull();
   });
 
   it("is null for a plain expense, a transfer on an open goal, or an unknown goal", () => {
     expect(entrySubtitle(tx(), [goal()])).toBeNull();
     expect(
       entrySubtitle(
-        tx({ entry_type: "contribution", goal: 9, category: null }),
+        tx({
+          entry_type: "contribution",
+          goal: 9,
+          category: CONTRIBUTION_CATEGORY,
+        }),
         [goal()],
       ),
     ).toBeNull();
