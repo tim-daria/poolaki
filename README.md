@@ -103,6 +103,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 - Backend API documentation: [Backend Readme](backend/README.md) and [other backend documents](docs/backend)
 - AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
 - Frontend documentation: [Frontend documents](docs/frontend), and other [frontend documents](docs/frontend)
+- Input validation, both sides: [docs/validation.md](docs/validation.md)
 
 ## Additional Sections [... NEEDS TO BE FILLED ...]
 
