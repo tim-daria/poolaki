@@ -126,18 +126,18 @@ shape at `NAV_MOBILE_QUERY`.
 
 ## The pieces you build with
 
-| Component                                  | Role                                                                                      |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `Box`                                      | a `div` with `sx`                                                                         |
-| `Stack`                                    | flex container with a `spacing` prop; use it instead of hand-written flexbox              |
-| `Paper variant="card"` / `"clickableCard"` | the one card look; `components/Card/TitledCard` frames it with a title row                |
-| `Typography variant=…`                     | text; custom `mono` (figures) and `label` (uppercase table heads, section labels)         |
-| `Button`                                   | pill, no elevation (theme); `variant="contained"` for the page's one primary action       |
-| `IconButton`                               | round, unaffected by the Button pill override                                             |
-| `Chip`                                     | category labels, active filters; the archive's "Overdraft" chip is the one outlined chip |
-| `ToggleButtonGroup`                        | segmented control; look comes from the theme, callers set only size and radius            |
-| `Drawer` / `Dialog`                        | overlays; shape and anchor come from `hooks/useSheet` — never set width/height per drawer |
-| `Alert`, toasts via `useToast`             | errors that are not field errors                                                          |
+| Component                                  | Role                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `Box`                                      | a `div` with `sx`                                                                          |
+| `Stack`                                    | flex container with a `spacing` prop; use it instead of hand-written flexbox               |
+| `Paper variant="card"` / `"clickableCard"` | the one card look; `components/Card/TitledCard` frames it with a title row                 |
+| `Typography variant=…`                     | text; custom `mono` (figures) and `label` (uppercase table heads, section labels)          |
+| `Button`                                   | pill, no elevation (theme); `variant="contained"` for the page's one primary action        |
+| `IconButton`                               | round, unaffected by the Button pill override                                              |
+| `Chip`                                     | category labels, active filters; the archive's "Overdraft" chip is the one outlined chip   |
+| `ToggleButtonGroup`                        | segmented control by default; `className="cards"` for the outlined direction cards (theme) |
+| `Drawer` / `Dialog`                        | overlays; shape and anchor come from `hooks/useSheet` — never set width/height per drawer  |
+| `Alert`, toasts via `useToast`             | errors that are not field errors                                                           |
 
 Nearly every page is `Paper > Stack > (Typography | Button | TextField | Table)`.
 
