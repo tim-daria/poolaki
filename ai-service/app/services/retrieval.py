@@ -1,13 +1,35 @@
 # Hybrid RAG
+import asyncio
+import json
+import logging
+import time
 from abc import ABC, abstractmethod
+from typing import Any, Protocol
 
+from app.clients.django import DjangoClientError
+from app.config.settings import settings
+from app.services.intention import ENDPOINT_BY_INTENT, Intent
 from models.retrieval import CombinedRetrievalResult, RetrievedItem
+from models.usage import TokenUsage
+
+logger = logging.getLogger(__name__)
+
+# Errors that must reach the user (403/400); anything else degrades to vectors only
+PROPAGATED_ERROR_CODES = {"FORBIDDEN", "INVALID_REQUEST"}
+
+
+class BackendClient(Protocol):
+    async def fetch_backend_data(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any]: ...
 
 
 class MockDocumentRepository:
-    """TESTING ONLY: Mock temporal para simular búsqueda en base de datos vectorial."""
+    """TESTING ONLY: Temporal mock to simulate vector search."""
 
-    async def search_documents(self, query: str, top_k: int = 3) -> list[str]:
+    async def search_documents(
+        self, query: str, usage: TokenUsage, top_k: int = 3
+    ) -> list[str]:
         return [f"doc_{i}" for i in range(top_k)]
 
 
@@ -18,48 +40,65 @@ class BaseRetriever(ABC):
         user_id: int,
         organization_id: int,
         query: str,
-        intent: str | None = None,
-        top_k: int = 3,
+        usage: TokenUsage,
+        intent: Intent | None = None,
+        top_k: int | None = None,
     ) -> CombinedRetrievalResult:
         pass
 
 
-class MockRetriever(BaseRetriever):
+class Retriever(BaseRetriever):
     def __init__(
         self,
         doc_repo: MockDocumentRepository,
-        django_client,
+        django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
         self._django_client = django_client
 
     def _resolve_endpoint_from_intent(
         self,
-        intent: str | None,
+        intent: Intent | None,
     ) -> str | None:
-        if intent == "summary":
-            return "/api/internal/v1/analytics/summary/"
-        if intent == "categories":
-            return "/api/internal/v1/categories/"
-        if intent == "transactions":
-            return "/api/internal/v1/transactions/"
-        # if intent == "goal_progress":
-        #     return "/api/internal/v1/goals/progress"
-        return None
+        if intent is None:
+            return None
+        path = ENDPOINT_BY_INTENT.get(intent)
+        return f"/api/internal/v1/{path}/" if path else None
 
     async def get_context(
         self,
         user_id: int,
         organization_id: int,
         query: str,
-        intent: str | None = None,
-        top_k: int = 3,
+        usage: TokenUsage,
+        intent: Intent | None = None,
+        top_k: int | None = None,
     ) -> CombinedRetrievalResult:
 
-        documents = await self._doc_repo.search_documents(
-            query=query,
-            top_k=top_k,
+        top_k = top_k or settings.vector_top_k
+        start = time.perf_counter()
+        endpoint = self._resolve_endpoint_from_intent(intent)
+        payload = {"user_id": user_id, "organization_id": organization_id}
+
+        # Vectors always run; Django only if the intent has an endpoint
+        vector_task = self._doc_repo.search_documents(
+            query=query, usage=usage, top_k=top_k
         )
+
+        outcome: dict[str, Any] | BaseException | None = None
+        if endpoint is not None:
+            docs_result, outcome = await asyncio.gather(
+                vector_task,
+                self._django_client.fetch_backend_data(endpoint, payload),
+                return_exceptions=True,
+            )
+        else:
+            docs_result = (await asyncio.gather(vector_task, return_exceptions=True))[0]
+            outcome = None
+
+        if isinstance(docs_result, BaseException):
+            raise docs_result  # a vector failure is a real error
+        docs: list[str] = docs_result
 
         items = [
             RetrievedItem(
@@ -68,30 +107,54 @@ class MockRetriever(BaseRetriever):
                 source="vector_db",
                 metadata={},
             )
-            for doc in documents
+            for doc in docs
         ]
 
-        endpoint = self._resolve_endpoint_from_intent(intent)
-
+        structured = None
+        degraded = False
         if endpoint is not None:
-            payload = {
-                "user_id": user_id,
-                "organization_id": organization_id,
-            }
+            if (
+                isinstance(outcome, DjangoClientError)
+                and outcome.code in PROPAGATED_ERROR_CODES
+            ):
+                raise outcome  # chat.py maps it to 403/400
+            if isinstance(outcome, Exception):
+                degraded = True  # network down, 5xx...: continue with vectors only
+                logger.warning(
+                    "django_degraded",
+                    extra={"endpoint": endpoint, "error": type(outcome).__name__},
+                )
+            elif outcome:
+                structured = outcome
 
-            structured_data = await self._django_client.fetch_backend_data(
-                endpoint,
-                payload,
+        if structured:
+            items.append(
+                RetrievedItem(
+                    type="structured_data",
+                    content=json.dumps(structured, ensure_ascii=False),
+                    source="django_api",
+                    metadata={"endpoint": endpoint},
+                )
+            )
+        elif degraded:
+            items.append(
+                RetrievedItem(
+                    type="system_note",
+                    content="The user's financial data is temporarily unavailable.",
+                    source="system",
+                    metadata={},
+                )
             )
 
-            if structured_data:
-                items.append(
-                    RetrievedItem(
-                        type="structured_data",
-                        content=str(structured_data),
-                        source="django_api",
-                        metadata=structured_data,
-                    )
-                )
-
+        logger.info(
+            "retrieval_done",
+            extra={
+                "intent": intent,
+                "endpoint": endpoint,
+                "docs": docs,
+                "has_structured": bool(structured),
+                "degraded": degraded,
+                "retrieval_ms": round((time.perf_counter() - start) * 1000),
+            },
+        )
         return CombinedRetrievalResult(items=items)

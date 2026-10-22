@@ -87,7 +87,7 @@ describe("askAssistant", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse(200, {
         answer: "You spent 500 on Food this month.",
-        metadata: { intent: "monthly_summary" },
+        metadata: { intent: "summary" },
       }),
     );
 
