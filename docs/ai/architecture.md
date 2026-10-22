@@ -132,10 +132,10 @@ For detailed information regarding the Retrieval-Augmented Generation pipeline (
 │ ├── api/			# API routes and endpoints
 │ ├── clients/		# External service clients (Django, LLM providers)
 │ ├── config/		# Application configuration
-│ ├── models/		# Internal data models and API schemas
 │ ├── prompts/		# AI prompt templates
 │ ├── services/		# logic and AI workflows
 │ └── main.py		# FastAPI application entry point
+├── models/	    	# Internal data models and API schemas
 ```
 
 ---
@@ -175,8 +175,9 @@ The main backend:
 
 ### Error Handling
 
-`404`: Data not found
-
-`403`: Unauthorized access
-
-`500`: AI service unavailable
+| Case                              | HTTP                                       |
+| --------------------------------- | ------------------------------------------ |
+| Backend returns `FORBIDDEN`       | 403                                        |
+| Backend returns `INVALID_REQUEST` | 400                                        |
+| All LLM attempts fail             | 503                                        |
+| Backend down or 5xx               | 200, degraded answer (vector context only) |
