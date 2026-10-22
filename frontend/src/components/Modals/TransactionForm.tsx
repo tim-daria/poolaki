@@ -566,6 +566,9 @@ export function TransactionForm({
               <IsoDatePicker
                 labelId="transaction-date-label"
                 disabled={foreign}
+                // A new row is something that happened. An old row keeps
+                // whatever date it has, the API accepting any.
+                disableFuture={!editing}
                 value={draft.transaction_date}
                 onChange={(iso) => set("transaction_date", iso)}
                 slotProps={{

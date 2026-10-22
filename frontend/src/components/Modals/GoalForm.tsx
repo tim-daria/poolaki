@@ -228,6 +228,9 @@ export function GoalForm({ open, goal, onClose, onSaved }: Props) {
             >
               <IsoDatePicker
                 labelId="goal-date-label"
+                // The server wants today or later. Only on create: an overdue
+                // goal is still opened to be renamed or completed.
+                disablePast={!editing}
                 value={draft.target_date}
                 onChange={(iso) => set("target_date", iso)}
                 slotProps={{ textField: { id: "goal-date" } }}

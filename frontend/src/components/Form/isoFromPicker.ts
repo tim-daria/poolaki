@@ -14,3 +14,20 @@ export function isoFromPicker(
 ): string {
   return d?.isValid() && error === null ? d.format("YYYY-MM-DD") : "";
 }
+
+/**
+ * Helper text for a date a bound rejects. Only `disableFuture` and
+ * `disablePast` are named: rules a form opts into, so the field should say
+ * why. The others (a half-typed year trips `minDate`) stay silent, as the red
+ * outline is enough while typing.
+ */
+export function pickerHint(error: DateValidationError): string | undefined {
+  switch (error) {
+    case "disableFuture":
+      return "Cannot be in the future.";
+    case "disablePast":
+      return "Cannot be in the past.";
+    default:
+      return undefined;
+  }
+}
