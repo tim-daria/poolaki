@@ -16,6 +16,9 @@ export function toMoneyString(n: number): string {
   return n.toFixed(2);
 }
 
+/** Two-decimal arithmetic: amounts are cents, and float sums drift. */
+export const cents = (n: number) => Number(toMoneyString(n));
+
 /* ---------------------------------- */
 /*               Limits               */
 /* ---------------------------------- */
