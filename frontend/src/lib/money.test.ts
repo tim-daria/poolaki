@@ -13,6 +13,7 @@ import {
   parsePastedAmount,
   parseTypedAmount,
   toMoneyString,
+  cents,
   splitCents,
   toRawAmount,
   validateAmount,
@@ -23,6 +24,11 @@ describe("wire format", () => {
   it("parseMoney reads the API string and rejects garbage", () => {
     expect(parseMoney("49.90")).toBe(49.9);
     expect(() => parseMoney("abc")).toThrow(/malformed/i);
+  });
+
+  it("cents rounds float drift away", () => {
+    expect(cents(0.1 + 0.2)).toBe(0.3);
+    expect(cents(620.1 - 500)).toBe(120.1);
   });
 
   it("toMoneyString always carries two decimals", () => {

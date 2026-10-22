@@ -57,7 +57,7 @@ import {
 import { useCategories } from "../../hooks/useCategories";
 import { TransferDirection, type Direction } from "./TransferDirection";
 import { useAuth } from "../../context/useAuth";
-import { canEditTransaction } from "../../lib/access";
+import { canEditTransaction, goalLock } from "../../lib/access";
 
 /** Why the type and goal are fixed for one opening of the form. */
 type LockReason = "editing" | "contributing";
@@ -166,6 +166,14 @@ export function TransactionForm({
   const spendableGoals = goals.filter(isSpendable);
   const options = selectableCategories(categories, draft.entry_type);
 
+  /**
+   * The server refuses to delete this row (and, for an archived goal, to
+   * change its amount); the controls are disabled and the info line says why,
+   * so the refusal is never met. Null in the Add flow.
+   */
+  const lock = editRow ? goalLock(editRow, selectedGoal) : null;
+  const amountFixed = foreign || lock?.kind === "archived";
+
   /** Tracks the open/closed edge, so the block below runs once per opening. */
   const [wasOpen, setWasOpen] = useState(open);
 
@@ -215,7 +223,7 @@ export function TransactionForm({
     e.preventDefault();
 
     // Stop before the request if the draft is incomplete.
-    const problem = validateDraft(draft, goals);
+    const problem = validateDraft(draft, goals, editRow ?? undefined);
     if (problem) {
       setError(problem);
       return;
@@ -355,7 +363,11 @@ export function TransactionForm({
               <Alert severity="info">
                 {foreign
                   ? `This transaction is added by ${editRow.created_by}. Only they can change or delete it.`
-                  : "Type and goal cannot be edited after creation. To change these, please delete this transaction and create a new one."}
+                  : lock?.kind === "archived"
+                    ? `${selectedGoal?.name ?? "The goal"} is archived, so the amount is fixed and this transaction cannot be deleted. The other fields can still be changed.`
+                    : lock?.kind === "overdraw"
+                      ? `Type and goal cannot be edited after creation. This transaction cannot be deleted either: that would leave ${selectedGoal?.name ?? "the goal"} €${displayAmount(lock.shortfall)} below zero.`
+                      : "Type and goal cannot be edited after creation. To change these, please delete this transaction and create a new one."}
               </Alert>
             )}
             {lockReason === "contributing" && (
@@ -488,7 +500,7 @@ export function TransactionForm({
             <FieldLabel label="Amount" htmlFor="transaction-amount">
               <MoneyField
                 id="transaction-amount"
-                disabled={foreign}
+                disabled={amountFixed}
                 value={draft.amount}
                 onChange={(amount) => set("amount", amount)}
                 placeholder="0,00"
@@ -579,7 +591,9 @@ export function TransactionForm({
               variant="outlined"
               color="error"
               onClick={() => setConfirmingDelete(true)}
-              disabled={saving}
+              // Stays visible when locked, so the info line above has
+              // something to explain.
+              disabled={saving || lock !== null}
             >
               Delete
             </Button>
