@@ -134,7 +134,7 @@ shape at `NAV_MOBILE_QUERY`.
 | `Typography variant=…`                     | text; custom `mono` (figures) and `label` (uppercase table heads, section labels)         |
 | `Button`                                   | pill, no elevation (theme); `variant="contained"` for the page's one primary action       |
 | `IconButton`                               | round, unaffected by the Button pill override                                             |
-| `Chip`                                     | category labels, active filters                                                           |
+| `Chip`                                     | category labels, active filters; the archive's "Overdraft" chip is the one outlined chip |
 | `ToggleButtonGroup`                        | segmented control; look comes from the theme, callers set only size and radius            |
 | `Drawer` / `Dialog`                        | overlays; shape and anchor come from `hooks/useSheet` — never set width/height per drawer |
 | `Alert`, toasts via `useToast`             | errors that are not field errors                                                          |

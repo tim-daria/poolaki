@@ -14,7 +14,15 @@ The reports page provides visual and consolidated financial summaries, allowing 
 
 ## Key Features and Visualizations
 
-- **Annual Transactions Filter:** Features an annual for entire report, and as a default will use the current year.
+- **Year filter:** The whole report covers one year, the current year by
+  default. The selector offers every year from the workspace's oldest
+  transaction up to the current year, newest first, including years with no
+  transactions; picking an empty year renders a zero-filled report. The page
+  only learns the year of the oldest row, not which years have rows, so it
+  cannot skip the gaps; offering only populated years would need the backend
+  to expose the distinct transaction years. If there are no transactions, or
+  that lookup fails, only the current year is offered and the report still
+  loads.
 
 - **Summary cards:** Display income, expenses, and the amount set aside
   (contributions minus withdrawals) for the filtered year.
