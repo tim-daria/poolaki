@@ -11,7 +11,9 @@ class EmbeddingService:
         self.llm_client = llm_client
         self.db_pool = db_pool
 
-    def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
+    def chunk_text(
+        self, text: str, chunk_size: int = 1000, overlap: int = 200
+    ) -> list[str]:
         """Chunk the documents with a small overlapping."""
         chunks = []
         start = 0
@@ -26,33 +28,35 @@ class EmbeddingService:
         return chunks
 
     async def ingest_document(self, document_id: str, text: str) -> None:
-        """Orquesta la división de texto, la generación de embeddings y el guardado en pgvector."""
+        """Chunk the text, generate embeddings, and persist them to pgvector."""
         chunks = self.chunk_text(text)
-        
+
         if not chunks:
             logger.warning("No text to process for document_id=%s", document_id)
             return
 
-        # Llama al nuevo método del cliente LLM
+        # Generate embeddings through the LLM client.
         embeddings = await self.llm_client.generate_embeddings(chunks)
 
         # Save into the db
-        async with self.db_pool.acquire() as conn:
-            async with conn.transaction():
-                for idx in range(len(chunks)):
-                    chunk_text = chunks[idx]
-                    vector = embeddings[idx]
-                    
-                    # pgvector accepts the representation in str of a py list
-                    await conn.execute(
-                        """
-                        INSERT INTO document_chunks (document_id, chunk_index, content, embedding)
-                        VALUES ($1, $2, $3, $4)
+        async with self.db_pool.acquire() as conn, conn.transaction():
+            for idx in range(len(chunks)):
+                chunk_text = chunks[idx]
+                vector = embeddings[idx]
+
+                # pgvector accepts the representation in str of a py list
+                await conn.execute(
+                    """
+                        INSERT INTO chunks (document_id, content, embedding)
+                        VALUES ($1, $2, $3::vector)
                         """,
-                        document_id,
-                        idx,
-                        chunk_text,
-                        str(vector)
-                    )
-        
-        logger.info("Successfully ingested document_id=%s with %s chunks", document_id, len(chunks))
+                    document_id,
+                    chunk_text,
+                    str(vector),
+                )
+
+        logger.info(
+            "Successfully ingested document_id=%s with %s chunks",
+            document_id,
+            len(chunks),
+        )

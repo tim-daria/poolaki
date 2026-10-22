@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     llm_base_url: str
     llm_model: str
     llm_fallback_model: str | None = None
-    llm_embedding_model: str
+    embedding_model: str
     llm_api_key: str
     llm_timeout: float = 30.0
     llm_max_retries: int = 1
@@ -20,9 +20,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-# RAG pipeline
+    # RAG pipeline
     max_context_tokens: int = 3000  # budget of <context> (estimated)
     min_similarity: float = 0.75  # min pgvector threshold (adjust with test)
     vector_top_k: int = 3  # semantic documents per query
+
 
 settings = Settings()
