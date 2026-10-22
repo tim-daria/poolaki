@@ -19,9 +19,12 @@ class FakeDjango:
             raise self._error
         return {"year": 2026, "balance": "3500.00", "months": []}
 
+class FakeVectorSearchService:
+    async def search(self, query: str, limit: int = 5) -> list[dict]:
+        return [{"content": f"doc_{i}"} for i in range(limit)]
 
 def make_retriever(error: DjangoClientError | None = None) -> Retriever:
-    return Retriever(doc_repo=MockDocumentRepository(), django_client=FakeDjango(error))
+    return Retriever(doc_repo=FakeVectorSearchService(), django_client=FakeDjango(error))
 
 
 @pytest.mark.asyncio

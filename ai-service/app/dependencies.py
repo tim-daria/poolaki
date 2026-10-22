@@ -40,7 +40,7 @@ def get_llm_service(request: Request) -> LLMService:
     django_client = request.app.state.django_client
 
     retriever = Retriever(
-        doc_repo=MockDocumentRepository(),
+        doc_repo=get_vector_search_service(request),
         django_client=django_client,
     )
 

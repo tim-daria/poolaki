@@ -24,9 +24,7 @@ class BackendClient(Protocol):
     ) -> dict[str, Any]: ...
 
 
-class MockDocumentRepository:
-    """TESTING ONLY: Temporal mock to simulate vector search."""
-
+class DocumentRepositoryProtocol(Protocol):
     async def search_documents(
         self, query: str, usage: TokenUsage, top_k: int = 3
     ) -> list[str]:
@@ -50,7 +48,7 @@ class BaseRetriever(ABC):
 class Retriever(BaseRetriever):
     def __init__(
         self,
-        doc_repo: MockDocumentRepository,
+        doc_repo: Any,
         django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
@@ -82,7 +80,7 @@ class Retriever(BaseRetriever):
 
         # Vectors always run; Django only if the intent has an endpoint
         vector_task = self._doc_repo.search_documents(
-            query=query, usage=usage, top_k=top_k
+            query=query, usage=usage, limit=top_k
         )
 
         outcome: dict[str, Any] | BaseException | None = None
@@ -98,7 +96,9 @@ class Retriever(BaseRetriever):
 
         if isinstance(docs_result, BaseException):
             raise docs_result  # a vector failure is a real error
-        docs: list[str] = docs_result
+
+        raw_docs = docs_result  #real raw content received back
+        docs: list[str] = [doc.get("content", "") for doc in raw_docs]
 
         items = [
             RetrievedItem(
