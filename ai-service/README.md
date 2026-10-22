@@ -230,7 +230,7 @@ docker compose exec caddy wget -qO- \
 {
   "answer": "...",
   "metadata": {
-    "intent": "monthly_summary"
+    "intent": "summary"
   }
 }
 ```

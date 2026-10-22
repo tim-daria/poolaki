@@ -7,7 +7,7 @@ import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { BottomNav } from "./BottomNav/BottomNav";
-import { NAV_MOBILE_QUERY, PAGE_PADDING } from "../lib/layout";
+import { NAV_MOBILE_QUERY, PAGE_PADDING, PRINT } from "../lib/layout";
 import { useScrollingDown } from "../hooks/useScrollingDown";
 
 /**
@@ -60,6 +60,8 @@ export function AppLayout() {
         height: "100dvh",
         width: "100%",
         bgcolor: "primary.light",
+        // Paper has no viewport: the shell flows so pages break naturally.
+        [PRINT]: { height: "auto" },
       }}
     >
       {/* App shell: header stacked over the page, scrolling as one. */}
@@ -71,6 +73,8 @@ export function AppLayout() {
           flex: 1,
           minWidth: 0,
           overflowY: "auto",
+          // A scroll container prints as one clipped box.
+          [PRINT]: { overflow: "visible" },
         }}
       >
         {/* Same column, PAGE_PADDING and scroll container as the pages, so the
@@ -110,7 +114,14 @@ export function AppLayout() {
           </Box>
         </Box>
         {isMobile && (
-          <Box sx={{ position: "sticky", bottom: 0, zIndex: "appBar" }}>
+          <Box
+            sx={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: "appBar",
+              [PRINT]: { display: "none" },
+            }}
+          >
             {/* Anchored to the bar, so it rides above it whatever the safe-area
         inset adds below. */}
             <Box
