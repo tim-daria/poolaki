@@ -27,7 +27,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../../lib/layout";
+import { NAV_DESKTOP, PRINT } from "../../lib/layout";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
@@ -35,7 +35,7 @@ import { initials } from "../../lib/initials";
 import { avatarColor } from "../../lib/avatarColor";
 
 /** Shell header height. */
-export const headerHeight = 72;
+const headerHeight = 72;
 
 /**
  * One footprint for every round control on the bar, so the notification and
@@ -43,7 +43,7 @@ export const headerHeight = 72;
  * contents differ in size on purpose: a filled avatar disc reads heavier than
  * an outline glyph, so matching them pixel-for-pixel makes the avatar dominate.
  */
-const controlSize = 52;
+const controlSx = { width: 52, height: 52 } as const;
 const avatarSize = 38;
 const glyphSize = 28;
 
@@ -97,15 +97,19 @@ export function Header({
           gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
           gap: 2,
         },
+        [PRINT]: { display: "none" },
       }}
     >
+      {/* Phones: the switcher keeps to half the bar, so the controls on the
+          right never get squeezed by a long workspace name. */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 1,
           minWidth: 0,
-          [NAV_DESKTOP]: { justifySelf: "start" },
+          maxWidth: "50%",
+          [NAV_DESKTOP]: { justifySelf: "start", maxWidth: "none" },
         }}
       >
         <OrgSwitcher />
@@ -122,16 +126,46 @@ export function Header({
           [NAV_DESKTOP]: { ml: 0, justifySelf: "end" },
         }}
       >
-        {showAssistant && (
-          <Button
-            variant="outlined"
-            startIcon={<AutoAwesomeOutlinedIcon />}
-            onClick={onAssistantClick}
-            sx={{ mr: 1.5, fontWeight: 700, border: "1px solid" }}
-          >
-            Ask AI
-          </Button>
-        )}
+        {showAssistant &&
+          (mobile ? (
+            <IconButton
+              aria-label="Ask AI"
+              onClick={onAssistantClick}
+              // No margin, like the bell beside the avatar on desktop: the
+              // two controls' insets around their discs are the gap.
+              sx={controlSx}
+            >
+              {/* The ring matches the avatar disc, not the hit area, so the
+                  two read as the same size. */}
+              <Box
+                sx={{
+                  width: avatarSize,
+                  height: avatarSize,
+                  // A flex child of the padded button; without this it
+                  // shrinks to the button's content box.
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  color: "text.primary",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                <AutoAwesomeOutlinedIcon fontSize="small" />
+              </Box>
+            </IconButton>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<AutoAwesomeOutlinedIcon />}
+              onClick={onAssistantClick}
+              // Full primary border; the outlined default is half-alpha.
+              sx={{ mr: 1.5, fontWeight: 700, borderColor: "primary.main" }}
+            >
+              Ask AI
+            </Button>
+          ))}
         {!mobile && (
           <IconButton
             aria-label="Notifications"
@@ -140,7 +174,7 @@ export function Header({
             aria-haspopup="dialog"
             aria-expanded={Boolean(notifAnchor)}
             onClick={(e) => setNotifAnchor(e.currentTarget)}
-            sx={{ width: controlSize, height: controlSize }}
+            sx={controlSx}
           >
             <Badge color="error" variant="dot" invisible={unreadCount === 0}>
               <NotificationsNoneIcon sx={{ fontSize: glyphSize }} />
@@ -161,7 +195,7 @@ export function Header({
           aria-haspopup="menu"
           aria-expanded={Boolean(accountAnchor)}
           onClick={(e) => setAccountAnchor(e.currentTarget)}
-          sx={{ width: controlSize, height: controlSize }}
+          sx={controlSx}
         >
           <Badge
             color="error"
@@ -189,8 +223,10 @@ export function Header({
           onClose={closeAccount}
           slotProps={{ paper: { sx: { minWidth: 200 } } }}
         >
+          {/* Identity, not a command: a Box so it is neither focusable nor
+              announced as a disabled item. Padding matches MenuItem. */}
           {user && (
-            <MenuItem disabled sx={{ opacity: "1 !important" }}>
+            <Box sx={{ px: 2, py: 0.75 }}>
               <ListItemText
                 primary={user.username}
                 secondary={user.email}
@@ -199,7 +235,7 @@ export function Header({
                   secondary: { noWrap: true },
                 }}
               />
-            </MenuItem>
+            </Box>
           )}
           {user && <Divider />}
 

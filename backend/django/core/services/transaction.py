@@ -12,14 +12,13 @@ from django.db.models.query import QuerySet
 
 from core.models import (
     EntryType,
-    Membership,
     NotificationType,
     Organization,
     Transaction,
     User,
 )
 from core.services.balance import GoalBalanceMutation, lock_goal_and_validate_balance
-from core.services.notification import notify_users
+from core.services.notification import notify_org_members_except
 
 
 @dataclass(frozen=True)
@@ -176,12 +175,9 @@ def _create_transaction_entry(
         is_tax_deductible=is_tax_deductible,
     )
     # A personal budget has a single member, so no notifications about new transaction.
-    notify_users(
-        list(
-            Membership.objects.filter(org=org)
-            .exclude(user=created_by)
-            .values_list("user_id", flat=True)
-        ),
+    notify_org_members_except(
+        org,
+        created_by,
         NotificationType.TRANSACTION_ADDED,
         {
             "org_name": org.name,
@@ -190,7 +186,6 @@ def _create_transaction_entry(
             "amount": str(txn.amount),
             "entry_type": txn.entry_type,
         },
-        org=org,
     )
     return txn
 

@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AiChatDrawer } from "./AiChat/AiChatDrawer";
-import { Outlet, useParams, Link as RouterLink } from "react-router";
-import { Box, Link, useMediaQuery } from "@mui/material";
+import { Outlet, useParams } from "react-router";
+import { Box, useMediaQuery } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
 import { BottomNav } from "./BottomNav/BottomNav";
-import { LEGAL_LINKS } from "./BottomNav/navItems";
-import { NAV_MOBILE_QUERY, PAGE_PADDING } from "../lib/layout";
+import { NAV_MOBILE_QUERY, PAGE_PADDING, PRINT } from "../lib/layout";
 import { useScrollingDown } from "../hooks/useScrollingDown";
 
 /**
@@ -61,6 +60,8 @@ export function AppLayout() {
         height: "100dvh",
         width: "100%",
         bgcolor: "primary.light",
+        // Paper has no viewport: the shell flows so pages break naturally.
+        [PRINT]: { height: "auto" },
       }}
     >
       {/* App shell: header stacked over the page, scrolling as one. */}
@@ -72,6 +73,8 @@ export function AppLayout() {
           flex: 1,
           minWidth: 0,
           overflowY: "auto",
+          // A scroll container prints as one clipped box.
+          [PRINT]: { overflow: "visible" },
         }}
       >
         {/* Same column, PAGE_PADDING and scroll container as the pages, so the
@@ -109,32 +112,16 @@ export function AppLayout() {
               <Outlet />
             </PageHeader>
           </Box>
-
-          {/* Below the page on every size; the bottom bar does not carry them. */}
-          <Box
-            component="footer"
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 2,
-              py: 2,
-            }}
-          >
-            {LEGAL_LINKS.map(({ to, label }) => (
-              <Link
-                key={to}
-                component={RouterLink}
-                to={to}
-                underline="hover"
-                sx={{ fontSize: "0.75rem", color: "text.secondary" }}
-              >
-                {label}
-              </Link>
-            ))}
-          </Box>
         </Box>
         {isMobile && (
-          <Box sx={{ position: "sticky", bottom: 0, zIndex: "appBar" }}>
+          <Box
+            sx={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: "appBar",
+              [PRINT]: { display: "none" },
+            }}
+          >
             {/* Anchored to the bar, so it rides above it whatever the safe-area
         inset adds below. */}
             <Box

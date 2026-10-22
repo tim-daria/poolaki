@@ -1,5 +1,8 @@
-from datetime import UTC, datetime
+import re
+from datetime import date
 from pathlib import Path
+
+from app.services.context_builder import NO_CONTEXT
 
 APP_DIR = Path(__file__).resolve().parent.parent
 PROMPTS_PATH = APP_DIR / "prompts"
@@ -19,20 +22,22 @@ class PromptBuilder:
 
     def build(
         self,
+        today: date,
         user_question: str,
         context: str = "",
     ) -> str:
-        if not context.strip():
-            formatted_context = "Not relevant data found for your question"
-        else:
-            formatted_context = context
+
+        values = {
+            # "Wednesday 21 October 2026"; `today.day` instead of the glibc-only `%-d`
+            "current_date": f"{today:%A} {today.day} {today:%B %Y}",
+            "context": context if context.strip() else NO_CONTEXT,
+            "user_question": user_question,
+        }
 
         prompt = f"{self.base_system}\n\n{self.financial_assistant}"
 
-        current_date = datetime.now(UTC).astimezone().date().isoformat()
-
-        return (
-            prompt.replace("{{user_question}}", user_question)
-            .replace("{{context}}", formatted_context)
-            .replace("{{current_date}}", current_date)
+        return re.sub(
+            r"\{\{(\w+)\}\}",
+            lambda m: values.get(m.group(1), m.group(0)),
+            prompt,
         )

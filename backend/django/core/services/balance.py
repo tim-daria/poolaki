@@ -157,4 +157,5 @@ def annotate_goal_balance(queryset: QuerySet[Goal]) -> QuerySet[Goal]:
 
 
 def get_annotated_goal_balance(goal: Goal) -> Decimal:
-    return Decimal(cast(AnnotatedGoal, goal)._goal_balance)
+    # Goals without entries come back as scale-0 "0"; keep the 2-decimals contract.
+    return Decimal(cast(AnnotatedGoal, goal)._goal_balance).quantize(Decimal("0.01"))

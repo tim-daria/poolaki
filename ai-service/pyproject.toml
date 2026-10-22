@@ -40,6 +40,9 @@ filterwarnings = [
 [tool.mypy]
 plugins = ["pydantic.mypy"]
 
+[tool.ruff]
+extend-exclude = [".venv", "__pycache__", ".cache"]
+
 [tool.ruff.lint]
 ignore = ["B008"]
 
