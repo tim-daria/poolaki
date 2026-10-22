@@ -242,7 +242,7 @@ class TransactionGetDeleteView(APIView):
                     GoalBalanceMutation.update(
                         transaction.entry_type,
                         transaction.amount,
-                        data["amount"],
+                        data.get("amount", transaction.amount),
                     ),
                 )
                 transaction = get_object_or_404(
