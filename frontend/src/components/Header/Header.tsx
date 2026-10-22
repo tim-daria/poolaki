@@ -27,7 +27,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../../context/useAuth";
 import { useNotifications } from "../../context/useNotifications";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
-import { NAV_DESKTOP } from "../../lib/layout";
+import { NAV_DESKTOP, PRINT } from "../../lib/layout";
 import { NavTabs } from "./NavTabs";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { NotificationPanel } from "./NotificationPanel";
@@ -97,6 +97,7 @@ export function Header({
           gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
           gap: 2,
         },
+        [PRINT]: { display: "none" },
       }}
     >
       {/* Phones: the switcher keeps to half the bar, so the controls on the

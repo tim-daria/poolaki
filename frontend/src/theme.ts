@@ -75,6 +75,12 @@ const cardStyle = {
   borderRadius: 24,
   padding: "var(--card-padding)",
   boxShadow: CARD_SHADOW,
+  // Shadows do not print; a hairline keeps the edge, and a card never splits across pages.
+  "@media print": {
+    boxShadow: "none",
+    border: "1px solid var(--mui-palette-divider)",
+    breakInside: "avoid",
+  },
 };
 
 export const theme = createTheme({

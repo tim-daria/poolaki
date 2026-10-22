@@ -30,7 +30,7 @@ def test_placeholders_are_filled_in_one_pass():
 
 
 def test_prompt_contains_formatting_rules():
-    prompt = PromptBuilder().build(today=TODAY, user_question="How much did I spend?")
+    prompt = PromptBuilder().build(today=date(2026, 10, 21), user_question="How much did I spend?")
 
     assert "€5.000,00" in prompt
     assert "**bold**" in prompt

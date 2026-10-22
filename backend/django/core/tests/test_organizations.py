@@ -14,6 +14,7 @@ from core.models import (
     Role,
     User,
 )
+from core.services.invitation import create_invitation
 from core.services.organization import MAX_ORGS_PER_USER
 
 pytestmark = pytest.mark.django_db
@@ -545,6 +546,33 @@ def test_last_member_leaving_notifies_pending_invitation_recipients(
     deleted = Notification.objects.get(user=invitee, type=NotificationType.ORGANIZATION_DELETED)
     assert deleted.payload == {"org_name": "Solo org", "last_member": owner.username}
     assert deleted.org is None
+
+
+def test_last_member_leaving_resolves_pending_invitation_notifications(
+    api_client: APIClient,
+    owner: User,
+    invitee: User,
+) -> None:
+    org = Organization.objects.create(
+        name="Solo org", is_personal=False, initial_balance=Decimal("0")
+    )
+    Membership.objects.create(user=owner, org=org, role=Role.OWNER)
+    # through the service, so the invitation notification exists
+    create_invitation(org, invitee.username, owner)
+    org_id = org.id
+
+    api_client.force_authenticate(user=owner)
+
+    response = api_client.post(reverse("organization-leave", kwargs={"org_id": org_id}))
+
+    assert response.status_code == 200
+
+    # no stuck Accept/Decline row: the invitation notification is resolved
+    invitation_note = Notification.objects.get(user=invitee, type=NotificationType.INVITATION)
+    assert invitation_note.is_read is True
+    # the badge now counts only the organization_deleted notification
+    unread = list(Notification.objects.filter(user=invitee, is_read=False))
+    assert [n.type for n in unread] == [NotificationType.ORGANIZATION_DELETED]
 
 
 def test_cannot_leave_personal_budget(

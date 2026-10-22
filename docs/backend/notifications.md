@@ -74,7 +74,9 @@ The leave endpoint (`POST /api/v1/organizations/{org_id}/leave/`) produces:
   (`ownership_transferred` omits `new_owner` — the recipient is the new owner.)
 
 - `organization_deleted` (to the recipients of pending invitations when the
-  last member leaves). Such notifications have `org = null`:
+  last member leaves). Such notifications have `org = null`. Deleting the
+  organization also resolves (marks read) the recipients' pending
+  `invitation` notifications, so no stale Accept/Decline row survives:
 
   ```json
   {
