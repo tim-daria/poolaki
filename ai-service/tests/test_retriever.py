@@ -4,7 +4,7 @@ import pytest
 
 from app.clients.django import DjangoClientError
 from app.services.intention import Intent
-from app.services.retrieval import MockDocumentRepository, Retriever
+from app.services.retrieval import Retriever
 from models.usage import TokenUsage
 
 

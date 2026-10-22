@@ -9,7 +9,7 @@ from app.services.embedding import EmbeddingService
 from app.services.intention import IntentionService
 from app.services.llm import LLMService
 from app.services.prompt_builder import PromptBuilder
-from app.services.retrieval import MockDocumentRepository, Retriever
+from app.services.retrieval import Retriever
 from app.services.vector_search import VectorSearchService
 
 
