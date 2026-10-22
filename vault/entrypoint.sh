@@ -106,7 +106,9 @@ if [ "$INITIALIZED" = "false" ]; then
 		tunnel_token="$TUNNEL_TOKEN"
 	
 	vault kv put secret/ai-service \
-		llm_api_key="$LLM_API_KEY"
+		llm_api_key="$LLM_API_KEY" \
+		embedding_model="$EMBEDDING_MODEL" \
+		embedding_base_url="$EMBEDDING_BASE_URL"
 
 	#######################################
 	###### Setup AppRole auth method #####
