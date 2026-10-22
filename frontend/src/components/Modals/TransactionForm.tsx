@@ -221,16 +221,23 @@ export function TransactionForm({
       return;
     }
 
+    // A transfer has no category picker, so a contribution is filed under the
+    // workspace's Contribution category. Never null: a contribution without a
+    // category is how the server marks an archive's overdraft settlement.
+    const contribution = contributionCategory(categories);
+    if (draft.entry_type === "contribution" && !contribution) {
+      setError("Categories are still loading. Try again in a moment.");
+      return;
+    }
+
     setError("");
     setSaving(true);
-    // A transfer has no category picker, so it is filed under the workspace's
-    // Contribution category. Null while the list loads; the backend allows it.
     const payload = isTransfer
       ? {
           ...draft,
           category:
             draft.entry_type === "contribution"
-              ? (contributionCategory(categories)?.id ?? null)
+              ? (contribution?.id ?? null)
               : null,
         }
       : draft;

@@ -18,17 +18,8 @@ import {
   REPORT_UNAVAILABLE,
   type YearlyReportResponse,
 } from "../../lib/reports";
-import {
-  fetchTransactionPage,
-  fetchYearTransfers,
-} from "../../lib/transactions";
-import { getGoals } from "../../lib/goals";
-import {
-  savingsByGoal,
-  savingsByMonth,
-  savingsTotal,
-  type GoalSavings,
-} from "../../lib/savings";
+import { fetchTransactionPage } from "../../lib/transactions";
+import { savingsByGoal, savingsByMonth, savingsTotal } from "../../lib/savings";
 import { yearOptions } from "../../lib/reportYears";
 import { PAGE_PADDING, PRINT, TABLET } from "../../lib/layout";
 import {
@@ -40,13 +31,6 @@ import { MonthlyChart } from "./MonthlyChart";
 import { CategoriesCard } from "./CategoriesCard";
 
 const SUBTITLE = "Income, expenses and savings for the year";
-
-interface YearSavings {
-  total: number;
-  /** Index 0 is January. */
-  byMonth: number[];
-  byGoal: GoalSavings[];
-}
 
 const pageSx = {
   ...PAGE_PADDING,
@@ -76,7 +60,6 @@ export function Component() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [savings, setSavings] = useState<YearSavings | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,28 +115,6 @@ export function Component() {
       .catch(() => {});
     return () => controller.abort();
   }, [org.id]);
-
-  // Savings are derived from transfer rows until the report carries them.
-  // Optional: a failure leaves the savings views out rather than failing the page.
-  useEffect(() => {
-    const controller = new AbortController();
-    Promise.all([
-      fetchYearTransfers(org.id, year, controller.signal),
-      getGoals(org.id, controller.signal),
-    ])
-      .then(([transfers, goals]) => {
-        setSavings({
-          total: savingsTotal(transfers),
-          byMonth: savingsByMonth(transfers, year),
-          byGoal: savingsByGoal(transfers, goals),
-        });
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        setSavings(null);
-      });
-    return () => controller.abort();
-  }, [org.id, year]);
 
   const handleYearChange = (event: SelectChangeEvent<number>) => {
     setYear(Number(event.target.value));
@@ -219,13 +180,14 @@ export function Component() {
         <>
           <SummaryCards
             totals={reportData.totals}
-            setAside={savings?.total ?? null}
+            setAside={savingsTotal(reportData.totals)}
           />
           <MonthlyChart
             monthly={reportData.monthly}
             year={year}
-            savingsByMonth={savings?.byMonth ?? null}
+            savingsByMonth={savingsByMonth(reportData.monthly)}
           />
+
           {/* Print-only page break so the categories card starts a fresh page. */}
           <Box
             sx={{
@@ -235,7 +197,7 @@ export function Component() {
           />
           <CategoriesCard
             categories={reportData.categories}
-            savingsByGoal={savings?.byGoal ?? null}
+            savingsByGoal={savingsByGoal(reportData.goals)}
             year={year}
           />
         </>

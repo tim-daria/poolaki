@@ -39,25 +39,32 @@ function report(
 ): YearlyReportResponse {
   return {
     year: 2026,
-    totals: { income: "0.00", expense: "0.00" },
+    totals: { income: "0.00", expense: "0.00", goals_balance: "0.00" },
     monthly: Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       income: "0.00",
       expense: "0.00",
+      goals_balance: "0.00",
     })),
     categories: [],
     goal_balance: "0.00",
+    goals: [],
     ...overrides,
   };
 }
 
-/** The report with August's income and expense set. */
-function augustReport(income: number, expense: number): YearlyReportResponse {
+/** The report with August's income, expense and net savings set. */
+function augustReport(
+  income: number,
+  expense: number,
+  saved = 0,
+): YearlyReportResponse {
   const r = report();
   r.monthly[7] = {
     month: 8,
     income: income.toFixed(2),
     expense: expense.toFixed(2),
+    goals_balance: saved.toFixed(2),
   };
   return r;
 }
