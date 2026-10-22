@@ -303,7 +303,7 @@ ReDoc:
 /redoc
 ```
 
-For service contracts and communication details, see: [api-contract.md](docs/ai/api-contract.md)
+For service contracts and communication details, see: [api-contract.md](../docs/ai/api/api-contract.md)
 
 ## Development Guidelines
 
