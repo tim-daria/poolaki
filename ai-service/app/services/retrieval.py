@@ -47,7 +47,7 @@ class BaseRetriever(ABC):
 class Retriever(BaseRetriever):
     def __init__(
         self,
-        doc_repo: Any,
+        doc_repo: DocumentRepositoryProtocol,
         django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
