@@ -21,15 +21,6 @@ Key planned features:
 - AI-powered conversations over financial data
 - Multi-user / concurrent usage with no data races
 
-## Modules of Choice
-
-### Minor module: Reports & Analytics dashboard (1 point)
-
-A yearly report over income, expenses and savings: one aggregation
-endpoint, custom charts and a print-ready layout. Full justification and
-technical details:
-[docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md).
-
 ## Instructions
 
 > Prerequisites and run steps will be filled in as the stack is finalized.
