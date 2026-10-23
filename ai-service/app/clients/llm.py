@@ -123,6 +123,77 @@ class LLMClient:
 
         raise LLMClientError("All LLM attempts failed") from last_error
 
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+        # Track the last exception to raise if all retries fail
+        last_error: Exception | None = None
+
+        for attempt in range(settings.llm_max_retries + 1):
+            start_time = time.perf_counter()
+
+            try:
+                payload: dict[str, Any] = {
+                    "model": settings.embedding_model,
+                    "input": texts,
+                }
+
+                response = await self._client.post(
+                    "/embeddings",
+                    json=payload,
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                embeddings: list[list[float]] = []
+
+                # Extract the vector array for each input chunk
+                for item in data.get("data", []):
+                    embeddings.append(item.get("embedding"))
+
+                usage = data.get("usage", {})
+                prompt_tokens = usage.get("prompt_tokens", 0)
+
+                logger.info(
+                    "Embeddings generated successfully",
+                    extra={
+                        "model": settings.embedding_model,
+                        "prompt_tokens": prompt_tokens,
+                        "duration": round(time.perf_counter() - start_time, 2),
+                        "chunks_count": len(texts),
+                    },
+                )
+
+                return embeddings
+
+            except httpx.TimeoutException as exc:
+                last_error = exc
+                logger.warning(
+                    "Embedding timeout",
+                    extra={"attempt": attempt + 1},
+                )
+
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code
+                logger.warning(
+                    "Embedding request failed",
+                    extra={"attempt": attempt + 1, "status_code": status_code},
+                )
+
+                if not self._is_retryable_status(status_code):
+                    raise LLMClientError(
+                        f"Non-retryable embedding error: {status_code}"
+                    ) from exc
+
+                last_error = exc
+
+            except (httpx.HTTPError, ValueError) as exc:
+                last_error = exc
+                logger.warning(
+                    "Embedding unexpected error",
+                    extra={"attempt": attempt + 1},
+                )
+
+        raise LLMClientError("All embedding attempts failed") from last_error
+
     def _is_retryable_status(self, status_code: int) -> bool:
         return status_code in {429, 502, 503}
 

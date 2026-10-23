@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     llm_base_url: str
     llm_model: str
     llm_fallback_model: str | None = None
+    embedding_model: str
     llm_api_key: str
     llm_timeout: float = 30.0
     llm_max_retries: int = 1
