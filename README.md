@@ -219,6 +219,15 @@ choice".
 ◦ How each module was implemented.
 ◦ Which team member(s) worked on each module.
 
+## Modules of Choice
+
+### Minor module: Reports & Analytics dashboard (1 point)
+
+A yearly report over income, expenses and savings: one aggregation
+endpoint, custom charts and a print-ready layout. Full justification and
+technical details:
+[docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md).
+
 </details>
 
 <details>
@@ -257,7 +266,7 @@ choice".
 ## Resources
 
 - Project subject: 42 `ft_transcendence`
-  
+
 - [django-allauth: Headless API ](https://allauth.org/docs/draft-api/)
 - [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [Mozilla Web Docs](https://developer.mozilla.org/en-US/)
