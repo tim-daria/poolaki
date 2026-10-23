@@ -10,6 +10,7 @@ from app.services.intention import IntentionService
 from app.services.llm import LLMService
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import MockDocumentRepository, Retriever
+from app.services.vector_search import VectorSearchService
 
 
 def get_settings(request: Request) -> Settings:
@@ -21,6 +22,14 @@ def get_embedding_service(request: Request) -> EmbeddingService:
     """Inject the EmbeddingService with its required dependencies."""
     return EmbeddingService(
         llm_client=request.app.state.llm_client,
+        db_pool=get_db_pool(),
+    )
+
+
+def get_vector_search_service(request: Request) -> VectorSearchService:
+    """Inject the VectorSearchService with embedding client and db pool."""
+    return VectorSearchService(
+        embedding_service=get_embedding_service(request),
         db_pool=get_db_pool(),
     )
 
