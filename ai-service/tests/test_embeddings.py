@@ -4,6 +4,7 @@ import pytest
 
 from app.clients.llm import LLMClient
 from app.services.embedding import EmbeddingService
+from models.usage import LLMUsage, TokenUsage
 
 
 def test_chunk_text_basic() -> None:
@@ -31,10 +32,30 @@ def test_chunk_text_small() -> None:
 
 
 @pytest.mark.asyncio
+async def test_embed_accumulates_usage() -> None:
+    mock_llm = AsyncMock()
+    mock_llm.generate_embeddings.return_value = (
+        [[0.1, 0.2, 0.3]],
+        LLMUsage(input_tokens=7),
+    )
+    service = EmbeddingService(llm_client=mock_llm, db_pool=MagicMock())
+    usage = TokenUsage()
+
+    embeddings = await service.embed(["hello"], usage=usage)
+
+    assert embeddings == [[0.1, 0.2, 0.3]]
+    assert usage.embedding == 7
+    mock_llm.generate_embeddings.assert_awaited_once_with(["hello"], purpose="query")
+
+
+@pytest.mark.asyncio
 async def test_ingest_document_success() -> None:
     # Mock LLM client to return fake embeddings
     mock_llm = AsyncMock()
-    mock_llm.generate_embeddings.return_value = [[0.1, 0.2, 0.3]]
+    mock_llm.generate_embeddings.return_value = (
+        [[0.1, 0.2, 0.3]],
+        LLMUsage(input_tokens=3),
+    )
 
     # Mock database connection and pool
     mock_conn = AsyncMock()

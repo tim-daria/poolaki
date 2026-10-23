@@ -48,6 +48,19 @@ The system provides analysis based on historical data, not financial forecasting
 
 ---
 
+## Conversation History and Session Memory
+
+Examples:
+
+> What did I ask before?
+> Continue from where we left off.
+> Remember that I prefer short answers.
+
+Reason:
+The assistant is stateless: each request is handled independently. It cannot see earlier messages or previous chats. Answers do not end with a follow-up question, so the user should send each question separately.
+
+---
+
 ## Weekly and Sub-Weekly Granularity
 
 Examples:

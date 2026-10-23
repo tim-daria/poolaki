@@ -133,7 +133,9 @@ class LLMClient:
 
         raise LLMClientError("All LLM attempts failed") from last_error
 
-    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+    async def generate_embeddings(
+        self, texts: list[str], purpose: str = "unknown"
+    ) -> tuple[list[list[float]], LLMUsage]:
         # Track the last exception to raise if all retries fail
         last_error: Exception | None = None
 
@@ -160,19 +162,20 @@ class LLMClient:
                     embeddings.append(item.get("embedding"))
 
                 usage = data.get("usage", {})
-                prompt_tokens = usage.get("prompt_tokens", 0)
+                prompt_tokens = int(usage.get("prompt_tokens") or 0)
 
                 logger.info(
                     "Embeddings generated successfully",
                     extra={
                         "model": settings.embedding_model,
+                        "purpose": purpose,
                         "prompt_tokens": prompt_tokens,
                         "duration": round(time.perf_counter() - start_time, 2),
                         "chunks_count": len(texts),
                     },
                 )
 
-                return embeddings
+                return embeddings, LLMUsage(input_tokens=prompt_tokens)
 
             except httpx.TimeoutException as exc:
                 last_error = exc

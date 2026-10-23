@@ -21,7 +21,9 @@ class FakeDjango:
 
 
 class FakeVectorSearchService:
-    async def search(self, query: str, limit: int = 5) -> list[dict]:
+    async def search(
+        self, query: str, limit: int = 5, usage: TokenUsage | None = None
+    ) -> list[dict]:
         return [{"content": f"doc_{i}"} for i in range(limit)]
 
 

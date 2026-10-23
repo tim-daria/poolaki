@@ -18,6 +18,18 @@ async def make_client(payload: dict) -> LLMClient:
     return client
 
 
+async def make_embedding_client(payload: dict) -> LLMClient:
+    client = LLMClient()
+    await client._embedding_client.aclose()
+    client._embedding_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=payload)
+        ),
+        base_url="http://test",
+    )
+    return client
+
+
 @pytest.mark.asyncio
 async def test_llm_success_returns_text_and_usage():
     client = await make_client(
@@ -41,6 +53,22 @@ async def test_llm_missing_usage_defaults_to_zero():
     _, usage = await client.generate_response("Hello")
 
     assert usage == LLMUsage(input_tokens=0, output_tokens=0)
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_embedding_success_returns_usage():
+    client = await make_embedding_client(
+        {
+            "data": [{"embedding": [0.1, 0.2]}],
+            "usage": {"prompt_tokens": 4},
+        }
+    )
+
+    embeddings, usage = await client.generate_embeddings(["Hello"], purpose="query")
+
+    assert embeddings == [[0.1, 0.2]]
+    assert usage == LLMUsage(input_tokens=4)
     await client.close()
 
 
@@ -82,9 +110,10 @@ async def test_generate_embeddings_uses_embedding_client(monkeypatch):
         headers={"Authorization": "Bearer embed-key"},
     )
 
-    embeddings = await client.generate_embeddings(["hello"])
+    embeddings, usage = await client.generate_embeddings(["hello"])
 
     assert embeddings == [[0.1, 0.2]]
+    assert usage.input_tokens == 2
     assert seen == {
         "url": "http://embed/embeddings",
         "authorization": "Bearer embed-key",

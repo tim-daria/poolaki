@@ -1,3 +1,5 @@
+# AI Prompt Management
+
 ## Supported Variables
 
 - `{{current_date}}`: Today's date, formatted like "Wednesday 21 October 2026".
@@ -7,6 +9,12 @@
 ## System Prompt Sections (`system_base.md`)
 
 Scope and Limits, Data Rules, Security Rules, Language, Formatting.
+
+## Conversation Behavior
+
+The assistant has no session memory. Each request is one-shot: it cannot see earlier messages, previous chats, or context the user expects it to remember.
+
+Because it cannot follow the conversation, answers do not end with a follow-up question.
 
 ## Safety Rules
 
@@ -21,4 +29,4 @@ The assistant must:
 
 ## Versioning
 
-Current prompt version: `assistant_v3`, tracked in [`ai-service/app/versions/registry.md`](../../ai-service/app/versions/registry.md).
+Current prompt version: `assistant_v4`, tracked in [`ai-service/app/versions/registry.md`](../../ai-service/app/versions/registry.md).
