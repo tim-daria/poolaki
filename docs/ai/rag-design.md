@@ -84,10 +84,14 @@ class Retriever:
         user_id: str,
         org_id: str,
         query: str,
-        intent: str
+        usage: TokenUsage,
+        intent: Intent | None = None,
+        top_k: int | None = None,
     ) -> CombinedRetrievalResult:
         ...
 ```
+
+Vector search always runs; the Django call runs in parallel only if the intent has an endpoint. `FORBIDDEN` and `INVALID_REQUEST` are propagated; any other backend failure degrades to vector-only context plus a `system_note`.
 
 ### 2.2 Context Builder (`app/services/context_builder.py`)
 
@@ -97,8 +101,15 @@ class Retriever:
 
 ```Python
 class ContextBuilder:
-    def build_context(self, retrieval_result: CombinedRetrievalResult) -> str:
+    def build_context(
+        self,
+        retrieval_result: CombinedRetrievalResult,
+        usage: TokenUsage,
+        today: date,
+    ) -> str:
 ```
+
+Formats retrieved data for the LLM, adds the data window, hides internal source names, and trims transactions by whole rows when `MAX_CONTEXT_TOKENS` is exceeded. Stores the estimated size in `usage.context_est`
 
 ### 2.3 Prompt Builder (`app/services/prompt_builder.py`)
 
@@ -111,7 +122,7 @@ class PromptBuilder:
     def build_prompt(self, user_question: str, context: str) -> str:
 ```
 
-### 2.4 LLM Client (`app/clients/llm_client.py`)
+### 2.4 LLM Client (`app/clients/llm.py`)
 
 **Responsibility:** Sends the assembled prompt to the LLM Provider (NVIDIA / OpenAI / Local model), handles streaming responses, timeouts, and fallback errors.
 
@@ -119,8 +130,10 @@ class PromptBuilder:
 
 ```Python
 class LLMClient:
-    async def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, prompt: str) -> tuple[str, LLMUsage]:
 ```
+
+Returns the provider-reported token usage (0 if the provider does not report it)
 
 ### 2.5 Global Knowledge Base
 

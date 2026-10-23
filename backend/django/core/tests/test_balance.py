@@ -1,3 +1,5 @@
+"""Tests for organization and goal balance calculations."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -5,10 +7,41 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.models import Goal, Organization, Transaction, User
-from core.services.balance import calculate_org_balance
+from core.models import EntryType, Goal, Organization, Transaction, User
+from core.services.balance import GoalBalanceMutation, calculate_org_balance
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_delta"),
+    [
+        (
+            GoalBalanceMutation.create(EntryType.CONTRIBUTION, Decimal("25.00")),
+            Decimal("25.00"),
+        ),
+        (
+            GoalBalanceMutation.create(EntryType.WITHDRAW, Decimal("25.00")),
+            Decimal("-25.00"),
+        ),
+        (
+            GoalBalanceMutation.update(
+                EntryType.WITHDRAW,
+                Decimal("10.00"),
+                Decimal("25.00"),
+            ),
+            Decimal("-15.00"),
+        ),
+        (
+            GoalBalanceMutation.delete(EntryType.CONTRIBUTION, Decimal("25.00")),
+            Decimal("-25.00"),
+        ),
+    ],
+)
+def test_goal_balance_mutation_calculates_signed_delta(
+    mutation: GoalBalanceMutation, expected_delta: Decimal
+) -> None:
+    assert mutation.delta == expected_delta
 
 
 def test_calculate_org_balance_returns_initial_balance_without_transactions(

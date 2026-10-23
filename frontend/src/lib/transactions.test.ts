@@ -389,6 +389,54 @@ describe("validateDraft", () => {
     it("lets the server decide when the goal is not in the list", () => {
       expect(validateDraft(withdraw("50"), [])).toBeNull();
     });
+
+    describe("when editing, sets the row's own amount aside", () => {
+      const row = (
+        entry_type: "contribution" | "withdraw",
+        amount: number,
+      ): Transaction => ({
+        id: 4,
+        entry_type,
+        category: null,
+        description: "",
+        amount,
+        transaction_date: "2026-03-10",
+        is_tax_deductible: false,
+        goal: 9,
+        created_by: "ana",
+      });
+
+      it("lets a withdrawal grow to the balance plus itself", () => {
+        const editing = row("withdraw", 50);
+        expect(validateDraft(withdraw("80"), [goal], editing)).toBeNull();
+        expect(validateDraft(withdraw("80.01"), [goal], editing)).toBe(
+          "Only €80,00 is in this goal.",
+        );
+      });
+
+      it("lets a contribution be lowered only to what is unspent", () => {
+        // The goal holds 30 of this 100, so 70 has been spent.
+        const editing = row("contribution", 100);
+        const contribute = (amount: string) =>
+          draft({
+            entry_type: "contribution",
+            goal: 9,
+            category: null,
+            amount,
+          });
+        expect(validateDraft(contribute("70"), [goal], editing)).toBeNull();
+        expect(validateDraft(contribute("69.99"), [goal], editing)).toBe(
+          "The goal has already spent €70,00 of this contribution.",
+        );
+      });
+
+      it("counts a row on another goal as nothing", () => {
+        const editing = { ...row("withdraw", 50), goal: 2 };
+        expect(validateDraft(withdraw("30.01"), [goal], editing)).toBe(
+          "Only €30,00 is in this goal.",
+        );
+      });
+    });
   });
 });
 

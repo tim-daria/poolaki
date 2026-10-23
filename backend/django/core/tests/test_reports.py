@@ -11,7 +11,12 @@ pytestmark = pytest.mark.django_db
 
 
 def month_row(month: int, income: str = "0.00", expense: str = "0.00") -> dict[str, int | str]:
-    return {"month": month, "income": income, "expense": expense}
+    return {
+        "month": month,
+        "income": income,
+        "expense": expense,
+        "goals_balance": "0.00",
+    }
 
 
 def add_transaction(
@@ -51,7 +56,12 @@ def add_goal_transaction(
     amount: str,
     transaction_date: str,
     category: Category | None = None,
+    categorized: bool = True,
 ) -> Transaction:
+    if categorized and entry_type == "contribution" and category is None:
+        category, _ = Category.objects.get_or_create(
+            org=org, name=f"{goal.name} contribution", type="contribution"
+        )
     return Transaction.objects.create(
         org=org,
         goal=goal,
@@ -171,7 +181,11 @@ def test_year_without_data_returns_zeros(
 
     data = report_client.get(report_url(org.id), {"year": 2001}).json()
 
-    assert data["totals"] == {"income": "0.00", "expense": "0.00"}
+    assert data["totals"] == {
+        "income": "0.00",
+        "expense": "0.00",
+        "goals_balance": "0.00",
+    }
     assert [entry["month"] for entry in data["monthly"]] == list(range(1, 13))
     assert all(entry[key] == "0.00" for entry in data["monthly"] for key in ("income", "expense"))
     assert data["categories"] == []
@@ -213,7 +227,11 @@ def test_totals_sum_income_and_expense_and_ignore_initial_balance(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["totals"] == {"income": "120.10", "expense": "40.50"}
+    assert data["totals"] == {
+        "income": "120.10",
+        "expense": "40.50",
+        "goals_balance": "0.00",
+    }
 
 
 def test_sums_wider_than_one_amount_still_serialize(
@@ -235,11 +253,9 @@ def test_sums_wider_than_one_amount_still_serialize(
     assert data["categories"][0]["total"] == "1999999999999.98"
 
 
-def test_contribution_transactions_excluded_from_all_sections(
+def test_contribution_transactions_are_reported_but_excluded_from_categories(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
-    # Savings analytics are deferred until the `withdraw` entry type exists,
-    # so contribution rows must not leak into any report section.
     _, org = personal_user
     salary = Category.objects.create(org=org, name="Salary", type="income")
     food = Category.objects.create(org=org, name="Food", type="expense")
@@ -250,12 +266,31 @@ def test_contribution_transactions_excluded_from_all_sections(
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    assert data["totals"] == {"income": "100.00", "expense": "30.00"}
+    assert data["totals"] == {
+        "income": "100.00",
+        "expense": "30.00",
+        "goals_balance": "0.00",
+    }
     assert data["monthly"][1] == month_row(2)
     assert [(c["name"], c["type"]) for c in data["categories"]] == [
         ("Salary", "income"),
         ("Food", "expense"),
     ]
+
+
+def test_uncategorized_contributions_are_excluded_from_goal_balances(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    goal = add_goal(org, "Savings")
+    add_goal_transaction(org, goal, "contribution", "100.00", "2025-02-07", categorized=False)
+    add_goal_transaction(org, goal, "withdraw", "20.00", "2025-02-08")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["totals"]["goals_balance"] == "-20.00"
+    assert data["monthly"][1]["goals_balance"] == "-20.00"
+    assert data["goals"][0]["balance"] == "-20.00"
 
 
 def test_amounts_are_two_decimal_strings(
@@ -309,6 +344,22 @@ def test_monthly_sums_each_entry_type_separately(
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
     assert data["monthly"][0] == month_row(1, income="100.00", expense="40.00")
+
+
+def test_monthly_reports_contributions_and_withdrawals(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    goal = add_goal(org, "Savings")
+    add_goal_transaction(org, goal, "contribution", "105.00", "2025-10-05")
+    add_goal_transaction(org, goal, "withdraw", "5.00", "2025-10-15")
+    add_goal_transaction(org, goal, "contribution", "14.00", "2025-11-05")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["monthly"][9]["goals_balance"] == "100.00"
+    assert data["monthly"][10]["goals_balance"] == "14.00"
+    assert data["totals"]["goals_balance"] == "114.00"
 
 
 # ------------------------------------ #
@@ -403,19 +454,27 @@ def test_goal_balance_sums_active_and_completed_goals(
     active = add_goal(org, "Emergency fund")
     completed = add_goal(org, "Trip", status=GoalStatus.COMPLETED)
     archived = add_goal(org, "Old fund", status=GoalStatus.ARCHIVED)
+    current_month_date = timezone.localdate().replace(day=5).isoformat()
     add_goal_transaction(org, active, "contribution", "100.50", "2025-01-05")
     add_goal_transaction(org, active, "contribution", "49.50", "2025-02-05")
     add_goal_transaction(org, completed, "contribution", "200.00", "2025-01-05")
     add_goal_transaction(org, completed, "withdraw", "50.00", "2025-03-05")
     add_goal_transaction(org, archived, "contribution", "999.00", "2025-01-05")
+    add_goal_transaction(org, active, "contribution", "150.00", current_month_date)
+    add_goal_transaction(org, completed, "contribution", "200.00", current_month_date)
+    add_goal_transaction(org, completed, "withdraw", "50.00", current_month_date)
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
     # active 150.00 + completed 150.00; the archived goal is excluded
     assert data["goal_balance"] == "300.00"
+    assert data["totals"]["goals_balance"] == "300.00"
+    assert data["monthly"][0]["goals_balance"] == "300.50"
+    assert data["monthly"][1]["goals_balance"] == "49.50"
+    assert data["monthly"][2]["goals_balance"] == "-50.00"
 
 
-def test_goal_balance_nets_withdrawals_and_goal_expenses(
+def test_goal_balance_ignores_goal_expenses(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
@@ -424,30 +483,34 @@ def test_goal_balance_nets_withdrawals_and_goal_expenses(
     add_goal_transaction(org, goal, "contribution", "300.00", "2025-01-05")
     add_goal_transaction(org, goal, "withdraw", "120.00", "2025-02-05")
     add_goal_transaction(org, goal, "expense", "80.25", "2025-03-05", category=groceries)
+    current_month_date = timezone.localdate().replace(day=5).isoformat()
+    add_goal_transaction(org, goal, "contribution", "300.00", current_month_date)
+    add_goal_transaction(org, goal, "withdraw", "120.00", current_month_date)
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
-    # 300.00 contribution - 120.00 withdraw - 80.25 goal expense
-    assert data["goal_balance"] == "99.75"
+    # Goal balance is contribution - withdraw; goal expenses do not affect it.
+    assert data["goal_balance"] == "180.00"
+    assert data["goals"][0]["balance"] == "180.00"
 
 
-def test_goal_balance_is_current_snapshot_independent_of_year(
+def test_goal_balance_is_scoped_to_current_month(
     report_client: APIClient, personal_user: tuple[User, Organization]
 ) -> None:
     _, org = personal_user
-    salary = Category.objects.create(org=org, name="Salary", type="income")
     goal = add_goal(org, "Savings")
-    add_goal_transaction(org, goal, "contribution", "100.00", "2024-05-10")
-    add_transaction(org, "income", "50.00", "2025-06-01", category=salary)
+    current_month = timezone.localdate().replace(day=10)
+    previous_month = (
+        current_month.replace(year=current_month.year - 1, month=12)
+        if current_month.month == 1
+        else current_month.replace(month=current_month.month - 1)
+    )
+    add_goal_transaction(org, goal, "contribution", "100.00", previous_month.isoformat())
+    add_goal_transaction(org, goal, "contribution", "35.00", current_month.isoformat())
 
-    data_2025 = report_client.get(report_url(org.id), {"year": 2025}).json()
-    data_2024 = report_client.get(report_url(org.id), {"year": 2024}).json()
+    data = report_client.get(report_url(org.id), {"year": current_month.year}).json()
 
-    # yearly sections follow the year, the goal balance does not
-    assert data_2025["totals"]["income"] == "50.00"
-    assert data_2024["totals"]["income"] == "0.00"
-    assert data_2025["goal_balance"] == "100.00"
-    assert data_2024["goal_balance"] == "100.00"
+    assert data["goal_balance"] == "35.00"
 
 
 def test_goal_balance_excludes_other_organizations(
@@ -456,10 +519,70 @@ def test_goal_balance_excludes_other_organizations(
     _, org = personal_user
     other_org = Organization.objects.create(name="Other budget", initial_balance=Decimal("0"))
     goal = add_goal(org, "Mine")
-    add_goal_transaction(org, goal, "contribution", "10.00", "2025-01-05")
+    current_month_date = timezone.localdate().replace(day=5).isoformat()
+    add_goal_transaction(org, goal, "contribution", "10.00", current_month_date)
     other_goal = add_goal(other_org, "Theirs")
     add_goal_transaction(other_org, other_goal, "contribution", "9999.00", "2025-01-05")
 
     data = report_client.get(report_url(org.id), {"year": 2025}).json()
 
     assert data["goal_balance"] == "10.00"
+
+
+def test_report_includes_goal_status_and_month_end_balances(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    active = add_goal(org, "Car")
+    completed = add_goal(org, "Housing", status=GoalStatus.COMPLETED)
+    add_goal_transaction(org, active, "contribution", "100.00", "2025-10-05")
+    add_goal_transaction(org, completed, "contribution", "14.00", "2025-11-05")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["goals"] == [
+        {
+            "goal_id": active.pk,
+            "name": "Car",
+            "status": "active",
+            "target_amount": "1000.00",
+            "balance": "100.00",
+            "monthly": ["0.00"] * 9 + ["100.00", "0.00", "0.00"],
+        },
+        {
+            "goal_id": completed.pk,
+            "name": "Housing",
+            "status": "completed",
+            "target_amount": "1000.00",
+            "balance": "14.00",
+            "monthly": ["0.00"] * 10 + ["14.00", "0.00"],
+        },
+    ]
+
+
+def test_goal_monthly_values_include_only_transactions_from_each_month(
+    report_client: APIClient, personal_user: tuple[User, Organization]
+) -> None:
+    _, org = personal_user
+    goal = add_goal(org, "Emergency fund")
+    add_goal_transaction(org, goal, "contribution", "40.00", "2024-12-15")
+    add_goal_transaction(org, goal, "contribution", "100.00", "2025-01-05")
+    add_goal_transaction(org, goal, "withdraw", "25.00", "2025-02-10")
+    add_goal_transaction(org, goal, "contribution", "10.00", "2025-02-20")
+
+    data = report_client.get(report_url(org.id), {"year": 2025}).json()
+
+    assert data["goals"][0]["monthly"] == [
+        "100.00",
+        "-15.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "0.00",
+    ]

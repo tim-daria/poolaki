@@ -1,8 +1,12 @@
+"""Aggregate yearly organization finances, categories, and goal snapshots."""
+
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import Q, QuerySet, Sum
+from django.db.models import Case, DecimalField, F, Q, QuerySet, Sum, When
 from django.db.models.functions import Coalesce, ExtractMonth
+from django.utils import timezone
 
 from core.models import (
     Category,
@@ -13,11 +17,17 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import annotate_goal_balance, get_annotated_goal_balance
+from core.services.balance import annotate_goal_balance
 
 _ZERO = Decimal("0")
 
-_REPORTED_TYPES = (EntryType.INCOME, EntryType.EXPENSE)
+_REPORTED_TYPES = (
+    EntryType.INCOME,
+    EntryType.EXPENSE,
+    EntryType.CONTRIBUTION,
+    EntryType.WITHDRAW,
+)
+_CATEGORY_TYPES = (EntryType.INCOME, EntryType.EXPENSE)
 
 # Goals that still hold spendable funds. Archived goals are settled (their
 # balance is zeroed at archival), so they never contribute.
@@ -37,35 +47,39 @@ def _reported_transactions(org: Organization, year: int) -> QuerySet[Transaction
     )
 
 
-def _metric_sums() -> dict[str, Any]:
-    return {
-        entry_type.value: Coalesce(Sum("amount", filter=Q(entry_type=entry_type)), _ZERO)
-        for entry_type in _REPORTED_TYPES
-    }
-
-
 def _metric_totals(base: QuerySet[Transaction]) -> dict[str, Decimal]:
-    """Yearly income/expense totals."""
-    return base.aggregate(**_metric_sums())
+    """Yearly income, expense, and net goal transfer totals."""
+    return base.aggregate(
+        income=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.INCOME)), _ZERO),
+        expense=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)), _ZERO),
+        goals_balance=Coalesce(Sum(_goal_balance_expression()), _ZERO),
+    )
 
 
 def _monthly_breakdown(base: QuerySet[Transaction]) -> list[dict[str, Any]]:
-    """12 rows (month 1-12) with per-metric sums; empty months are zero-filled."""
+    """12 rows with income, expense, and net goal transfer sums."""
     monthly_rows = (
         base.annotate(month=ExtractMonth("transaction_date"))
         .values("month")
-        .annotate(**_metric_sums())
+        .annotate(
+            income=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.INCOME)), _ZERO),
+            expense=Coalesce(Sum("amount", filter=Q(entry_type=EntryType.EXPENSE)), _ZERO),
+            goals_balance=Coalesce(Sum(_goal_balance_expression()), _ZERO),
+        )
         .order_by("month")
     )
     rows_by_month = {row["month"]: row for row in monthly_rows}
     monthly = []
     for month in range(1, 13):
         row = rows_by_month.get(month)
-        entry: dict[str, Any] = {"month": month}
-        for entry_type in _REPORTED_TYPES:
-            key = entry_type.value
-            entry[key] = row[key] if row is not None else _ZERO
-        monthly.append(entry)
+        monthly.append(
+            {
+                "month": month,
+                "income": row["income"] if row is not None else _ZERO,
+                "expense": row["expense"] if row is not None else _ZERO,
+                "goals_balance": row["goals_balance"] if row is not None else _ZERO,
+            }
+        )
     return monthly
 
 
@@ -97,7 +111,8 @@ def get_org_category_breakdown(
     distinguish "no spending" from "the category does not exist". Contribution
     categories are excluded by design (shared report/AI rule).
     """
-    monthly_by_category = _monthly_by_category(_reported_transactions(org, year))
+    category_transactions = _reported_transactions(org, year).filter(entry_type__in=_CATEGORY_TYPES)
+    monthly_by_category = _monthly_by_category(category_transactions)
 
     if include_inactive:
         categories = Category.objects.filter(
@@ -125,22 +140,95 @@ def get_org_category_breakdown(
     )
 
 
-def _goal_balance(org: Organization) -> Decimal:
-    """Current balance across all active and completed goals (one aggregate
-    query); a snapshot that ignores the reported year."""
-    goals = annotate_goal_balance(Goal.objects.filter(org=org, status__in=_REPORTED_GOAL_STATUSES))
-    return sum((get_annotated_goal_balance(goal) for goal in goals), _ZERO)
+def _goal_balance_expression(amount_field: str = "amount") -> Case:
+    return Case(
+        When(
+            entry_type=EntryType.CONTRIBUTION,
+            goal__status__in=_REPORTED_GOAL_STATUSES,
+            category__isnull=False,
+            then=F(amount_field),
+        ),
+        When(
+            entry_type=EntryType.WITHDRAW,
+            goal__status__in=_REPORTED_GOAL_STATUSES,
+            then=-F(amount_field),
+        ),
+        default=_ZERO,
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+
+
+def _reported_goals(org: Organization) -> list[Goal]:
+    goals = Goal.objects.filter(org=org, status__in=_REPORTED_GOAL_STATUSES)
+    return list(annotate_goal_balance(goals))
+
+
+def _goal_report(org: Organization, year: int, goals: list[Goal]) -> list[dict[str, Any]]:
+    """Return selected-year balances and monthly contribution-withdrawal changes."""
+    start = date(year, 1, 1)
+    end = date(year + 1, 1, 1)
+    goal_transactions = Transaction.objects.filter(
+        org=org,
+        goal__in=goals,
+        entry_type__in=(EntryType.CONTRIBUTION, EntryType.WITHDRAW),
+    )
+    current_rows = (
+        goal_transactions.filter(transaction_date__gte=start, transaction_date__lt=end)
+        .values("goal_id")
+        .annotate(balance=Sum(_goal_balance_expression()))
+    )
+    current = {row["goal_id"]: row["balance"] or _ZERO for row in current_rows}
+    monthly_rows = (
+        goal_transactions.filter(transaction_date__gte=start, transaction_date__lt=end)
+        .annotate(month=ExtractMonth("transaction_date"))
+        .values("goal_id", "month")
+        .annotate(balance=Sum(_goal_balance_expression()))
+    )
+    monthly = {(row["goal_id"], row["month"]): row["balance"] or _ZERO for row in monthly_rows}
+
+    result = []
+    for goal in goals:
+        monthly_balances = [monthly.get((goal.pk, month), _ZERO) for month in range(1, 13)]
+        result.append(
+            {
+                "goal_id": goal.pk,
+                "name": goal.name,
+                "status": goal.status,
+                "target_amount": goal.target_amount,
+                "balance": current.get(goal.pk, _ZERO),
+                "monthly": monthly_balances,
+            }
+        )
+    return result
+
+
+def _goal_balance(org: Organization, goals: list[Goal]) -> Decimal:
+    """Current-month balance across all active and completed goals."""
+    month_start = timezone.localdate().replace(day=1)
+    next_month = (
+        date(month_start.year + 1, 1, 1)
+        if month_start.month == 12
+        else date(month_start.year, month_start.month + 1, 1)
+    )
+    total = Transaction.objects.filter(
+        org=org,
+        goal__in=goals,
+        transaction_date__gte=month_start,
+        transaction_date__lt=next_month,
+        entry_type__in=(EntryType.CONTRIBUTION, EntryType.WITHDRAW),
+    ).aggregate(balance=Sum(_goal_balance_expression()))["balance"]
+    return total or _ZERO
 
 
 def get_org_report(org: Organization, year: int) -> dict[str, Any]:
-    """Build the yearly report payload; every section is computed only from
-    the reported entry types (contribution rows are excluded by design),
-    plus the current goal balance as a year-independent snapshot."""
+    """Build the yearly report payload and goal snapshots."""
     base = _reported_transactions(org, year)
+    goals = _reported_goals(org)
     return {
         "year": year,
         "totals": _metric_totals(base),
         "monthly": _monthly_breakdown(base),
         "categories": get_org_category_breakdown(org, year),
-        "goal_balance": _goal_balance(org),
+        "goal_balance": _goal_balance(org, goals),
+        "goals": _goal_report(org, year, goals),
     }

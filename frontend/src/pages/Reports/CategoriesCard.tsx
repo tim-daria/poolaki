@@ -22,7 +22,7 @@ type View = "expense" | "income" | "savings";
 interface CategoriesCardProps {
   categories: CategoryReport[];
   /** Null when the transfer rows did not load; the Savings view is then absent. */
-  savingsByGoal: GoalSavings[] | null;
+  savingsByGoal: GoalSavings[];
   year: number;
 }
 
@@ -59,7 +59,7 @@ export function CategoriesCard({
   // Goals and categories are both just named totals here.
   const totals =
     view === "savings"
-      ? (savingsByGoal ?? []).map((g) => ({
+      ? savingsByGoal.map((g) => ({
           id: `goal-${g.id}`,
           label: g.name,
           value: g.total,
@@ -95,9 +95,7 @@ export function CategoriesCard({
   const options = [
     { value: "expense" as const, label: "Expenses" },
     { value: "income" as const, label: "Income" },
-    ...(savingsByGoal === null
-      ? []
-      : [{ value: "savings" as const, label: "Savings" }]),
+    { value: "savings" as const, label: "Savings" },
   ];
 
   return (
