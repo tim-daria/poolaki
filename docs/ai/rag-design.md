@@ -139,7 +139,7 @@ Returns the provider-reported token usage (0 if the provider does not report it)
 
 **Responsibility:** Stores shared product knowledge used by the AI Service to provide relevant context when answering user questions when its required.
 
-Document chunks and their embeddings are stored in `PostgreSQL` with `pgvector`. An external embedding provider generates embeddings for document ingestion and query retrieval.
+Document chunks and their embeddings are stored in `PostgreSQL` with `pgvector`. An external embedding provider generates embeddings for document ingestion and query retrieval. Embeddings can use a separate provider via `EMBEDDING_BASE_URL`/`EMBEDDING_API_KEY`; unset values fall back to `LLM_BASE_URL`/`LLM_API_KEY`.
 
 ## 3. End-to-End Data Flow
 

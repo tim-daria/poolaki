@@ -226,6 +226,7 @@ The same embedding model will be used for document ingestion and query embedding
 ### Consequences
 
 - The AI Service depends on the availability and limits of the embedding provider.
+- Embedding calls can use a separate provider via `EMBEDDING_BASE_URL`/`EMBEDDING_API_KEY`; unset values fall back to the LLM provider.
 - API credentials must be managed securely.
 - Embedding costs and latency must be monitored.
 - Changing the embedding model requires regenerating existing document embeddings.
