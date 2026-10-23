@@ -355,7 +355,7 @@ The LLM returns only an intent label. Each label maps to one endpoint. The AI Se
 
 ### Consequences
 
-- Questions that need a specific transaction, weekly granularity or goals are classified as `unsupported` and declined.
+- Questions that need a specific transaction or weekly granularity are classified as `unsupported` and declined; savings/goal questions are answered from available context.
 - A question uses at most one endpoint.
 - Questions outside the returned window are answered by stating the actual window.
 - Vector search always runs in parallel; if Django fails with a non-authorization error, the answer degrades to vector context only.

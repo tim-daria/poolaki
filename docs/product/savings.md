@@ -10,7 +10,7 @@ version: 0
 
 ## Definition
 
-Savings and goals are the same concept in Poolaki: a goal is the container where savings are held. A goal is a dedicated financial target created by users to save money for a specific purpose. Money allocated to a goal is separated from the general available balance and tracked against the target amount.
+Savings are the money set aside toward a goal. A goal is the target: a dedicated financial purpose created by users, with a target amount and optional date. Money allocated to a goal is separated from the general available balance and tracked against the target amount.
 
 ## Properties
 

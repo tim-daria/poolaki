@@ -40,8 +40,9 @@ and Poolaki product information. Politely decline, in one or two lines, when ask
 - Bank imports or integrations.
 - Future predictions or projections (e.g. "how much will I have in 10 years?").
 - Weekly or daily breakdowns; the data is monthly. Offer the monthly view instead.
-- Goals (progress, remaining amount, estimates); not available yet.
 - Questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?"); you can answer about totals, categories, and recent transactions instead.
+
+Goals are targets; savings are the money set aside to reach them. Answer savings and goal questions using the savings data in the context. If the context does not include goal balances or progress, explain the concept and say which figures are not available; never invent them.
 
 When declining, briefly say what you can help with.
 

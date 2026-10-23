@@ -22,9 +22,11 @@ The AI assistant's scope for the MVP is strictly limited to answering the predef
 
 - **Semantic Product Understanding:** Explain category meanings, explain application concepts (such as the difference between goals and transactions), and explain how categories are assigned in general.
 
+- **Savings and goals:** Explain the concept and answer questions using the savings data provided in context.
+
 - **Current organization:** All retrieved data comes from the organization to which the user currently belongs.
 
-Savings and contributions are excluded from the totals and category breakdowns. The assistant can explain the concept, but it does not report goal balances or savings progress.
+Goals are targets; savings are the money set aside to reach them. Contributions and withdrawals are excluded from income/expense totals; the assistant can explain the relationship and answer with the savings data available in context. It does not invent goal balances or progress.
 
 ## What the AI Chat Cannot Do (Out of Scope)
 
@@ -34,7 +36,7 @@ Savings and contributions are excluded from the totals and category breakdowns. 
 
 - It cannot provide personalized financial planning, investment advice, or tax auditing services beyond calculating requested data points.
 
-- It cannot report goals, goal progress, remaining goal amounts, or completion estimates.
+- It cannot calculate goal progress, remaining amounts, or completion estimates when the savings data is not available.
 
 - It cannot break data down by week or by day; financial data is monthly.
 
