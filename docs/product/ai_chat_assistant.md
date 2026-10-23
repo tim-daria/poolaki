@@ -52,7 +52,7 @@ Goals are targets; savings are the money set aside to reach them. Contributions 
 
 The AI assistant has no session memory. Each message is one-shot: it cannot see earlier messages, previous chats, or context the user expects it to remember. It cannot continue a previous answer or recall preferences from the same conversation.
 
-Because it cannot follow the conversation, every answer never ends with one short follow-up question so the user can continue without relying on memory.
+Because it cannot follow the conversation, answers do not end with a follow-up question.
 
 ## How to Access the AI Chat
 

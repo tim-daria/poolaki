@@ -29,4 +29,4 @@ The assistant must:
 
 ## Versioning
 
-Current prompt version: `assistant_v3`, tracked in [`ai-service/app/versions/registry.md`](../../ai-service/app/versions/registry.md).
+Current prompt version: `assistant_v4`, tracked in [`ai-service/app/versions/registry.md`](../../ai-service/app/versions/registry.md).

@@ -110,9 +110,10 @@ async def test_generate_embeddings_uses_embedding_client(monkeypatch):
         headers={"Authorization": "Bearer embed-key"},
     )
 
-    embeddings = await client.generate_embeddings(["hello"])
+    embeddings, usage = await client.generate_embeddings(["hello"])
 
     assert embeddings == [[0.1, 0.2]]
+    assert usage.input_tokens == 2
     assert seen == {
         "url": "http://embed/embeddings",
         "authorization": "Bearer embed-key",

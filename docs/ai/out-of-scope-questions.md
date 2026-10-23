@@ -57,7 +57,7 @@ Examples:
 > Remember that I prefer short answers.
 
 Reason:
-The assistant is stateless: each request is handled independently. It cannot see earlier messages or previous chats. It ends every answer with a short follow-up question so the user can continue without relying on memory.
+The assistant is stateless: each request is handled independently. It cannot see earlier messages or previous chats. Answers do not end with a follow-up question, so the user should send each question separately.
 
 ---
 
