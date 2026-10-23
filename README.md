@@ -221,12 +221,10 @@ choice".
 
 ## Modules of Choice
 
-### Minor module: Reports & Analytics dashboard (1 point)
-
-A yearly report over income, expenses and savings: one aggregation
-endpoint, custom charts and a print-ready layout. Full justification and
-technical details:
-[docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md).
+| Points | Module | Author | Description | Docs |
+| --- | --- | --- | --- | --- |
+| 1p | Minor module: Reports & Analytics dashboard | dtimofee | A yearly report over income, expenses and savings: one aggregation endpoint, custom charts and a print-ready layout. | [docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md)
+| --- | --- | --- | --- | --- |
 
 </details>
 
