@@ -86,9 +86,10 @@ These are the endpoints the `AI Service` uses to retrieve financial data from `D
 
 ### Authentication
 
-Internal endpoints require:
+Internal endpoints require, in order:
 
-1. **User authorization.** `user_id` must be a member of `organization_id`. Otherwise → `403 FORBIDDEN`.
+1. **Service authentication.** A shared bearer token in the `Authorization` header: `Bearer <INTERNAL_API_TOKEN>`. Only the AI Service holds the token, so a valid header is the caller's identity. Missing or invalid token → `401 UNAUTHORIZED`.
+2. **User authorization.** `user_id` must be a member of `organization_id`. Otherwise → `403 FORBIDDEN`.
 
 ### 2.1. Financial Summary
 

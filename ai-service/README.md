@@ -182,6 +182,9 @@ LLM_MODEL=<your-model>
 DJANGO_BASE_URL=http://backend:8000
 DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>
 
+# Bearer token presented to the backend's /api/internal/v1/ API
+INTERNAL_API_TOKEN=<shared-token>
+
 # Optional (defaults shown)
 # LLM_FALLBACK_MODEL=<your-model>
 # MAX_CONTEXT_TOKENS=3000
@@ -190,7 +193,7 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>
 
 ```
 
-**Note:** LLM_*, DJANGO_BASE_URL and DATABASE_URL are required; the service does not start without them.
+**Note:** LLM_*, DJANGO_BASE_URL, DATABASE_URL and INTERNAL_API_TOKEN are required; the service does not start without them.
 
 ## Instructions
 

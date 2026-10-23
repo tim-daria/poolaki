@@ -26,7 +26,7 @@ Keeping the secrets in Vault stores them **encrypted at rest** and **isolated** 
 
 ## Dynamic PostgreSQL Credentials
 
-The Vault Agent authenticates to Vault using AppRole and receives a Vault token. 
+The Vault Agent authenticates to Vault using AppRole and receives a Vault token.
 
 Its policy permits it to request credentials from a specific PostgreSQL database role, such as `database/creds/my-app`.
 
@@ -71,6 +71,23 @@ To add or change fields, run on of the commands *<u>with the complete set of key
 - Select Save.
 
 The UI creates a new version when you save changes to an existing KV v2 secret.
+
+## Inter-Service Bearer Token
+
+The AI Service and the backend share one static secret, `internal_api_token`, stored in the `secret/ai-service` KV path next to the LLM API key.
+
+- The Vault Agent renders it to both services' env files as `INTERNAL_API_TOKEN` (`vault/agent/templates/ai-creds.tpl` for the AI Service, `ai-tokens.tpl` for the backend, wired in `vault/config/hcl/agent.hcl`), so the token is never committed or set by hand.
+- The token is the AI Service's identity on the backend's internal financial data API: every request to `/api/internal/v1/` must carry `Authorization: Bearer <token>`, otherwise the request is rejected with `401`.
+- While the key is missing from Vault or the token is empty, the backend fails closed: the internal API answers `401` to every caller. The templates render the token with `| default ""` on purpose — an unset key must become an empty value, not Go's `<nil>`, which is not a valid shell assignment and would break the services' entrypoints when they source the env files.
+- To set or rotate the token on an already-initialized vault:
+
+  ```
+  docker compose exec vault sh -c \
+    "vault login $(jq -r .root_token /vault/secure/vault-init.json) >/dev/null && \
+     vault kv merge secret/ai-service internal_api_token=<new-token>"
+  ```
+
+  Use `kv merge`, not `kv put` — `put` replaces the whole secret and would drop `llm_api_key`. The agent re-renders both env files, the backend self-restarts on the new env; the AI Service reads the env only at startup, so restart it (`docker compose restart ai-service`) for the change to take effect there.
 
 ## Read the vault values
 (Only for test and debugging)
