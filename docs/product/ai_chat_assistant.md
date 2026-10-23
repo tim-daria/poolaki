@@ -20,7 +20,7 @@ The AI assistant's scope for the MVP is strictly limited to answering the predef
 
 - **Transactions details:** Identify the largest expense category for the current year, the top five expenses and the most recent expense in the last three calendar months, and the largest transactions within that window.
 
-- **Semantic Product Understanding:** Explain category meanings, explain application concepts (such as the difference between goals and transactions), and explain how categories are assig ned in general.
+- **Semantic Product Understanding:** Explain category meanings, explain application concepts (such as the difference between goals and transactions), and explain how categories are assigned in general.
 
 - **Current organization:** All retrieved data comes from the organization to which the user currently belongs.
 
