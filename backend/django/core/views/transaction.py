@@ -1,6 +1,9 @@
+"""API views for listing, creating, updating, and deleting transactions."""
+
 from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 # from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -8,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import EntryType, Organization, Transaction, User
+from core.models import EntryType, Goal, GoalStatus, Organization, Transaction, User
 from core.permissions import IsOrgMember
 from core.serializers import (
     TransactionCreateSerializer,
@@ -16,8 +19,12 @@ from core.serializers import (
     TransactionResponseSerializer,
     TransactionUpdateSerializer,
 )
-
-# from core.services.balance import calculate_org_balance
+from core.services.balance import (
+    GoalBalanceMutation,
+    calculate_goal_balance,
+    lock_goal_and_validate_balance,
+)
+from core.services.goal import allowed_entry_types
 from core.services.transaction import (
     TransactionFilters,
     create_transaction_entry,
@@ -114,17 +121,39 @@ class TransactionListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         org = get_object_or_404(Organization, pk=org_id)
         data = serializer.validated_data
-        transaction = create_transaction_entry(
-            org=org,
-            created_by=request.user,
-            category_id=data.get("category_id").pk if data.get("category_id") else None,
-            goal_id=data.get("goal_id").pk if data.get("goal_id") else None,
-            entry_type=data["entry_type"],
-            amount=data["amount"],
-            description=data.get("description"),
-            transaction_date=data["transaction_date"],
-            is_tax_deductible=data["is_tax_deductible"],
-        )
+        goal = data.get("goal_id")
+        if data["entry_type"] == EntryType.WITHDRAW and isinstance(goal, Goal):
+            with db_transaction.atomic():
+                locked_goal = Goal.objects.select_for_update().get(pk=goal.pk)
+                if data["entry_type"] not in allowed_entry_types(locked_goal):
+                    raise ValidationError("Withdrawals can only be made from active goals.")
+                if data["amount"] > calculate_goal_balance(locked_goal):
+                    raise ValidationError(
+                        {"amount": ("Withdrawal amount cannot exceed the goal balance.",)}
+                    )
+                transaction = create_transaction_entry(
+                    org=org,
+                    created_by=request.user,
+                    category_id=data.get("category_id").pk if data.get("category_id") else None,
+                    goal_id=locked_goal.pk,
+                    entry_type=data["entry_type"],
+                    amount=data["amount"],
+                    description=data.get("description"),
+                    transaction_date=data["transaction_date"],
+                    is_tax_deductible=data["is_tax_deductible"],
+                )
+        else:
+            transaction = create_transaction_entry(
+                org=org,
+                created_by=request.user,
+                category_id=data.get("category_id").pk if data.get("category_id") else None,
+                goal_id=goal.pk if isinstance(goal, Goal) else None,
+                entry_type=data["entry_type"],
+                amount=data["amount"],
+                description=data.get("description"),
+                transaction_date=data["transaction_date"],
+                is_tax_deductible=data["is_tax_deductible"],
+            )
 
         return Response(
             TransactionResponseSerializer(transaction).data,
@@ -151,13 +180,15 @@ class TransactionGetDeleteView(APIView):
         - 200 OK with the updated transaction for PATCH requests.
 
         DELETE
-        Deletes the requested transaction. Income transactions can be deleted only
-        when the organization's current balance is sufficient to cancel the income.
+        Deletes the requested transaction. Deleting a contribution or withdrawal
+        validates the resulting goal balance and rejects changes that violate the
+        goal invariant, including transactions associated with archived goals.
+        Income deletion is not restricted by the organization's balance.
 
     Returns:
         - 204 No content for successful DELETE requests.
-        - 400 Bad Request when an income transaction cannot be cancelled because
-                the organization's balance is insufficient.
+        - 400 Bad Request when deleting a goal transaction would violate the goal
+                balance invariant.
     """
 
     permission_classes = [IsAuthenticated, IsOrgMember]
@@ -178,45 +209,73 @@ class TransactionGetDeleteView(APIView):
         user = request.user
         assert isinstance(user, User)
 
-        transaction = get_object_or_404(
-            Transaction,
-            id=transaction_id,
-            org_id=org_id,
-            created_by=user,
-        )
-
-        serializer = TransactionUpdateSerializer(
-            data=request.data,
-            context={
-                "org_id": org_id,
-                "transaction": transaction,
-            },
-        )
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        updated_fields = set()
-        if "category_id" in data:
-            transaction.category = data["category_id"]
-            updated_fields.add("category")
-
-        if "amount" in data:
-            transaction.amount = data["amount"]
-            updated_fields.add("amount")
-
-        if "description" in data:
-            transaction.description = data["description"]
-            updated_fields.add("description")
-
-        if "transaction_date" in data:
-            transaction.transaction_date = data["transaction_date"]
-            updated_fields.add("transaction_date")
-
-        if "is_tax_deductible" in data:
-            transaction.is_tax_deductible = data["is_tax_deductible"]
-            updated_fields.add("is_tax_deductible")
+        with db_transaction.atomic():
+            transaction = get_object_or_404(
+                Transaction.objects.select_for_update(),
+                id=transaction_id,
+                org_id=org_id,
+                created_by=user,
+            )
+            goal = (
+                Goal.objects.select_for_update().get(pk=transaction.goal_id)
+                if transaction.goal_id is not None
+                else None
+            )
+            serializer = TransactionUpdateSerializer(
+                data=request.data,
+                context={
+                    "org_id": org_id,
+                    "transaction": transaction,
+                    "goal": goal,
+                },
+            )
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
 
         with db_transaction.atomic():
+            if transaction.goal_id is not None and transaction.entry_type in (
+                EntryType.CONTRIBUTION,
+                EntryType.WITHDRAW,
+            ):
+                locked_goal = lock_goal_and_validate_balance(
+                    transaction.goal_id,
+                    GoalBalanceMutation.update(
+                        transaction.entry_type,
+                        transaction.amount,
+                        data.get("amount", transaction.amount),
+                    ),
+                )
+                transaction = get_object_or_404(
+                    Transaction.objects.select_for_update(),
+                    id=transaction_id,
+                    org_id=org_id,
+                    created_by=user,
+                    goal_id=locked_goal.id,
+                )
+            else:
+                transaction = get_object_or_404(
+                    Transaction.objects.select_for_update(),
+                    id=transaction_id,
+                    org_id=org_id,
+                    created_by=user,
+                )
+
+            updated_fields = set()
+            if "category_id" in data:
+                transaction.category = data["category_id"]
+                updated_fields.add("category")
+            if "amount" in data:
+                transaction.amount = data["amount"]
+                updated_fields.add("amount")
+            if "description" in data:
+                transaction.description = data["description"]
+                updated_fields.add("description")
+            if "transaction_date" in data:
+                transaction.transaction_date = data["transaction_date"]
+                updated_fields.add("transaction_date")
+            if "is_tax_deductible" in data:
+                transaction.is_tax_deductible = data["is_tax_deductible"]
+                updated_fields.add("is_tax_deductible")
             transaction.save(update_fields=updated_fields)
 
         return Response(
@@ -232,6 +291,27 @@ class TransactionGetDeleteView(APIView):
                 org_id=org_id,
                 created_by=request.user,
             )
+            if transaction.goal_id is not None:
+                goal = Goal.objects.select_for_update().get(pk=transaction.goal_id)
+                if goal.status == GoalStatus.ARCHIVED:
+                    raise ValidationError(
+                        {
+                            "amount": [
+                                "Transactions associated with archived goals cannot be deleted."
+                            ]
+                        }
+                    )
+                if transaction.entry_type in (EntryType.CONTRIBUTION, EntryType.WITHDRAW):
+                    lock_goal_and_validate_balance(
+                        goal.id,
+                        GoalBalanceMutation.delete(transaction.entry_type, transaction.amount),
+                    )
+                    transaction = get_object_or_404(
+                        Transaction.objects.select_for_update(),
+                        id=transaction_id,
+                        org_id=org_id,
+                        created_by=request.user,
+                    )
             # Check for negative organization balance after deleting transaction entry
             # org = get_object_or_404(
             #     Organization.objects.select_for_update(),

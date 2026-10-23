@@ -19,7 +19,7 @@ interface MonthlyChartProps {
   monthly: YearlyReportResponse["monthly"];
   year: number;
   /** Index 0 is January. Null when the transfer rows did not load. */
-  savingsByMonth: number[] | null;
+  savingsByMonth: number[];
   sx?: SxProps<Theme>;
 }
 
@@ -45,7 +45,7 @@ export function MonthlyChart({
   const SAVINGS_COLOR = alpha(palette.accent.main, BAR_OPACITY);
 
   const [view, setView] = useState<MonthView>("flow");
-  const savings = savingsByMonth !== null && view === "savings";
+  const savings = view === "savings";
 
   // Null for past years, where every month is complete.
   const now = new Date();
@@ -66,9 +66,7 @@ export function MonthlyChart({
           id: "savings",
           label: "Saved per month",
           color: SAVINGS_COLOR,
-          data: monthly.map((m, i) =>
-            valueAt(i, savingsByMonth[m.month - 1] ?? 0),
-          ),
+          data: monthly.map((m, i) => valueAt(i, savingsByMonth[m.month - 1])),
         },
       ]
     : [
@@ -91,7 +89,7 @@ export function MonthlyChart({
   const savedSoFar = savings
     ? monthly
         .filter((_, i) => elapsed[i])
-        .map((m) => savingsByMonth[m.month - 1] ?? 0)
+        .map((m) => savingsByMonth[m.month - 1])
     : [];
   const average =
     savedSoFar.length > 0
@@ -114,17 +112,15 @@ export function MonthlyChart({
           : "Income and expenses per month"
       }
       action={
-        savingsByMonth !== null && (
-          <Segmented<MonthView>
-            aria-label="Monthly view"
-            value={view}
-            onChange={setView}
-            options={[
-              { value: "flow", label: "Income & expenses" },
-              { value: "savings", label: "Savings" },
-            ]}
-          />
-        )
+        <Segmented<MonthView>
+          aria-label="Monthly view"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "flow", label: "Income & expenses" },
+            { value: "savings", label: "Savings" },
+          ]}
+        />
       }
       sx={sx}
     >

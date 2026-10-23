@@ -7,6 +7,7 @@
 
 import { TODAY } from "./date";
 import {
+  cents,
   displayAmount,
   parseMoney,
   toMoneyString,
@@ -178,24 +179,55 @@ export function changeType(
   };
 }
 
+/** A transfer's effect on its goal: a contribution adds, a withdrawal takes. */
+function goalEffect(entry_type: EntryType, amount: number): number {
+  return entry_type === "contribution" ? amount : -amount;
+}
+
+/**
+ * The goal balance may not go below zero, as `lock_goal_and_validate_balance`
+ * has it. On an edit the row's own effect is taken out first, so a withdrawal
+ * may be raised up to what the goal holds plus itself, and a contribution may
+ * be lowered only to what the goal has not yet spent. Null when fine, or when
+ * the goal is not loaded: the server decides then.
+ */
+function balanceProblem(
+  draft: TransactionDraft,
+  goal: Goal | undefined,
+  editing: Transaction | undefined,
+): string | null {
+  if (!goal) return null;
+  const before =
+    editing && editing.goal === goal.id
+      ? goalEffect(editing.entry_type, editing.amount)
+      : 0;
+  const after = goalEffect(draft.entry_type, Number(draft.amount));
+  if (cents(goal.balance - before + after) >= 0) return null;
+  // What the goal holds once this row is set aside: the most a withdrawal may
+  // be, or (negated) the least a contribution may be lowered to.
+  const room = cents(goal.balance - before);
+  return draft.entry_type === "withdraw"
+    ? `Only €${displayAmount(room)} is in this goal.`
+    : `The goal has already spent €${displayAmount(-room)} of this contribution.`;
+}
+
 /**
  * Validates draft before submission. Returns an error message or null.
  *
  * Checks rules HTML attributes cannot enforce: whitespace-only descriptions,
- * unselected values (null), and entry_type-specific requirements
- * (description and category for income/expense; goal for contribution).
+ * unselected values (null), entry_type-specific requirements (description and
+ * category for income/expense; goal for contribution) and the goal balance
+ * floor. `editing` is the row being changed, so its own amount is not counted
+ * against it.
  */
 export function validateDraft(
   draft: TransactionDraft,
   goals: Goal[] = [],
+  editing?: Transaction,
 ): string | null {
   if (isTransfer(draft.entry_type)) {
-    if (draft.entry_type === "withdraw") {
-      const goal = goalById(goals, draft.goal);
-      if (goal && Number(draft.amount) > goal.balance) {
-        return `Only €${displayAmount(goal.balance)} is in this goal.`;
-      }
-    }
+    const problem = balanceProblem(draft, goalById(goals, draft.goal), editing);
+    if (problem) return problem;
     if (draft.goal === null) return "Pick a goal.";
   } else {
     if (!draft.description.trim()) return "Description is required.";
@@ -493,58 +525,4 @@ export async function fetchTransactionPage(
     page_count: data.page_count,
     counts: data.counts,
   };
-}
-
-/**
- * Every contribution and withdrawal dated in `year`, across pages.
- * Savings figures are derived from these rows; the report has no transfer sums.
- */
-export async function fetchYearTransfers(
-  org_id: number,
-  year: number,
-  signal?: AbortSignal,
-): Promise<Transaction[]> {
-  const from = `${year}-01-01`;
-  const to = `${year}-12-31`;
-  const [contributions, withdrawals] = await Promise.all([
-    fetchAllOfType(org_id, "contribution", from, to, signal),
-    fetchAllOfType(org_id, "withdraw", from, to, signal),
-  ]);
-  return [...contributions, ...withdrawals];
-}
-
-/** The API's page cap. */
-const TRANSFER_PAGE_SIZE = 100;
-
-/** Every page of one entry type within the date range. */
-async function fetchAllOfType(
-  org_id: number,
-  entry_type: "contribution" | "withdraw",
-  from: string,
-  to: string,
-  signal?: AbortSignal,
-): Promise<Transaction[]> {
-  const rows: Transaction[] = [];
-  let page = 1;
-  let pageCount: number;
-  do {
-    const params = new URLSearchParams({
-      entry_type,
-      date_from: from,
-      date_to: to,
-      page_size: String(TRANSFER_PAGE_SIZE),
-      page: String(page),
-    });
-    const res = await fetch(
-      `/api/v1/organizations/${org_id}/transactions/?${params}`,
-      { credentials: "include", signal },
-    );
-    if (!res.ok) throw new Error(`Failed to load transfers (${res.status})`);
-    const data: { transactions: TransactionDTO[]; page_count: number } =
-      await res.json();
-    rows.push(...data.transactions.map(fromDTO));
-    pageCount = data.page_count;
-    page += 1;
-  } while (page <= pageCount);
-  return rows;
 }

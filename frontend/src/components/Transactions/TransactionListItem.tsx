@@ -10,16 +10,26 @@
  * read-only (Home) unless given `onClick` (the Transactions page).
  */
 
-import type { KeyboardEvent, ReactNode } from "react";
-import { Box, Chip, Typography, type SxProps, type Theme } from "@mui/material";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import {
+  Box,
+  Chip,
+  Tooltip,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { Money } from "../Money";
 import type { Category } from "../../lib/categories";
 import { shortDate } from "../../lib/date";
 import {
-  ENTRY_STYLE,
   entryCategoryLabel,
+  entryStyle,
   entrySubtitle,
   entryTitle,
+  isOverdraftSettlement,
+  overdraftHint,
 } from "../../lib/entryDisplay";
 import type { Goal } from "../../lib/goals";
 import { displayAmount } from "../../lib/money";
@@ -126,8 +136,9 @@ interface ItemProps {
 
 /**
  * A row. The divider is drawn into the gap below it; the last row has none.
- * A clickable row stays a list item: it has no nested control, its content
- * is its accessible name, and a real button cannot be a subgrid row.
+ * A clickable row stays a list item: its content is its accessible name, and
+ * a real button cannot be a subgrid row. Its one nested control is the
+ * settlement row's info icon, which swallows its own activation.
  */
 export function TransactionListItem({
   transaction: t,
@@ -136,8 +147,9 @@ export function TransactionListItem({
   withPerson,
   onClick,
 }: ItemProps) {
-  const style = ENTRY_STYLE[t.entry_type];
+  const style = entryStyle(t);
   const category = entryCategoryLabel(t, categories);
+  const hint = isOverdraftSettlement(t) ? overdraftHint(t.amount) : null;
   const subtitle = entrySubtitle(t, goals);
   const hidden = { display: "none", minWidth: 0 };
   const shown = whenWide(withPerson, { display: "block" });
@@ -180,9 +192,29 @@ export function TransactionListItem({
         <Typography sx={{ fontWeight: 600 }} noWrap>
           {entryTitle(t, categories, goals)}
         </Typography>
-        <Typography variant="body2" noWrap sx={{ color: "text.secondary" }}>
-          {shortDate(t.transaction_date)}
-          {subtitle && ` · ${subtitle}`}
+        {/* A flex row, so the hint icon centres on the text like every other info icon. */}
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+          }}
+        >
+          <Box
+            component="span"
+            sx={{
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {shortDate(t.transaction_date)}
+            {subtitle && ` · ${subtitle}`}
+          </Box>
+          {hint && <RowHint text={hint} />}
         </Typography>
       </Box>
       {/* Coloured by entry type, the same as the Transactions table. */}
@@ -193,6 +225,8 @@ export function TransactionListItem({
             sx={{
               bgcolor: style.chipBg,
               color: style.chipColor ?? style.color,
+              border: style.chipBorder ? "1px solid" : undefined,
+              borderColor: style.chipBorder,
               fontWeight: 500,
               maxWidth: "100%",
             }}
@@ -220,5 +254,43 @@ export function TransactionListItem({
         {style.sign}€{displayAmount(t.amount)}
       </Money>
     </Box>
+  );
+}
+
+/** Swallows the keys and clicks that would otherwise activate the row. */
+function stopActivation(e: MouseEvent | KeyboardEvent) {
+  if ("key" in e && e.key !== "Enter" && e.key !== " ") return;
+  e.stopPropagation();
+}
+
+/**
+ * Info icon at the end of the date line, the FieldLabel pattern: focusable so
+ * the text is reachable from the keyboard, the aria-label carries it for
+ * screen readers without hovering.
+ */
+function RowHint({ text }: { text: string }) {
+  return (
+    <Tooltip title={text} arrow>
+      <Box
+        component="span"
+        tabIndex={0}
+        role="note"
+        aria-label={text}
+        onClick={stopActivation}
+        onKeyDown={stopActivation}
+        sx={{
+          display: "inline-flex",
+          color: "text.secondary",
+          cursor: "help",
+          "&:focus-visible": {
+            outline: "2px solid",
+            outlineColor: "primary.main",
+            borderRadius: "50%",
+          },
+        }}
+      >
+        <InfoOutlinedIcon sx={{ fontSize: "1rem" }} />
+      </Box>
+    </Tooltip>
   );
 }

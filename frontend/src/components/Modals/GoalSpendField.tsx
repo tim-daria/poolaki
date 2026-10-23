@@ -114,6 +114,8 @@ export function GoalSpendField({
             onChange(e.target.value === "" ? null : Number(e.target.value))
           }
           slotProps={{
+            // No native `required` on the hidden input; see TransactionForm's goal select.
+            htmlInput: { required: false },
             select: {
               labelId: "transaction-spend-goal-label",
               displayEmpty: true,
