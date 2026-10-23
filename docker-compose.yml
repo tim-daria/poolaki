@@ -35,11 +35,11 @@ services:
     environment:
       TZ: Europe/Berlin
     volumes:
-      - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile
+      # - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
       - coraza_logs:/coraza/logs:rw
-      - ./backend/caddy/403.html:/etc/caddy/custom-pages/403.html:ro
+      # - ./backend/caddy/403.html:/etc/caddy/custom-pages/403.html:ro
     networks:
       - tunnel_net
       - frontend_net
@@ -64,7 +64,7 @@ services:
       dockerfile: django/Dockerfile
     container_name: django
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
+    user: "0:0"
     expose:
     - "8000"
     environment:
@@ -101,12 +101,13 @@ services:
         condition: service_healthy
 
   db:
-    image: pgvector/pgvector:pg18
+    build:
+      context: ./backend/postgres
+      dockerfile: Dockerfile
     container_name: postgres_db
     restart: unless-stopped
     volumes:
       - postgres_db:/var/lib/postgresql/
-      - ./backend/postgres:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -136,7 +137,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: nodejs
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
+    user: "0:0"
     expose:
       - "5173"
     environment:
@@ -325,7 +326,7 @@ services:
       context: ./ai-service
       dockerfile: Dockerfile
     container_name: ai-service
-    user: "${UID:-1000}:${GID:-1000}"
+    user: "0:0"
     restart: unless-stopped
     expose:
       - "8000"
@@ -391,6 +392,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: vault
     restart: unless-stopped
+    user: "0:0"
     cap_add:
       - IPC_LOCK
     ports:
@@ -410,7 +412,7 @@ services:
     networks:
     - vault_net
     healthcheck:
-      test: ["CMD", "sh", "-c", "vault status | grep -q 'Sealed.*false'"]
+      test: ["CMD-SHELL", "vault status | grep -q 'Sealed.*false' && test -s /vault/secure/id/role_id && test -s /vault/secure/id/secret_id"]
       retries: 3
       start_period: 30s
       timeout: 5s
@@ -421,6 +423,7 @@ services:
   vault_agent:
     image: hashicorp/vault:2.0
     container_name: vault_agent
+    user: "0:0"
     entrypoint: ["vault", "agent", "-config=/vault/config/hcl/agent.hcl"]
     volumes:
       - ./vault/config/hcl/agent.hcl:/vault/config/hcl/agent.hcl

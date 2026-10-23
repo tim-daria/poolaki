@@ -27,4 +27,9 @@ RUN mkdir -p /data /config /coraza/logs && \
 COPY coraza.conf /etc/caddy/coraza.conf
 RUN chown caddy:caddy /etc/caddy/coraza.conf
 
+RUN mkdir -p /etc/caddy/custom-pages
+
+COPY --chown=caddy:caddy Caddyfile /etc/caddy/Caddyfile
+COPY --chown=caddy:caddy 403.html /etc/caddy/custom-pages/403.html
+
 USER caddy
