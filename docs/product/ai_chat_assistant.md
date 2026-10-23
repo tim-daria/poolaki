@@ -3,7 +3,7 @@ document_id: ai_chat_assistant
 title: AI Chat Assistant
 domain: product
 language: en
-version: 1
+version: 2
 ---
 
 # AI Chat Assistant
@@ -47,6 +47,12 @@ Goals are targets; savings are the money set aside to reach them. Contributions 
 - It cannot provide information from organizations different than the one in which the user is during the chat.
 
 - It answers in English only.
+
+## Conversation Behavior
+
+The AI assistant has no session memory. Each message is one-shot: it cannot see earlier messages, previous chats, or context the user expects it to remember. It cannot continue a previous answer or recall preferences from the same conversation.
+
+Because it cannot follow the conversation, every answer never ends with one short follow-up question so the user can continue without relying on memory.
 
 ## How to Access the AI Chat
 
