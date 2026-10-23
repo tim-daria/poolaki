@@ -194,18 +194,101 @@ PostgreSQL 18 (`pgvector/pgvector:pg18` image). Chosen because:
 <details>
 <summary><strong>❗Database Schema</strong></summary>
 
-◦ Visual representation or description of the database structure.
-◦ Tables/collections and their relationships.
-◦ Key fields and data types.
+![Database schema](./docs/database/database_schema.png)
+
+The schema is relational PostgreSQL, managed by Django migrations. Every model
+uses a `BigAutoField` primary key (`id`). `ForeignKey` columns are stored as
+`BIGINT` values referencing the related `id`.
+
+### Tables and relationships
+
+- **`core_user`** — application users. Django's `AbstractUser` fields include
+  username, password, name, email, staff/active flags, and timestamps; the
+  project adds MFA fields. A user can belong to many organizations through
+  memberships, create goals and transactions, receive invitations and
+  notifications, and invite other users.
+- **`core_organization`** — personal or shared workspaces. Organizations have
+  many memberships, invitations, categories, goals, transactions, and
+  notifications.
+- **`core_membership`** — the many-to-many join table between users and
+  organizations, with a `role` (`owner` or `member`). An `(org, user)` pair is
+  unique.
+- **`core_invitation`** — an invitation to join an organization. It references
+  the organization, the invited user, and optionally the inviting user. At
+  most one pending invitation exists for a given `(org, invited_user)` pair.
+- **`core_category`** — organization-scoped transaction categories. A category
+  is typed as `income`, `expense`, or `contribution`; `(org, name, type)` is
+  unique.
+- **`core_goal`** — organization-scoped savings goals, optionally created by a
+  user. Transactions may reference a goal to record contributions or
+  withdrawals.
+- **`core_transaction`** — organization-scoped financial entries. Each entry
+  may reference a goal and category and optionally the creating user. The
+  organization, goal, category, and user relationships are independent, so
+  deleting an organization cascades while deleting a goal, category, or user
+  preserves the transaction by setting that reference to `NULL`.
+- **`core_notification`** — user inbox entries, optionally associated with an
+  organization. Notifications contain a typed event and JSON payload; deleting
+  the user cascades, while deleting the organization sets its reference to
+  `NULL`.
+
+### Key fields and data types
+
+| Table | Key fields |
+| --- | --- |
+| `core_user` | `id BIGINT`; `email VARCHAR(254) UNIQUE NOT NULL`; `mfa_secret VARCHAR(32) NOT NULL DEFAULT ''`; `is_mfa_active BOOLEAN NOT NULL DEFAULT FALSE`; inherited Django authentication fields |
+| `core_organization` | `id BIGINT`; `name VARCHAR(100) NOT NULL`; `initial_balance NUMERIC(14,2) NOT NULL DEFAULT 0`; `is_personal BOOLEAN NOT NULL DEFAULT FALSE`; `created_at TIMESTAMPTZ NOT NULL` |
+| `core_membership` | `id BIGINT`; `org_id BIGINT NOT NULL`; `user_id BIGINT NOT NULL`; `role VARCHAR(20) NOT NULL DEFAULT 'member'`; `joined_at TIMESTAMPTZ NOT NULL`; unique `(org_id, user_id)` |
+| `core_invitation` | `id BIGINT`; `org_id BIGINT NOT NULL`; `invited_user_id BIGINT NOT NULL`; `invited_by_id BIGINT NULL`; `status VARCHAR(20) NOT NULL DEFAULT 'pending'`; `created_at TIMESTAMPTZ NOT NULL`; `responded_at TIMESTAMPTZ NULL`; unique pending `(org_id, invited_user_id)` |
+| `core_category` | `id BIGINT`; `org_id BIGINT NOT NULL`; `name VARCHAR(50) NOT NULL`; `type VARCHAR(20) NOT NULL`; unique `(org_id, name, type)` |
+| `core_goal` | `id BIGINT`; `org_id BIGINT NOT NULL`; `name VARCHAR(100) NOT NULL`; `target_amount NUMERIC(14,2) NOT NULL`; `target_date DATE NULL`; `status VARCHAR(20) NOT NULL DEFAULT 'active'`; `created_by_id BIGINT NULL`; `created_at TIMESTAMPTZ NOT NULL`; `completed_at DATE NULL` |
+| `core_transaction` | `id BIGINT`; `org_id BIGINT NOT NULL`; `goal_id BIGINT NULL`; `category_id BIGINT NULL`; `entry_type VARCHAR(20) NOT NULL`; `amount NUMERIC(14,2) NOT NULL`; `description VARCHAR(1024) NULL`; `transaction_date DATE NOT NULL`; `is_tax_deductible BOOLEAN NOT NULL DEFAULT FALSE`; `created_by_id BIGINT NULL`; `created_at TIMESTAMPTZ NOT NULL` |
+| `core_notification` | `id BIGINT`; `user_id BIGINT NOT NULL`; `type VARCHAR(30) NOT NULL`; `org_id BIGINT NULL`; `payload JSONB NOT NULL DEFAULT '{}'`; `is_read BOOLEAN NOT NULL DEFAULT FALSE`; `created_at TIMESTAMPTZ NOT NULL` |
+
+Status/type choices are stored as strings: invitation status is `pending`,
+`accepted`, `declined`, or `cancelled`; goal status is `active`, `completed`,
+or `archived`; and transaction entry type is `income`, `expense`,
+`contribution`, or `withdraw`. The schema indexes transactions by
+`(org_id, transaction_date)` and notifications by
+`(user_id, is_read, created_at)`.
 
 </details>
 
 <details>
-<summary><strong>❗Features List</strong></summary>
+<summary><strong>Features List</strong></summary>
 
-◦ Complete list of implemented features.
-◦ Which team member(s) worked on each feature.
-◦ Brief description of each feature’s functionality.
+The following table lists the implemented product features, the team members
+who contributed to them, and a brief description of their functionality.
+Contributors are identified by the usernames listed at the top of this
+README.
+
+| Feature | Team member(s) | Description |
+| --- | --- | --- |
+| User accounts and authentication | `dtimofee`, `tsemenov` | Email/password registration and login, session management, logout, CSRF protection, protected routes, password changes, and 42 (Intra) OAuth sign-in. |
+| Personal budgets and balances | `nefimov`, `tsemenov` | Creates a personal workspace for each user, supports an initial balance, and calculates the current balance from income, expenses, and goal transfers. |
+| Shared workspaces | `dtimofee`, `tsemenov`, `mainibet` | Users can create workspaces, switch between them, view members, leave a workspace, and manage workspace membership with owner and member roles. |
+| Workspace invitations | `dtimofee`, `tsemenov`, `mainibet` | Workspace owners can invite users and cancel invitations; invited users can review, accept, or decline invitations. |
+| Transactions | `nefimov`, `dtimofee`, `tsemenov` | Tracks income, expenses, contributions, and withdrawals with amounts, descriptions, dates, categories, goals, and tax-deductible status. Transactions can be listed, filtered, edited, and deleted. |
+| Transaction categories | `nefimov`, `dtimofee`, `tsemenov` | Provides workspace-scoped income, expense, and contribution categories, with filtering and duplicate-prevention rules. |
+| Savings goals | `nefimov`, `tsemenov`, `dtimofee` | Creates savings targets with optional target dates, tracks contributions and withdrawals, calculates progress and balances, and supports active, completed, and archived statuses. |
+| Financial reports | `dtimofee`, `nefimov`, `tsemenov` | Provides yearly workspace reports with income and expense totals, monthly distributions, category breakdowns, savings information, current balance, charts, year selection, and print-friendly output. |
+| Home dashboard | `tsemenov`, `nefimov`, `dtimofee` | Summarizes the selected workspace with balance, monthly activity, recent transactions, top spending, savings goals, and setup guidance. |
+| Notifications | `dtimofee`, `mainibet`, `tsemenov` | Provides an in-app inbox for invitations, transaction activity, goal milestones, and workspace membership events. The frontend polls for updates and shows unread counts. |
+| AI financial assistant | `mainibet`, `dtimofee`, `tsemenov` | Answers supported natural-language questions about workspace finances through a separate FastAPI service using intent classification, Django API retrieval, vector retrieval, prompt construction, and an external LLM. |
+| Responsive web interface | `tsemenov`, `mainibet` | React single-page application with lazy routes, responsive desktop and mobile layouts, workspace navigation, drawers, bottom sheets, charts, date controls, money formatting, toast feedback, and Markdown-rendered AI responses. |
+| Workspace authorization | `nefimov`, `dtimofee`, `tsemenov` | Restricts workspace-scoped API operations to members and limits sensitive actions, such as invitations, member removal, and workspace administration, to owners. |
+| Input validation and API protection | `dtimofee`, `nefimov`, `tsemenov` | Validates request payloads, query parameters, identifiers, monetary values, dates, categories, goals, and AI questions before processing them. |
+| Session and CSRF security | `dtimofee`, `tsemenov` | Uses django-allauth sessions, protected routes, CSRF tokens, secure logout, and authenticated API requests for browser access. |
+| Database integrity and concurrency control | `nefimov`, `dtimofee`, `cwick` | Uses PostgreSQL foreign keys, unique constraints, indexes, decimal fields, atomic transactions, and workspace scoping to keep financial data consistent when multiple users work concurrently. |
+| Secrets management | `cwick` | Stores service secrets in HashiCorp Vault, uses AppRole-scoped access, initializes and unseals Vault automatically, and issues short-lived database credentials through Vault’s database secrets engine. |
+| Web application firewall | `cwick` | Places Coraza WAF with the OWASP Core Rule Set in front of the frontend and API, records audit information, and blocks malicious HTTP requests before they reach application services. |
+| Containerized deployment | `cwick` | Runs the frontend, Django backend, PostgreSQL, AI service, Vault, Vault Agent, Caddy, and Cloudflare Tunnel through Docker Compose with development and production profiles. |
+| Reverse proxy and service routing | `cwick` | Uses Caddy as the single application entry point, routing API, authentication, administration, and frontend requests to the appropriate internal service. |
+| Public access through Cloudflare Tunnel | `cwick` | Publishes the application through Cloudflare Tunnel without requiring open inbound ports on the host. |
+| Service health checks | `nefimov`, `cwick`, `dtimofee` | Exposes health endpoints and Docker health checks so dependent services and CI can wait for the database, backend, Vault, AI service, and tunnel to become ready. |
+| Metrics and observability | `cwick` | Collects application and database metrics with Prometheus, PostgreSQL exporter, and cAdvisor; provides Grafana dashboards, traffic visibility, and alerting. |
+| Database backup and recovery | `cwick` | Runs scheduled PostgreSQL dumps in a dedicated backup container and keeps backup-related storage separate from the application services. |
+| Testing and CI | `tsemenov`, `dtimofee`, `mainibet` | Backend pytest, Ruff, and mypy checks; frontend Vitest, Playwright, ESLint, Prettier, and build checks; plus CI workflows for the relevant project areas. |
 
 </details>
 
@@ -258,7 +341,7 @@ choice".
 
 - Project subject: 42 `ft_transcendence`
   
-- [django-allauth: Headless API ](https://allauth.org/docs/draft-api/)
+- [django-allauth: Headless API ](https://docs.allauth.org/en/latest/headless/index.html)
 - [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [Mozilla Web Docs](https://developer.mozilla.org/en-US/)
 - [React Official Documentation](https://react.dev/)
