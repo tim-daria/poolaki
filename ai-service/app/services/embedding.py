@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from app.clients.llm import LLMClient
+from app.services.vector import VectorRepository
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,7 @@ class EmbeddingService:
     def __init__(self, llm_client: LLMClient, db_pool: Any) -> None:
         self.llm_client = llm_client
         self.db_pool = db_pool
+        self._repository = VectorRepository(db_pool)
 
     def chunk_text(
         self, text: str, chunk_size: int = 1000, overlap: int = 200
@@ -38,22 +40,9 @@ class EmbeddingService:
         # Generate embeddings through the LLM client.
         embeddings = await self.llm_client.generate_embeddings(chunks)
 
-        # Save into the db
-        async with self.db_pool.acquire() as conn, conn.transaction():
-            for idx in range(len(chunks)):
-                chunk_text = chunks[idx]
-                vector = embeddings[idx]
-
-                # pgvector accepts the representation in str of a py list
-                await conn.execute(
-                    """
-                        INSERT INTO chunks (document_id, content, embedding)
-                        VALUES ($1, $2, $3::vector)
-                        """,
-                    document_id,
-                    chunk_text,
-                    str(vector),
-                )
+        await self._repository.save_chunks(
+            document_id, list(zip(chunks, embeddings))
+        )
 
         logger.info(
             "Successfully ingested document_id=%s with %s chunks",
