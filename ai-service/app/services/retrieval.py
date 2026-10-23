@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable
 from typing import Any, Protocol
 
 from app.clients.django import DjangoClientError
@@ -24,13 +25,13 @@ class BackendClient(Protocol):
     ) -> dict[str, Any]: ...
 
 
-class MockDocumentRepository:
-    """TESTING ONLY: Temporal mock to simulate vector search."""
-
-    async def search_documents(
-        self, query: str, usage: TokenUsage, top_k: int = 3
-    ) -> list[str]:
-        return [f"doc_{i}" for i in range(top_k)]
+class DocumentRepositoryProtocol(Protocol):
+    async def search(
+        self,
+        query: str,
+        limit: int = settings.vector_top_k,
+        usage: TokenUsage | None = None,
+    ) -> list[dict[str, Any]]: ...
 
 
 class BaseRetriever(ABC):
@@ -50,7 +51,7 @@ class BaseRetriever(ABC):
 class Retriever(BaseRetriever):
     def __init__(
         self,
-        doc_repo: MockDocumentRepository,
+        doc_repo: DocumentRepositoryProtocol,
         django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
@@ -64,6 +65,14 @@ class Retriever(BaseRetriever):
             return None
         path = ENDPOINT_BY_INTENT.get(intent)
         return f"/api/internal/v1/{path}/" if path else None
+
+    async def _timed(self, awaitable: Awaitable[Any]) -> tuple[Any, float]:
+        start = time.perf_counter()
+        try:
+            result = await awaitable
+        except Exception as exc:  # noqa: BLE001 - stage errors are returned to the caller
+            result = exc
+        return result, round((time.perf_counter() - start) * 1000, 2)
 
     async def get_context(
         self,
@@ -81,24 +90,32 @@ class Retriever(BaseRetriever):
         payload = {"user_id": user_id, "organization_id": organization_id}
 
         # Vectors always run; Django only if the intent has an endpoint
-        vector_task = self._doc_repo.search_documents(
-            query=query, usage=usage, top_k=top_k
-        )
+        vector_task = self._doc_repo.search(query=query, limit=top_k, usage=usage)
 
         outcome: dict[str, Any] | BaseException | None = None
+        django_ms: float | None = None
         if endpoint is not None:
-            docs_result, outcome = await asyncio.gather(
-                vector_task,
-                self._django_client.fetch_backend_data(endpoint, payload),
-                return_exceptions=True,
+            (docs_result, vector_ms), (outcome, django_ms) = await asyncio.gather(
+                self._timed(vector_task),
+                self._timed(self._django_client.fetch_backend_data(endpoint, payload)),
             )
         else:
-            docs_result = (await asyncio.gather(vector_task, return_exceptions=True))[0]
+            docs_result, vector_ms = await self._timed(vector_task)
             outcome = None
 
         if isinstance(docs_result, BaseException):
             raise docs_result  # a vector failure is a real error
-        docs: list[str] = docs_result
+
+        raw_docs = docs_result  # real raw content received back
+        docs: list[str] = [doc.get("content", "") for doc in raw_docs]
+        doc_similarities = [
+            {
+                "id": doc.get("id"),
+                "source": (doc.get("metadata") or {}).get("source"),
+                "similarity": doc.get("similarity"),
+            }
+            for doc in raw_docs
+        ]
 
         items = [
             RetrievedItem(
@@ -152,8 +169,12 @@ class Retriever(BaseRetriever):
                 "intent": intent,
                 "endpoint": endpoint,
                 "docs": docs,
+                "doc_similarities": doc_similarities,
+                "min_similarity": settings.min_similarity,
                 "has_structured": bool(structured),
                 "degraded": degraded,
+                "vector_ms": vector_ms,
+                "django_ms": django_ms,
                 "retrieval_ms": round((time.perf_counter() - start) * 1000),
             },
         )

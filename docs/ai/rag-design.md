@@ -139,7 +139,11 @@ Returns the provider-reported token usage (0 if the provider does not report it)
 
 **Responsibility:** Stores shared product knowledge used by the AI Service to provide relevant context when answering user questions when its required.
 
-Document chunks and their embeddings are stored in `PostgreSQL` with `pgvector`. An external embedding provider generates embeddings for document ingestion and query retrieval.
+Document chunks and their embeddings are stored in `PostgreSQL` with `pgvector`. An external embedding provider generates embeddings for document ingestion and query retrieval. Embeddings can use a separate provider via `EMBEDDING_BASE_URL`/`EMBEDDING_API_KEY`; unset values fall back to `LLM_BASE_URL`/`LLM_API_KEY`.
+
+**Supported embedding models:** any model behind an OpenAI-compatible `POST /embeddings` API that accepts `model` and `input` and returns `data[].embedding`, with **1536-dimensional** vectors (for example, `text-embedding-3-small`). Model names are configured with `EMBEDDING_MODEL`; there is no allowlist.
+
+**Not supported:** non-OpenAI-compatible embedding APIs, custom request/response formats, and models with a different dimension (for example, `text-embedding-3-large` at 3072) unless the `vector(1536)` column and all stored embeddings are changed together.
 
 ## 3. End-to-End Data Flow
 

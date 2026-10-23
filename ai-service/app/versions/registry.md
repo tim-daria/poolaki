@@ -2,6 +2,24 @@
 
 # Prompt Versions
 
+## assistant_v4
+
+Created: 2026-10-23
+
+Changes:
+
+- Added no-session-memory rule: each request is one-shot; the assistant cannot see earlier messages or previous chats.
+- Forbid a closing follow-up question in every answer, so the user does not assume the chat keeps conversation memory.
+
+## assistant_v3
+
+Created: 2026-10-23
+
+Changes:
+
+- Removed goals from unsupported questions.
+- Added savings/goal rule: goals are targets; savings are the money set aside to reach them; answer from context and never invent balances or progress.
+
 ## assistant_v2
 
 Created: 2026-10-22
@@ -31,11 +49,3 @@ Changes:
 
 - Initial assistant behavior.
 - Added anti-hallucination rules.
-
-<!-- ## assistant_v2
-Created:
-Changes:
--
--
--->
-<!-- - Improved financial explanation style. -->

@@ -281,7 +281,11 @@ Expected Response:
 
 ---
 
-# Domain: Goals
+# Domain: Savings & Goals
+
+Goals are targets; savings are the money set aside to reach them.
+
+The assistant answers savings and goal questions with the savings data in the context. Dedicated `goals/progress` and `goals/forecast` endpoints are planned but not implemented; when the context lacks figures, the assistant explains the limitation instead of inventing them.
 
 ## GOAL-001 - Goal Progress
 
@@ -289,24 +293,13 @@ User Question:
 
 > How much progress have I made toward my goal?
 
-**Intent:**
-Calculate goal completion.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-- Contributions
-
-Retrieval: `SQL`
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/progress`
-
-Status: planned — endpoint not implemented yet.
+Status: available when the context includes goal balance or progress.
 
 Expected Response:
 
-> "You have completed 60% of your savings goal."
+> "You have saved €600 of your €1000 goal."
 
 ---
 
@@ -316,19 +309,9 @@ User Question:
 
 > How much is left to reach my goal?
 
-**Intent:**
-Calculate remaining amount.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-
-Retrieval: `SQL`
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/progress`
-
-Status: planned — endpoint not implemented yet.
+Status: available when the context includes goal balance and target.
 
 Expected Response:
 
@@ -342,24 +325,13 @@ User Question:
 
 > When will I reach my goal if I continue at this pace?
 
-**Intent:**
-Estimate completion date.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-- Saving history
-
-Retrieval: `SQL` + Analytics
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/forecast`
-
-Status: planned — endpoint not implemented yet.
+Status: available only when the context includes enough savings history; otherwise the assistant explains the limitation.
 
 Expected Response:
 
-> "You are expected to reach your goal in 4 months."
+> "I don't have enough savings history to estimate that."
 
 ---
 

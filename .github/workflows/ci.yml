@@ -231,6 +231,9 @@ jobs:
           LLM_MODEL=AI
           LLM_API_KEY=123abc
           LLM_BASE_URL=www.llm.com
+          EMBEDDING_MODEL=test-model
+          EMBEDDING_BASE_URL=http://test
+          EMBEDDING_API_KEY=test-key
           DJANGO_BASE_URL=http://django:8000
           LOG_LEVEL=Warning
           LLM_TIMEOUT=30

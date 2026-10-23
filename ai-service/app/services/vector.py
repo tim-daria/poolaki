@@ -12,6 +12,30 @@ class VectorRepository:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
 
+    @staticmethod
+    def _vector_str(embedding: list[float]) -> str:
+        """Format a Python float list as a pgvector literal."""
+        return "[" + ",".join(map(str, embedding)) + "]"
+
+    async def save_chunks(
+        self,
+        document_id: str,
+        chunks: list[tuple[str, list[float]]],
+    ) -> None:
+        """Saves multiple chunks in one transaction."""
+        query = """
+            INSERT INTO chunks (document_id, content, embedding)
+            VALUES ($1, $2, $3::vector);
+        """
+        async with self._pool.acquire() as connection, connection.transaction():
+            for content, embedding in chunks:
+                await connection.execute(
+                    query,
+                    document_id,
+                    content,
+                    self._vector_str(embedding),
+                )
+
     async def save_chunk(
         self,
         document_id: str,
@@ -33,7 +57,7 @@ class VectorRepository:
         # meta_value ensures an empty dictionary is used if no metadata is provided.
         meta_value = metadata if metadata is not None else {}
         # vector_str converts the list of floats (embedding) into a vector text format compatible with pgvector.
-        vector_str = "[" + ",".join(map(str, embedding)) + "]"
+        vector_str = self._vector_str(embedding)
 
         async with self._pool.acquire() as connection:
             chunk_id = await connection.fetchval(
@@ -90,7 +114,7 @@ class VectorRepository:
                 )
 
             if embedding is not None:
-                vector_str = "[" + ",".join(map(str, embedding)) + "]"
+                vector_str = self._vector_str(embedding)
                 await connection.execute(
                     "UPDATE chunks SET embedding = $1::vector WHERE id = $2;",
                     vector_str,

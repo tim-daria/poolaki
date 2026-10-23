@@ -325,6 +325,8 @@ services:
       context: ./ai-service
       dockerfile: Dockerfile
     container_name: ai-service
+    env_file:
+      - .env
     user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
     expose:
@@ -335,6 +337,9 @@ services:
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
       DJANGO_BASE_URL: ${DJANGO_BASE_URL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL}
       LLM_TIMEOUT: ${LLM_TIMEOUT}
       TZ: Europe/Berlin

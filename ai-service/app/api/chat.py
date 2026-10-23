@@ -5,18 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.clients.django import DjangoClientError
 from app.clients.llm import LLMClientError
+from app.dependencies import get_llm_service
 from app.services.llm import LLMService
 from models.chat import ChatMetadata, ChatRequest, ChatResponse
 from models.usage import TokenUsage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
-
-
-def get_llm_service() -> LLMService:
-    from app.main import llm_service
-
-    return llm_service
 
 
 @router.post("/chat", response_model=ChatResponse)
