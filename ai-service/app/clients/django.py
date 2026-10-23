@@ -18,10 +18,15 @@ class DjangoClientError(Exception):
 
 
 class DjangoClient:
-    """Real HTTP client for the /api/internal/v1/ namespace."""
+    """Real HTTP client for the /api/internal/v1/ namespace; presents the
+    shared internal bearer token on every request."""
 
-    def __init__(self) -> None:
-        self._client = httpx.AsyncClient(base_url=settings.django_base_url)
+    def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
+        self._client = httpx.AsyncClient(
+            base_url=settings.django_base_url,
+            headers={"Authorization": f"Bearer {settings.internal_api_token}"},
+            transport=transport,
+        )
 
     async def fetch_backend_data(
         self, endpoint: str, payload: dict[str, Any]
