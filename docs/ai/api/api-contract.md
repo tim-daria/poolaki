@@ -287,6 +287,15 @@ Error codes:
 | LLM_ERROR       | 502 Bad Gateway           | LLM provider failure                     |
 | INTERNAL_ERROR  | 500 Internal Server Error | Unexpected service failure               |
 
+### Ingest Endpoint Errors
+
+`POST /ingest/` returns FastAPI's default error body: `{"detail": "..."}`.
+
+| Case                      | HTTP | Detail                                    |
+| ------------------------- | ---- | ----------------------------------------- |
+| Embedding provider fails  | 503  | `Embedding service temporarily unavailable` |
+| Vector store unavailable  | 500  | `Vector store unavailable`                |
+
 ---
 
 ## Mapping Intents to Endpoints
