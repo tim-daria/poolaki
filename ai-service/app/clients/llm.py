@@ -152,7 +152,6 @@ class LLMClient:
                 usage = data.get("usage", {})
                 prompt_tokens = usage.get("prompt_tokens", 0)
 
-
                 logger.info(
                     "Embeddings generated successfully",
                     extra={

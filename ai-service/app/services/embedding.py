@@ -40,9 +40,7 @@ class EmbeddingService:
         # Generate embeddings through the LLM client.
         embeddings = await self.llm_client.generate_embeddings(chunks)
 
-        await self._repository.save_chunks(
-            document_id, list(zip(chunks, embeddings))
-        )
+        await self._repository.save_chunks(document_id, list(zip(chunks, embeddings)))
 
         logger.info(
             "Successfully ingested document_id=%s with %s chunks",
