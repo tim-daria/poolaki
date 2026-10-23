@@ -7,6 +7,7 @@ import asyncpg
 from app.config.settings import settings
 from app.services.embedding import EmbeddingService
 from app.services.vector import VectorRepository
+from models.usage import TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -20,24 +21,28 @@ class VectorSearchService:
         self._repository = VectorRepository(db_pool)
 
     async def search(
-        self, query: str, limit: int = settings.vector_top_k
+        self,
+        query: str,
+        limit: int = settings.vector_top_k,
+        usage: TokenUsage | None = None,
     ) -> list[dict[str, Any]]:
-        start_time = time.time()
+        start_time = time.perf_counter()
         try:
             if not query or not query.strip():
                 raise ValueError("Query cannot be empty")
 
-            embeddings = await self.embedding_service.embed([query])
-            tokens = len(query.split())
+            embeddings = await self.embedding_service.embed([query], usage=usage)
             results = await self._repository.query_similar_chunks(
                 embeddings[0], limit=limit
             )
 
-            duration = time.time() - start_time
             logger.info(
-                "Vector search executed successfully in %.4fs with %s tokens processed.",
-                duration,
-                tokens,
+                "vector_search_done",
+                extra={
+                    "duration_ms": round((time.perf_counter() - start_time) * 1000),
+                    "query_chars": len(query),
+                    "results": len(results),
+                },
             )
             return results
         except Exception as exc:

@@ -14,6 +14,7 @@ TRACE_MESSAGES = {
     "llm_final_done",
     "LLM response successful",
     "Embeddings generated successfully",
+    "vector_search_done",
 }
 
 
@@ -76,6 +77,8 @@ def trace_detail(event: dict) -> str:
         return (
             f"docs={len(event.get('doc_similarities') or [])}, "
             f"{event.get('retrieval_ms')} ms, "
+            f"vector={event.get('vector_ms')} ms, "
+            f"django={event.get('django_ms')} ms, "
             f"min_similarity={event.get('min_similarity')}"
         )
     if message == "intent_classified":
@@ -88,9 +91,16 @@ def trace_detail(event: dict) -> str:
             f"attempt={event.get('attempt')}, "
             f"{event.get('duration')} s"
         )
+    if message == "vector_search_done":
+        return (
+            f"{event.get('duration_ms')} ms, "
+            f"results={event.get('results')}, "
+            f"chars={event.get('query_chars')}"
+        )
     if message == "Embeddings generated successfully":
         return (
             f"model={event.get('model')}, "
+            f"purpose={event.get('purpose')}, "
             f"chunks={event.get('chunks_count')}, "
             f"tokens={event.get('prompt_tokens')}, "
             f"{event.get('duration')} s"
@@ -105,6 +115,8 @@ def build_report(events: list[dict]) -> str:
         e for e in events if e.get("message") == "Embeddings generated successfully"
     ]
     llm_calls = [e for e in events if e.get("message") == "LLM response successful"]
+    intent_events = [e for e in events if e.get("message") == "intent_classified"]
+    final_events = [e for e in events if e.get("message") == "llm_final_done"]
 
     out = ["# AI service audit", ""]
     out += [
@@ -132,18 +144,30 @@ def build_report(events: list[dict]) -> str:
     out.append(table(["Requests", "Avg latency (ms)", "Total tokens", "Avg tokens", "Intents"], chat_rows))
     out.append("")
 
+    out += ["## Chat pipeline timing", ""]
+    stage_rows = [
+        ["Intent", num(avg([float(e["intent_ms"]) for e in intent_events if "intent_ms" in e]))],
+        ["Retrieval", num(avg([float(e["retrieval_ms"]) for e in retrievals if "retrieval_ms" in e]))],
+        ["Vector search", num(avg([float(e["vector_ms"]) for e in retrievals if e.get("vector_ms") is not None]))],
+        ["Django API", num(avg([float(e["django_ms"]) for e in retrievals if e.get("django_ms") is not None]))],
+        ["Final answer", num(avg([float(e["final_ms"]) for e in final_events if "final_ms" in e]))],
+        ["Chat total", num(avg([float(e["latency_ms"]) for e in chats if "latency_ms" in e]))],
+    ]
+    out.append(table(["Stage", "Avg ms"], stage_rows))
+    out.append("")
+
     out += ["## Token usage", ""]
     token_rows = [
         ["Intent classification", sum(int(e.get("intent_in", 0)) for e in chats), sum(int(e.get("intent_out", 0)) for e in chats)],
         ["Final answer", sum(int(e.get("final_in", 0)) for e in chats), sum(int(e.get("final_out", 0)) for e in chats)],
-        ["Embeddings", "", sum(int(e.get("prompt_tokens", 0)) for e in embeddings)],
+        ["Query embeddings", "", sum(int(e.get("embedding", 0)) for e in chats)],
         ["Total reported (chat)", "", sum(int(e.get("total_tokens", 0)) for e in chats)],
     ]
     out.append(table(["Stage", "Input", "Output"], token_rows))
     out.append("")
     out.append(
-        "Embedding tokens come from embedding events; "
-        "they are not included in the reported chat total."
+        "Chat totals include query embeddings. Ingestion embeddings are listed "
+        "under Embedding calls and are not part of chat totals."
     )
     out.append("")
 
@@ -162,11 +186,12 @@ def build_report(events: list[dict]) -> str:
     out.append("")
 
     out += ["## Embedding calls", ""]
-    embed_stats: dict[str, dict] = defaultdict(
+    embed_stats: dict[tuple[str, str], dict] = defaultdict(
         lambda: {"calls": 0, "chunks": 0, "tokens": 0, "durations": []}
     )
     for event in embeddings:
-        stat = embed_stats[event.get("model", "unknown")]
+        key = (event.get("model", "unknown"), event.get("purpose", "unknown"))
+        stat = embed_stats[key]
         stat["calls"] += 1
         stat["chunks"] += int(event.get("chunks_count", 0))
         stat["tokens"] += int(event.get("prompt_tokens", 0))
@@ -174,14 +199,20 @@ def build_report(events: list[dict]) -> str:
     embed_rows = [
         [
             model,
+            purpose,
             stat["calls"],
             stat["chunks"],
             stat["tokens"],
             num(avg(stat["durations"]), " s"),
         ]
-        for model, stat in sorted(embed_stats.items())
+        for (model, purpose), stat in sorted(embed_stats.items())
     ]
-    out.append(table(["Model", "Calls", "Chunks", "Tokens", "Avg duration"], embed_rows))
+    out.append(
+        table(
+            ["Model", "Purpose", "Calls", "Chunks", "Tokens", "Avg duration"],
+            embed_rows,
+        )
+    )
     out.append("")
 
     out += ["## Retrieval and similarity", ""]
@@ -268,12 +299,11 @@ def build_report(events: list[dict]) -> str:
 
 
 def main() -> None:
-    source = open(sys.argv[1], encoding="utf-8") if len(sys.argv) > 1 else sys.stdin
-    try:
-        events = parse_events(source)
-    finally:
-        if source is not sys.stdin:
-            source.close()
+    if len(sys.argv) > 1:
+        with open(sys.argv[1], encoding="utf-8") as source:
+            events = parse_events(source)
+    else:
+        events = parse_events(sys.stdin)
     print(build_report(events))
 
 

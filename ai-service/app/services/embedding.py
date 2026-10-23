@@ -4,6 +4,7 @@ from typing import Any
 from app.clients.llm import LLMClient
 from app.config.settings import settings
 from app.services.vector import VectorRepository
+from models.usage import TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,19 @@ class EmbeddingService:
         self.db_pool = db_pool
         self._repository = VectorRepository(db_pool)
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for the given texts."""
-        return await self.llm_client.generate_embeddings(texts)
+    async def embed(
+        self,
+        texts: list[str],
+        usage: TokenUsage | None = None,
+        purpose: str = "query",
+    ) -> list[list[float]]:
+        """Generate embeddings and add the provider-reported tokens to usage."""
+        embeddings, llm_usage = await self.llm_client.generate_embeddings(
+            texts, purpose=purpose
+        )
+        if usage is not None:
+            usage.embedding += llm_usage.input_tokens
+        return embeddings
 
     def chunk_text(
         self,
@@ -46,7 +57,7 @@ class EmbeddingService:
             return
 
         # Generate embeddings through the LLM client.
-        embeddings = await self.llm_client.generate_embeddings(chunks)
+        embeddings = await self.embed(chunks, purpose="ingestion")
 
         await self._repository.save_chunks(document_id, list(zip(chunks, embeddings)))
 

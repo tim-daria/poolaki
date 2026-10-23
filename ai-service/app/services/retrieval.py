@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable
 from typing import Any, Protocol
 
 from app.clients.django import DjangoClientError
@@ -26,7 +27,10 @@ class BackendClient(Protocol):
 
 class DocumentRepositoryProtocol(Protocol):
     async def search(
-        self, query: str, limit: int = settings.vector_top_k
+        self,
+        query: str,
+        limit: int = settings.vector_top_k,
+        usage: TokenUsage | None = None,
     ) -> list[dict[str, Any]]: ...
 
 
@@ -62,6 +66,14 @@ class Retriever(BaseRetriever):
         path = ENDPOINT_BY_INTENT.get(intent)
         return f"/api/internal/v1/{path}/" if path else None
 
+    async def _timed(self, awaitable: Awaitable[Any]) -> tuple[Any, float]:
+        start = time.perf_counter()
+        try:
+            result = await awaitable
+        except Exception as exc:  # noqa: BLE001 - stage errors are returned to the caller
+            result = exc
+        return result, round((time.perf_counter() - start) * 1000, 2)
+
     async def get_context(
         self,
         user_id: int,
@@ -78,17 +90,17 @@ class Retriever(BaseRetriever):
         payload = {"user_id": user_id, "organization_id": organization_id}
 
         # Vectors always run; Django only if the intent has an endpoint
-        vector_task = self._doc_repo.search(query=query, limit=top_k)
+        vector_task = self._doc_repo.search(query=query, limit=top_k, usage=usage)
 
         outcome: dict[str, Any] | BaseException | None = None
+        django_ms: float | None = None
         if endpoint is not None:
-            docs_result, outcome = await asyncio.gather(
-                vector_task,
-                self._django_client.fetch_backend_data(endpoint, payload),
-                return_exceptions=True,
+            (docs_result, vector_ms), (outcome, django_ms) = await asyncio.gather(
+                self._timed(vector_task),
+                self._timed(self._django_client.fetch_backend_data(endpoint, payload)),
             )
         else:
-            docs_result = (await asyncio.gather(vector_task, return_exceptions=True))[0]
+            docs_result, vector_ms = await self._timed(vector_task)
             outcome = None
 
         if isinstance(docs_result, BaseException):
@@ -161,6 +173,8 @@ class Retriever(BaseRetriever):
                 "min_similarity": settings.min_similarity,
                 "has_structured": bool(structured),
                 "degraded": degraded,
+                "vector_ms": vector_ms,
+                "django_ms": django_ms,
                 "retrieval_ms": round((time.perf_counter() - start) * 1000),
             },
         )
