@@ -150,11 +150,8 @@ class LLMClient:
                     embeddings.append(item.get("embedding"))
 
                 usage = data.get("usage", {})
-                prompt_tokens = usage.get("prompt_tokens")
+                prompt_tokens = usage.get("prompt_tokens", 0)
 
-                # Fallback if prompt_tokens is missing from response
-                if not prompt_tokens:
-                    prompt_tokens = 0
 
                 logger.info(
                     "Embeddings generated successfully",
