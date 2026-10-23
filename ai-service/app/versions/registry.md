@@ -2,6 +2,15 @@
 
 # Prompt Versions
 
+## assistant_v4
+
+Created: 2026-10-23
+
+Changes:
+
+- Added no-session-memory rule: each request is one-shot; the assistant cannot see earlier messages or previous chats.
+- Forbid a closing follow-up question in every answer, so the user does not assume the chat keeps conversation memory.
+
 ## assistant_v3
 
 Created: 2026-10-23
