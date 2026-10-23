@@ -2,6 +2,7 @@ import os
 from decimal import Decimal
 
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 from rest_framework.test import APIClient
 
 from core.models import (
@@ -17,6 +18,13 @@ from core.models import (
 
 os.environ.setdefault("AI_SERVICE_URL", "http://ai-service:8000")
 os.environ.setdefault("AI_SERVICE_TIMEOUT", "90")
+
+INTERNAL_API_TOKEN = "test-internal-token"
+
+
+@pytest.fixture(autouse=True)
+def internal_api_token(settings: SettingsWrapper) -> None:
+    settings.INTERNAL_API_TOKEN = INTERNAL_API_TOKEN
 
 
 @pytest.fixture

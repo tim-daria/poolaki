@@ -233,6 +233,16 @@ REST_FRAMEWORK = {
 
 
 # ======================================================
+# INTER-SERVICE AUTH (AI service -> backend)
+# ======================================================
+
+# Shared bearer token the AI Service must present to /api/internal/v1/,
+# provisioned by Vault. An empty value fails closed: the internal API
+# rejects every request with 401 instead of opening a channel.
+INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
+
+
+# ======================================================
 # INTERNATIONALIZATION
 # ======================================================
 
