@@ -99,6 +99,11 @@ async def test_embedding_client_falls_back_to_llm_config(monkeypatch):
 
     client = LLMClient()
 
-    assert str(client._embedding_client.base_url).rstrip("/") == "http://test"
-    assert client._embedding_client.headers["Authorization"] == "Bearer test"
+    assert str(client._embedding_client.base_url).rstrip(
+        "/"
+    ) == settings.llm_base_url.rstrip("/")
+    assert (
+        client._embedding_client.headers["Authorization"]
+        == f"Bearer {settings.llm_api_key}"
+    )
     await client.close()
