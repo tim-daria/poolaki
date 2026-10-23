@@ -10,56 +10,82 @@ version: 0
 
 ## Definition
 
-A goal is a dedicated financial target created by users to save money for a specific purpose. Money allocated to a goal is separated from the general available balance.
+Savings are the money set aside toward a goal. A goal is the target: a dedicated financial purpose created by users, with a target amount and optional date. Money allocated to a goal is separated from the general available balance and tracked against the target amount.
+
+## Properties
+
+- **Name:** Required and unique within the workspace.
+- **Target amount:** Required and greater than zero.
+- **Target date:** Optional. When set, it must be today or a future date; it can be removed later.
+- **Status:** Active, Completed, or Archived.
+- **Creator:** The member who created the goal.
 
 ## Contributions
 
-A contribution is a specific type of transaction used to move money from the general available balance into a specific savings goal. Once contributed, this money no longer appears in the general available balance.
+A contribution moves money from the general available balance into an active goal. It requires a goal; the Contribution category is applied automatically.
 
-## Goal Customization and Properties
+Contributions reduce the general available balance and increase the goal balance. Editing or deleting a contribution adjusts the goal balance accordingly.
 
-**Properties:** Goals include a custom name, target amount, deadline (optional), and status.
+## Withdrawals
 
-**States:** Goals can be Active, Archived, or Completed.
+A withdrawal moves money from an active goal back into the general available balance.
 
-**Editing:** Users can edit the name, target amount, deadline, and status while a goal is active or completed, but not when it is archived.
+Archiving a goal also settles it: a positive balance is returned as a withdrawal named after the archived goal, and a negative balance is covered by a compensating contribution.
 
-**Optional Deadlines:** Deadlines are optional, allowing for permanent or ongoing savings funds such as emergency funds. Removing the deadline also removes any overdue status.
+## Available Balance
 
-## Goal Lifecycle and Statuses
+The general available balance is the initial balance plus income, minus expenses, minus contributions, plus withdrawals. Goal balances stay outside it until the goal is archived.
 
-**Overdue:** Appears if the target date passes without reaching 100% completion. It can be cleared by editing the goal to set a future deadline or by removing the deadline entirely.
+## States and Rules
 
-**Completed:** Marks the current saved amount as the new 100% target. Completed goals can still receive contributions and exceed 100% of the original target.
+**Active:** The goal accepts contributions and withdrawals. It can also pay expenses only when it has no target date; a goal with a deadline cannot be spent from until it is completed.
 
-**Archived:** Indicates the user no longer wishes to save for that purpose. Archived goals cannot receive further contributions, and any saved money returns to the general available balance. The historical data remains visible on the savings page.
+**Completed:** A goal is completed manually from the goal form. Completed goals can pay expenses but cannot receive contributions or withdrawals. Completing sets a completion date; reverting to active clears it.
 
-**Off limits:** A goal whose balance has gone below zero, because expenses paid from it exceeded what it held. The card marks it with an "Off limits" chip, a red negative amount and "Over by €X" in place of the deadline; its progress reads 0%. The general available balance does not reflect the overdraft while the goal is open: it is settled from the balance only when the goal is archived, as a contribution labelled "Overdraft settlement" in the transactions list. Topping the goal up with a contribution clears the state earlier.
+**Archived:** Archiving settles the goal balance and moves the goal to the archived section. Archived goals cannot be edited, receive contributions or withdrawals, or pay expenses.
 
-## Shared Accounts and Permissions
+## Progress, Overdue, and Off Limits
 
-- All members in a shared account can create goals.
+**Progress:** The saved balance divided by the target amount. Progress can exceed 100%, and a goal can be completed before or after reaching its target.
 
-- Goals cannot be deleted, but they can be archived.
+**Overdue:** An active goal that has not reached its target and whose target date has passed is marked overdue until it is completed, topped up, or given a new date.
 
-- Only the creator of the goal or the organization owner can archive a goal.
+**Off limits:** A goal whose balance is below zero, because expenses paid from it exceeded what it held. The card shows an "Off limits" chip, a negative amount, and the amount over the balance; progress reads 0%. A contribution clears the state, and the overdraft is settled when the goal is archived.
 
-- Notifications are sent to all members except the actor when a goal is created, completed, or archived.
+## Spending from Goals
 
-## Expenses Linked to Goals
+Expenses can be paid from a goal when the goal is spendable: an active goal without a target date or a completed goal. Linking an expense deducts the amount from that goal instead of the general available balance.
 
-Expenses can optionally be linked to a specific savings goal when registered.
+## Permissions and Notifications
 
-This helps users evaluate whether their savings plan was sufficient, more than enough, or less than what was actually needed for that objective.
+- All workspace members can view goals and create new ones.
 
-Linking an expense deducts the money from that specific savings total while keeping the expense record tied to it.
+- Any member can contribute to or withdraw from an active goal. Each transfer is a transaction, so only its creator can edit or delete it.
 
-## Where Goals and Savings Appear
+- Only the goal creator or the workspace owner can edit a goal, change its status, or archive it.
 
-**Home Page:** Displays a summary of active goals.
+- Archived goals are read-only for everyone.
 
-**Savings Page:** Displays all goals, individual saved amounts, completion percentages, status filters, and the "Add Goal" option.
+- Goals cannot be deleted.
 
-**Transactions Page:** Lists contributions and linked expenses individually. Transactions can be filtered by type, and editing a contribution adjusts the corresponding goal balance automatically.
+- Creating, completing, or archiving a goal notifies every other workspace member. Editing a goal or reverting it to active sends no notification.
 
-**Reports Page:** Displays visual charts and numeric totals of consolidated savings month-by-month for a selected year.
+- Contributions, withdrawals, and goal-linked expenses notify other members as transactions.
+
+- A personal workspace has no other members to notify.
+
+## Where Savings and Goals Appear
+
+**Home Page:** Displays the active goal closest to completion, or a prompt to create the first goal.
+
+**Savings Page:** Groups goals into Active, Completed, and Archived sections, with balances, progress, and the add, edit, contribute, withdraw, and archive actions.
+
+**Transactions Page:** Lists contributions, withdrawals, and expenses linked to a goal.
+
+**Reports Page:** Shows the amount set aside per month and a savings view grouped by goal for the selected year.
+
+## Related Concepts
+
+- Transactions
+- Categories
+- Reports

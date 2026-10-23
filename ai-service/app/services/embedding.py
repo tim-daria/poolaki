@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from app.clients.llm import LLMClient
+from app.config.settings import settings
 from app.services.vector import VectorRepository
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,10 @@ class EmbeddingService:
         return await self.llm_client.generate_embeddings(texts)
 
     def chunk_text(
-        self, text: str, chunk_size: int = 1000, overlap: int = 200
+        self,
+        text: str,
+        chunk_size: int = settings.chunk_size,
+        overlap: int = settings.chunk_overlap,
     ) -> list[str]:
         """Chunk the documents with a small overlapping."""
         chunks = []

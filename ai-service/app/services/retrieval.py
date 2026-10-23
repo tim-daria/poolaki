@@ -24,13 +24,10 @@ class BackendClient(Protocol):
     ) -> dict[str, Any]: ...
 
 
-class MockDocumentRepository:
-    """TESTING ONLY: Temporal mock to simulate vector search."""
-
-    async def search_documents(
-        self, query: str, usage: TokenUsage, top_k: int = 3
-    ) -> list[str]:
-        return [f"doc_{i}" for i in range(top_k)]
+class DocumentRepositoryProtocol(Protocol):
+    async def search(
+        self, query: str, limit: int = settings.vector_top_k
+    ) -> list[dict[str, Any]]: ...
 
 
 class BaseRetriever(ABC):
@@ -50,7 +47,7 @@ class BaseRetriever(ABC):
 class Retriever(BaseRetriever):
     def __init__(
         self,
-        doc_repo: MockDocumentRepository,
+        doc_repo: DocumentRepositoryProtocol,
         django_client: BackendClient,
     ):
         self._doc_repo = doc_repo
@@ -81,9 +78,7 @@ class Retriever(BaseRetriever):
         payload = {"user_id": user_id, "organization_id": organization_id}
 
         # Vectors always run; Django only if the intent has an endpoint
-        vector_task = self._doc_repo.search_documents(
-            query=query, usage=usage, top_k=top_k
-        )
+        vector_task = self._doc_repo.search(query=query, limit=top_k)
 
         outcome: dict[str, Any] | BaseException | None = None
         if endpoint is not None:
@@ -98,7 +93,17 @@ class Retriever(BaseRetriever):
 
         if isinstance(docs_result, BaseException):
             raise docs_result  # a vector failure is a real error
-        docs: list[str] = docs_result
+
+        raw_docs = docs_result  # real raw content received back
+        docs: list[str] = [doc.get("content", "") for doc in raw_docs]
+        doc_similarities = [
+            {
+                "id": doc.get("id"),
+                "source": (doc.get("metadata") or {}).get("source"),
+                "similarity": doc.get("similarity"),
+            }
+            for doc in raw_docs
+        ]
 
         items = [
             RetrievedItem(
@@ -152,6 +157,8 @@ class Retriever(BaseRetriever):
                 "intent": intent,
                 "endpoint": endpoint,
                 "docs": docs,
+                "doc_similarities": doc_similarities,
+                "min_similarity": settings.min_similarity,
                 "has_structured": bool(structured),
                 "degraded": degraded,
                 "retrieval_ms": round((time.perf_counter() - start) * 1000),

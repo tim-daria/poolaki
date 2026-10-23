@@ -24,6 +24,16 @@ class LLMClient:
                 "Content-Type": "application/json",
             },
         )
+        self._embedding_client = httpx.AsyncClient(
+            base_url=settings.embedding_base_url or settings.llm_base_url,
+            timeout=settings.llm_timeout,
+            headers={
+                "Authorization": (
+                    f"Bearer {settings.embedding_api_key or settings.llm_api_key}"
+                ),
+                "Content-Type": "application/json",
+            },
+        )
 
     async def generate_response(self, prompt: str) -> tuple[str, LLMUsage]:
         models = [settings.llm_model]
@@ -136,7 +146,7 @@ class LLMClient:
                     "input": texts,
                 }
 
-                response = await self._client.post(
+                response = await self._embedding_client.post(
                     "/embeddings",
                     json=payload,
                 )
@@ -199,3 +209,4 @@ class LLMClient:
 
     async def close(self) -> None:
         await self._client.aclose()
+        await self._embedding_client.aclose()

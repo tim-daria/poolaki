@@ -170,7 +170,7 @@ Covers: category spending questions ("how much did I spend on food?", "what is m
 
 - One row per income and expense category in the organization, including categories without activity in the year (zero-filled), so the AI Service can distinguish "no spending on Health this year" from "the category does not exist".
 - `monthly` is always 12 slots, index `0` = January, zero-filled. `total` equals the sum of `monthly`.
-- Only income and expense categories are returned. The contribution category is excluded until the planned `withdraw` entry type lands: savings only make sense net of withdrawals, so contribution data is deferred with the goal endpoints (2.4).
+- Only income and expense categories are returned. The contribution category is excluded until the planned `withdraw` entry type lands: savings only make sense net of withdrawals, so contribution data is not exposed to the AI yet.
 - Ordering: income categories first, then expense categories; within a type, by `total` descending, then by name. The biggest expense category is the first expense entry.
 
 ### 2.3. Transactions
@@ -206,7 +206,7 @@ The single request the AI Service sends for every transaction intent:
 - Window: the last 3 calendar months including the current one — from the first day of the month two months before the current month to today. Computed server-side from the current date; the AI Service sends no dates.
 - No row cap: every income/expense transaction in the window is returned.
 - Newest first: `date` descending, `id` descending within a day.
-- Only `income` and `expense` are returned. `contribution` / `withdraw` are internal goal transfers, not income/expense events, and are excluded; goal funding questions are answered by the goals endpoint (2.4).
+- Only `income` and `expense` are returned. `contribution` / `withdraw` are internal goal transfers, not income/expense events, and are excluded; savings/goal questions use the savings data available in context, and dedicated endpoints are planned (2.4).
 
 The endpoint retrieves the full bounded list; the LLM answers from it:
 
@@ -239,7 +239,9 @@ Questions about periods **outside** the fetched window (e.g. "largest expense la
 
 ### 2.4. Deferred Endpoints (Goals)
 
-Goal endpoints are part of the planned contract but are **not implemented** in this iteration. The AI Service must not call them; goal questions (see [Supported AI Questions](../supported-questions.md)) are declined until the endpoints land.
+Goal endpoints are part of the planned contract but are **not implemented** in this iteration. The AI Service must not call them. Savings/goal questions are answered from the savings data available in context; when figures are missing, the assistant explains the limitation and does not invent them.
+
+Goals are targets; savings are the money set aside to reach them.
 
 Planned:
 

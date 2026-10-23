@@ -9,7 +9,7 @@ from app.services.embedding import EmbeddingService
 from app.services.intention import IntentionService
 from app.services.llm import LLMService
 from app.services.prompt_builder import PromptBuilder
-from app.services.retrieval import MockDocumentRepository, Retriever
+from app.services.retrieval import Retriever
 from app.services.vector_search import VectorSearchService
 
 
@@ -40,7 +40,7 @@ def get_llm_service(request: Request) -> LLMService:
     django_client = request.app.state.django_client
 
     retriever = Retriever(
-        doc_repo=MockDocumentRepository(),
+        doc_repo=get_vector_search_service(request),
         django_client=django_client,
     )
 
