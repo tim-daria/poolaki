@@ -17,7 +17,7 @@ from core.models import (
     Organization,
     Transaction,
 )
-from core.services.balance import get_annotated_goal_balance
+from core.services.balance import calculate_goal_balance, get_annotated_goal_balance
 from core.services.goal import allowed_entry_types
 
 
@@ -367,6 +367,34 @@ class TransactionUpdateSerializer(serializers.Serializer[Transaction]):
             raise serializers.ValidationError(
                 {"category_id": ("Category type must match transaction entry type.")}
             )
+
+        if "amount" in attrs and transaction.goal_id is not None:
+            goal = self.context.get("goal") or transaction.goal
+            current_balance = calculate_goal_balance(goal)
+            old_signed_amount = (
+                transaction.amount
+                if transaction.entry_type == EntryType.CONTRIBUTION
+                else -transaction.amount
+            )
+            new_amount = cast(Decimal, attrs["amount"])
+            new_signed_amount = (
+                new_amount if transaction.entry_type == EntryType.CONTRIBUTION else -new_amount
+            )
+            resulting_balance = current_balance - old_signed_amount + new_signed_amount
+
+            if goal.status == GoalStatus.ARCHIVED and resulting_balance != Decimal("0"):
+                raise serializers.ValidationError(
+                    {
+                        "amount": (
+                            "Transactions associated with archived goals must keep the goal "
+                            "balance at zero.",
+                        )
+                    }
+                )
+            if transaction.entry_type == EntryType.WITHDRAW and resulting_balance < Decimal("0"):
+                raise serializers.ValidationError(
+                    {"amount": ("Withdrawal amount cannot exceed the goal balance.",)}
+                )
         return attrs
 
     def validate_category_id(self, category: Category | None) -> Category | None:
@@ -475,12 +503,14 @@ class AiChatRequestSerializer(serializers.Serializer[dict[str, str]]):
 class ReportAmountsSerializer(serializers.Serializer[dict[str, Any]]):
     income = serializers.DecimalField(max_digits=None, decimal_places=2)
     expense = serializers.DecimalField(max_digits=None, decimal_places=2)
+    goals_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportMonthlySerializer(serializers.Serializer[dict[str, Any]]):
     month = serializers.IntegerField()
     income = serializers.DecimalField(max_digits=None, decimal_places=2)
     expense = serializers.DecimalField(max_digits=None, decimal_places=2)
+    goals_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
@@ -488,6 +518,19 @@ class ReportCategorySerializer(serializers.Serializer[dict[str, Any]]):
     name = serializers.CharField()
     type = serializers.ChoiceField(choices=[CategoryType.INCOME, CategoryType.EXPENSE])
     total = serializers.DecimalField(max_digits=None, decimal_places=2)
+    monthly = serializers.ListField(
+        child=serializers.DecimalField(max_digits=None, decimal_places=2),
+        min_length=12,
+        max_length=12,
+    )
+
+
+class ReportGoalSerializer(serializers.Serializer[dict[str, Any]]):
+    goal_id = serializers.IntegerField()
+    name = serializers.CharField()
+    status = serializers.ChoiceField(choices=GoalStatus.choices)
+    target_amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    balance = serializers.DecimalField(max_digits=None, decimal_places=2)
     monthly = serializers.ListField(
         child=serializers.DecimalField(max_digits=None, decimal_places=2),
         min_length=12,
@@ -505,6 +548,7 @@ class ReportResponseSerializer(serializers.Serializer[dict[str, Any]]):
     monthly = ReportMonthlySerializer(many=True)
     categories = ReportCategorySerializer(many=True)
     goal_balance = serializers.DecimalField(max_digits=None, decimal_places=2)
+    goals = ReportGoalSerializer(many=True)
 
 
 class OrganizationBalanceSerializer(serializers.Serializer[dict[str, Any]]):
@@ -548,3 +592,6 @@ class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
 
 class AiTransactionsResponseSerializer(serializers.Serializer[dict[str, Any]]):
     transactions = AiTransactionSerializer(many=True)
+
+
+"""Serialize API request and response payloads for the core application."""

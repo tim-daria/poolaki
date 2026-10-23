@@ -284,7 +284,9 @@ Status:
 GET /api/v1/organizations/{org_id}/goals/{goal_id}/balance/
 ```
 
-Returns the current balance for the goal based on the transactions linked to it. The balance represents the total contributions assigned to the goal and is used to track progress toward the target amount.
+Returns the current net balance for the goal based on the transactions linked to
+it. Contributions increase the balance, while withdrawals and expenses decrease
+it. The balance is used to track progress toward the target amount.
 
 Response example:
 
@@ -319,7 +321,7 @@ Request body:
 
 Changing the status updates the lifecycle of the goal. The goal can move from `active` to `completed`, from `completed` to `active`, and from `active` or `completed` to `archived`. Archived goals cannot be changed back to an active state.
 
-When a goal is archived, any remaining goal balance is transferred back to the organization balance.
+When a goal is archived, its net balance is settled as part of the same atomic operation. A positive balance creates a `withdraw` transaction for the remaining amount; a negative balance creates a compensating `contribution` for its absolute value. Both transactions are linked to the goal, have `category_id: null`, the description `Archived <goal name>`, the archive date, and `is_tax_deductible: false`; no settlement transaction is created when the balance is zero. The goal is archived with a zero balance.
 
 Changing the status to `completed` or `archived` sends a `goal_completed` /
 `goal_archived` notification to every other member of the organization;
@@ -444,9 +446,12 @@ All organization members can make a withdrawal.
 Status:
 
 - `201 Created` on success
-- `400 Bad Request` when the goal is not active or validation fails
+- `400 Bad Request` when the goal is not active, the withdrawal exceeds the
+  current goal balance, or validation fails
 - `403 Forbidden` when the user is not allowed to withdraw from the goal
 - `404 Not Found` when the goal does not exist in the organization
+
+A withdrawal amount may equal the current goal balance but cannot exceed it.
 
 ### Make expense
 

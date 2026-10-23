@@ -24,13 +24,32 @@ def test_response_carry_contract_shape(
 
     assert set(data) == {"year", "balance", "totals", "months"}
     assert data["year"] == 2025
-    assert data["totals"] == {"income": "100.00", "expense": "0.00"}
+    assert data["totals"] == {
+        "income": "100.00",
+        "expense": "0.00",
+        "goals_balance": "0.00",
+    }
     assert [m["month"] for m in data["months"]] == list(range(1, 13))
-    assert set(data["months"][0]) == {"month", "income", "expense"}
+    assert set(data["months"][0]) == {
+        "month",
+        "income",
+        "expense",
+        "goals_balance",
+    }
     # months without activity are zero-filled
-    assert data["months"][0] == {"month": 1, "income": "0.00", "expense": "0.00"}
+    assert data["months"][0] == {
+        "month": 1,
+        "income": "0.00",
+        "expense": "0.00",
+        "goals_balance": "0.00",
+    }
     june = next(m for m in data["months"] if m["month"] == 6)
-    assert june == {"month": 6, "income": "100.00", "expense": "0.00"}
+    assert june == {
+        "month": 6,
+        "income": "100.00",
+        "expense": "0.00",
+        "goals_balance": "0.00",
+    }
 
 
 def test_default_year_is_current_year(

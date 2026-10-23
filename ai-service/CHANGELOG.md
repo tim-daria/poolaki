@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-10-22
+
+### Added
+
+- Integrated the real `DjangoClient` with the internal API contract (`analytics/summary`, `categories`, `transactions`).
+- Added per-request token counting (`TokenUsage`, `LLMUsage`) and per-stage latency logging (`intent_classified`, `retrieval_done`, `llm_final_done`, `chat_completed`).
+- Added data-window information and token-budget trimming of `transactions` in the context builder.
+- Added scope, data, security, language and formatting rules to the system prompt.
+- Added `<context>` and `<user_question>` delimiters to the prompts.
+- Added `DjangoClientError` and its HTTP mapping in the chat endpoint (403, 400).
+
+### Changed
+
+- Intents are now `summary`, `categories`, `transactions` and `unsupported`; unknown labels no longer raise an error.
+- Retriever runs vector search and Django calls in parallel and degrades to vector-only context when the backend fails.
+- `LLMClient.generate_response` now returns `(text, LLMUsage)`.
+- `PromptBuilder` fills placeholders in a single pass and receives `today` as a `date` from `LLMService`.
+- JSON logs now include all `extra` fields.
+- Moved `database_url` to `settings.py`; added `max_context_tokens`, `min_similarity` and `vector_top_k`.
+
+### Removed
+
+- Removed `MockDjangoClient` and the goals endpoints from the supported flow.
+
 ## [0.5.0] - 2026-09-30
 
 ### Added

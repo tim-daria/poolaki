@@ -9,15 +9,12 @@ import { monthHeading, monthYear, TODAY } from "./date";
 import { goalFlags, targetReached, type Goal } from "./goals";
 import { splitExpense } from "./goalSpend";
 import { DEFAULT_FILTERS } from "./transactionFilters";
-import { toMoneyString } from "./money";
+import { cents } from "./money";
 import { fetchTransactionPage, type Transaction } from "./transactions";
 
 /* ---------------------------------- */
 /*              Headline              */
 /* ---------------------------------- */
-
-/** Two-decimal arithmetic: amounts are cents, and float sums drift. */
-const cents = (n: number) => Number(toMoneyString(n));
 
 export type GoalFigures = {
   saved: number;
