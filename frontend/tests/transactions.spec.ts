@@ -562,11 +562,11 @@ test.describe.serial("Transactions", () => {
       .filter({ hasText: "Categories" });
 
     // Today is frozen at 15 Sep 2026; the fixtures end in August.
-    await panel.getByRole("button", { name: "Last month" }).click();
+    await panel.getByRole("button", { name: "Prev month" }).click();
     await expect(page).toHaveURL(/from=2026-08-01/);
     await expect(page).toHaveURL(/to=2026-08-31/);
     await expect(
-      panel.getByRole("button", { name: "Last month" }),
+      panel.getByRole("button", { name: "Prev month" }),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(panel.getByText("4 transactions match")).toBeVisible();
 

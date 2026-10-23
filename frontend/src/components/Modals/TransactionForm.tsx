@@ -397,8 +397,10 @@ export function TransactionForm({
                     select
                     disabled={locked}
                     /* null means "not picked yet", but MUI needs "" for that —
-                     passing null would make the field uncontrolled. */
-                    value={draft.goal ?? ""}
+                     passing null would make the field uncontrolled. Empty
+                     too until the goals load, so the value is always one of
+                     the options. */
+                    value={selectedGoal ? draft.goal : ""}
                     onChange={(e) => {
                       if (e.target.value === "new") setCreatingGoal(true);
                       else set("goal", Number(e.target.value));
@@ -443,8 +445,11 @@ export function TransactionForm({
                       <AddIcon fontSize="small" sx={{ mr: 1 }} />
                       New goal…
                     </MenuItem>
+                    {/* The chosen goal stays listed after it is completed or
+                        archived: an edit of an old transfer is locked, but its
+                        goal still has to be an option to be shown. */}
                     {goals
-                      .filter((g) => canTransfer(g))
+                      .filter((g) => canTransfer(g) || g.id === draft.goal)
                       .map((g) => (
                         <MenuItem key={g.id} value={g.id}>
                           <Box sx={{ fontWeight: 700 }}>{g.name}</Box>
