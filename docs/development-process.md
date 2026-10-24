@@ -54,6 +54,7 @@ GitHub was used for project management and collaborative development:
 | Miro     | Sprint reviews, retrospectives, planning and deadline coordination |
 | Slack    | Team communication and Huddles                                     |
 | Insomnia | Testing backend API endpoints and verifying responses              |
+| Notion   | Team knowledge base and process documentation                      |
 
 ## 7. Continuous Improvement
 
