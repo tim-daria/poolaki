@@ -100,9 +100,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project Documentation
 
-- Backend API documentation: [Backend Readme](backend/README.md) and [other backend documents](docs/backend)
-- AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
-- Frontend documentation: [Frontend documents](docs/frontend), and other [frontend documents](docs/frontend)
+- Backend API documentation: [Backend Readme](docs/backend/README.md) and [other backend documents](docs/backend)
+- AI Service documentation: [AI Readme](docs/ai-service/README.md) and [other AI documents](docs/ai)
+- Frontend documentation: [Frontend Readme](docs/frontend/README.md), and other [frontend documents](docs/frontend)
 - Input validation, both sides: [docs/validation.md](docs/validation.md)
 
 ## Additional Sections [... NEEDS TO BE FILLED ...]
@@ -119,9 +119,11 @@ For each team member mentioned at the top of the README.md, you must provide:
 <details>
 <summary><strong>❗Project Management</strong></summary>
 
-◦ How the team organized the work (task distribution, meetings, etc.).
-◦ Tools used for project management (GitHub Issues, Trello, etc.).
-◦ Communication channels used (Discord, Slack, etc.).
+- **Organisation.** The team met once a week to review progress, decide what to build next and split the work. Tasks were assigned at these meetings and tracked until done.
+
+- **Tools.** Work items were tracked as GitHub Issues, one issue per task or bug, closed by the pull request that resolved it. A GitHub Projects board gave an overview of the issues by status (to do, in progress, done) and by assignee, and was reviewed at each weekly meeting. Miro boards were used for planning: sketching screens, mapping data flows and laying out the module roadmap before anything was coded.
+
+- **Communication.** Day-to-day communication happened in a shared Slack workspace. Slack carried quick questions, pull request links and decisions made between meetings, so that nothing depended on everyone being in the same room.
 
 </details>
 
