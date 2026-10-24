@@ -42,3 +42,6 @@ blob-report/
 
 # Certificates
 *.pem
+
+#audit
+ai-audit.md
