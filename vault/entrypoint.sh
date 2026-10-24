@@ -107,6 +107,9 @@ if [ "$INITIALIZED" = "false" ]; then
 
 	vault kv put secret/ai-service \
 		llm_api_key="$LLM_API_KEY" \
+		embedding_model="$EMBEDDING_MODEL" \
+		embedding_base_url="$EMBEDDING_BASE_URL" \
+		embedding_api_key="$EMBEDDING_API_KEY" \
 		internal_api_token="$INTERNAL_API_TOKEN"
 
 	#######################################

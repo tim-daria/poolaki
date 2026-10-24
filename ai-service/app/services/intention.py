@@ -31,10 +31,10 @@ class IntentionService:
         prompt = f"""
 Classify the following financial question into exactly one of these intents:
 
-- summary: income/expense totals per month, balance, averages, month-to-month comparison, shared/organization spending.
+- summary: income/expense totals per month, balance, averages, month-to-month comparison, shared/organization spending, savings and goals.
 - categories: spending/income by category, biggest category, list of categories, which category fits a transaction.
 - transactions: top/largest expenses, last expense, listing recent transactions.
-- unsupported: goals, investment advice, external data (e.g. crypto prices), bank import, future predictions, weekly or daily granularity, questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?").
+- unsupported: investment advice, external data (e.g. crypto prices), bank import, future predictions, weekly or daily granularity, questions about one specific transaction (e.g. "why was my Uber on June 2 categorized as Transport?").
 
 Question:
 <question>

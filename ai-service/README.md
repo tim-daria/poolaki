@@ -179,11 +179,16 @@ AI_SERVICE_PORT=8000
 LLM_BASE_URL=<url>
 LLM_API_KEY=<your-api-key>
 LLM_MODEL=<your-model>
+EMBEDDING_MODEL=<your-embedding-model>
 DJANGO_BASE_URL=http://backend:8000
 DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>
 
 # Bearer token presented to the backend's /api/internal/v1/ API
 INTERNAL_API_TOKEN=<shared-token>
+
+# Optional: separate embedding provider; falls back to LLM_BASE_URL/LLM_API_KEY
+# EMBEDDING_BASE_URL=<url>
+# EMBEDDING_API_KEY=<your-embedding-api-key>
 
 # Optional (defaults shown)
 # LLM_FALLBACK_MODEL=<your-model>
@@ -193,7 +198,7 @@ INTERNAL_API_TOKEN=<shared-token>
 
 ```
 
-**Note:** LLM_*, DJANGO_BASE_URL, DATABASE_URL and INTERNAL_API_TOKEN are required; the service does not start without them.
+**Note:** `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_MODEL`, `DJANGO_BASE_URL`, `DATABASE_URL` and `INTERNAL_API_TOKEN` are required; the service does not start without them.
 
 ## Instructions
 

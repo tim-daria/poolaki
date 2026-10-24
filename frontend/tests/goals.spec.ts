@@ -152,7 +152,7 @@ test.describe.serial("Goals", () => {
     await expect(dialog).toBeHidden();
     const card = active().getByRole("group", { name: "Winter tyres" });
     await expect(card).toBeVisible();
-    await expect(card.getByText("0% Completed")).toBeVisible();
+    await expect(card.getByText("0% of €480,00")).toBeVisible();
     await expect(card.getByText(/^By /)).toHaveCount(0);
   });
 
@@ -210,7 +210,7 @@ test.describe.serial("Goals", () => {
 
     // Active: progress from the API balance, the deadline from the goal.
     const laptop = active().getByRole("group", { name: "New laptop" });
-    await expect(laptop.getByText("90% Completed")).toBeVisible();
+    await expect(laptop.getByText("90% of €2.000,00")).toBeVisible();
     await expect(laptop.getByText("By Dec 2027")).toBeVisible();
     await expect(laptop.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
@@ -218,7 +218,7 @@ test.describe.serial("Goals", () => {
     );
     // Full but still active: the hint says what to do next.
     const emergency = active().getByRole("group", { name: "Emergency fund" });
-    await expect(emergency.getByText("100% Completed")).toBeVisible();
+    await expect(emergency.getByText("100% of €3.000,00")).toBeVisible();
     // The cue is a chip; MUI's Tooltip makes its title the chip's accessible name.
     const cue = emergency.getByRole("button", {
       name: "Target reached. Mark it as completed to spend from it.",
@@ -241,7 +241,7 @@ test.describe.serial("Goals", () => {
 
     // Archived: dimmed, no actions; the refund left it at zero.
     const vacation = archived().getByRole("group", { name: "Vacation fund" });
-    await expect(vacation.getByText("0% Completed")).toBeVisible();
+    await expect(vacation.getByText("0% of €500,00")).toBeVisible();
     await expect(archived().getByTestId("ArchiveOutlinedIcon")).toHaveCount(2);
     await expect(
       archived().getByRole("button", { name: /^Actions for / }),
@@ -455,7 +455,7 @@ test.describe.serial("Goals", () => {
     await page.getByRole("button", { name: "Archived", exact: true }).click();
     const card = archived().getByRole("group", { name: "Emergency fund" });
     await expect(card).toBeVisible();
-    await expect(card.getByText("0% Completed")).toBeVisible();
+    await expect(card.getByText("0% of €3.000,00")).toBeVisible();
     await expect(active().getByText("Emergency fund")).toHaveCount(0);
 
     // The refund is a withdrawal in the goal's activity.

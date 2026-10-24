@@ -72,6 +72,16 @@ export function NetBalanceCard({ balance, change, monthStart }: Props) {
               </>
             )}
           </Money>
+          {/* The abbreviation drops digits and cents; the exact figure
+              follows in the secondary line so nothing is lost to a hover. */}
+          {abbreviated && (
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, color: "text.secondary", whiteSpace: "nowrap" }}
+            >
+              <Money>{full}</Money>
+            </Typography>
+          )}
           {shownChange && (
             <Typography
               variant="body2"

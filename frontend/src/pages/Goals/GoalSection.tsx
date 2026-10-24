@@ -3,11 +3,18 @@
 import { useId, useState, type ReactNode } from "react";
 import { Box, ButtonBase, Collapse, Typography } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { DESKTOP, TABLET } from "../../lib/layout";
 
+/**
+ * One column on a phone, two on a tablet, three on desktop. minmax(0, 1fr),
+ * not a px floor: a long name or chip row must not push a column past the viewport.
+ */
 const cardGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(300px, 1fr))",
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: 2,
+  [TABLET]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
+  [DESKTOP]: { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" },
 } as const;
 
 interface Props {

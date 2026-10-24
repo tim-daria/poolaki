@@ -197,8 +197,10 @@ describe("compactAmount", () => {
     expect(compactAmount(149206000)).toBe("149,2\u00a0Mio.");
   });
 
-  it("rounds to one decimal", () => {
-    expect(compactAmount(1555555)).toBe("1,6\u00a0Mio.");
+  it("truncates to one decimal instead of rounding up", () => {
+    expect(compactAmount(1555555)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(1599999)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(1999999, "us")).toBe("1.9M");
   });
 
   it("uses the locale's abbreviations", () => {

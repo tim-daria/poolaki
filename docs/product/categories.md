@@ -10,7 +10,7 @@ version: 0
 
 ## Definition
 
-Categories are predefined labels assigned to transactions (income, expenses, or contributions) to classify financial movements and track spending habits.
+Categories are predefined labels assigned to income and expense transactions to classify financial movements and track spending habits. Contributions use the fixed Contribution category and are not chosen by the user.
 
 ## Default Categories and When to Use Them
 
@@ -31,23 +31,32 @@ _Categories available for expenses:_
 **Utilities:** Use for electricity, water, gas, internet, and phone bills.
 
 _Categories available for incomes:_
+
 **Salary**: Use for regular employment earnings and primary wages.
 
 **Freelance**: Use for side projects, consulting, contract work, and independent earnings.
 
+**Gift**: Use for money received without an invoice, such as presents or informal transfers.
+
+_Category available for contributions:_
+
+**Contribution**: Use for money moved into a savings goal. This category is applied automatically.
+
 ## Rules and Limitations
 
-- Categories are provided by default in the system.
+- Categories are provided by default for each workspace.
 
-- Users cannot create custom categories.
+- All workspace members can view and select categories.
 
-- Categories can be selected when creating or editing any transaction.
+- No member can create, edit, or delete categories. Category changes send no notifications.
+
+- Income and expense transactions require a category. Contributions and withdrawals do not.
 
 ## Where Categories Appear and Why It Is Useful
 
-**Home Page:** Displays the top 3 most used categories for "today", allowing users to quickly identify daily spending concentrations.
+**Home Page:** Displays the top three expense categories for the current month plus an "Other" slice, allowing users to quickly identify spending concentrations.
 
-**Reports Page:** Visualizes all categories in a chart, showing the total amount spent per category and its percentage of the total for the selected transactions type, helping users analyze spending, patterns, and manage budgets effectively.
+**Reports Page:** Visualizes categories as a donut and share list for the selected year. The Expense and Income views show the amount and percentage per category; the Savings view groups totals by goal instead.
 
 ## Related Concepts
 

@@ -268,6 +268,7 @@ export function compactAmount(
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     notation: "compact",
     maximumFractionDigits: 1,
+    roundingMode: "trunc",
   }).format(n);
 }
 
