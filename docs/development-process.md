@@ -48,11 +48,12 @@ GitHub was used for project management and collaborative development:
 
 ## 6. Tools
 
-| Tool   | Purpose                                                            |
-| ------ | ------------------------------------------------------------------ |
-| GitHub | Issues, branches, pull requests, CI and task tracking              |
-| Miro   | Sprint reviews, retrospectives, planning and deadline coordination |
-| Slack  | Team communication and Huddles                                     |
+| Tool     | Purpose                                                            |
+| -------- | ------------------------------------------------------------------ |
+| GitHub   | Issues, branches, pull requests, CI and task tracking              |
+| Miro     | Sprint reviews, retrospectives, planning and deadline coordination |
+| Slack    | Team communication and Huddles                                     |
+| Insomnia | Testing backend API endpoints and verifying responses              |
 
 ## 7. Continuous Improvement
 
