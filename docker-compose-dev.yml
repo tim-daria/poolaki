@@ -27,7 +27,7 @@ services:
   caddy:
     build:
       context: .
-      dockerfile: ./backend/caddy/Dockerfile_dev
+      dockerfile: ./backend/caddy/Dockerfile.dev
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -73,6 +73,8 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      AI_SERVICE_TIMEOUT: ${AI_SERVICE_TIMEOUT}
     volumes:
       - ./backend/django:/app
       - type: volume
@@ -334,10 +336,16 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
-      DJANGO_BASE_URL: ${DJANGO_BASE_URL}
-      LOG_LEVEL: ${LOG_LEVEL}
+      LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES}
       LLM_TIMEOUT: ${LLM_TIMEOUT}
+      DJANGO_BASE_URL: ${DJANGO_BASE_URL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL}
       TZ: Europe/Berlin
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     volumes:
       - ./ai-service:/app
       - type: volume
