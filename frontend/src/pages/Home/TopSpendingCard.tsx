@@ -41,12 +41,13 @@ const ringSx = {
   flexShrink: 0,
   width: SIZE,
   height: SIZE,
-  // Stretches to the row; the size container keeps the ring out of the row's
-  // intrinsic height, so the sidebar never outgrows the card beside it.
+  // Fills the row's height; the size container keeps the ring out of the row's
+  // intrinsic height, so the sidebar never outgrows the card beside it. A
+  // percentage, not `alignSelf: stretch`: WebKit does not resolve aspect-ratio
+  // from a stretched flex cross size and leaves the item 0 wide.
   [DESKTOP]: {
     width: "auto",
-    height: "auto",
-    alignSelf: "stretch",
+    height: "100%",
     aspectRatio: "1 / 1",
   },
 } as const;
