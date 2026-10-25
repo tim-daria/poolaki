@@ -26,8 +26,8 @@ services:
 
   caddy:
     build:
-      context: ./backend/caddy
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/caddy/Dockerfile_dev
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -35,7 +35,7 @@ services:
     environment:
       TZ: Europe/Berlin
     volumes:
-      - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./backend/caddy/Caddyfile_dev:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
       - coraza_logs:/coraza/logs:rw
@@ -188,7 +188,7 @@ services:
       start_period: 15s
       timeout: 5s
     profiles:
-      - prod
+      - full
 
 
   grafana:
@@ -237,7 +237,7 @@ services:
         condition: service_healthy
         restart: true
     profiles:
-      - prod
+      - full
 
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
@@ -258,7 +258,7 @@ services:
         condition: service_healthy
         restart: true
     profiles:
-      - prod
+      - full
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -281,7 +281,7 @@ services:
     depends_on:
       - caddy
     profiles:
-      - prod
+      - full
 
 
 ######################################################
@@ -314,7 +314,7 @@ services:
         condition: service_healthy
         restart: true
     profiles:
-      - prod
+      - full
 
 ######################################################
 # RAG - System #
