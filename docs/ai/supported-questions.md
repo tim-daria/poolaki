@@ -15,6 +15,8 @@ Data retrieval is mainly performed through backend services using SQL-based quer
 
 The following are the initial supported questions for the MVP:
 
+Data retrieval is consolidated into three internal endpoints — `analytics/summary`, `transactions`, and `categories` (see [API Contract](api/api-contract.md)).
+
 ---
 
 # Domain: Expenses & Transactions
@@ -37,7 +39,7 @@ Retrieval:
 `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/monthly-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -62,7 +64,7 @@ Retrieval:
 `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/monthly-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -87,7 +89,7 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/categories`
+`POST /api/internal/v1/categories`
 
 Expected Response:
 
@@ -112,7 +114,7 @@ Data Required:
 Retrieval: `SQL` + Analytics (backend service)
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/categories/ranking`
+`POST /api/internal/v1/categories`
 
 Expected Response:
 
@@ -138,6 +140,8 @@ Retrieval: `SQL`
 Backend Endpoint:
 `POST /api/internal/v1/transactions`
 
+Parameters: none — the endpoint returns all income/expense transactions of the last 3 calendar months, newest first; the LLM picks the top 5 expenses from the returned list.
+
 Expected Response:
 
 > "A list of your five largest expenses."
@@ -160,7 +164,9 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`POST /api/internal/v1/transactions/latest`
+`POST /api/internal/v1/transactions`
+
+Parameters: none — same static payload as EXP-005 (all income/expense transactions of the last 3 calendar months, newest first); the LLM reads the first expense row of the returned list.
 
 Expected Response:
 
@@ -184,7 +190,9 @@ Data Required:
 Retrieval: `SQL`
 
 Backend Endpoint:
-`/api/internal/v1/transactions`
+`POST /api/internal/v1/transactions`
+
+Parameters: none — same static payload as EXP-005 (all income/expense transactions of the last 3 calendar months, newest first); the LLM finds the largest expense in the requested sub-period (default: the full window) from the returned list.
 
 Expected Response:
 
@@ -210,7 +218,7 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/income-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -234,7 +242,9 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/income-average`
+`POST /api/internal/v1/analytics/summary`
+
+The average is derived by the AI Service from the month rows of the response.
 
 Expected Response:
 
@@ -261,7 +271,9 @@ Data Required:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/balance`
+`POST /api/internal/v1/analytics/summary`
+
+The `balance` field of the response.
 
 Expected Response:
 
@@ -269,7 +281,11 @@ Expected Response:
 
 ---
 
-# Domain: Goals
+# Domain: Savings & Goals
+
+Goals are targets; savings are the money set aside to reach them.
+
+The assistant answers savings and goal questions with the savings data in the context. Dedicated `goals/progress` and `goals/forecast` endpoints are planned but not implemented; when the context lacks figures, the assistant explains the limitation instead of inventing them.
 
 ## GOAL-001 - Goal Progress
 
@@ -277,22 +293,13 @@ User Question:
 
 > How much progress have I made toward my goal?
 
-**Intent:**
-Calculate goal completion.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-- Contributions
-
-Retrieval: `SQL`
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/progress`
+Status: available when the context includes goal balance or progress.
 
 Expected Response:
 
-> "You have completed 60% of your savings goal."
+> "You have saved €600 of your €1000 goal."
 
 ---
 
@@ -302,17 +309,9 @@ User Question:
 
 > How much is left to reach my goal?
 
-**Intent:**
-Calculate remaining amount.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-
-Retrieval: `SQL`
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/progress`
+Status: available when the context includes goal balance and target.
 
 Expected Response:
 
@@ -326,22 +325,13 @@ User Question:
 
 > When will I reach my goal if I continue at this pace?
 
-**Intent:**
-Estimate completion date.
+Retrieval: `Savings data in context`
 
-Data Required:
-
-- Goals
-- Saving history
-
-Retrieval: `SQL` + Analytics
-
-Backend Endpoint:
-`POST /api/internal/v1/goals/forecast`
+Status: available only when the context includes enough savings history; otherwise the assistant explains the limitation.
 
 Expected Response:
 
-> "You are expected to reach your goal in 4 months."
+> "I don't have enough savings history to estimate that."
 
 ---
 
@@ -356,28 +346,13 @@ User Question:
 Retrieval: Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/trends`
+`POST /api/internal/v1/analytics/summary`
+
+The comparison is derived by the AI Service from adjacent month rows.
 
 Expected Response:
 
 > "You spent 15% more than last month."
-
----
-
-## TREND-002 - Cash Flow
-
-User Question:
-
-> What is my net cash flow this week?
-
-Retrieval: Analytics
-
-Backend Endpoint:
-`POST /api/internal/v1/analytics/cash-flow`
-
-Expected Response:
-
-> "Your net cash flow this week is +€350."
 
 ---
 
@@ -392,7 +367,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/shared-expenses`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -409,7 +384,7 @@ User Question:
 Retrieval: `SQL` + Analytics
 
 Backend Endpoint:
-`POST /api/internal/v1/analytics/organization-summary`
+`POST /api/internal/v1/analytics/summary`
 
 Expected Response:
 
@@ -521,7 +496,9 @@ Data Required:
 Retrieval: `SQL` + `Vector`
 
 Backend Endpoint:
-`POST /api/internal/v1/transactions/detail`
+`POST /api/internal/v1/transactions`
+
+Status: planned — identifying a specific transaction from free text requires slot extraction, which is out of scope in the MVP (see [Out of Scope](out-of-scope-questions.md)); the question is declined until it lands.
 
 Vector Source:
 

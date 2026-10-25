@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AiChatDrawer } from "./AiChat/AiChatDrawer";
 import { Outlet, useParams } from "react-router";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material";
 import { useLogout } from "../context/useLogout";
 import { useRouteMeta } from "../routeMeta";
 import { Header } from "./Header/Header";
 import { PageHeader } from "./PageHeader/PageHeader";
-import { Sidebar } from "./Sidebar/Sidebar";
-
-const COLLAPSED_KEY = "sidebar:collapsed";
+import { BottomNav } from "./BottomNav/BottomNav";
+import { NAV_MOBILE_QUERY, PAGE_PADDING, PRINT } from "../lib/layout";
+import { useScrollingDown } from "../hooks/useScrollingDown";
 
 /**
  * Ceiling for the page column. Past this the content centres instead of
@@ -21,89 +21,123 @@ const contentMaxWidth = 1280;
 const narrowContentMaxWidth = 880;
 
 /**
- * Storage access is guarded: a blocked or full localStorage throws, and the
- * app shell failing to render over a cosmetic preference is not a trade worth
- * making.
- */
-function readCollapsed(): boolean {
-  try {
-    return localStorage.getItem(COLLAPSED_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Main application layout housing the persistent Header and Sidebar.
+ * Main application layout: the Header with the page tabs, and the page area.
  *
- * Key behaviors:
- * - Flex shell: a permanent MUI Drawer renders its paper `position: fixed`, so
- *   the Drawer root has to reserve the column in normal flow. That is the
- *   standard MUI app-shell pattern and the reason this is flex, not grid.
- * - Lifted chrome state: `collapsed` and `mobileOpen` live here because the
- *   Header's hamburger opens a Drawer the Sidebar owns.
- * - State Reset via `key={orgId}`: Bound to `<main>`, changing `orgId` forces React
- *   to remount only the page content (<Outlet />), automatically clearing old filters,
- *   scroll position, and stale data while keeping the shell UI mounted smoothly.
+ * - State reset via `key={orgId}`: bound to `<main>`, changing `orgId` forces
+ *   React to remount only the page content (<Outlet />), clearing old
+ *   filters and stale data while the shell stays mounted. The shell column
+ *   is the scroll container (so the header scrolls away with the page and
+ *   a scrollbar narrows header and page alike), and it is not keyed, so an
+ *   effect scrolls it back to the top on the same change.
+ *   The chat drawer is keyed the same way so a conversation never outlives
+ *   the organisation it was about.
+ * - The AI assistant is a temporary Drawer; `useRestoreFocus` inside it
+ *   handles the aria-hidden edges like every other overlay.
  */
 export function AppLayout() {
   const logout = useLogout();
   const { orgId } = useParams();
   const narrow = useRouteMeta()?.width === "narrow";
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  // Lazy initialiser — reads storage once on mount, not on every render.
-  const [collapsed, setCollapsed] = useState(readCollapsed);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-    } catch {
-      // Preference is not worth surfacing an error over.
-    }
-  }, [collapsed]);
+  const showAssistant = useRouteMeta()?.assistant ?? true;
+  const isMobile = useMediaQuery(NAV_MOBILE_QUERY);
 
   const [chatOpen, setChatOpen] = useState(false);
+  const [fabSlot, setFabSlot] = useState<HTMLElement | null>(null);
+
+  const shellRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    shellRef.current?.scrollTo({ top: 0 });
+  }, [orgId]);
+
+  const fabCollapsed = useScrollingDown(shellRef);
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
-      <Sidebar
-        isMobile={isMobile}
-        collapsed={collapsed}
-        onToggleCollapsed={() => setCollapsed((c) => !c)}
-        mobileOpen={mobileOpen}
-        onMobileClose={() => setMobileOpen(false)}
-      />
+    <Box
+      sx={{
+        display: "flex",
+        // dvh, not vh: on iOS the collapsing address bar would otherwise
+        // leave the chat input behind the browser chrome.
+        height: "100dvh",
+        width: "100%",
+        bgcolor: "primary.light",
+        // Paper has no viewport: the shell flows so pages break naturally.
+        [PRINT]: { height: "auto" },
+      }}
+    >
+      {/* App shell: header stacked over the page, scrolling as one. */}
       <Box
+        ref={shellRef}
         sx={{
           display: "flex",
           flexDirection: "column",
           flex: 1,
           minWidth: 0,
+          overflowY: "auto",
+          // A scroll container prints as one clipped box.
+          [PRINT]: { overflow: "visible" },
         }}
       >
-        <Header
-          onLogout={logout}
-          onMenuClick={() => setMobileOpen(true)}
-          showMenuButton={isMobile}
-        />
+        {/* Same column, PAGE_PADDING and scroll container as the pages, so the
+            bar's edges line up with the cards below it at every width, with
+            or without a scrollbar, and it scrolls away with them. */}
 
-        <Box component="main" key={orgId} sx={{ flex: 1, overflowY: "auto" }}>
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: contentMaxWidth,
+            mx: "auto",
+            // The pages share this exact padding, so the bar's edges meet theirs.
+            ...PAGE_PADDING,
+            pt: 2,
+          }}
+        >
+          <Header
+            onLogout={logout}
+            onAssistantClick={() => setChatOpen(true)}
+            showAssistant={showAssistant}
+            mobile={isMobile}
+          />
+        </Box>
+
+        <Box component="main" key={orgId} sx={{ flex: 1 }}>
           {/* Content column, centred once the viewport outgrows it. Wraps
-               the page header too, so heading and page stay on one edge. */}
+              the page header too, so heading and page stay on one edge. */}
           <Box
             sx={{
               maxWidth: narrow ? narrowContentMaxWidth : contentMaxWidth,
               mx: "auto",
             }}
           >
-            <PageHeader onAssistantClick={() => setChatOpen(true)}>
+            <PageHeader fabSlot={isMobile ? fabSlot : null}>
               <Outlet />
             </PageHeader>
           </Box>
         </Box>
+        {isMobile && (
+          <Box
+            sx={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: "appBar",
+              [PRINT]: { display: "none" },
+            }}
+          >
+            {/* Anchored to the bar, so it rides above it whatever the safe-area
+        inset adds below. */}
+            <Box
+              ref={setFabSlot}
+              data-collapsed={fabCollapsed || undefined}
+              sx={{
+                position: "absolute",
+                right: 16,
+                bottom: "calc(100% + 16px)",
+              }}
+            />
+            <BottomNav />
+          </Box>
+        )}
       </Box>
+
       <AiChatDrawer
         key={orgId}
         open={chatOpen}

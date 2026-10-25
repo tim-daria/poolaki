@@ -216,7 +216,8 @@ Side effects (see [notifications.md](notifications.md)):
 - on ownership transfer: the new owner receives `ownership_transferred`,
   every other remaining member receives `owner_changed`
 - if the organization is deleted, the recipients of its pending
-  invitations receive `organization_deleted`
+  invitations receive `organization_deleted`, and their pending
+  `invitation` notifications are marked read (resolved) at the same time
 
 ### Rename an organization
 

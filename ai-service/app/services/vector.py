@@ -3,12 +3,38 @@ from typing import Any
 import asyncpg
 from fastapi import HTTPException
 
+from app.config.settings import settings
+
 
 class VectorRepository:
     """Repository to manage vector persistence and search of chunks using pgvector."""
 
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
+
+    @staticmethod
+    def _vector_str(embedding: list[float]) -> str:
+        """Format a Python float list as a pgvector literal."""
+        return "[" + ",".join(map(str, embedding)) + "]"
+
+    async def save_chunks(
+        self,
+        document_id: str,
+        chunks: list[tuple[str, list[float]]],
+    ) -> None:
+        """Saves multiple chunks in one transaction."""
+        query = """
+            INSERT INTO chunks (document_id, content, embedding)
+            VALUES ($1, $2, $3::vector);
+        """
+        async with self._pool.acquire() as connection, connection.transaction():
+            for content, embedding in chunks:
+                await connection.execute(
+                    query,
+                    document_id,
+                    content,
+                    self._vector_str(embedding),
+                )
 
     async def save_chunk(
         self,
@@ -31,7 +57,7 @@ class VectorRepository:
         # meta_value ensures an empty dictionary is used if no metadata is provided.
         meta_value = metadata if metadata is not None else {}
         # vector_str converts the list of floats (embedding) into a vector text format compatible with pgvector.
-        vector_str = "[" + ",".join(map(str, embedding)) + "]"
+        vector_str = self._vector_str(embedding)
 
         async with self._pool.acquire() as connection:
             chunk_id = await connection.fetchval(
@@ -42,21 +68,22 @@ class VectorRepository:
     async def query_similar_chunks(
         self,
         query_embedding: list[float],
-        limit: int = 5,
+        limit: int = settings.vector_top_k,
+        min_similarity: float = settings.min_similarity,
     ) -> list[dict[str, Any]]:
         """Searches for the most similar chunks to the query embedding using pgvector and returns a list with their similarity score."""
-        # similarity measures how close the vectors are; higher values indicate greater semantic match.
         query = """
             SELECT id, document_id, content, metadata,
                    1 - (embedding <=> $1::vector) AS similarity
             FROM chunks
+            WHERE 1 - (embedding <=> $1::vector) >= $3
             ORDER BY embedding <=> $1::vector
             LIMIT $2;
         """
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
         async with self._pool.acquire() as connection:
-            rows = await connection.fetch(query, vector_str, limit)
+            rows = await connection.fetch(query, vector_str, limit, min_similarity)
 
             results = []
             for row in rows:
@@ -87,9 +114,9 @@ class VectorRepository:
                 )
 
             if embedding is not None:
-                vector_str = "[" + ",".join(map(str, embedding)) + "]"
+                vector_str = self._vector_str(embedding)
                 await connection.execute(
-                    "UPDATE chunks SET embedding = $1::vector WHERE id = $2; As a vector str ",
+                    "UPDATE chunks SET embedding = $1::vector WHERE id = $2;",
                     vector_str,
                     chunk_id,
                 )

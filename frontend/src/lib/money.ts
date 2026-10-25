@@ -16,6 +16,9 @@ export function toMoneyString(n: number): string {
   return n.toFixed(2);
 }
 
+/** Two-decimal arithmetic: amounts are cents, and float sums drift. */
+export const cents = (n: number) => Number(toMoneyString(n));
+
 /* ---------------------------------- */
 /*               Limits               */
 /* ---------------------------------- */
@@ -247,4 +250,72 @@ export function validateOpeningBalance(
   locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
 ): string | null {
   return checkAmount(canonical, 0, locale);
+}
+
+/* ---------------------------------- */
+/*              Compact               */
+/* ---------------------------------- */
+
+/**
+ * Abbreviates a large amount for a space that cannot fit the full figure
+ * ("149,2 Mio."), one decimal at most. Callers keep the exact amount in a
+ * tooltip and the accessible name: the abbreviation drops the cents.
+ */
+export function compactAmount(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    notation: "compact",
+    maximumFractionDigits: 1,
+    roundingMode: "trunc",
+  }).format(n);
+}
+
+/* ---------------------------------- */
+/*           Overview figures         */
+/* ---------------------------------- */
+
+/** Whole euros, grouped: "3.567". For chart labels, where cents are noise. */
+export function displayWhole(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+/** The display amount split at the decimal separator, so cents can be styled apart. */
+export function splitCents(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): { whole: string; cents: string } {
+  const text = displayAmount(n, locale);
+  const at = text.lastIndexOf(SEPARATORS[locale].decimal);
+  return { whole: text.slice(0, at), cents: text.slice(at) };
+}
+
+/** Six whole digits fit every column a figure sits in; from seven it is abbreviated. */
+const COMPACT_FROM = 1_000_000;
+
+/**
+ * Whether displayFigure abbreviates this amount. Components that show the
+ * exact figure alongside an abbreviated one ask this rather than restating
+ * the threshold.
+ */
+export function isAbbreviated(n: number): boolean {
+  // The rounded value decides, and is what gets abbreviated: 999.999,6
+  // would otherwise pass the threshold yet come back unabbreviated.
+  return Math.abs(Math.round(n)) >= COMPACT_FROM;
+}
+
+/** Whole euros up to six digits; past that the compact form ("1,0 Mrd."), so a figure never outgrows its column. */
+export function displayFigure(
+  n: number,
+  locale: MoneyLocale = DEFAULT_MONEY_LOCALE,
+): string {
+  return isAbbreviated(n)
+    ? compactAmount(Math.round(n), locale)
+    : displayWhole(n, locale);
 }

@@ -70,6 +70,8 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      AI_SERVICE_TIMEOUT: ${AI_SERVICE_TIMEOUT}
     volumes:
       - ./backend/django:/app
       - type: volume
@@ -82,7 +84,6 @@ services:
       - /tmp:exec,mode=777
     networks:
       - backend_net
-      # - vault_net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 30s
@@ -140,7 +141,6 @@ services:
       TZ: Europe/Berlin
     volumes:
       - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./backend/monitoring/prometheus_data:/var/prometheus
     networks:
       - tunnel_net
       - backend_net
@@ -292,6 +292,8 @@ services:
       context: ./ai-service
       dockerfile: Dockerfile
     container_name: ai-service
+    env_file:
+      - .env
     user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
     expose:
@@ -302,6 +304,9 @@ services:
       LLM_MODEL: ${LLM_MODEL}
       LLM_BASE_URL: ${LLM_BASE_URL}
       DJANGO_BASE_URL: ${DJANGO_BASE_URL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL}
       LLM_TIMEOUT: ${LLM_TIMEOUT}
       TZ: Europe/Berlin
@@ -368,7 +373,7 @@ services:
     - vault_init:/vault/secure/
     - vault_id:/vault/secure/id
     - vault_agent:/vault/agent/secrets
-    env_file: 
+    env_file:
     - .env
     environment:
       TZ: Europe/Berlin
@@ -416,7 +421,6 @@ volumes:
   caddy_config:
   coraza_logs:
   grafana_data:
-  prom_data:
   vault_data:
   vault_init:
   vault_id:

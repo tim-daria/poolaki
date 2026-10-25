@@ -4,8 +4,13 @@ policies:
   - orgId: 1
     receiver: email-contact-point
     group_by: ['grafana_folder', 'alertname']
+    group_wait: 5s
+    group_interval: 15s
+    repeat_interval: 4h
     routes:
       - receiver: email-contact-point
         object_matchers:
           - ['severity', '=', 'critical']
+        group_wait: 5s
+        group_interval: 15s
         continue: false

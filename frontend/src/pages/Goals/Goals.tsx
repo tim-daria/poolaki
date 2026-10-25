@@ -1,12 +1,13 @@
-/** @file Goals page: every goal as a card in a foldable Active, Completed or Archived section; the add modal and the Contribute modal are wired. */
+/** @file Goals page: every goal as a card in a foldable Active, Completed or Archived section; the add/edit, Contribute and info modals are wired. */
 
 import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
+import { Alert, Box, CircularProgress } from "@mui/material";
 import {
   PageActionButton,
   PageTitle,
 } from "../../components/PageHeader/PageHeader";
 import { GoalForm } from "../../components/Modals/GoalForm";
+import { GoalInfoCard } from "../../components/Modals/GoalInfoCard";
 import { TransactionForm } from "../../components/Modals/TransactionForm";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
 import {
@@ -19,6 +20,9 @@ import {
 import { GoalCard } from "./GoalCard";
 import { GoalSection } from "./GoalSection";
 import { NewGoalCard } from "./NewGoalCard";
+import { useAuth } from "../../context/useAuth";
+import { canEditGoal } from "../../lib/access";
+import { PAGE_PADDING } from "../../lib/layout";
 
 /** One section per state, in page order; Archived starts folded. */
 const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
@@ -29,59 +33,113 @@ const SECTIONS: { state: GoalStatus; title: string; defaultOpen: boolean }[] = [
 
 function Goals() {
   const org = useCurrentOrg();
+  const { user } = useAuth();
+  const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** Bumped after a save, so the cards refetch. */
+  const [version, setVersion] = useState(0);
   const [adding, setAdding] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  /** The goal a Contribute click targets; null keeps the transaction modal closed. */
-  const [contributeTo, setContributeTo] = useState<Goal | null>(null);
+  /** The goal open in the edit form; null means the form adds. */
+  const [editing, setEditing] = useState<Goal | null>(null);
+  /** The goal a transfer targets and which way; null keeps the transaction modal closed. */
+  const [transfer, setTransfer] = useState<{
+    goal: Goal;
+    direction: "contribution" | "withdraw";
+  } | null>(null);
+  /** The goal whose info card is open; null keeps it closed. */
+  const [infoFor, setInfoFor] = useState<Goal | null>(null);
 
   useEffect(() => {
-    getGoals(org.id).then(setGoals);
-  }, [org.id]);
+    const controller = new AbortController();
+    getGoals(org.id, controller.signal)
+      .then((loaded) => {
+        setGoals(loaded);
+        setError(null);
+      })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(e instanceof Error ? e.message : "Failed to load goals");
+      });
+    return () => controller.abort();
+  }, [org.id, version]);
 
-  const ordered = [...goals].sort(oldestFirst);
+  const refresh = () => setVersion((v) => v + 1);
+
+  const ordered = [...(goals ?? [])].sort(oldestFirst);
 
   return (
     <Box
-      sx={{ px: 3, pb: 5, display: "flex", flexDirection: "column", gap: 3 }}
+      sx={{
+        ...PAGE_PADDING,
+        pb: 5,
+        display: "flex",
+        flexDirection: "column",
+        gap: 3,
+      }}
     >
       <PageTitle />
       <PageActionButton onClick={() => setAdding(true)}>
-        Add saving
+        Add goal
       </PageActionButton>
-      <GoalForm open={adding} onClose={() => setAdding(false)} />
-      {/* No onSaved: saved_amount comes from the seed until the API lands, so
-          there is nothing to refresh yet. No onInfo on the cards either: the
-          Info view is not built, so archived cards are inert on click. */}
-      <TransactionForm
-        open={contributeTo !== null}
-        onClose={() => setContributeTo(null)}
-        goal={contributeTo?.id}
+      {error && <Alert severity="error">{error}</Alert>}
+      <GoalForm
+        open={adding || editing !== null}
+        goal={editing}
+        onClose={() => {
+          setAdding(false);
+          setEditing(null);
+        }}
+        onSaved={refresh}
       />
-      {SECTIONS.map(({ state, title, defaultOpen }) => {
-        const cards = ordered
-          .filter((g) => goalState(g) === state)
-          .map((g) => (
-            <GoalCard
-              key={g.id}
-              goal={g}
-              onContribute={() => setContributeTo(g)}
-            />
-          ));
-        return (
-          <GoalSection
-            key={state}
-            title={title}
-            ariaLabel={`${title} goals`}
-            defaultOpen={defaultOpen}
-          >
-            {cards}
-            {/* Nothing in progress: prompt for one where the first card would sit. */}
-            {state === "active" && cards.length === 0 && (
-              <NewGoalCard onClick={() => setAdding(true)} />
-            )}
-          </GoalSection>
-        );
-      })}
+      <TransactionForm
+        open={transfer !== null}
+        direction={transfer?.direction}
+        onClose={() => setTransfer(null)}
+        goal={transfer?.goal.id}
+        onSaved={refresh}
+      />
+      <GoalInfoCard
+        open={infoFor !== null}
+        goal={infoFor}
+        onClose={() => setInfoFor(null)}
+      />
+      {goals === null ? (
+        <CircularProgress />
+      ) : (
+        SECTIONS.map(({ state, title, defaultOpen }) => {
+          const cards = ordered
+            .filter((g) => goalState(g) === state)
+            .map((g) => (
+              <GoalCard
+                key={g.id}
+                goal={g}
+                canEdit={canEditGoal(g, user?.username, org.role)}
+                onContribute={() =>
+                  setTransfer({ goal: g, direction: "contribution" })
+                }
+                onWithdraw={() =>
+                  setTransfer({ goal: g, direction: "withdraw" })
+                }
+                onInfo={() => setInfoFor(g)}
+                onEdit={() => setEditing(g)}
+              />
+            ));
+          return (
+            <GoalSection
+              key={state}
+              title={title}
+              ariaLabel={`${title} goals`}
+              defaultOpen={defaultOpen}
+            >
+              {cards}
+              {/* Nothing in progress: prompt for one where the first card would sit. */}
+              {state === "active" && cards.length === 0 && (
+                <NewGoalCard onClick={() => setAdding(true)} />
+              )}
+            </GoalSection>
+          );
+        })
+      )}
     </Box>
   );
 }

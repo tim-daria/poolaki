@@ -227,27 +227,13 @@ export function NotificationPanel({
           }}
           aria-label="Filter notifications"
           sx={{
-            bgcolor: "background.default",
             borderRadius: 999,
             p: "3px",
-            gap: 0.5,
-            // The group's own `grouped` rules square off the inner edges and
-            // pull the children together with a negative margin, so the pill
-            // shape has to be restated for both ends to out-specify them.
             "& .MuiToggleButtonGroup-grouped": {
-              border: 0,
               px: 1.5,
               py: 0.25,
-              fontWeight: 600,
               fontSize: "0.75rem",
               color: "text.secondary",
-              "&:first-of-type": { borderRadius: 999 },
-              "&:not(:first-of-type)": { borderRadius: 999, ml: 0 },
-              "&.Mui-selected": {
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                "&:hover": { bgcolor: "primary.main" },
-              },
             },
           }}
         >
@@ -327,7 +313,6 @@ export function NotificationPanel({
               <Paper
                 key={n.id}
                 component="li"
-                elevation={0}
                 sx={{
                   p: 1.5,
                   // The palette's "subtle tint", used app-wide for gentle

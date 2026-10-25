@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { DatePicker, type DatePickerProps } from "@mui/x-date-pickers";
 import dayjs, { type Dayjs } from "dayjs";
-import { isoFromPicker } from "./isoFromPicker";
+import { isoFromPicker, pickerHint } from "./isoFromPicker";
 
 type IsoDatePickerProps = Omit<DatePickerProps, "value" | "onChange"> & {
   /** "YYYY-MM-DD", or "" when empty. */
@@ -45,6 +45,9 @@ export function IsoDatePicker({
     setLocal(value ? dayjs(value) : null);
   }
 
+  /** Why the typed date was reported as "", for the helper line. */
+  const [hint, setHint] = useState<string | undefined>(undefined);
+
   return (
     <DatePicker
       format="DD-MM-YYYY"
@@ -52,6 +55,7 @@ export function IsoDatePicker({
       slotProps={{
         ...slotProps,
         textField: {
+          helperText: hint,
           ...slotProps?.textField,
           ...(labelId && {
             slotProps: { input: { "aria-labelledby": labelId } },
@@ -62,6 +66,7 @@ export function IsoDatePicker({
       onChange={(d, context) => {
         setLocal(d);
         const iso = isoFromPicker(d, context.validationError);
+        setHint(pickerHint(context.validationError));
         setLastReported(iso);
         onChange(iso);
       }}

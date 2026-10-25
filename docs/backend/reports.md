@@ -5,8 +5,9 @@ All endpoints in this document require authentication.
 ## Reports endpoint
 
 One read-only endpoint with the yearly finance report for the reporting page:
-income/expense totals, monthly distribution, and per-category breakdown for
-one organization and one year.
+income/expense totals and goals debit, monthly distribution, per-category breakdown for one
+organization and one year, the current-month balance across active and
+completed goals (`goal_balance`) and per-goal breakdown for one organization and one year.
 
 ### Get yearly report
 
@@ -27,12 +28,13 @@ Response example:
   "year": 2025,
   "totals": {
     "income": "12000.00",
-    "expense": "8400.50"
+    "expense": "8400.50",
+    "goals_balance": "241.00"
   },
   "monthly": [
-    { "month": 1, "income": "1000.00", "expense": "700.00" },
-    { "month": 2, "income": "0.00", "expense": "120.50" },
-    { "month": 3, "income": "0.00", "expense": "0.00" }
+    { "month": 1, "income": "1000.00", "expense": "700.00", "goals_balance": "241.00" },
+    { "month": 2, "income": "0.00", "expense": "120.50", "goals_balance": "0.00" },
+    { "month": 3, "income": "0.00", "expense": "0.00", "goals_balance": "0.00" }
   ],
   "categories": [
     {
@@ -48,6 +50,25 @@ Response example:
       "type": "expense",
       "total": "2100.25",
       "monthly": ["180.50", "170.25", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "1750.00"]
+    },
+  ],
+  "goal_balance": "241.00",
+  "goals": [
+    {
+      "goal_id": 15,
+      "name": "Travel",
+      "status": "active",
+      "target_amount": "222.00",
+      "balance": "22.00",
+      "monthly": [ "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "22.00", "22.00"]
+    },
+    {
+      "goal_id": 18,
+      "name": "Bike",
+      "status": "completed",
+      "target_amount": "3000.00",
+      "balance": "89.00",
+      "monthly": [ "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "11.00", "11.00", "89.00" ]
     }
   ]
 }
@@ -64,12 +85,26 @@ Status:
 
 ## How the report is built
 
-- **Income and expenses only.** Savings (`contribution`) are not part of the
-  report. A "total contributions" number alone would be misleading once the
-  planned `withdraw` type exists — savings only make sense net of
-  withdrawals (contributions minus withdrawals). Savings metrics will be
-  designed together with `withdraw` and added later, either to this endpoint
-  or a new one.
+- **Yearly sections contain income, expenses and `goals_balance`.** Contribution
+  and withdraw rows move money between cash and goals, so they do not appear as
+  separate rows in `totals`, `monthly` or `categories`; their net effect is
+  represented by `goals_balance` in `totals` and each monthly item. The Home
+  page takes this month's income, expenses, top-spending split and savings
+  figure from this endpoint's `monthly[].goals_balance` and `goal_balance`.
+- **goal balance calculation.** In the report, `balance` for the specified period is
+  calculated as contributions minus withdrawals, excluding contributions with
+  `category = null` and the opening balance. This keeps the report
+  self-contained: the frontend can display the organization savings snapshot
+  and the active or completed goals in one call without extra requests.
+- **`goal_balance` is the current-month savings figure, net of withdrawals.**
+  It is the aggregate of contributions minus withdrawals for the current
+  calendar month across all active and completed goals. It ignores the `year`
+  parameter. Archived goals are excluded — they are settled (zero balance) at
+  archival. Goals without a balance simply contribute 0.
+- **`goals` adds per-goal progress to the report.** Each item in the array
+  includes `goal_id`, `name`, `status`, `target_amount`, the goal's `balance`,
+  and a 12-month sequence showing the end-of-month balance for that goal within
+  the requested year.
 - **Opening balance is not income.** `Organization.initial_balance` is the
   money the organization started with, not money earned this year, so it is
   excluded from every metric.
@@ -85,8 +120,9 @@ Status:
   so charts need no gap handling. For the current (incomplete) year the
   not-yet-arrived months are plain zeros.
 - **The response shape is the same for any year.** A year without income or
-  expense transactions returns zero `totals`, 12 zero `monthly` entries, and
-  an empty `categories` array — never `null` or missing keys. The frontend
+  expense transactions returns zero `totals`, 12 zero `monthly` entries, an
+  empty `categories` array and — when the organization has no goals — a
+  `goal_balance` of `"0.00"`. Never `null` or missing keys. The frontend
   can use `categories.length === 0` as its "no data" signal, since every
   reported row is categorized.
 - **No "uncategorized" bucket.** The API requires a category for income and
@@ -98,3 +134,6 @@ Status:
   month chart needs no extra request.
 - Amounts are strings with exactly 2 decimal places, same as the rest of the
   API.
+- **Sums have a scale, not a width.** A row is capped at 14 digits; a sum
+  of rows is not, so every total here (and the organization balance) is
+  serialized with two decimals and no digit limit.

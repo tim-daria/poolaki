@@ -25,6 +25,7 @@ const CODE_MESSAGES: Record<string, string> = {
   user_not_found: "No account exists with that username or email.",
   username_password_mismatch: "Incorrect password.",
   email_password_mismatch: "Incorrect password.",
+  enter_current_password: "Incorrect current password.",
   invalid_login: "Please enter your username or email and password.",
   too_many_login_attempts:
     "Too many failed login attempts. Please try again later.",

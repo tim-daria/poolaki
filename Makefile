@@ -4,7 +4,7 @@ COMPOSE_FILE_DEV=./docker-compose-dev.yml
 
 .PHONY: up re prod re-prod down stop start start-prod stop-prod build status status_all logs clean fclean rmVolumes \
 		Tcaddy Tdjango Tdb Tnode Tvault Tvault_agent Tdb_backup Tai \
-		readVault wafLog auditLog
+		readVault wafLog auditLog aiAudit
 
 all: up
 
@@ -145,3 +145,7 @@ wafLog:
 
 auditLog:
 	@docker exec caddy cat  /coraza/logs/audit.log | jq > ./audit.log
+
+aiAudit:
+	@docker compose -f "$(COMPOSE_FILE)" logs --no-color --no-log-prefix ai-service | python3 scripts/ai_audit.py > ./ai-audit.md
+	@echo "=== 📊 AI audit written to ai-audit.md 📊 ==="

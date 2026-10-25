@@ -5,17 +5,29 @@ class Settings(BaseSettings):
     llm_base_url: str
     llm_model: str
     llm_fallback_model: str | None = None
+    embedding_model: str
+    embedding_base_url: str | None = None
+    embedding_api_key: str | None = None
     llm_api_key: str
     llm_timeout: float = 30.0
     llm_max_retries: int = 1
 
     django_base_url: str
 
+    database_url: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    # RAG pipeline
+    max_context_tokens: int = 3000  # budget of <context> (estimated)
+    min_similarity: float = 0.75  # min pgvector threshold (adjust with test)
+    vector_top_k: int = 3  # semantic documents per query
+    chunk_size: int = 1000  # characters per document chunk
+    chunk_overlap: int = 200  # overlap between consecutive chunks
 
 
 settings = Settings()

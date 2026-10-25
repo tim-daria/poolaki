@@ -12,6 +12,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useOrgList } from "../../context/useOrgList";
 import { useCurrentOrg } from "../../context/useCurrentOrg";
+import { NAV_DESKTOP } from "../../lib/layout";
 import { MAX_ORGS } from "../../lib/organizations";
 import { CreateOrgForm } from "../Modals/CreateOrgForm";
 
@@ -34,6 +35,7 @@ export function OrgSwitcher() {
 
   return (
     <>
+      {/* A plain control, not a tab lookalike: no fill or border at rest. */}
       <Button
         onClick={(e) => setAnchor(e.currentTarget)}
         aria-haspopup="menu"
@@ -42,6 +44,7 @@ export function OrgSwitcher() {
         endIcon={
           <KeyboardArrowDownIcon
             sx={{
+              color: "text.secondary",
               transition: (theme) => theme.transitions.create("transform"),
               transform: anchor ? "rotate(180deg)" : "none",
             }}
@@ -50,22 +53,26 @@ export function OrgSwitcher() {
         // Truncation hides the full name, so keep it reachable on hover.
         title={currentOrg.name}
         sx={{
-          // Reads as a distinct control against the white AppBar by borrowing
-          // the page background behind it.
-          bgcolor: "background.default",
           color: "text.primary",
-          fontSize: "1.05rem",
+          fontSize: 15,
           fontWeight: 600,
-          px: 1.5,
-          py: 0.5,
-          "&:hover": { bgcolor: "primary.light" },
-          // Fixed so the header doesn't reflow when switching workspaces, but
-          // in rem so it tracks the root font size.
-          width: "14rem",
+          minHeight: 44,
           maxWidth: "100%",
-          justifyContent: "space-between",
-          // Without this the chevron is squeezed instead of the label.
-          "& .MuiButton-endIcon": { flexShrink: 0 },
+          [NAV_DESKTOP]: { maxWidth: 240 },
+          px: 1,
+          py: 0.5,
+          gap: "10px",
+          justifyContent: "flex-start",
+          textAlign: "left",
+          "&:hover": { bgcolor: "action.hover" },
+          // Without these the icons are squeezed instead of the label.
+          "& .MuiButton-endIcon": {
+            m: 0,
+            flexShrink: 0,
+            // MUI sizes the icon from this span, so the override lives here
+            // too; set on the icon itself it loses on specificity.
+            "& > *:nth-of-type(1)": { fontSize: 16 },
+          },
         }}
       >
         <Box

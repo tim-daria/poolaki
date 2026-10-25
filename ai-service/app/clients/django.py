@@ -1,61 +1,61 @@
+import logging
 from typing import Any
 
-from pydantic import BaseModel, Field
+import httpx
+
+from app.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
-class RetrievalRequest(BaseModel):
-    user_id: str
-    organization_id: str
-    question: str
-    intent: str
-    top_k: int = Field(default=5, ge=1)
+class DjangoClientError(Exception):
+    """Error in the API contract format: {"error": {"code", "message"}}."""
+
+    def __init__(self, code: str, message: str, status_code: int):
+        super().__init__(message)
+        self.code = code  # FORBIDDEN, INVALID_REQUEST, INTERNAL_ERROR, ...
+        self.status_code = status_code
 
 
-class RetrievedItem(BaseModel):
-    type: str
-    content: str
-    source: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+class DjangoClient:
+    """Real HTTP client for the /api/internal/v1/ namespace."""
 
+    def __init__(self) -> None:
+        self._client = httpx.AsyncClient(base_url=settings.django_base_url)
 
-class CombinedRetrievalResult(BaseModel):
-    items: list[RetrievedItem] = Field(default_factory=list)
+    async def fetch_backend_data(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        try:
+            response = await self._client.post(endpoint, json=payload)
+        except httpx.HTTPError as exc:  # network, timeout, DNS...
+            logger.warning(
+                "django_request_failed",
+                extra={"endpoint": endpoint, "error": type(exc).__name__},
+            )
+            raise DjangoClientError(
+                "INTERNAL_ERROR", "Backend unreachable", 502
+            ) from exc
 
+        if response.is_error:
+            code, message = "INTERNAL_ERROR", "Backend error"
+            try:
+                error = response.json().get("error", {})
+                code = error.get("code", code)
+                message = error.get("message", message)
+            except ValueError:  # body was not JSON
+                pass
+            logger.warning(
+                "django_error_response",
+                extra={
+                    "endpoint": endpoint,
+                    "status_code": response.status_code,
+                    "code": code,
+                },
+            )
+            raise DjangoClientError(code, message, response.status_code)
 
-class MockDjangoClient:
-    """TESTING ONLY: temporal client to simulate Django
-    TODO: replace for the real integration
-    """
+        return response.json()
 
-    async def fetch_backend_data(self, endpoint: str, payload: dict) -> dict[str, Any]:
-        if endpoint == "/api/internal/v1/analytics/monthly-summary":
-            return {
-                "period": "2026-01",
-                "total_income": 2500,
-                "total_expenses": 850,
-                "categories": [
-                    {
-                        "name": "Food",
-                        "amount": 300,
-                    }
-                ],
-            }
-
-        # if endpoint == "/api/internal/v1/transactions":
-        # return {
-        #    "transactions": [
-        #        {"date": "2026-01-20", "description": "Groceries", "amount": 120},
-        #        {"date": "2026-01-19", "description": "Restaurant", "amount": 45},
-        #        {"date": "2026-01-18", "description": "Transport", "amount": 30},
-        #    ]
-        # }
-
-        # if endpoint == "/api/internal/v1/goals/progress":
-        #    return {
-        #        "goal": "Emergency Fund",
-        #        "target": 5000,
-        #        "current": 3200,
-        #        "progress_percentage": 64,
-        #    }
-
-        return {}
+    async def close(self) -> None:
+        await self._client.aclose()

@@ -139,6 +139,7 @@ test.describe.serial("Settings", () => {
       guest.getByText("1 pending invitation waiting for you"),
     ).toBeVisible();
     await guest.getByRole("button", { name: "View" }).click();
+    await expect(guest.getByText(`from ${ownerUser.username}`)).toBeVisible();
     await guest.getByRole("button", { name: "Accept" }).click();
 
     await expect(guest.getByText(`Joined ${sharedName}`)).toBeVisible();
@@ -154,20 +155,21 @@ test.describe.serial("Settings", () => {
     await expect(guest.getByRole("button", { name: "Quit" })).toBeEnabled();
     await expect(guest.getByText("Delete workspace")).toBeHidden();
     // The route turns the header's Ask AI button off.
-    await expect(
-      guest.getByRole("button", { name: "AI Assistant" }),
-    ).toBeHidden();
+    await expect(guest.getByRole("button", { name: "Ask AI" })).toBeHidden();
   });
 
   // On the guest: a password change ends the user's other sessions, which
   // would sign the shared owner out of every other spec.
   test("a changed password works on the next login", async () => {
     await openSettings(guest);
-    await guest.getByRole("button", { name: "Change", exact: true }).click();
+    await guest.getByRole("button", { name: "Change password" }).click();
     await guest.getByLabel("Current password").fill(guestUser.password);
     await guest.getByLabel(/^New password/).fill(newPassword);
     await guest.getByLabel("Confirm new password").fill(newPassword);
-    await guest.getByRole("button", { name: "Change password" }).click();
+    await guest
+      .getByRole("dialog")
+      .getByRole("button", { name: "Change password" })
+      .click();
 
     // Dialog first: if the backend rejects the change, the failure snapshot
     // then shows the form's error rather than just a missing toast.

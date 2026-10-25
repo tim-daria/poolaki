@@ -1,6 +1,13 @@
 /** @file Onboarding checklist shown on Home until every step is done or the banner is dismissed. */
 
-import { Box, ButtonBase, IconButton, Stack, Typography } from "@mui/material";
+import {
+  alpha,
+  Box,
+  ButtonBase,
+  IconButton,
+  Paper,
+  Typography,
+} from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -19,7 +26,10 @@ export function SetupBanner({ steps, onDismiss }: Props) {
   const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <Box
+    // The card variant gives it the cards' padding and radius, so the tiles
+    // share a left edge with the card below.
+    <Paper
+      variant="card"
       component="section"
       aria-label="Set up your workspace"
       sx={{
@@ -27,10 +37,9 @@ export function SetupBanner({ steps, onDismiss }: Props) {
         flexWrap: "wrap",
         alignItems: "center",
         gap: 2,
-        p: 2,
-        pl: 3,
-        borderRadius: 4,
-        bgcolor: "primary.light",
+        // The page itself is primary.light, so the panel needs a step deeper
+        // to read as a surface; the secondary tint at low alpha keeps it soft.
+        bgcolor: (theme) => alpha(theme.palette.secondary.light, 0.3),
       }}
     >
       <Box sx={{ flex: "1 1 200px" }}>
@@ -40,18 +49,34 @@ export function SetupBanner({ steps, onDismiss }: Props) {
         </Typography>
       </Box>
 
-      <Stack
+      {/* A grid, so the tiles share one width and one height at every size. */}
+      <Box
         component="ol"
-        direction={{ xs: "column", md: "row" }}
-        sx={{ flex: "3 1 480px", gap: 1.5, listStyle: "none", m: 0, p: 0 }}
+        sx={{
+          flex: "3 1 480px",
+          flexBasis: { xs: "100%", md: 480 },
+          // On narrow screens the list wraps under the header and the X stays on the header line.
+          order: { xs: 2, md: 0 },
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: `repeat(${steps.length}, minmax(0, 1fr))`,
+          },
+          gap: 1.5,
+          listStyle: "none",
+          m: 0,
+          p: 0,
+        }}
       >
         {steps.map((step, i) => (
-          <Box component="li" key={step.label} sx={{ flex: 1, minWidth: 0 }}>
+          <Box component="li" key={step.label} sx={{ minWidth: 0 }}>
             <ButtonBase
               onClick={step.onClick}
               disabled={step.done}
               sx={{
                 width: "100%",
+                height: "100%",
+                minHeight: 56,
                 justifyContent: "flex-start",
                 gap: 1.5,
                 px: 2,
@@ -98,11 +123,18 @@ export function SetupBanner({ steps, onDismiss }: Props) {
             </ButtonBase>
           </Box>
         ))}
-      </Stack>
+      </Box>
 
-      <IconButton aria-label="Dismiss setup" onClick={onDismiss}>
+      <IconButton
+        aria-label="Dismiss setup"
+        onClick={onDismiss}
+        size="small"
+        // Pulled into the corner by its own padding, so it sits on the edge
+        // of the content box rather than inset by a button's worth of space.
+        sx={{ ml: "auto", alignSelf: "flex-start", mt: -1, mr: -1 }}
+      >
         <CloseIcon fontSize="small" />
       </IconButton>
-    </Box>
+    </Paper>
   );
 }

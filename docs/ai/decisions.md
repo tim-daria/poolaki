@@ -226,6 +226,7 @@ The same embedding model will be used for document ingestion and query embedding
 ### Consequences
 
 - The AI Service depends on the availability and limits of the embedding provider.
+- Embedding calls can use a separate provider via `EMBEDDING_BASE_URL`/`EMBEDDING_API_KEY`; unset values fall back to the LLM provider.
 - API credentials must be managed securely.
 - Embedding costs and latency must be monitored.
 - Changing the embedding model requires regenerating existing document embeddings.
@@ -332,3 +333,29 @@ The AI Service will measure the latency of embedding generation, vector retrieva
 - Errors and retrieval outcomes should be logged consistently.
 - Existing request-level timing will be retained.
 - Dedicated metrics infrastructure may be introduced in a future version.
+- Token usage per stage (intent, embedding, final answer) is logged together with latency in the `chat_completed` event. Provider-reported `usage` is the source of truth; context size is only estimated.
+
+---
+
+## Decision 14: Intent Label Only and Backend-Defined Payloads
+
+### Context
+
+The backend now exposes three internal endpoints that each return a self-contained data set covering a family of intents.
+
+### Decision
+
+The LLM returns only an intent label. Each label maps to one endpoint. The AI Service sends no filters or slots; Django decides the payload (window, ordering, entry types).
+
+### Reason
+
+- Keeps the classifier simple and cheap.
+- Removes the need for slot extraction from free text.
+- Keeps data scoping and windows in the backend.
+
+### Consequences
+
+- Questions that need a specific transaction or weekly granularity are classified as `unsupported` and declined; savings/goal questions are answered from available context.
+- A question uses at most one endpoint.
+- Questions outside the returned window are answered by stating the actual window.
+- Vector search always runs in parallel; if Django fails with a non-authorization error, the answer degrades to vector context only.

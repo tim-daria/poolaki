@@ -56,7 +56,7 @@ poolaki.de:80 {
 	handle /_allauth/* {
 		reverse_proxy backend:8000
 	}
-	handle /api/* {
+	handle /api/v1/* {
 		reverse_proxy backend:8000
 	}
 	handle /static/* {
@@ -85,7 +85,7 @@ poolaki.localhost:80 {
 	handle /_allauth/* {
 		reverse_proxy backend:8000
 	}
-	handle /api/* {
+	handle /api/v1/* {
 		reverse_proxy backend:8000
 	}
 	handle /static/* {

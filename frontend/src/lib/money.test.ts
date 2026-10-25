@@ -2,6 +2,10 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  compactAmount,
+  displayFigure,
+  isAbbreviated,
+  displayWhole,
   filterTypedAmount,
   formatAmount,
   displayAmount,
@@ -9,6 +13,8 @@ import {
   parsePastedAmount,
   parseTypedAmount,
   toMoneyString,
+  cents,
+  splitCents,
   toRawAmount,
   validateAmount,
   validateOpeningBalance,
@@ -18,6 +24,11 @@ describe("wire format", () => {
   it("parseMoney reads the API string and rejects garbage", () => {
     expect(parseMoney("49.90")).toBe(49.9);
     expect(() => parseMoney("abc")).toThrow(/malformed/i);
+  });
+
+  it("cents rounds float drift away", () => {
+    expect(cents(0.1 + 0.2)).toBe(0.3);
+    expect(cents(620.1 - 500)).toBe(120.1);
   });
 
   it("toMoneyString always carries two decimals", () => {
@@ -173,5 +184,66 @@ describe("validation", () => {
 
   it("formats the bound in the requested locale", () => {
     expect(validateAmount("0", "us")).toBe("Amount must be at least 0.01");
+  });
+});
+
+describe("compactAmount", () => {
+  it("leaves small amounts alone", () => {
+    expect(compactAmount(999)).toBe("999");
+  });
+
+  it("abbreviates millions with one decimal in the default locale", () => {
+    expect(compactAmount(1500000)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(149206000)).toBe("149,2\u00a0Mio.");
+  });
+
+  it("truncates to one decimal instead of rounding up", () => {
+    expect(compactAmount(1555555)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(1599999)).toBe("1,5\u00a0Mio.");
+    expect(compactAmount(1999999, "us")).toBe("1.9M");
+  });
+
+  it("uses the locale's abbreviations", () => {
+    expect(compactAmount(149206000, "us")).toBe("149.2M");
+    expect(compactAmount(1234567890123, "us")).toBe("1.2T");
+  });
+});
+
+describe("overview figures", () => {
+  it("displayWhole drops cents and groups thousands", () => {
+    expect(displayWhole(3567)).toBe("3.567");
+    expect(displayWhole(1712.49)).toBe("1.712");
+    expect(displayWhole(1712.5)).toBe("1.713");
+  });
+
+  it("splitCents separates the decimal part for styling", () => {
+    expect(splitCents(350794)).toEqual({ whole: "350.794", cents: ",00" });
+    expect(splitCents(0.5, "us")).toEqual({ whole: "0", cents: ".50" });
+  });
+});
+
+describe("isAbbreviated", () => {
+  it.each([
+    [945, false],
+    [999999.4, false],
+    [999999.6, true],
+    [1000000, true],
+    [-1000000, true],
+  ])("isAbbreviated(%d) is %s", (amount, expected) => {
+    expect(isAbbreviated(amount)).toBe(expected);
+  });
+});
+
+describe("displayFigure", () => {
+  it("shows whole euros up to six digits", () => {
+    expect(displayFigure(945)).toBe("945");
+    expect(displayFigure(999999.4)).toBe("999.999");
+    // Rounds to seven digits, so it abbreviates like any seven-digit figure.
+    expect(displayFigure(999999.6)).toBe("1\u00a0Mio.");
+  });
+
+  it("abbreviates from a million", () => {
+    expect(displayFigure(1001002100498)).toBe("1 Bio.");
+    expect(displayFigure(98744927657)).toBe("98,7 Mrd.");
   });
 });

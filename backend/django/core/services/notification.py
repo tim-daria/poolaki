@@ -1,4 +1,4 @@
-from core.models import Notification, NotificationType, Organization
+from core.models import Membership, Notification, NotificationType, Organization, User
 
 
 def notify_users(
@@ -12,4 +12,21 @@ def notify_users(
         return
     Notification.objects.bulk_create(
         Notification(user_id=uid, type=ntype, org=org, payload=payload) for uid in user_ids
+    )
+
+
+def notify_org_members_except(
+    org: Organization,
+    actor: User,
+    ntype: NotificationType,
+    payload: dict[str, object],
+) -> None:
+    """Notify every member of the organization except the actor."""
+    notify_users(
+        list(
+            Membership.objects.filter(org=org).exclude(user=actor).values_list("user_id", flat=True)
+        ),
+        ntype,
+        payload,
+        org=org,
     )

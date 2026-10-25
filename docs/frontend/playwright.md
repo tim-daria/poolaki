@@ -83,51 +83,6 @@ npx playwright install chromium
 
 ---
 
-## Goal fixtures - TEMPORARY before the goals API lands
-
-The transaction specs create rows through the real API and need nothing seeded:
-every workspace gets its own categories when it is created, and the specs read
-them back from `GET /organizations/<org_id>/categories/`.
-
-Goals are the exception. The backend exposes no endpoint for them, so the
-frontend still declares them client-side in
-[lib/goals.ts](../../frontend/src/lib/goals.ts), and a contribution is rejected
-unless a goal with that id exists in the workspace you are in. Seeding is
-therefore only needed to try the transaction form's **Saving** tab by hand.
-
-`manage.py` needs the database credentials, which the entrypoint sources from
-the Vault agent's files at start-up. An exec'd shell starts *without* them, so
-a bare `docker compose exec -T backend python manage.py ...` fails with
-`fe_sendauth: no password supplied`. Source the same file first; a small shell
-function keeps that out of the way:
-
-```bash
-manage() {
-  docker compose exec -T backend sh -c \
-    "set -a; . /vault/agent/secrets/db-creds.env; set +a; python manage.py $*"
-}
-```
-
-Goals are scoped to a workspace, so the command takes the one to seed:
-
-```bash
-# The number is the workspace id from the URL, /o/<id>
-manage seed_transaction_fixtures 1
-
-# Print what it would write and roll back
-manage seed_transaction_fixtures 1 --dry-run
-```
-
-The command is idempotent: it updates the rows in place, so running it twice is
-safe. Note that the goal ids are fixed, so naming a *different* workspace moves
-those goals rather than adding more.
-
-> **IMPORTANT:** Named volumes survive `docker compose down` — reseeding is only needed after
-> `docker compose down -v`, which drops the database. Drop this step entirely
-> once the goals endpoints land.
-
----
-
 ## Test users and the signup rate limit
 
 allauth allows 20 signups per minute per IP. Every spec used to register its

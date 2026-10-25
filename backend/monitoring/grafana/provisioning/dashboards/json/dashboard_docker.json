@@ -813,7 +813,7 @@
       "hideTimepicker": false,
       "fiscalYearStartMonth": 0
     },
-    "title": "Docker monitoring",
+    "title": "Docker Dashboard",
     "variables": [
       {
         "kind": "QueryVariable",

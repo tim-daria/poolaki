@@ -1,42 +1,124 @@
-/** @file Goal types, form draft, and API calls. Reads are seeded until a goals API exists. */
+/** @file Goal types, form draft, and API calls. */
 
 import { TODAY } from "./date";
 import { parseMoney, toMoneyString, validateAmount } from "./money";
 import { formatName } from "./text";
-import { SEED_GOALS, seedIsEmptied } from "./goals.seed";
-
-/**
- * TODO: no goals API exists (core.models.Goal has no route), so SEED_GOALS
- * (lib/goals.seed.ts) stands in, the way categories did before they moved to fetchCategories in
- * lib/categories.ts. A contribution is rejected with 400
- * unless a Goal row with that id exists for the workspace
- * (TransactionCreateSerializer.validate_goal_id). Replace with a fetch once
- * the endpoints land; goalById keeps its signature.
- */
+import { isRejection, rejectionMessage } from "./apiErrors";
 
 /** Mirrors core.models.GoalStatus. */
 export type GoalStatus = "active" | "completed" | "archived";
 
 /**
- * The state a goal is shown in. Completion is derived, never set: a goal that has
- * reached its target is "completed" while it stays un-archived. Only "archived"
- * comes from the wire; if the backend ever sends "completed" the amounts still
- * decide, so the two cannot disagree.
+ * The state a goal is shown in: what the wire says, and only that. Completion
+ * is set by the user, so a goal past its target stays active until marked
+ * completed; the amounts only feed flags and hints (see targetReachedCue).
  */
 export function goalState(g: Goal): GoalStatus {
-  if (g.status === "archived") return "archived";
-  return g.saved_amount >= g.target_amount ? "completed" : "active";
+  return g.status;
 }
 
 export const isArchived = (g: Goal) => goalState(g) === "archived";
+
+/** An expense may be paid from this goal. The server decides; see `Goal.spendable`. */
+export const isSpendable = (g: Goal) => g.spendable;
+
+/** Contributions and withdrawals are accepted on active goals only; the server rejects the rest. */
+export const canTransfer = (g: Goal) => g.status === "active";
+
+export const targetReached = (g: Goal) => g.balance >= g.target_amount;
+
+/** Below zero: expenses paid from it exceeded what it held. Archived goals are settled, so never. */
+export const isOffLimits = (g: Goal) =>
+  g.balance < 0 && g.status !== "archived";
+
+/** How far below zero, as a positive amount; 0 when not off limits. */
+export const overBy = (g: Goal) => Math.max(0, -g.balance);
+
+/**
+ * Why a full active goal still cannot be spent from;
+ * shown as a chip's tooltip. Null otherwise.
+ */
+export function targetReachedCue(g: Goal): string | null {
+  return g.status === "active" && targetReached(g)
+    ? "Target reached. Mark it as completed to spend from it."
+    : null;
+}
+
+/** Chip text per flag. Exhaustive: a flag without a label fails to compile. */
+export const FLAG_LABEL: Record<GoalFlag, string> = {
+  off_limits: "Off limits",
+  overdue: "Overdue",
+};
+
+/**
+ * What the progress bar draws, per state. Palette paths for `sx`. Past 100%
+ * the light track stands for the planned 100% and the bar draws only the
+ * excess, as if filling again, so 120% shows a 20% bar; `pct` stays honest
+ * for the label and assistive tech. Archived is dimmed, bar included: a full
+ * primary bar would read as "in progress".
+ */
+export type BarLook = {
+  pct: number;
+  barValue: number;
+  track: string;
+  fill: string;
+};
+
+/** An overdraft reads as 0%; the card states the amount instead. */
+export function goalBarLook(g: Goal): BarLook {
+  const pct =
+    g.target_amount === 0
+      ? 0
+      : Math.max(0, Math.round((g.balance / g.target_amount) * 100));
+  switch (goalState(g)) {
+    case "archived":
+      return {
+        pct,
+        barValue: Math.min(100, pct),
+        track: "action.disabledBackground",
+        fill: "text.disabled",
+      };
+    case "completed":
+      return {
+        pct,
+        // Marked completed short of the target is possible, so no assumption of >=100.
+        barValue: pct > 100 ? Math.min(100, pct - 100) : pct,
+        track: "success.light",
+        fill: "success.main",
+      };
+    case "active":
+      return {
+        pct,
+        barValue: Math.min(100, pct),
+        track: "primary.light",
+        fill: "primary.dark",
+      };
+  }
+}
 
 /** Mirrors core.models.Goal, plus the progress the picker shows. */
 export type Goal = {
   id: number;
   name: string;
   target_amount: number;
-  /** Derived on the server from the goal's contributions, never sent up. */
-  saved_amount: number;
+  /** Contributions minus withdrawals and expenses paid from it;
+   * what counts toward the target. Negative once expenses exceed what was saved.
+   */
+  balance: number;
+  /**
+   * Whether an expense may be paid from this goal. The server's rule is
+   * "completed, or active with no target date", and it rejects an expense
+   * against any other goal with a 400.
+   */
+  spendable: boolean;
+  /** balance / target_amount, as the server computes it; unclamped. */
+  progress: number;
+  /** Server-side: target_date is before today and the goal is not completed. */
+  overdue: boolean;
+  /** ISO date set when marked completed, null otherwise. */
+  completed_at: string | null;
+  /** Username, or null when the creator's account is gone. */
+  created_by: string | null;
   /** "YYYY-MM-DD", or null for a goal with no deadline. */
   target_date: string | null;
   status: GoalStatus;
@@ -45,22 +127,23 @@ export type Goal = {
 };
 
 /**
- * Conditions worth calling out on a goal. Extend the union to add one; the card
- * renders whatever comes back. TODO: "off_limits" (spent more than planned) joins
- * once contributions are wired up — it needs transaction data, so goalFlags will
- * grow a parameter then; the list shape stays.
+ * Conditions worth calling out on a goal, in display order. Extend the union
+ * to add one; the card renders whatever comes back.
  */
-export type GoalFlag = "overdue";
+export type GoalFlag = "off_limits" | "overdue";
 
 /**
- * Flags for a goal, in display order. Derived from the amounts and dates, not
- * from the state, so they persist once a goal is archived. ISO "YYYY-MM-DD"
- * strings compare correctly as strings; a goal due today is not overdue.
+ * Flags for a goal, in display order. Off limits means the balance is below zero.
+ * Overdue means the deadline passed with
+ * the target unmet; it persists once a goal is archived, and never applies to
+ * a completed one. ISO "YYYY-MM-DD" strings compare correctly as strings; a
+ * goal due today is not overdue.
  */
 export function goalFlags(g: Goal, today: string = TODAY): GoalFlag[] {
   const flags: GoalFlag[] = [];
-  const reached = g.saved_amount >= g.target_amount;
-  if (!reached && g.target_date !== null && g.target_date < today) {
+  if (isOffLimits(g)) flags.push("off_limits");
+  const unmet = g.status !== "completed" && !targetReached(g);
+  if (unmet && g.target_date !== null && g.target_date < today) {
     flags.push("overdue");
   }
   return flags;
@@ -75,15 +158,18 @@ export function oldestFirst(a: Goal, b: Goal): number {
   return a.created_at.localeCompare(b.created_at);
 }
 
-/**
- * TODO: no goals API exists yet. Swap the body for a real fetch
- * (`GET /api/v1/organizations/${org_id}/goals/`) once it lands, the
- * signature (org_id in, Promise<Goal[]> out) is written to match that call,
- * so Goals.tsx does not need to change, just the `await` it already has room for.
- */
-export async function getGoals(org_id: number): Promise<Goal[]> {
-  void org_id; // TODO: use once the fetch call replaces the seed
-  return seedIsEmptied() ? [] : SEED_GOALS;
+/** GET /api/v1/organizations/${org_id}/goals/ — every status; the page splits them. */
+export async function getGoals(
+  org_id: number,
+  signal?: AbortSignal,
+): Promise<Goal[]> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/goals/`, {
+    credentials: "include",
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load goals (${res.status})`);
+  const body: { goals: GoalDTO[] } = await res.json();
+  return body.goals.map(fromDTO);
 }
 
 export function goalById(goals: Goal[], id: number | null): Goal | undefined {
@@ -103,34 +189,33 @@ export type GoalDraft = {
   target_date: string;
 };
 
-/** Seeded with today, like the transaction date. */
+/** Blank, date included: no deadline is the default, not today. */
 export function emptyGoalDraft(): GoalDraft {
-  return { name: "", target_amount: "", target_date: TODAY };
+  return { name: "", target_amount: "", target_date: "" };
 }
 
-/**
- * Validates the draft before submission. Returns an error message or null.
- * The date is required because core.models.Goal.target_date is NOT NULL.
- */
+/** Validates the draft before submission. Returns an error message or null. */
 export function validateGoalDraft(draft: GoalDraft): string | null {
   if (!draft.name.trim()) return "Name is required.";
   const amountProblem = validateAmount(draft.target_amount);
   if (amountProblem) return amountProblem;
-  if (!draft.target_date) return "Pick a target date.";
   return null;
+}
+
+/** The form's view of an existing goal, for edit mode. */
+export function toGoalDraft(g: Goal): GoalDraft {
+  return {
+    name: g.name,
+    target_amount: toMoneyString(g.target_amount),
+    target_date: g.target_date ?? "",
+  };
 }
 
 /* ---------------------------------- */
 /*                HTTP                */
 /* ---------------------------------- */
 
-/**
- * Flip once core/urls.py routes goals. Until then the form shows a notice and
- * keeps Create disabled, so nothing pretends to persist a goal.
- */
-export const CAN_CREATE_GOALS = false;
-
-/** A 400 whose message belongs in the form, as opposed to a network failure. */
+/** A 400 or 403 whose message belongs in the form, as opposed to a network failure. */
 export class GoalError extends Error {}
 
 /** Raw API shape the endpoint is expected to return; mirrors the model. */
@@ -139,13 +224,14 @@ type GoalDTO = {
   name: string;
   /** String to preserve decimal precision. */
   target_amount: string;
-  saved_amount: string;
+  balance: string;
+  spendable: boolean;
+  progress: string;
+  overdue: boolean;
+  completed_at: string | null;
+  created_by: string | null;
   target_date: string | null;
-  /**
-   * Raw, not GoalStatus: no serializer sends this yet, so the boundary
-   * validates it (parseGoalStatus) rather than assuming it, unlike
-   * entry_type in lib/transactions.ts whose serializer already exists.
-   */
+  /** Raw; parseGoalStatus validates it at the boundary. */
   status: string;
   created_at: string;
 };
@@ -167,7 +253,12 @@ function fromDTO(d: GoalDTO): Goal {
     id: d.id,
     name: d.name,
     target_amount: parseMoney(d.target_amount),
-    saved_amount: parseMoney(d.saved_amount),
+    balance: parseMoney(d.balance),
+    spendable: d.spendable,
+    progress: parseMoney(d.progress),
+    overdue: d.overdue,
+    completed_at: d.completed_at,
+    created_by: d.created_by,
     target_date: d.target_date,
     status: parseGoalStatus(d.status),
     created_at: d.created_at,
@@ -187,26 +278,64 @@ export async function createGoal(
     body: JSON.stringify({
       name: formatName(draft.name),
       target_amount: toMoneyString(Number(draft.target_amount)),
-      target_date: draft.target_date,
+      target_date: draft.target_date || null,
     }),
   });
-  if (res.status === 400) {
-    const body: unknown = await res.json().catch(() => null);
-    throw new GoalError(firstMessage(body) ?? "Could not save the goal");
+  if (isRejection(res)) {
+    throw new GoalError(await rejectionMessage(res, "Could not save the goal"));
   }
   if (!res.ok) throw new Error(`Failed to create goal (${res.status})`);
   return fromDTO(await res.json());
 }
 
-/** First string found in a DRF error body: {field: [msg]}, {detail: msg} or [msg]. */
-function firstMessage(body: unknown): string | null {
-  if (typeof body === "string") return body;
-  if (Array.isArray(body)) return body.length ? firstMessage(body[0]) : null;
-  if (body && typeof body === "object") {
-    for (const value of Object.values(body)) {
-      const found = firstMessage(value);
-      if (found) return found;
-    }
+/** Fields PATCH accepts. Omitted means unchanged; `target_date: null` clears it. */
+export type GoalPatch = {
+  name?: string;
+  target_amount?: string;
+  target_date?: string | null;
+  status?: GoalStatus;
+};
+
+/**
+ * Only what differs from `original`: the server rejects an empty body, so the
+ * caller skips the request when this is `{}`.
+ */
+export function goalPatch(
+  original: Goal,
+  draft: GoalDraft,
+  status: GoalStatus,
+): GoalPatch {
+  const patch: GoalPatch = {};
+  const name = formatName(draft.name);
+  if (name !== original.name) patch.name = name;
+  const amount = toMoneyString(Number(draft.target_amount));
+  if (amount !== toMoneyString(original.target_amount))
+    patch.target_amount = amount;
+  const date = draft.target_date || null;
+  if (date !== original.target_date) patch.target_date = date;
+  if (status !== original.status) patch.status = status;
+  return patch;
+}
+
+/** PATCH /api/v1/organizations/${org_id}/goals/${id}/ — owner or creator only (403 otherwise). */
+export async function updateGoal(
+  org_id: number,
+  id: number,
+  patch: GoalPatch,
+  csrfToken: string,
+): Promise<Goal> {
+  const res = await fetch(`/api/v1/organizations/${org_id}/goals/${id}/`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    credentials: "include",
+    body: JSON.stringify(patch),
+  });
+  if (isRejection(res)) {
+    throw new GoalError(
+      await rejectionMessage(res, "Could not update the goal"),
+    );
   }
-  return null;
+  if (!res.ok) throw new Error(`Failed to update goal (${res.status})`);
+  const body: { goal: GoalDTO } = await res.json();
+  return fromDTO(body.goal);
 }

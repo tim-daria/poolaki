@@ -4,12 +4,6 @@ import { isRejection, rejectionMessage } from "./apiErrors";
 
 const GENERIC = "Could not save the starting balance. Please try again.";
 
-/**
- * Flip once the backend can set a shared workspace's starting balance. Until
- * then Home shows the action disabled, so the layout is final.
- */
-export const CAN_SET_SHARED_STARTING_BALANCE = false;
-
 export async function submitInitialBalance(
   balance: string,
   csrfToken: string,

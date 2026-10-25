@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Alert,
+  Box,
   Button,
   DialogActions,
   DialogContent,
@@ -11,6 +12,7 @@ import {
 } from "@mui/material";
 import { PasswordChangeError, changePassword } from "../../lib/account";
 import { getCsrfToken } from "../../lib/csrf";
+import { useAuth } from "../../context/useAuth";
 import { useToast } from "../../context/useToast";
 import { ModalShell } from "./ModalShell";
 import { DiscardChangesDialog } from "./CloseGuard";
@@ -24,6 +26,7 @@ interface Props {
 const BLANK = { current: "", next: "", confirm: "" };
 
 export function ChangePasswordForm({ open, onClose }: Props) {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [draft, setDraft] = useState(BLANK);
   const [error, setError] = useState("");
@@ -77,6 +80,28 @@ export function ChangePasswordForm({ open, onClose }: Props) {
       onExited={handleExited}
     >
       <form onSubmit={handleSubmit}>
+        {/* Not shown: password managers need a username field to know which
+            saved login the new password belongs to. */}
+        <Box
+          component="input"
+          type="text"
+          name="username"
+          autoComplete="username"
+          value={user?.username ?? ""}
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+          sx={{
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            border: 0,
+            padding: 0,
+            margin: "-1px",
+          }}
+        />
         <DialogContent>
           <Stack spacing={2}>
             <TextField
