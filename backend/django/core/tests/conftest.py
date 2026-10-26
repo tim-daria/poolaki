@@ -18,6 +18,7 @@ from core.models import (
 
 os.environ.setdefault("AI_SERVICE_URL", "http://ai-service:8000")
 os.environ.setdefault("AI_SERVICE_TIMEOUT", "90")
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 INTERNAL_API_TOKEN = "test-internal-token"
 

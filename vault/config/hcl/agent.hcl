@@ -43,6 +43,13 @@ template {
 }
 
 template {
+  source      = "/vault/agent/templates/secret-key.tpl"
+  destination = "/vault/agent/secrets/django/secret-key.env"
+  perms       = "0440"
+  command     = "touch /vault/agent/secrets/django/.reload-trigger"
+}
+
+template {
   source      = "/vault/agent/templates/ai-tokens.tpl"
   destination = "/vault/agent/secrets/django/ai-tokens.env"
   perms       = "0440"

@@ -95,6 +95,11 @@ if [ "$INITIALIZED" = "false" ]; then
 		intra42_client_id="$INTRA42_CLIENT_ID" \
 		intra42_client_secret="$INTRA42_CLIENT_SECRET"
 
+	# via file: the vault CLI treats a leading @ in a value as a file reference
+	printf '%s' "$SECRET_KEY" > /tmp/secret_key
+	vault kv put secret/django/secret_key secret_key=@/tmp/secret_key
+	rm /tmp/secret_key
+
 	vault kv put secret/grafana \
 		gf_admin_user="$GF_ADMIN_USER" \
 		gf_admin_password="$GF_ADMIN_PASSWORD" \
