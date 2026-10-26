@@ -60,13 +60,17 @@ Vault initialises and unseals itself on first start; the backend waits for it.
 
 ### URLs
 
-| Service    | URL                                  | Profile |
-| ---------- | ------------------------------------ | ------- |
-| App        | <http://poolaki.localhost:8080>      | dev     |
-| Django admin | <http://poolaki.localhost:8080/admin/> | dev   |
-| Vault UI   | <http://localhost:8200/ui>           | dev     |
-| Grafana    | <http://grafana.localhost:8080>      | prod    |
-| Prometheus | <http://prometheus.localhost:8080>   | prod    |
+| Service       | URL                                      | Profile |
+| ------------- | ---------------------------------------- | ------- |
+| Public app    | <https://poolaki.de>                     | prod    |
+| Local app     | <http://poolaki.localhost:8080>          | dev     |
+| Django admin  | <http://poolaki.localhost:8080/admin/>   | dev     |
+| Vault UI      | <http://localhost:8200/ui>               | dev     |
+| Grafana       | <http://grafana.localhost:8080>          | prod    |
+| Prometheus    | <http://prometheus.localhost:8080>       | prod    |
+
+Use the public HTTPS address for browser-to-backend traffic in production. The
+HTTP addresses are local development endpoints only.
 
 ### Useful targets
 
@@ -110,9 +114,30 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 <details>
 <summary><strong>❗Team Information</strong></summary>
 
-For each team member mentioned at the top of the README.md, you must provide:
-◦ Assigned role(s): PO, PM, Tech Lead, Developers, etc.
-◦ Brief description of their responsibilities.
+- **`albetanc` — Project Manager (PM) and Developer.** Coordinated planning,
+  task distribution, progress tracking, and team communication. Also
+  contributed to the AI service, including its architecture, retrieval
+  pipeline, integrations, and related documentation.
+
+- **`cwick` — Technical Lead and Developer.** Led infrastructure and
+  architecture decisions, including Docker-based deployment, service routing,
+  Vault secrets management, Cloudflare Tunnel access, the WAF, monitoring,
+  backups, and operational documentation.
+
+- **`dtimofee` — Product Owner (PO) and Backend Developer.** Defined and
+  prioritised product requirements, validated completed features, and
+  communicated the project direction. Implemented and documented backend
+  functionality including authentication, workspaces, permissions,
+  invitations, notifications, reports, and API integration.
+
+- **`nefimov` — Backend Developer.** Implemented the financial domain model and
+  API behaviour for transactions, categories, savings goals, reports, and
+  related business rules. Worked on database integrity, concurrency-safe
+  operations, validation, and backend documentation.
+
+- **`tsemenov` — Frontend Developer.** Owned the React application experience:
+  product flows, UI design system, responsive layouts, routing, workspace and
+  transaction interfaces, frontend tests, CI, and frontend documentation.
 
 </details>
 
@@ -315,7 +340,7 @@ choice".
 | 1p | **Minor: Web.** Implement advanced search functionality with filters, sorting, and pagination. | dtimofee, tsemenov | Transactions page | ❗ |
 | 1p | **Minor: Accessibility.** Support for additional browsers. | tsemenov | Cromium, firefox, Webkit | [docs/frontend/browser-support.md](docs/frontend/browser-support.md) |
 | 1p | **Minor: User Management.** Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.). | dtimofee | ❗ | ❗ |
-| 2p | **Minor: User Management.** Advanced permissions system. | ❗ | ❗ | ❗ |
+| 2p | **Major: User Management.** Advanced permissions system. | ❗ | ❗ | ❗ |
 | 2p | **Major: User Management.** An organization system. | ❗ | ❗ | ❗ |
 | 1p | **Minor: User Management.** User activity analytics and insights dashboard. | ❗ | ❗ | ❗ |
 | 2p | **Major: Artificial Intelligence.** Implement a complete RAG (Retrieval-Augmented Generation) system. | ❗ | ❗ | ❗ |
@@ -333,6 +358,176 @@ choice".
 ◦ Detailed breakdown of what each team member contributed.
 ◦ Specific features, modules, or components implemented by each person.
 ◦ Any challenges faced and how they were overcome.
+
+<details>
+<summary><strong>albetanc (🧭) — Project Management and Backend/AI Integration</strong></summary>
+
+**Scope.** Project Manager responsible for planning, task distribution,
+progress tracking, and communication. Also contributed to backend features
+connecting the product to the AI service.
+
+**Design and user flow**
+- Helped define the product scope and prioritise the user flows around shared
+  organizations, invitations, notifications, reports, and AI assistance.
+- Coordinated the way organization membership, permissions, and user-visible
+  notifications work together across the application.
+
+**Implementation**
+- Built and maintained the organization and membership workflow: shared
+  organizations, permissions, invitations, accepting invitations, leaving an
+  organization, member removal, and organization rename/delete operations.
+- Implemented the notification system across invitations, organization changes,
+  transactions, and savings goals, including the related backend integrations.
+- Added API versioning and connected the Django API to the AI chat service,
+  including the backend/frontend chat integration.
+- Implemented and documented reporting and transaction filtering, and
+  contributed to the savings and goal-related backend work.
+
+**Tooling and quality**
+- Coordinated work through GitHub Issues, pull requests, the project board,
+  weekly meetings, Miro planning, and Slack communication.
+- Added API and feature documentation, including the representative work on
+  [shared organizations](https://github.com/tim-daria/poolaki/commit/02bea85de223a6b22738e90ec497fe5044aceb68),
+  [permissions and invitations](https://github.com/tim-daria/poolaki/commit/14fc9a109a63ba2c34c2118d48fb88c4a22ae8b),
+  [notifications](https://github.com/tim-daria/poolaki/commit/1f9842a33a880373612836394d64df4a02bb8405),
+  [AI chat integration](https://github.com/tim-daria/poolaki/commit/001aef61b0ad5b173827772e75af1b30422e3c3d),
+  and [reporting](https://github.com/tim-daria/poolaki/commit/865896edaddb29fe619779890fc95112f9ef1685).
+
+**Challenges**
+- **Keeping shared-workspace access consistent.** Organization membership,
+  permissions, invitations, and notifications affect the same users and
+  resources, so the implementation had to keep authorization and user-visible
+  events aligned across endpoints.
+- **Connecting two services without duplicating business rules.** The AI
+  service receives a constrained API contract from Django rather than reading
+  the database directly, which keeps workspace access checks in the main
+  backend.
+</details>
+
+<details>
+<summary><strong>cwick (🛡️) — Technical Lead and Infrastructure</strong></summary>
+
+**Scope.** Technical Lead responsible for deployment architecture, service
+integration, security, and operational reliability for the Docker-based
+monorepo.
+
+**Design and user flow**
+- Designed the local and production service layout so the application, AI
+  service, database, Vault, monitoring, and tunnel can run as one stack.
+- Defined the operational flow for starting services, checking readiness,
+  accessing the production app, and recovering database data.
+
+**Implementation**
+- Built the Docker and Compose infrastructure, Makefile workflows, service
+  health checks, and CI pre-check tooling.
+- Implemented Cloudflare Tunnel access and the Vault-based secrets workflow,
+  including integrations for Grafana, the AI service, and deployment secrets.
+- Added the Coraza WAF, hardened its request handling, and documented commands
+  for testing and inspecting WAF activity.
+- Implemented Prometheus/Grafana monitoring, PostgreSQL and container metrics,
+  dashboards, and database test data for operational checks.
+
+**Tooling and quality**
+- Added infrastructure documentation covering deployment, Vault, WAF,
+  monitoring, and the production setup.
+- Established operational checks with [monitoring](https://github.com/tim-daria/poolaki/commit/9a179f4ab2cec89ca0ab29d684721c53528e6839),
+  [Cloudflare Tunnel](https://github.com/tim-daria/poolaki/commit/dd80146e152dfdbd51d176e5319d3524290ca6df),
+  [Vault](https://github.com/tim-daria/poolaki/commit/8d43273d1cde0188797a9db9132f1fd62baffeea),
+  and [WAF](https://github.com/tim-daria/poolaki/commit/c7fbc5cbae0d6276905b9efdf3971c5c93281c73)
+  integrations.
+
+**Challenges**
+- **Ordering dependent services safely.** Backend, Vault, database, AI service,
+  and the tunnel must become ready in the correct order; health checks and
+  startup scripts make those dependencies explicit instead of relying on
+  timing.
+- **Protecting secrets while keeping local development usable.** Vault
+  bootstrapping, environment configuration, and CI checks were combined so
+  secrets are injected at runtime without committing them to the repository.
+</details>
+
+<details>
+<summary><strong>dtimofee (🧩) — Product Ownership and Backend/AI Service</strong></summary>
+
+**Scope.** Product Owner responsible for product direction and validation.
+Also implemented the AI service, its retrieval pipeline, and cross-cutting
+backend features.
+
+**Design and user flow**
+- Defined and prioritised product requirements, validated completed work, and
+  communicated decisions about the user-facing scope.
+- Shaped the AI assistant flow so users can ask natural-language questions
+  about their own expenses, goals, trends, and shared workspaces.
+
+**Implementation**
+- Set up the FastAPI AI microservice and its Django API contract, then
+  implemented prompt handling, context building, LLM integration, and
+  retrieval-augmented generation.
+- Added embedding ingestion and vector search, documented the embedding
+  architecture, and improved no-memory behaviour and AI auditing.
+- Implemented AI chat UI integration, markdown responses, legal pages, and
+  supporting notification and report integrations.
+
+**Tooling and quality**
+- Documented the AI API contract and embedding architecture, and improved
+  reliability through fallback handling, audit improvements, and no-memory
+  behaviour.
+- Delivered the [FastAPI service](https://github.com/tim-daria/poolaki/commit/7f8c865243e0b09e215ea25af672bba350032d7e),
+  [RAG prototype](https://github.com/tim-daria/poolaki/commit/52ad4cf7d64cd2ef30a376d70c0d720dff77c7b1),
+  [LLM integration](https://github.com/tim-daria/poolaki/commit/15e7bd9b98cb925a48a055e2758115b7b63dde75),
+  [vector search](https://github.com/tim-daria/poolaki/commit/7cac462b091bda13ecfcc3747acfde96e93c2422),
+  and [AI audit/no-memory improvements](https://github.com/tim-daria/poolaki/commit/fe3a7e23154b153ae12707defcf55cede83f0d9d).
+
+**Challenges**
+- **Building useful answers from scoped financial data.** The retrieval and
+  context pipeline had to select relevant workspace data while preserving the
+  Django API boundary and avoiding direct database access from the AI service.
+- **Making the AI service dependable.** Explicit API contracts, fallback
+  handling, audit improvements, and no-memory behaviour reduce the impact of
+  unavailable model or vector-search functionality.
+</details>
+
+<details>
+<summary><strong>nefimov (🔧) — Backend Financial Domain</strong></summary>
+
+**Scope.** Backend Developer responsible for the transaction and savings
+domain in the Django backend, including validation, business rules, and
+reporting data.
+
+**Design and user flow**
+- Defined the financial flow from income and expenses through goal
+  contributions, withdrawals, progress, completion, and archival.
+- Kept personal budgets and shared-workspace transactions subject to the same
+  balance and authorization rules.
+
+**Implementation**
+- Designed the transaction model and backend API for income, expenses, and
+  goal-related transfers, including editing and deletion.
+- Implemented savings goals, goal progress and reporting, archived-goal
+  behaviour, and restrictions on withdrawals and transactions linked to
+  archived goals.
+- Added transaction and goal test data used by the application and test
+  environment, and contributed to report data used by the frontend.
+- Documented the goals and reporting behaviour and fixed edge cases in
+  transaction serializers and atomic operations.
+
+**Tooling and quality**
+- Added backend tests and test data for transactions and goals, and documented
+  the [goals](https://github.com/tim-daria/poolaki/commit/26e656d9e48e266a08a122f0c8f19161396f89a)
+  and [reporting](https://github.com/tim-daria/poolaki/commit/7d8b1802b0008e13d51ed19300fe83e983412f9a)
+  behaviour.
+- Implemented the [transaction backend](https://github.com/tim-daria/poolaki/commit/ce1eea2ea18c3d50d2517c0cbc9432ade1d6528a),
+  [transaction editing](https://github.com/tim-daria/poolaki/commit/dbbc4055bc742b3d1aba894545e67456ea47a277),
+  and [goal transaction restrictions](https://github.com/tim-daria/poolaki/commit/f7d4b434425ce71b4525d5dd061807ccbe957992).
+
+**Challenges**
+- **Preserving financial invariants.** Transaction changes affect balances,
+  goals, and reports, so validation and database operations must prevent
+  invalid transfers and keep derived totals consistent.
+- **Handling lifecycle transitions.** Archived and completed goals need
+  different rules from active goals; explicit checks and atomic updates keep
+  those transitions safe when several requests occur close together.
+</details>
 
 <details>
 <summary><strong>Tanya (🎀 tsemenov) — Frontend</strong></summary>
@@ -365,6 +560,7 @@ choice".
 - Project subject: 42 `ft_transcendence`
   
 - [django-allauth: Headless API ](https://docs.allauth.org/en/latest/headless/index.html)
+- [Django Official Documentation](https://docs.djangoproject.com/en/6.1/)
 - [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [Mozilla Web Docs](https://developer.mozilla.org/en-US/)
 - [React Official Documentation](https://react.dev/)
