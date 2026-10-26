@@ -2,6 +2,32 @@
 
 All endpoints in this document require authentication.
 
+Organization-scoped endpoints also require membership in the organization.
+
+## Ledger model
+
+The `Transaction` table is the source of truth for financial write
+operations. The organization's general balance and each goal's balance are
+derived from the effective transaction rows rather than stored as mutable
+counters. Goal reservations are therefore represented by goal-linked ledger
+rows. The organization `initial_balance` is the starting value for the general
+balance calculation.
+
+Transactions may reference an organization, goal, category, and creating user.
+The organization and goal/category references must remain consistent. The
+`(organization, transaction_date)` index supports date-based listing and
+reporting as the ledger grows.
+
+The related models are:
+
+- `Organization`: owns the budget and provides `initial_balance`.
+- `Membership`: verifies that a user may access the organization's ledger.
+- `Goal`: receives contributions and withdrawals and may be the target of an
+  expense.
+- `Category`: optionally classifies a transaction and must belong to the same
+  organization.
+- `Transaction`: records each financial event and its creator.
+
 ## Transactions endpoints
 
 Transactions are linked to an organization and can represent income, expenses,
@@ -156,6 +182,8 @@ Side effect (see [notifications.md](notifications.md)): every other member of
 the organization receives a `transaction_added` notification; the creator is
 not notified.
 
+The notification is not created for a personal budget.
+
 ### Get transaction details
 
 ```http
@@ -260,6 +288,16 @@ Only the transaction creator can delete a transaction. Deleting a contribution
 or withdraw must leave the goal balance valid. Transactions associated with
 archived goals cannot be deleted. Deleting an income transaction is not
 restricted by the organization's balance.
+
+## Consistency safeguards
+
+Transaction writes should:
+
+- validate organization membership before changing the ledger;
+- lock a referenced goal while checking and applying a goal-linked change;
+- verify that a referenced goal belongs to the same organization; and
+- reject changes that would leave insufficient funds or violate the goal
+  balance invariant.
 
 ## Frontend integration notes
 
