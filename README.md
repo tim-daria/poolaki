@@ -100,9 +100,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project Documentation
 
-- Backend API documentation: [Backend Readme](backend/README.md) and [other backend documents](docs/backend)
-- AI Service documentation: [AI Readme](ai-service/README.md) and [other AI documents](docs/ai)
-- Frontend documentation: [Frontend documents](docs/frontend), and other [frontend documents](docs/frontend)
+- Backend API documentation: [Backend Readme](docs/backend/README.md) and [other backend documents](docs/backend)
+- AI Service documentation: [AI Readme](docs/ai-service/README.md) and [other AI documents](docs/ai)
+- Frontend documentation: [Frontend Readme](docs/frontend/README.md), and other [frontend documents](docs/frontend)
 - Input validation, both sides: [docs/validation.md](docs/validation.md)
 
 ## Additional Sections [... NEEDS TO BE FILLED ...]
@@ -119,9 +119,11 @@ For each team member mentioned at the top of the README.md, you must provide:
 <details>
 <summary><strong>❗Project Management</strong></summary>
 
-◦ How the team organized the work (task distribution, meetings, etc.).
-◦ Tools used for project management (GitHub Issues, Trello, etc.).
-◦ Communication channels used (Discord, Slack, etc.).
+- **Organisation.** The team met once a week to review progress, decide what to build next and split the work. Tasks were assigned at these meetings and tracked until done.
+
+- **Tools.** Work items were tracked as GitHub Issues, one issue per task or bug, closed by the pull request that resolved it. A GitHub Projects board gave an overview of the issues by status (to do, in progress, done) and by assignee, and was reviewed at each weekly meeting. Miro boards were used for planning: sketching screens, mapping data flows and laying out the module roadmap before anything was coded.
+
+- **Communication.** Day-to-day communication happened in a shared Slack workspace. Slack carried quick questions, pull request links and decisions made between meetings, so that nothing depended on everyone being in the same room.
 
 </details>
 
@@ -301,6 +303,27 @@ README.
 choice".
 ◦ How each module was implemented.
 ◦ Which team member(s) worked on each module.
+
+## Modules of Choice
+
+| Points | Module | Author | Description | Docs |
+| --- | --- | --- | --- | --- |
+| 2p | **Major: Web.** Use a framework for both the frontend and backend. | dtimofee, tsemenov | Django + React Router | [docs/modules/backend-integration.md](docs/modules/backend-integration.md), [docs/modules/input-validation.md](docs/modules/input-validation.md), [docs/frontend/routing.md](docs/frontend/routing.md), [docs/frontend/password-change.md](docs/frontend/password-change.md) |
+| 1p | **Minor: Web.** Use an ORM for the database | ❗ | ❗ | ❗ |
+| 1p | **Minor: Web.** A complete notification system for all creation, update, and deletion actions | ❗ | ❗ | ❗ |
+| 1p | **Minor: Web.** Custom-made design system with reusable components, including a proper color palette, typography, and icons (minimum: 10 reusable components). | tsemenov | Custom design system based on MUI | [docs/modules/design-system.md](docs/modules/design-system.md), [docs/frontend/mui-and.styles.md](docs/frontend/mui-and.styles.md]), [docs/frontend/money.md](docs/frontend/money.md), [docs/frontend/drawers.md](docs/frontend/drawers.md) |
+| 1p | **Minor: Web.** Implement advanced search functionality with filters, sorting, and pagination. | dtimofee, tsemenov | Transactions page | ❗ |
+| 1p | **Minor: Accessibility.** Support for additional browsers. | tsemenov | Cromium, firefox, Webkit | [docs/frontend/browser-support.md](docs/frontend/browser-support.md) |
+| 1p | **Minor: User Management.** Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.). | dtimofee | ❗ | ❗ |
+| 2p | **Minor: User Management.** Advanced permissions system. | ❗ | ❗ | ❗ |
+| 2p | **Major: User Management.** An organization system. | ❗ | ❗ | ❗ |
+| 1p | **Minor: User Management.** User activity analytics and insights dashboard. | ❗ | ❗ | ❗ |
+| 2p | **Major: Artificial Intelligence.** Implement a complete RAG (Retrieval-Augmented Generation) system. | ❗ | ❗ | ❗ |
+| 2p | **Major: Artificial Intelligence.** Implement a complete LLM system interface. | ❗ | ❗ | ❗ |
+| 2p | **Major: Cybersecurity.** Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets. | ❗ | ❗ | ❗ |
+| 2p | **Major: DevOps.** Monitoring system with Prometheus and Grafana. | ❗ | ❗ | ❗ |
+| 2p | **Major: DevOps.** Health check and status page system with automated backups and disaster recovery procedures. | ❗ | ❗ | ❗ |
+| 1p | **Minor: Data & Analytics.** Advanced analytics dashboard with data visualization | dtimofee | A yearly report over income, expenses and savings: one aggregation endpoint, custom charts and a print-ready layout. | [docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md), [docs/backend/reports.md](docs/backend/reports.md) |
 
 </details>
 
