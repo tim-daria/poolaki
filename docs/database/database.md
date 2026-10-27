@@ -123,4 +123,4 @@ the repository.
 ## Backups
 
 Production backups are implemented by the dedicated Docker Compose service
-described in [`db_backup.md`](db_backup.md).
+described in [`backup.md`](backup.md).
