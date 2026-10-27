@@ -12,9 +12,9 @@ This document is the detailed source for team structure, roles, feature and modu
 | `cwick`    | cwick             | Infrastructure & Security Lead                | Docker, Vault, Caddy/Coraza, Cloudflare Tunnel, monitoring, backups, CI infrastructure                   |
 | `dtimofee` | Daria Timofeeva   | Tech Lead; Backend Lead                       | Django/DRF, database, authentication/OAuth, organizations, reports, notification backend, AI integration |
 | `nefimov`  | Nikolai Efimov    | Backend Developer                             | Goals, transactions, balances, transaction restrictions, goal report data                                |
-| `tsemenov` | Tanya Kletka      | Frontend Lead; QA                             | UX/UI, design system, React application, responsive layouts, frontend tests and CI                       |
+| `tsemenov` | Tanya Semenova      | Frontend Lead; QA                             | UX/UI, design system, React application, responsive layouts, frontend tests and CI                       |
 
-Alicia Betancourt (`albetanc`) is the lead of the notification system. Daria Timofeeva (`dtimofee`) implements its backend side; Tanya Kletka (`tsemenov`) reviews the frontend side.
+Alicia Betancourt (`albetanc`) is the lead of the notification system. Daria Timofeeva (`dtimofee`) implements its backend side; Tanya Semenova (`tsemenov`) reviews the frontend side.
 
 ## 2. Roles and Responsibilities
 
@@ -30,7 +30,7 @@ Project coordination was shared. The PO facilitated sprint priorities; the techn
 
 Each service area had a technical lead. Leads owned architecture and technical decisions, supported other developers and reviewed relevant changes.
 
-- **Frontend Technical Lead — Tanya Kletka (`tsemenov`).** Frontend architecture, UX and UI consistency, responsive behaviour, frontend integration and troubleshooting.
+- **Frontend Technical Lead — Tanya Semenova (`tsemenov`).** Frontend architecture, UX and UI consistency, responsive behaviour, frontend integration and troubleshooting.
 - **Backend Technical Lead — Daria Timofeeva (`dtimofee`).** Django/DRF architecture, data model, API contracts, authentication and integration with the AI service.
 - **AI Technical Lead — Alicia Betancourt (`albetanc`).** AI service boundary, RAG pipeline, prompt/LLM integration and the contract with the backend.
 - **Infrastructure and Security Lead — cwick.** Docker Compose, Vault, WAF, tunnel, monitoring, backups and infrastructure reviews.
@@ -41,7 +41,7 @@ Infrastructure and security changes received additional review from the Infrastr
 
 Developers implemented features, tested their work, participated in code reviews and maintained documentation. Each service had at least two team members involved.
 
-- **Frontend:** Tanya Kletka (`tsemenov`), with support from Alicia Betancourt (`albetanc`).
+- **Frontend:** Tanya Semenova (`tsemenov`), with support from Alicia Betancourt (`albetanc`).
 - **Backend:** Daria Timofeeva (`dtimofee`) and Nikolai Efimov (`nefimov`).
 - **AI:** Alicia Betancourt (`albetanc`), with backend integration from Daria Timofeeva (`dtimofee`).
 - **Infrastructure:** cwick, with reviews from the other leads.
@@ -168,7 +168,7 @@ Technical decisions involving multiple services were coordinated between the rel
 - Wrote backend tests and documentation for goals, transactions and reports.
 - **Challenges:** preserving invariants when transactions and goals change together; handling concurrent writes without double-counting savings; keeping goal balance rules consistent between the API, reports and the Home page; supporting archived goals without losing history.
 
-### tsemenov (Tanya Kletka)
+### tsemenov (Tanya Semenova)
 
 **Scope.** Owner of `frontend/`: product design, UX/UI, architecture, tests, CI job and `docs/frontend/`.
 

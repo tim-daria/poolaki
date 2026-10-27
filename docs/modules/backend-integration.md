@@ -82,6 +82,35 @@ be read by injected script; a token in `localStorage` can), and revocable
 (logout invalidates server-side immediately). JWTs earn their complexity with
 multiple clients or multiple origins; Poolaki has neither.
 
+### Where the session lives
+
+Neither cookie is in localStorage. `sessionid` and `csrftoken` sit in the
+browser's cookie store (the "cookie jar"), a per-profile database the browser
+keeps on disk and shows in DevTools under Application → Cookies, one panel
+away from Local storage. The value of `sessionid` is a random key; the session
+itself is a row in Django's `django_session` table that holds the user id. The
+browser stores a pointer, the server stores who you are.
+
+localStorage is a different store: a key-value map per origin that a page
+writes with `localStorage.setItem()` and reads back with `getItem()`. The two
+differ in exactly the ways that matter for a credential:
+
+|                | Cookie store                                   | localStorage                              |
+| -------------- | ---------------------------------------------- | ----------------------------------------- |
+| Who can read   | Script never, when the cookie is `HttpOnly`    | Any script running on the origin          |
+| Who sends it   | The browser, on every request, automatically   | Only your own code, copied into a header  |
+| Lifetime       | The server decides; logout deletes it          | Until cleared, across tabs and restarts   |
+
+The app writes one localStorage key, the setup-banner flag
+`home:setup-dismissed:<orgId>` in `pages/Home/Home.tsx`. No credential or
+token goes there.
+
+That table is the JWT argument in concrete terms. A token in localStorage is
+readable by any injected script and, once copied, works from any machine until
+it expires. The session cookie is neither readable nor portable, and the
+server can end it at any moment. The one cookie script _can_ read is the CSRF
+token, for the reason given in the next section.
+
 ---
 
 ## CSRF: the double-submit header
@@ -102,6 +131,17 @@ cannot read it, so it cannot set the header.
 `getCsrfToken()` could not read an `HttpOnly` cookie and every write would 403. It is safe because the CSRF token is not a credential — it proves the
 request came from a page that could read the cookie jar, nothing about who
 you are. The credential, `sessionid`, stays `HttpOnly`.
+
+Why the check holds: a foreign site can make the browser _send_ our cookies,
+but it cannot _read_ them, because cookies are only visible to script on the
+origin that set them, and it cannot set a custom header on a cross-site
+request, because the browser first asks our server through CORS and is
+refused. The only way to read `csrftoken` is to already run script on our
+origin, and an attacker in that position can make requests from the page
+directly; the token adds nothing they lack. So the two cookies split the job:
+`sessionid` says who you are and hides from script, `csrftoken` says the
+request came from our page and has to be visible to script for exactly that
+reason.
 
 The token is passed into `lib/` functions as a parameter rather than read
 inside them, so they are pure and testable in Node (Vitest's environment has

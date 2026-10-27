@@ -204,7 +204,7 @@ The first line lists the 42 logins. The names below are those used in the reposi
 | `cwick`    | cwick             | Infrastructure & Security Lead         | Docker Compose, Vault, Caddy/Coraza WAF, Cloudflare Tunnel, monitoring, backups, CI infrastructure                                             |
 | `dtimofee` | Daria Timofeeva   | Tech Lead, Backend Lead & Scrum Master | Django/DRF architecture, database schema, authentication and OAuth, organizations, transactions, reports, notification backend, AI integration |
 | `nefimov`  | Nikolai Efimov    | Backend Developer                      | Goals and goal transfers, transaction restrictions, balance calculations, goal report data, backend tests and documentation                    |
-| `tsemenov` | Tanya Kletka      | Frontend Lead & QA                     | UX/UI and design system, React application, responsive and accessible layouts, frontend tests, frontend CI and documentation                   |
+| `tsemenov` | Tanya Semenova      | Frontend Lead & QA                     | UX/UI and design system, React application, responsive and accessible layouts, frontend tests, frontend CI and documentation                   |
 
 Full role descriptions, feature ownership and review responsibilities are in [team organization → Roles and responsibilities](docs/team-organization.md#2-roles-and-responsibilities).
 
@@ -332,8 +332,8 @@ The team claims the following 42 modules. Major modules are worth 2 points and m
 | 1p     | OAuth 2.0                           | Minor | dtimofee, tsemenov | 42 OAuth through django-allauth headless; callback flow in the SPA                                                 | [authentication](docs/backend/authentication.md)                                                   |
 | 1p     | Search, filter and pagination       | Minor | dtimofee           | Server-side transaction search, multi-filter query parameters, sorting and page/page_size                          | [transactions](docs/backend/transactions.md)                                                       |
 | 1p     | Notification system                 | Minor | albetanc           | Notification inbox, unread count, clear-all and event fan-out; client polling                                      | [notifications](docs/backend/notifications.md)                                                     |
-| 1p | Support for additional browsers | Minor| tsemenov | ... | [browsers-support](docs/frontend/browser-support.md) |
-| 1p | Custom-made design system | Minor | tsemenov | ... | [design-system](docs/frontend/design-system.md) |
+| 1p     | Support for additional browsers     | Minor | tsemenov           | Same e2e specs on Chromium and Firefox; Safari by hand via the tunnel; sheets, pickers and print checked by hand   | [browser support](docs/frontend/browser-support.md), [checklist](docs/frontend/manual-checks.md)   |
+| 1p     | Custom-made design system           | Minor | tsemenov           | Colour, type and spacing tokens in one MUI theme; card, money, segmented, sheet and form components on every page  | [design system](docs/modules/design-system.md), [MUI and styles](docs/frontend/mui-and-styles.md)  |
 | 1p     | Health checks, backups and recovery | Minor | cwick              | Per-container healthchecks, `/health/` endpoints, daily `pg_dump` sidecar and tested restore procedure             | [infrastructure](docs/backend/infrastructure.md), [recovery](backend/backups/disaster-recovery.md) |
 | 2p     | Organization system                 | Major | dtimofee, tsemenov | Personal and shared workspaces, memberships, invitations, roles, leave/remove and ownership transfer               | [organizations](docs/backend/organizations.md)                                                     |
 | 2p     | RAG system                          | Major | albetanc           | Intent classification, hybrid retrieval from Django and pgvector, context/prompt building and grounded LLM answers | [RAG design](docs/ai/rag-design.md)                                                                |
@@ -351,7 +351,7 @@ The team claims the following 42 modules. Major modules are worth 2 points and m
 - **Reports and analytics (custom).** Users need to see where their money went, not only record transactions. The module is deliberately scoped as a minor: one aggregation endpoint, one page and a print layout, with no arbitrary date ranges or pushed updates. The full justification is in [the module report](docs/modules/reports-and-analytics.md).
 - **Cloudflare Tunnel (custom).** The public deployment must not open inbound ports. `cloudflared` dials out, Vault renders the token, and Cloudflare terminates TLS at the edge. See [infrastructure](docs/backend/infrastructure.md).
 
-**Total: 20 points** — 6 Major modules × 2 points + 8 Minor modules × 1 point.
+**Total: 22 points** — 6 Major modules × 2 points + 10 Minor modules × 1 point.
 
 ## Individual Contributions
 <sub>[↑ Index](#index)</sub>
@@ -366,36 +366,11 @@ Detailed responsibilities, feature ownership and challenges are in [team organiz
 | `cwick`                        | Docker, Vault, WAF, Cloudflare Tunnel, monitoring, backups                             | [details](docs/team-organization.md#cwick)                      |
 | `dtimofee` (Daria Timofeeva)   | Django/DRF backend, database, auth/OAuth, organizations, reports, notification backend | [details](docs/team-organization.md#dtimofee-daria-timofeeva)   |
 | `nefimov` (Nikolai Efimov)     | Goals, transactions, balances, goal reports                                            | [details](docs/team-organization.md#nefimov-nikolai-efimov)     |
-| `tsemenov` (Tanya Kletka)      | Frontend, UX/UI, design system, tests, CI                                              | [details](docs/team-organization.md#tsemenov-tanya-kletka)      |
+| `tsemenov` (Tanya Semenova)      | Frontend, UX/UI, design system, tests, CI                                              | [details](docs/team-organization.md#tsemenov-tanya-semenova)      |
 
 <!-- TEAM: keep this table as the summary; add detailed contribution notes and challenges in docs/team-organization.md#7-individual-contributions. -->
 
 > **Note.** Add detailed contribution notes and challenges in [team organization → Individual contributions](docs/team-organization.md#7-individual-contributions).
-
-<details>
-<summary><strong>Tanya (🎀 tsemenov) — Frontend</strong></summary>
-
-**Scope.** Owner of `frontend/`: product design, UX/UI, architecture, tests, CI job, and `docs/frontend/`.
-
-**Design and user flow**
-- Designed the app structure and user flow: sign-up or 42 login, personal budget with an initial balance, workspace switcher, then Home, Transactions, Goals, Reports and Settings. Shared workspaces follow the same flow after an invitation.
-- Made mockups for every page and modal before implementation, and iterated on them with the team.
-- Built a design system in the MUI theme: colour tokens, two type stacks, spacing, card variants ([docs/modules/design-system.md](docs/modules/design-system.md)).
-- Made every page responsive: top navigation on desktop, bottom navigation and bottom sheets on phones, print layout for reports.
-
-**Implementation**
-- Built the auth flow, routing, app shell, workspaces and invitations, Transactions and Home. Helped with Goals, Reports and the AI chat UI.
-- Shared pieces: theme, `Money` formatting, toasts, segmented controls, card header.
-
-**Tooling and quality**
-- React Compiler and Vite setup, Vitest unit tests, Playwright e2e suite, frontend CI job, `AGENTS.md` guidelines and frontend docs.
-
-**Challenges**
-- **Making the app intuitive.** Goals, shared workspaces and overdrafts are not simple concepts, so the interface had to explain them in plain language. Our rule was to hide or disable actions that aren't allowed, rather than let them fail.
-- **Composition and user flow.** Deciding what each page shows first, what stays one tap away, and where the single main action goes.
-- **Desktop and mobile.** One design had to work on both screens. Cards, modals, tables and charts were reworked for phones, not just shrunk.
-- **Consistency.** Keeping the look uniform across many pages, which is why every style decision lives in the theme.
-</details>
 
 ## Contributing
 <sub>[↑ Index](#index)</sub>
