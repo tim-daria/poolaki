@@ -209,6 +209,7 @@ PostgreSQL 18 (`pgvector/pgvector:pg18` image). Chosen because:
 **Justification of major choices**
 
 - **Django for the core.** Mature auth, ORM, migrations, and admin reduce the amount of security-sensitive code written by hand. Django is the single owner of users and financial data.
+- **PostgreSQL for persistence.** Its transactional guarantees, constraints, and foreign keys protect financial data under concurrent updates, while `pgvector` supports embedding storage and similarity search without introducing a separate vector database.
 - **Separate FastAPI service for AI.** AI workloads scale and change independently of business rules; the LLM provider can be swapped without touching the backend. The service never reads user data from the database directly, only through the Django API, so tenant isolation is enforced in one place (see [docs/ai/decisions.md](docs/ai/decisions.md)).
 - **React + MUI.** Typed components and a central theme keep the UI consistent; no hardcoded colours or spacing outside the theme (see [docs/frontend/mui-and-styles.md](docs/frontend/mui-and-styles.md)).
 - **Vite over a heavier framework.** The app is a client-side SPA behind an API; it needs a fast dev server and route-level code splitting, not SSR.
@@ -292,30 +293,30 @@ README.
 | Feature | Team member(s) | Description |
 | --- | --- | --- |
 | User accounts and authentication | `dtimofee`, `tsemenov` | Email/password registration and login, session management, logout, CSRF protection, protected routes, password changes, and 42 (Intra) OAuth sign-in. |
-| Personal budgets and balances | `nefimov`, `tsemenov` | Creates a personal workspace for each user, supports an initial balance, and calculates the current balance from income, expenses, and goal transfers. |
-| Shared workspaces | `dtimofee`, `tsemenov`, `mainibet` | Users can create workspaces, switch between them, view members, leave a workspace, and manage workspace membership with owner and member roles. |
-| Workspace invitations | `dtimofee`, `tsemenov`, `mainibet` | Workspace owners can invite users and cancel invitations; invited users can review, accept, or decline invitations. |
-| Transactions | `nefimov`, `dtimofee`, `tsemenov` | Tracks income, expenses, contributions, and withdrawals with amounts, descriptions, dates, categories, goals, and tax-deductible status. Transactions can be listed, filtered, edited, and deleted. |
-| Transaction categories | `nefimov`, `dtimofee`, `tsemenov` | Provides workspace-scoped income, expense, and contribution categories, with filtering and duplicate-prevention rules. |
-| Savings goals | `nefimov`, `tsemenov`, `dtimofee` | Creates savings targets with optional target dates, tracks contributions and withdrawals, calculates progress and balances, and supports active, completed, and archived statuses. |
-| Financial reports | `dtimofee`, `nefimov`, `tsemenov` | Provides yearly workspace reports with income and expense totals, monthly distributions, category breakdowns, savings information, current balance, charts, year selection, and print-friendly output. |
-| Home dashboard | `tsemenov`, `nefimov`, `dtimofee` | Summarizes the selected workspace with balance, monthly activity, recent transactions, top spending, savings goals, and setup guidance. |
+| Personal budgets and balances | `dtimofee`, `nefimov`, `tsemenov` | Creates a personal workspace for each user, supports an initial balance, and calculates the current balance from income, expenses, and goal transfers. |
+| Shared workspaces | `dtimofee`, `mainibet`, `tsemenov` | Users can create workspaces, switch between them, view members, leave a workspace, and manage workspace membership with owner and member roles. |
+| Workspace invitations | `dtimofee`, `mainibet`, `tsemenov` | Workspace owners can invite users and cancel invitations; invited users can review, accept, or decline invitations. |
+| Transactions | `dtimofee`, `nefimov`, `tsemenov` | Tracks income, expenses, contributions, and withdrawals with amounts, descriptions, dates, categories, goals, and tax-deductible status. Transactions can be listed, filtered, edited, and deleted. |
+| Transaction categories | `dtimofee`, `nefimov`, `tsemenov` | Provides workspace-scoped income, expense, and contribution categories, with filtering and duplicate-prevention rules. |
+| Savings goals | `dtimofee`, `nefimov`, `tsemenov` | Creates savings targets with optional target dates, tracks contributions and withdrawals, calculates progress and balances, and supports active, completed, and archived statuses. |
+| Financial reports | `mainibet`, `dtimofee`, `nefimov`, `tsemenov` | Provides yearly workspace reports with income and expense totals, monthly distributions, category breakdowns, savings information, current balance, charts, year selection, and print-friendly output. |
+| Home dashboard | `dtimofee`, `nefimov`, `tsemenov` | Summarizes the selected workspace with balance, monthly activity, recent transactions, top spending, savings goals, and setup guidance. |
 | Notifications | `dtimofee`, `mainibet`, `tsemenov` | Provides an in-app inbox for invitations, transaction activity, goal milestones, and workspace membership events. The frontend polls for updates and shows unread counts. |
-| AI financial assistant | `mainibet`, `dtimofee`, `tsemenov` | Answers supported natural-language questions about workspace finances through a separate FastAPI service using intent classification, Django API retrieval, vector retrieval, prompt construction, and an external LLM. |
-| Responsive web interface | `tsemenov`, `mainibet` | React single-page application with lazy routes, responsive desktop and mobile layouts, workspace navigation, drawers, bottom sheets, charts, date controls, money formatting, toast feedback, and Markdown-rendered AI responses. |
-| Workspace authorization | `nefimov`, `dtimofee`, `tsemenov` | Restricts workspace-scoped API operations to members and limits sensitive actions, such as invitations, member removal, and workspace administration, to owners. |
+| AI financial assistant | `dtimofee`, `mainibet`, `tsemenov` | Answers supported natural-language questions about workspace finances through a separate FastAPI service using intent classification, Django API retrieval, vector retrieval, prompt construction, and an external LLM. |
+| Responsive web interface | `tsemenov` | React single-page application with lazy routes, responsive desktop and mobile layouts, workspace navigation, drawers, bottom sheets, charts, date controls, money formatting, toast feedback, and Markdown-rendered AI responses. |
+| Workspace authorization | `dtimofee`, `tsemenov` | Restricts workspace-scoped API operations to members and limits sensitive actions, such as invitations, member removal, and workspace administration, to owners. |
 | Input validation and API protection | `dtimofee`, `nefimov`, `tsemenov` | Validates request payloads, query parameters, identifiers, monetary values, dates, categories, goals, and AI questions before processing them. |
 | Session and CSRF security | `dtimofee`, `tsemenov` | Uses django-allauth sessions, protected routes, CSRF tokens, secure logout, and authenticated API requests for browser access. |
-| Database integrity and concurrency control | `nefimov`, `dtimofee`, `cwick` | Uses PostgreSQL foreign keys, unique constraints, indexes, decimal fields, atomic transactions, and workspace scoping to keep financial data consistent when multiple users work concurrently. |
+| Database integrity and concurrency control | `dtimofee`, `nefimov`, `cwick` | Uses PostgreSQL foreign keys, unique constraints, indexes, decimal fields, atomic transactions, and workspace scoping to keep financial data consistent when multiple users work concurrently. |
 | Secrets management | `cwick` | Stores service secrets in HashiCorp Vault, uses AppRole-scoped access, initializes and unseals Vault automatically, and issues short-lived database credentials through Vault’s database secrets engine. |
 | Web application firewall | `cwick` | Places Coraza WAF with the OWASP Core Rule Set in front of the frontend and API, records audit information, and blocks malicious HTTP requests before they reach application services. |
 | Containerized deployment | `cwick` | Runs the frontend, Django backend, PostgreSQL, AI service, Vault, Vault Agent, Caddy, and Cloudflare Tunnel through Docker Compose with development and production profiles. |
 | Reverse proxy and service routing | `cwick` | Uses Caddy as the single application entry point, routing API, authentication, administration, and frontend requests to the appropriate internal service. |
 | Public access through Cloudflare Tunnel | `cwick` | Publishes the application through Cloudflare Tunnel without requiring open inbound ports on the host. |
-| Service health checks | `nefimov`, `cwick`, `dtimofee` | Exposes health endpoints and Docker health checks so dependent services and CI can wait for the database, backend, Vault, AI service, and tunnel to become ready. |
+| Service health checks | `cwick` | Exposes health endpoints and Docker health checks so dependent services and CI can wait for the database, backend, Vault, AI service, and tunnel to become ready. |
 | Metrics and observability | `cwick` | Collects application and database metrics with Prometheus, PostgreSQL exporter, and cAdvisor; provides Grafana dashboards, traffic visibility, and alerting. |
 | Database backup and recovery | `cwick` | Runs scheduled PostgreSQL dumps in a dedicated backup container and keeps backup-related storage separate from the application services. |
-| Testing and CI | `tsemenov`, `dtimofee`, `mainibet` | Backend pytest, Ruff, and mypy checks; frontend Vitest, Playwright, ESLint, Prettier, and build checks; plus CI workflows for the relevant project areas. |
+| Testing and CI | `dtimofee`, `mainibet`, `tsemenov` | Backend pytest, Ruff, and mypy checks; frontend Vitest, Playwright, ESLint, Prettier, and build checks; plus CI workflows for the relevant project areas. |
 
 </details>
 
@@ -334,21 +335,21 @@ choice".
 | Points | Module | Author | Description | Docs |
 | --- | --- | --- | --- | --- |
 | 2p | **Major: Web.** Use a framework for both the frontend and backend. | dtimofee, tsemenov | Django + React Router | [docs/modules/backend-integration.md](docs/modules/backend-integration.md), [docs/modules/input-validation.md](docs/modules/input-validation.md), [docs/frontend/routing.md](docs/frontend/routing.md), [docs/frontend/password-change.md](docs/frontend/password-change.md) |
-| 1p | **Minor: Web.** Use an ORM for the database | ❗ | ❗ | ❗ |
-| 1p | **Minor: Web.** A complete notification system for all creation, update, and deletion actions | ❗ | ❗ | ❗ |
+| 1p | **Minor: Web.** Use an ORM for the database | dtimofee, nefimov | Django + PostgreSQL | [docs/database/database.md](docs/database/database.md) |
+| 1p | **Minor: Web.** A complete notification system for all creation, update, and deletion actions | dtimofee, albetanc | Django | [docs/backend/notifications.md](docs/backend/notifications.md) |
 | 1p | **Minor: Web.** Custom-made design system with reusable components, including a proper color palette, typography, and icons (minimum: 10 reusable components). | tsemenov | Custom design system based on MUI | [docs/modules/design-system.md](docs/modules/design-system.md), [docs/frontend/mui-and.styles.md](docs/frontend/mui-and.styles.md]), [docs/frontend/money.md](docs/frontend/money.md), [docs/frontend/drawers.md](docs/frontend/drawers.md) |
-| 1p | **Minor: Web.** Implement advanced search functionality with filters, sorting, and pagination. | dtimofee, tsemenov | Transactions page | ❗ |
+| 1p | **Minor: Web.** Implement advanced search functionality with filters, sorting, and pagination. | dtimofee, tsemenov | Transactions page | [docs/backend/transactions.md](docs/backend/transactions.md) |
 | 1p | **Minor: Accessibility.** Support for additional browsers. | tsemenov | Cromium, firefox, Webkit | [docs/frontend/browser-support.md](docs/frontend/browser-support.md) |
-| 1p | **Minor: User Management.** Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.). | dtimofee | ❗ | ❗ |
-| 2p | **Major: User Management.** Advanced permissions system. | ❗ | ❗ | ❗ |
-| 2p | **Major: User Management.** An organization system. | ❗ | ❗ | ❗ |
-| 1p | **Minor: User Management.** User activity analytics and insights dashboard. | ❗ | ❗ | ❗ |
-| 2p | **Major: Artificial Intelligence.** Implement a complete RAG (Retrieval-Augmented Generation) system. | ❗ | ❗ | ❗ |
-| 2p | **Major: Artificial Intelligence.** Implement a complete LLM system interface. | ❗ | ❗ | ❗ |
-| 2p | **Major: Cybersecurity.** Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets. | ❗ | ❗ | ❗ |
-| 2p | **Major: DevOps.** Monitoring system with Prometheus and Grafana. | ❗ | ❗ | ❗ |
-| 2p | **Major: DevOps.** Health check and status page system with automated backups and disaster recovery procedures. | ❗ | ❗ | ❗ |
-| 1p | **Minor: Data & Analytics.** Advanced analytics dashboard with data visualization | dtimofee | A yearly report over income, expenses and savings: one aggregation endpoint, custom charts and a print-ready layout. | [docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md), [docs/backend/reports.md](docs/backend/reports.md) |
+| 1p | **Minor: User Management.** Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.). | dtimofee | OAuth 2.0 | [docs/backend/authentication.md](docs/backend/authentication.md) |
+| 2p | **Major: User Management.** Advanced permissions system. | dtimofee | Django-allauth Headless | [docs/backend/authentication.md](docs/backend/authentication.md) |
+| 2p | **Major: User Management.** An organization system. | dtimofee, tsemenov | Django | [docs/backend/organizations.md](docs/backend/organizations.md) |
+| 1p | **Minor: User Management.** User activity analytics and insights dashboard. | dtimofee, tsemenov | ❗ | [docs/backend/reports.md](docs/backend/reports.md)  |
+| 2p | **Major: Artificial Intelligence.** Implement a complete RAG (Retrieval-Augmented Generation) system. | albetanc | pgvector | [docs/ai/rag-design.md](docs/ai/rag-design.md) |
+| 2p | **Major: Artificial Intelligence.** Implement a complete LLM system interface. | albetanc, dtimofee | ❗ | [docs/product/ai_chat_assistant.md](docs/product/ai_chat_assistant.md) |
+| 2p | **Major: Cybersecurity.** Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets. | cwick | ❗ | [docs/backend/vault.md](docs/backend/vault.md) |
+| 2p | **Major: DevOps.** Monitoring system with Prometheus and Grafana. | cwick | Prometheus, Grafana |[docs/backend/monitoring.md](docs/backend/monitoring.md) |
+| 2p | **Major: DevOps.** Health check and status page system with automated backups and disaster recovery procedures. | cwick | ❗ | [docs/database/backup.md](docs/database/backup.md) |
+| 1p | **Minor: Data & Analytics.** Advanced analytics dashboard with data visualization | dtimofee, albetanc, tsemenov | A yearly report over income, expenses and savings: one aggregation endpoint, custom charts and a print-ready layout. | [docs/modules/reports-and-analytics.md](docs/modules/reports-and-analytics.md), [docs/backend/reports.md](docs/backend/reports.md) |
 
 </details>
 
