@@ -60,6 +60,7 @@ import {
   fetchMyInvitations,
   fetchPendingInvitations,
 } from "../../lib/organizations";
+import { truncateName } from "../../lib/text";
 
 const accountButtonSx = {
   ...outlinedActionSx,
@@ -381,7 +382,7 @@ function InvitationsBanner() {
       if (accept) {
         await acceptInvitation(inv.id, getCsrfToken());
         await refreshOrgs();
-        showToast(`Joined ${inv.organization_name}`);
+        showToast(`Joined ${truncateName(inv.organization_name)}`);
       } else {
         await declineInvitation(inv.id, getCsrfToken());
         showToast("Invitation declined");

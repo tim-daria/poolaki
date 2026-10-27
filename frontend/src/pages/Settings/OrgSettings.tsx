@@ -61,6 +61,7 @@ import {
   removeMember,
   successorOwner,
 } from "../../lib/organizations";
+import { truncateName } from "../../lib/text";
 
 const joinedFormat = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -137,8 +138,8 @@ function WorkspaceSettings({ org }: { org: Organization }) {
       await refresh().catch(() => {});
       showToast(
         organization_deleted
-          ? `Workspace "${org.name}" deleted`
-          : `You left ${org.name}`,
+          ? `Workspace "${truncateName(org.name)}" deleted`
+          : `You left ${truncateName(org.name)}`,
       );
     } catch (err) {
       showToast(
@@ -362,7 +363,7 @@ function MembersSection({
     setBusy(true);
     try {
       await removeMember(org.id, removing.user_id, getCsrfToken());
-      showToast(`${removing.username} removed from ${org.name}`);
+      showToast(`${removing.username} removed from ${truncateName(org.name)}`);
     } catch (err) {
       // A 400 means they already left; a 403 means we're no longer the
       // owner. The refetch shows the truth either way.

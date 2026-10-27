@@ -338,7 +338,10 @@ export function NotificationPanel({
                     {initials(userName)}
                   </Avatar>
 
-                  <Box sx={{ flexGrow: 1 }}>
+                  {/* minWidth 0: a flex child otherwise refuses to shrink
+                      below its longest word, so an unbroken workspace name
+                      would push the column past the card. */}
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Box
                       sx={{
                         display: "flex",
@@ -364,7 +367,11 @@ export function NotificationPanel({
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{ fontSize: "0.825rem", mt: 0.2 }}
+                      sx={{
+                        fontSize: "0.825rem",
+                        mt: 0.2,
+                        overflowWrap: "anywhere",
+                      }}
                     >
                       {typeText(n.type, payload)}
                     </Typography>

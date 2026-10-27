@@ -18,6 +18,8 @@ import { getCsrfToken } from "../../lib/csrf";
 import { ModalShell } from "./ModalShell";
 import { DiscardChangesDialog } from "./CloseGuard";
 import { useCloseGuard } from "./useCloseGuard";
+import { MAX_ORG_NAME_LENGTH } from "../../lib/organizations";
+import { truncateName } from "../../lib/text";
 
 interface Props {
   open: boolean;
@@ -77,6 +79,10 @@ export function CreateOrgForm({ open, onClose }: Props) {
       setError("Please enter a workspace name");
       return;
     }
+    if (trimmed.length > MAX_ORG_NAME_LENGTH) {
+      setError("The name is too long");
+      return;
+    }
     const parsed = parseFloat(balance);
     if (isNaN(parsed) || parsed < 0) {
       setError("Please enter a valid amount");
@@ -96,7 +102,7 @@ export function CreateOrgForm({ open, onClose }: Props) {
       // so navigating alone will not unmount this.
       onClose();
       navigate(`/o/${org.id}`);
-      showToast(`Workspace "${org.name}" created`);
+      showToast(`Workspace "${truncateName(org.name)}" created`);
     } catch (err) {
       // A 400 carries a reason the user can act on (e.g. the workspace cap).
       setError(
@@ -126,6 +132,8 @@ export function CreateOrgForm({ open, onClose }: Props) {
               required
               autoFocus
               fullWidth
+              helperText={`${name.trim().length}/${MAX_ORG_NAME_LENGTH}`}
+              error={name.length > MAX_ORG_NAME_LENGTH}
             />
 
             <TextField
