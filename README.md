@@ -26,7 +26,7 @@ This repository is the team monorepo: `frontend/` (React SPA), `backend/` (Djang
 Caddy, monitoring, backups), `ai-service/` (FastAPI), and `vault/` (secrets) are
 deployed together with a single `make` command via Docker Compose.
 
-## Instructions (❗ ADD PROD )
+## Instructions
 
 ### Prerequisites
 
@@ -109,10 +109,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 - Frontend documentation: [Frontend Readme](docs/frontend/README.md), and other [frontend documents](docs/frontend)
 - Input validation, both sides: [docs/validation.md](docs/validation.md)
 
-## Additional Sections [... NEEDS TO BE FILLED ...]
+## Additional Sections
 
 <details>
-<summary><strong>❗Team Information</strong></summary>
+<summary><strong>Team Information</strong></summary>
 
 - **`albetanc` — Project Manager (PM) and Developer.** Coordinated planning,
   task distribution, progress tracking, and team communication. Also
@@ -142,7 +142,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 </details>
 
 <details>
-<summary><strong>❗Project Management</strong></summary>
+<summary><strong>Project Management</strong></summary>
 
 - **Organisation.** The team met once a week to review progress, decide what to build next and split the work. Tasks were assigned at these meetings and tracked until done.
 
@@ -153,7 +153,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 </details>
 
 <details>
-<summary><strong>❗Technical Stack</strong></summary>
+<summary><strong>Technical Stack</strong></summary>
 
 **Frontend**
 
@@ -220,7 +220,7 @@ PostgreSQL 18 (`pgvector/pgvector:pg18` image). Chosen because:
 </details>
 
 <details>
-<summary><strong>❗Database Schema</strong></summary>
+<summary><strong>Database Schema</strong></summary>
 
 ![Database schema](./docs/database/database_schema.png)
 
@@ -321,14 +321,7 @@ README.
 </details>
 
 <details>
-<summary><strong>❗Modules</strong></summary>
-
-◦ List of all chosen modules (Major and Minor).
-◦ Point calculation (Major = 2pts, Minor = 1pt).
-◦ Justification for each module choice, especially for custom "Modules of
-choice".
-◦ How each module was implemented.
-◦ Which team member(s) worked on each module.
+<summary><strong>Modules</strong></summary>
 
 ## Modules
 
@@ -360,14 +353,10 @@ choice".
 </details>
 
 <details>
-<summary><strong>❗Individual Contributions</strong></summary>
-
-◦ Detailed breakdown of what each team member contributed.
-◦ Specific features, modules, or components implemented by each person.
-◦ Any challenges faced and how they were overcome.
+<summary><strong>Individual Contributions</strong></summary>
 
 <details>
-<summary><strong>albetanc (🧭) — Project Management and Backend/AI Integration</strong></summary>
+<summary><strong>Alicia (🧭 albetanc) — Project Management and Backend/AI Integration</strong></summary>
 
 **Scope.** Project Manager responsible for planning, task distribution,
 progress tracking, and communication. Also contributed to backend features
@@ -392,13 +381,9 @@ connecting the product to the AI service.
 
 **Tooling and quality**
 - Coordinated work through GitHub Issues, pull requests, the project board,
-  weekly meetings, Miro planning, and Slack communication.
-- Added API and feature documentation, including the representative work on
-  [shared organizations](https://github.com/tim-daria/poolaki/commit/02bea85de223a6b22738e90ec497fe5044aceb68),
-  [permissions and invitations](https://github.com/tim-daria/poolaki/commit/14fc9a109a63ba2c34c2118d48fb88c4a22ae8b),
-  [notifications](https://github.com/tim-daria/poolaki/commit/1f9842a33a880373612836394d64df4a02bb8405),
-  [AI chat integration](https://github.com/tim-daria/poolaki/commit/001aef61b0ad5b173827772e75af1b30422e3c3d),
-  and [reporting](https://github.com/tim-daria/poolaki/commit/865896edaddb29fe619779890fc95112f9ef1685).
+  Miro planning, and Slack; built and documented the AI stack with FastAPI,
+  Pydantic, asyncpg, embedding ingestion, vector search, fallback handling,
+  AI auditing, and no-memory behaviour.
 
 **Challenges**
 - **Keeping shared-workspace access consistent.** Organization membership,
@@ -412,7 +397,7 @@ connecting the product to the AI service.
 </details>
 
 <details>
-<summary><strong>cwick (🛡️) — Technical Lead and Infrastructure</strong></summary>
+<summary><strong>Christian (🛡️ cwick) — Technical Lead and Infrastructure</strong></summary>
 
 **Scope.** Technical Lead responsible for deployment architecture, service
 integration, security, and operational reliability for the Docker-based
@@ -435,13 +420,10 @@ monorepo.
   dashboards, and database test data for operational checks.
 
 **Tooling and quality**
-- Added infrastructure documentation covering deployment, Vault, WAF,
-  monitoring, and the production setup.
-- Established operational checks with [monitoring](https://github.com/tim-daria/poolaki/commit/9a179f4ab2cec89ca0ab29d684721c53528e6839),
-  [Cloudflare Tunnel](https://github.com/tim-daria/poolaki/commit/dd80146e152dfdbd51d176e5319d3524290ca6df),
-  [Vault](https://github.com/tim-daria/poolaki/commit/8d43273d1cde0188797a9db9132f1fd62baffeea),
-  and [WAF](https://github.com/tim-daria/poolaki/commit/c7fbc5cbae0d6276905b9efdf3971c5c93281c73)
-  integrations.
+- Established quality and operations through Docker Compose and Makefile
+  workflows, CI pre-checks, service health checks, Vault secrets management,
+  Coraza WAF, Prometheus/Grafana monitoring, database checks, and documentation
+  for deployment, the tunnel, Vault, WAF, and monitoring.
 
 **Challenges**
 - **Ordering dependent services safely.** Backend, Vault, database, AI service,
@@ -454,38 +436,45 @@ monorepo.
 </details>
 
 <details>
-<summary><strong>dtimofee (🧩) — Product Ownership and Backend/AI Service</strong></summary>
+<summary><strong>Daria (🧩 dtimofee) — Product Ownership and Backend Development</strong></summary>
 
-**Scope.** Product Owner responsible for product direction and validation.
-Also implemented the AI service, its retrieval pipeline, and cross-cutting
-backend features.
+**Scope.** Product Owner and Backend Developer responsible for product
+direction, shared-organization workflows, authorization, invitations,
+notifications, reporting, and the AI service integration.
 
 **Design and user flow**
 - Defined and prioritised product requirements, validated completed work, and
   communicated decisions about the user-facing scope.
+- Designed the shared-organization flow around membership, owner and member
+  permissions, invitations, notifications, and workspace-scoped reporting.
 - Shaped the AI assistant flow so users can ask natural-language questions
   about their own expenses, goals, trends, and shared workspaces.
 
 **Implementation**
+- Built and maintained the Django backend for shared organizations, including
+  membership management, role-based permissions, invitations, accepting and
+  declining invitations, leaving organizations, member removal, and
+  organization administration.
+- Implemented backend notifications for invitations, organization membership
+  changes, transactions, and savings-goal events, including unread/read state
+  and the related API integrations.
+- Implemented reporting endpoints and transaction filtering for
+  workspace-scoped financial summaries, and maintained API versioning and
+  documentation for these backend contracts.
 - Set up the FastAPI AI microservice and its Django API contract, then
   implemented prompt handling, context building, LLM integration, and
   retrieval-augmented generation.
-- Added embedding ingestion and vector search, documented the embedding
-  architecture, and improved no-memory behaviour and AI auditing.
-- Implemented AI chat UI integration, markdown responses, legal pages, and
-  supporting notification and report integrations.
 
 **Tooling and quality**
-- Documented the AI API contract and embedding architecture, and improved
-  reliability through fallback handling, audit improvements, and no-memory
-  behaviour.
-- Delivered the [FastAPI service](https://github.com/tim-daria/poolaki/commit/7f8c865243e0b09e215ea25af672bba350032d7e),
-  [RAG prototype](https://github.com/tim-daria/poolaki/commit/52ad4cf7d64cd2ef30a376d70c0d720dff77c7b1),
-  [LLM integration](https://github.com/tim-daria/poolaki/commit/15e7bd9b98cb925a48a055e2758115b7b63dde75),
-  [vector search](https://github.com/tim-daria/poolaki/commit/7cac462b091bda13ecfcc3747acfde96e93c2422),
-  and [AI audit/no-memory improvements](https://github.com/tim-daria/poolaki/commit/fe3a7e23154b153ae12707defcf55cede83f0d9d).
+- Coordinated backend work through GitHub Issues, pull requests, and project
+  documentation; kept authorization, notification, reporting, and AI API
+  contracts aligned across services.
 
 **Challenges**
+- **Keeping shared-workspace access consistent.** Organization membership,
+  permissions, invitations, notifications, and reports affect the same users
+  and resources, so authorization and user-visible events had to remain
+  aligned across endpoints.
 - **Building useful answers from scoped financial data.** The retrieval and
   context pipeline had to select relevant workspace data while preserving the
   Django API boundary and avoiding direct database access from the AI service.
@@ -495,7 +484,7 @@ backend features.
 </details>
 
 <details>
-<summary><strong>nefimov (🔧) — Backend Financial Domain</strong></summary>
+<summary><strong>Nikolai (🔧 nefimov) — Backend Financial Domain</strong></summary>
 
 **Scope.** Backend Developer responsible for the transaction and savings
 domain in the Django backend, including validation, business rules, and
@@ -519,13 +508,9 @@ reporting data.
   transaction serializers and atomic operations.
 
 **Tooling and quality**
-- Added backend tests and test data for transactions and goals, and documented
-  the [goals](https://github.com/tim-daria/poolaki/commit/26e656d9e48e266a08a122f0c8f19161396f89a)
-  and [reporting](https://github.com/tim-daria/poolaki/commit/7d8b1802b0008e13d51ed19300fe83e983412f9a)
-  behaviour.
-- Implemented the [transaction backend](https://github.com/tim-daria/poolaki/commit/ce1eea2ea18c3d50d2517c0cbc9432ade1d6528a),
-  [transaction editing](https://github.com/tim-daria/poolaki/commit/dbbc4055bc742b3d1aba894545e67456ea47a277),
-  and [goal transaction restrictions](https://github.com/tim-daria/poolaki/commit/f7d4b434425ce71b4525d5dd061807ccbe957992).
+- Ensured backend quality with the Django REST Framework transaction and goals
+  modules, serializer validation, atomic operations, test data, backend tests,
+  and documentation for `goals` and `reporting`.
 
 **Challenges**
 - **Preserving financial invariants.** Transaction changes affect balances,
@@ -568,17 +553,31 @@ reporting data.
   
 - [django-allauth: Headless API ](https://docs.allauth.org/en/latest/headless/index.html)
 - [Django Official Documentation](https://docs.djangoproject.com/en/6.1/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/current/)
+- [pgvector Documentation](https://github.com/pgvector/pgvector)
 - [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [Mozilla Web Docs](https://developer.mozilla.org/en-US/)
 - [React Official Documentation](https://react.dev/)
 - [React Router Official Documentation](https://reactrouter.com/)
+- [MUI Documentation](https://mui.com/material-ui/getting-started/)
 - [Vite Official Documentation](https://vite.dev/guide/)
 - [GitHub Secrets How-To](https://docs.github.com/en/actions/concepts/security/secrets)
 - [Playwright Documentation](https://playwright.dev/)
 - [Vitest Documentation](https://vitest.dev/)
+- [Uvicorn Documentation](https://uvicorn.dev/)
+- [Pydantic Settings Documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
+- [asyncpg Documentation](https://magicstack.github.io/asyncpg/current/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Caddy Documentation](https://caddyserver.com/docs/)
+- [OWASP Coraza Documentation](https://www.coraza.io/docs/tutorials/introduction/)
+- [Cloudflare Tunnel Documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)
+- [HashiCorp Vault Documentation](https://developer.hashicorp.com/vault/docs)
+- [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/)
+- [Grafana Documentation](https://grafana.com/docs/grafana/latest/)
+- [Ruff Documentation](https://docs.astral.sh/ruff/)
+- [mypy Documentation](https://mypy.readthedocs.io/en/stable/)
+- [uv Documentation](https://docs.astral.sh/uv/)
 - [Laws of UX](https://lawsofux.com/)
-
-[ ❗... ADD MORE... ]
 
 ## AI Usage
 
@@ -593,10 +592,3 @@ AI tools were used in this project for the following purposes:
 - **Testing:** drafting and extending unit and end-to-end tests.
 - **Documentation:** drafting and editing project documentation.
 - **Commits and pull requests:** writing and polishing commit messages and PR descriptions.
-
-[ ❗... ADD MORE... ]
-
-Security practices for writing workflows and using GitHub Actions features
-Using secrets in GitHub Actions
-
-Software Testing Course
