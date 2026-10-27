@@ -119,3 +119,8 @@ The active database connection is configured in
 `backend/django/django_project/settings.py` using PostgreSQL environment
 variables. Database credentials and connection details must remain outside
 the repository.
+
+## Backups
+
+Production backups are implemented by the dedicated Docker Compose service
+described in [`db_backup.md`](db_backup.md).

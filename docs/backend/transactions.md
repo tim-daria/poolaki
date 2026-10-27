@@ -39,15 +39,16 @@ or transfers to and from goals.
 GET /api/v1/organizations/{org_id}/transactions/
 ```
 
-Returns one page of the organization's transactions, filtered and sorted
-server-side.
+Implements advanced server-side search with composable filters, deterministic
+sorting, and pagination. All filters are applied within the organization
+before the selected entry-type tab and page are evaluated.
 
 Query parameters (all optional):
 
 - `entry_type`: `all` (default), `income`, `expense`, `contribution` or `withdraw` —
   the selected tab/column; every other parameter keeps working with it
-- `q`: case-insensitive substring search in the description or category name
-  (maximum 100 characters)
+- `q`: case-insensitive substring search in the description, category name, or
+  username of the member who added the row (maximum 100 characters)
 - `date_from` / `date_to`: inclusive ISO date bounds on `transaction_date`
 - `category_id`: one category ID or a comma-separated list of them (e.g.
   `3,7`); rows in any listed category are returned, rows without a category
@@ -55,8 +56,6 @@ Query parameters (all optional):
 - `goal_id`: ID of a goal belonging to the organization; matches every
   transaction linked to that goal
 - `tax_deductible`: `true` keeps only tax-deductible rows
-- `q`: case-insensitive substring match on the description, the category
-  name and the username of the member who added the row
 - `created_by`: one user ID or a comma-separated list of them; rows created
   by any listed member are returned. Every ID must be a member of the
   organization
@@ -97,11 +96,14 @@ Response example:
 }
 ```
 
-`counts` is the filtered set (date / category / goal / tax / member filters) split by
-entry type — one number per toggle. The selected toggle (`entry_type`) picks
-its part for the table: `total` is that part's size, `transactions` one page
-of it (`page` / `page_size` / `page_count`). Switching the toggle only
-changes the table; a page past `page_count` is an empty list, not an error.
+`counts` is the result after the search and all non-tab filters (date,
+category, goal, tax, and member filters), split by entry type — one number per
+toggle. The selected toggle (`entry_type`) picks its part for the table:
+`total` is that part's size, and `transactions` contains one page of it
+(`page` / `page_size` / `page_count`). Sorting is newest first by default;
+transactions on the same date are ordered by `id` to keep pages stable.
+Switching the toggle only changes the table; a page past `page_count` is an
+empty list, not an error.
 
 Status:
 
