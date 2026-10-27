@@ -61,20 +61,11 @@ and both engines run in one go without the problem.
 
 ## Manual browser checklist
 
-Run through these once per browser and record the result in the table. Safari
-must be tested on `https://poolaki.de` through the tunnel: on
-`http://poolaki.localhost:8080` Safari drops the Secure cookies and sign-in
-fails, for the reason given under WebKit below.
-
-1. Sign up, sign out, sign in. The wrong-password message appears.
-2. Create a shared workspace from the switcher, switch between workspaces.
-3. Invite a member, accept the invitation as that member, see the avatar.
-4. Add a transaction with the date picker, edit it, filter the list, search.
-5. Create a goal without a deadline, contribute to it, archive it.
-6. Reports: the summary tiles, the monthly chart, the categories card.
-7. AI chat: open from the header, send a question, close and reopen.
-8. Settings: rename the workspace, change the password, sign in again.
-9. Narrow the window to phone width: bottom navigation, modals as sheets.
+Run the full list in [manual-checks.md](manual-checks.md) once per browser
+and record the result in its table. Safari must be tested on
+`https://poolaki.de` through the tunnel: on `http://poolaki.localhost:8080`
+Safari drops the Secure cookies and sign-in fails, for the reason given under
+WebKit below.
 
 ## Known limitations
 
