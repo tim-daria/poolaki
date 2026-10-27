@@ -176,7 +176,7 @@ Technical decisions involving multiple services were coordinated between the rel
 
 - Designed the app structure and user flow: sign-up or 42 login, personal budget with an initial balance, workspace switcher, then Home, Transactions, Goals, Reports and Settings. Shared workspaces follow the same flow after an invitation.
 - Made mockups for every page and modal before implementation, and iterated on them with the team.
-- Built a design system in the MUI theme: colour tokens, two type stacks, spacing, card variants ([design system](frontend/design-system.md)).
+- Built a design system in the MUI theme: colour tokens, two type stacks, spacing, card variants ([design system](modules/design-system.md)).
 - Made every page responsive: top navigation on desktop, bottom navigation and bottom sheets on phones, print layout for reports.
 
 **Implementation**
