@@ -26,6 +26,10 @@ echo
 echo "=== cloudflare ==="
 $DOCKER_SHELL vault kv get -format=json secret/cloudflare/"$path" | jq '.data.data'
 
+echo
+echo "=== ai-service ==="
+$DOCKER_SHELL vault kv get -format=json secret/ai-service/"$path" | jq '.data.data'
+
 # read database credentials
 echo
 echo "=== Database credentials ==="

@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy (uv)
-        entry: bash -c 'cd backend/django && uv run mypy .'
+        entry: bash -c 'cd backend/django && export SECRET_KEY=test-secret-key && uv run mypy .'
         language: system
         types: [python]
         pass_filenames: false
