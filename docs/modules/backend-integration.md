@@ -3,7 +3,7 @@
 Everything the React app knows about the backend fits on one page: one
 origin, a session cookie, a CSRF header, and one shape for every API
 function. This page explains each, says where it lives, and ends with what
-the production build changes.
+the planned production build will change.
 
 ---
 
@@ -257,7 +257,7 @@ fixed "assistant unavailable" message rather than a field error.
 
 ---
 
-## Production: the multistage build
+## Production: the multistage build (planned, not shipped)
 
 **Today the deploy runs the Vite dev server.** `frontend/Dockerfile` ends in
 `entrypoint.sh`, which runs `npm run dev`, and Caddy proxies `poolaki.de` to
@@ -302,7 +302,7 @@ stops being used in production. The `optimizeDeps` block is a dev-server
 setting too; the chunking in the bundle comes from the `lazy:` route imports
 in `routes.tsx`.
 
-Until the multistage build lands, [production-build.md](production-build.md)
+Until the multistage build lands, [production-build.md](../frontend/production-build.md)
 explains how to serve the real bundle locally for performance checks.
 
 ---
