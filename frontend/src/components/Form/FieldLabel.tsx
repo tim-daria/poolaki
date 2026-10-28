@@ -49,7 +49,10 @@ export function FieldLabel({
         }}
       >
         <Typography
-          component="label"
+          // A <label> that points at nothing is flagged by Chrome and does
+          // nothing for assistive tech; without a target the caption is a
+          // span that names the control through aria-labelledby.
+          component={htmlFor ? "label" : "span"}
           htmlFor={htmlFor}
           id={id}
           sx={{
