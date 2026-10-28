@@ -7,15 +7,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.internal.auth import InternalTokenAuthentication, IsInternalService
 from core.models import Membership, Organization
 from core.serializers import AiQuerySerializer
 
 
 class AiOrgView(APIView, ABC):
-    """Internal AI endpoint: parse the shared body (user_id, organization_id,
-    optional year), check the body user is a member of the org (unknown org
-    -> 404, non-member -> 403), wrap the subclass payload in its response
-    serializer and return 200. Subclasses must implement build_payload()."""
+    """Internal AI endpoint: gate on the shared bearer token (401 otherwise),
+    parse the shared body (user_id, organization_id, optional year), check
+    the body user is a member of the org (unknown org -> 404, non-member ->
+    403), wrap the subclass payload in its response serializer and return
+    200. Subclasses must implement build_payload()."""
+
+    authentication_classes = [InternalTokenAuthentication]
+    permission_classes = [IsInternalService]
 
     response_serializer: type[serializers.Serializer[dict[str, Any]]]
 

@@ -359,3 +359,30 @@ The LLM returns only an intent label. Each label maps to one endpoint. The AI Se
 - A question uses at most one endpoint.
 - Questions outside the returned window are answered by stating the actual window.
 - Vector search always runs in parallel; if Django fails with a non-authorization error, the answer degrades to vector context only.
+
+---
+
+## Decision 15: Bearer-Token Authentication for the Internal Financial Data API
+
+### Context
+
+The AI Service retrieves financial data from the backend's `/api/internal/v1/` API over the shared Docker network. Without authentication, any container on the network could read arbitrary organizations' financial data (the body-based membership check alone does not identify the caller).
+
+### Decision
+
+The AI Service authenticates to the internal API with a shared bearer token (`INTERNAL_API_TOKEN`) provisioned by Vault:
+
+- Every `/api/internal/v1/` request must present `Authorization: Bearer <INTERNAL_API_TOKEN>`.
+- A missing or invalid token → `401`, before the existing user-membership check runs.
+- The backend fails closed while the token is unset: the internal API answers 401 to everyone and the AI Service degrades to vector-only context.
+
+### Reason
+
+- The internal API is service-to-service: there is no user session to lean on, so the token is the caller's identity.
+- A static shared secret keeps the path synchronous and stateless — no token issuance, expiry or refresh flow to operate.
+- Vault already provisions every other secret; the token follows the same pattern (KV path `secret/ai-service`, agent-rendered env files, backend restart on rotation).
+
+### Consequences
+
+- The internal API is unreachable without the token; the AI Service's `DjangoClient` presents it on every request.
+- Rotating the token is a single Vault write; the agent re-renders both services' env files and the backend restarts itself.

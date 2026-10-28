@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     llm_max_retries: int = 1
 
     django_base_url: str
+    internal_api_token: str
 
     database_url: str
 

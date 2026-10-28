@@ -26,7 +26,7 @@ INITIALIZED=$(vault_status_json | jq -r '.initialized')
 
 if [ "$INITIALIZED" = "false" ]; then
 	echo "Vault not initialized, initializing now..."
-	
+
 	echo "Creating vault init file..."
 	vault operator init -key-shares=5 -key-threshold=3 -format=json > "$VAULT_INIT_FILE"
 
@@ -90,10 +90,15 @@ if [ "$INITIALIZED" = "false" ]; then
 		django_superuser_username="$DJANGO_SUPERUSER_USERNAME" \
 		django_superuser_email="$DJANGO_SUPERUSER_EMAIL" \
 		django_superuser_password="$DJANGO_SUPERUSER_PASSWORD" \
-		
+
 	vault kv put secret/django/social_auth \
 		intra42_client_id="$INTRA42_CLIENT_ID" \
 		intra42_client_secret="$INTRA42_CLIENT_SECRET"
+
+	# via file: the vault CLI treats a leading @ in a value as a file reference
+	printf '%s' "$SECRET_KEY" > /tmp/secret_key
+	vault kv put secret/django/secret_key secret_key=@/tmp/secret_key
+	rm /tmp/secret_key
 
 	vault kv put secret/grafana \
 		gf_admin_user="$GF_ADMIN_USER" \
@@ -101,15 +106,16 @@ if [ "$INITIALIZED" = "false" ]; then
 		smtp_user="$SMTP_USER" \
 		smtp_password="$SMTP_PASSWORD" \
 		smtp_from_address="$SMTP_FROM_ADDRESS"
-	
+
 	vault kv put secret/cloudflare \
 		tunnel_token="$TUNNEL_TOKEN"
-	
+
 	vault kv put secret/ai-service \
 		llm_api_key="$LLM_API_KEY" \
 		embedding_model="$EMBEDDING_MODEL" \
 		embedding_base_url="$EMBEDDING_BASE_URL" \
-		embedding_api_key="$EMBEDDING_API_KEY"
+		embedding_api_key="$EMBEDDING_API_KEY" \
+		internal_api_token="$INTERNAL_API_TOKEN"
 
 	#######################################
 	###### Setup AppRole auth method #####
@@ -132,7 +138,7 @@ if [ "$INITIALIZED" = "false" ]; then
 		token_max_ttl=4h \
 		secret_id_ttl=0 \
 		secret_id_num_uses=0
-	
+
 	# get roleID & secretID for django-role
 	vault read -format=json auth/approle/role/agent-role/role-id \
 		| jq -r '.data.role_id' > /vault/secure/id/role_id

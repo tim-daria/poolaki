@@ -14,6 +14,10 @@ AI_ANALYTICS_URL = "ai-analytics-summary"
 AI_CATEGORIES_URL = "ai-categories"
 AI_TRANSACTIONS_URL = "ai-transactions"
 
+# Must match INTERNAL_API_TOKEN in core/tests/conftest.py (the autouse
+# fixture pins the setting to this value for every test).
+VALID_TOKEN = "test-internal-token"
+
 
 def add_transaction(
     org: Organization,
@@ -35,12 +39,22 @@ def add_transaction(
     )
 
 
-def post_endpoint(api_client: APIClient, url_name: str, body: dict[str, object]) -> Any:
-    """Raw POST to an internal AI endpoint; auth-matrix tests build bodies
-    that deviate from the standard member shape."""
+def post_endpoint(
+    api_client: APIClient,
+    url_name: str,
+    body: dict[str, object],
+    token: str | None = VALID_TOKEN,
+) -> Any:
+    """Raw POST to an internal AI endpoint with the valid bearer token by
+    default; token=None omits the Authorization header (auth-matrix tests).
+    Bodies may deviate from the standard member shape."""
     # The DRF stubs type the test response as the private `_MonkeyPatchedResponse`
     # (a `Response` subclass that adds `.json()`), so no public return type works.
-    return api_client.post(reverse(url_name), body, format="json")
+    if token is None:
+        return api_client.post(reverse(url_name), body, format="json")
+    return api_client.post(
+        reverse(url_name), body, format="json", HTTP_AUTHORIZATION=f"Bearer {token}"
+    )
 
 
 def post_ai_endpoint(

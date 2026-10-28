@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ======================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-+$i@vp)h)reff4hm9+!qf8g!90#=aq7s0ju-phg(a#qzw&zw&&"
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -230,6 +230,16 @@ REST_FRAMEWORK = {
     # runs as a single process.
     "DEFAULT_THROTTLE_RATES": {"ai_chat": "5/min"},
 }
+
+
+# ======================================================
+# INTER-SERVICE AUTH (AI service -> backend)
+# ======================================================
+
+# Shared bearer token the AI Service must present to /api/internal/v1/,
+# provisioned by Vault. An empty value fails closed: the internal API
+# rejects every request with 401 instead of opening a channel.
+INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
 
 
 # ======================================================

@@ -35,6 +35,7 @@ export DATABASE_USER=test_user
 export DATABASE_PASSWORD=test_password
 export DB_HOST=localhost
 export DB_PORT=5432
+export SECRET_KEY=test-secret-key
 export AI_SERVICE_URL=http://ai-service:8000
 export AI_SERVICE_TIMEOUT=90
 

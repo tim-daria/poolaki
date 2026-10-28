@@ -61,6 +61,7 @@ jobs:
       DATABASE_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
+      SECRET_KEY: ci-test-secret-key
       # Read at import time by core/services/ai_chat.py (strict env contract);
       # manage.py check/migrate/runserver all load the chat view.
       AI_SERVICE_URL: http://ai-service:8000
@@ -215,6 +216,7 @@ jobs:
           DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres_db:5432/${{ secrets.POSTGRES_DB }}
           DB_HOST=db
           DB_PORT=5432
+          SECRET_KEY=ci-test-secret-key
           VAULT_ADDR=${{ secrets.VAULT_ADDR }}
           DJANGO_SUPERUSER_USERNAME=${{ secrets.DJANGO_SUPERUSER_USERNAME }}
           DJANGO_SUPERUSER_EMAIL=${{ secrets.DJANGO_SUPERUSER_EMAIL }}
@@ -234,11 +236,12 @@ jobs:
           EMBEDDING_MODEL=test-model
           EMBEDDING_BASE_URL=http://test
           EMBEDDING_API_KEY=test-key
+          INTERNAL_API_TOKEN=ci-internal-test-token
           DJANGO_BASE_URL=http://django:8000
           LOG_LEVEL=Warning
           LLM_TIMEOUT=30
-          AI_SERVICE_URL: http://ai-service:8000
-          AI_SERVICE_TIMEOUT: "90"
+          AI_SERVICE_URL=http://ai-service:8000
+          AI_SERVICE_TIMEOUT=90
           EOF
 
       - name: Create optional AI service env for CI

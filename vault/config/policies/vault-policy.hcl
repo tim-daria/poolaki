@@ -13,6 +13,11 @@ path "secret/data/django/social_auth" {
 	capabilities = ["read"]
 }
 
+# read static django secret key
+path "secret/data/django/secret_key" {
+  capabilities = ["read"]
+}
+
 # read static grafana credentials
 path "secret/data/grafana" {
 	capabilities = ["read"]

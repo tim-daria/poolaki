@@ -4,12 +4,16 @@ set -e
 DB_SECRETS_FILE="/vault/agent/secrets/db-creds.env"
 ADMIN_SECRETS_FILE="/vault/agent/secrets/admin-creds.env"
 SOCIAL_AUTH_SECRETS_FILE="/vault/agent/secrets/social-auth-creds.env"
+AI_TOKENS_FILE="/vault/agent/secrets/ai-tokens.env"
+SECRET_KEY_FILE="/vault/agent/secrets/secret-key.env"
 TRIGGER_FILE="/vault/agent/secrets/.reload-trigger"
 
-until [ -f "$DB_SECRETS_FILE" ] && [ -f "$ADMIN_SECRETS_FILE" ] && [ -f "$SOCIAL_AUTH_SECRETS_FILE" ] \
+until [ -f "$DB_SECRETS_FILE" ] && [ -f "$ADMIN_SECRETS_FILE" ] && [ -f "$SOCIAL_AUTH_SECRETS_FILE" ] && [ -f "$AI_TOKENS_FILE" ] && [ -f "$SECRET_KEY_FILE" ] \
 	&& grep -q "^DATABASE_PASSWORD=" "$DB_SECRETS_FILE" \
 	&& grep -q "^DJANGO_SUPERUSER_PASSWORD=" "$ADMIN_SECRETS_FILE" \
-	&& grep -q "^INTRA42_CLIENT_SECRET=" "$SOCIAL_AUTH_SECRETS_FILE"; do
+	&& grep -q "^INTRA42_CLIENT_SECRET=" "$SOCIAL_AUTH_SECRETS_FILE" \
+	&& grep -q "^INTERNAL_API_TOKEN=" "$AI_TOKENS_FILE" \
+	&& grep -q "^SECRET_KEY='" "$SECRET_KEY_FILE"; do
 	echo "Waiting for initial Vault secrets.."
 	sleep 1
 done
@@ -18,6 +22,8 @@ set -a
 . "$DB_SECRETS_FILE"
 . "$ADMIN_SECRETS_FILE"
 . "$SOCIAL_AUTH_SECRETS_FILE"
+. "$AI_TOKENS_FILE"
+. "$SECRET_KEY_FILE"
 set +a
 
 APP_PID=""
@@ -48,8 +54,10 @@ restart_app() {
 	. "$DB_SECRETS_FILE"
 	. "$ADMIN_SECRETS_FILE"
 	. "$SOCIAL_AUTH_SECRETS_FILE"
+	. "$AI_TOKENS_FILE"
+	. "$SECRET_KEY_FILE"
 	set +a
-	
+
 	start_app
 }
 

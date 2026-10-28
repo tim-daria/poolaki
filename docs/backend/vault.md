@@ -26,7 +26,7 @@ Keeping the secrets in Vault stores them **encrypted at rest** and **isolated** 
 
 ## Dynamic PostgreSQL Credentials
 
-The Vault Agent authenticates to Vault using AppRole and receives a Vault token. 
+The Vault Agent authenticates to Vault using AppRole and receives a Vault token.
 
 Its policy permits it to request credentials from a specific PostgreSQL database role, such as `database/creds/my-app`.
 
