@@ -348,8 +348,6 @@ The team claims the following 42 modules. Major modules are worth 2 points and m
 | 1p     | Custom: Reports and analytics       | Minor | dtimofee, tsemenov | Yearly report endpoint, database aggregation, custom charts, print layout and accessibility                        | [module report](docs/modules/reports-and-analytics.md)                                             |
 | 1p     | Custom: Cloudflare Tunnel           | Minor | cwick    | Outbound-only `cloudflared` container, Vault-rendered token, no inbound ports, tunnel health and metrics           | [infrastructure](docs/backend/infrastructure.md)                                                   |
 
-<!-- TEAM: add new custom modules to this table and mirror their ownership in docs/team-organization.md#4-module-ownership. -->
-
 **Why these modules.** The standard modules cover the stack and the production concerns the subject requires: framework, ORM, OAuth, search/filter/pagination, notifications, health checks, organizations, AI microservice, RAG, monitoring and WAF/secrets. Each is exercised end to end, not a stub.
 
 - **AI microservice (core module, not custom).** AI workflows change independently of financial business rules, and the LLM provider must be replaceable. A separate service with an explicit API contract keeps Django as the only owner of financial data and makes the trust boundary testable. See [the module note](docs/modules/microservice-ai.md) and [AI decisions](docs/ai/decisions.md).
