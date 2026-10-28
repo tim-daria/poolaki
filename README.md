@@ -293,8 +293,13 @@ PostgreSQL 18 (`pgvector/pgvector:pg18` image). Chosen because:
 ## Database Schema
 <sub>[↑ Index](#index)</sub>
 
-<!-- TODO(dtimofee): complete the database schema section with the ER diagram, tables, relationships, key fields and data types. Source: backend/django/core/models.py and backend/django/core/migrations/. Remove this note when done. -->
-> **TODO — Database schema (owner: `dtimofee` / Daria Timofeeva).** Add the ER diagram, table list, relationships, key fields and data types here. Use [`backend/django/core/models.py`](backend/django/core/models.py) and [`backend/django/core/migrations/`](backend/django/core/migrations/) as the source of truth. Remove this note when complete.
+![Database schema](./docs/database/database_schema.png)
+
+The schema is relational PostgreSQL, managed by Django migrations. Every model
+uses a `BigAutoField` primary key (`id`). `ForeignKey` columns are stored as
+`BIGINT` values referencing the related `id`.
+
+Detailed description of tables and their relationships, key fields and data types are in [database.md](docs/database/database.md).
 
 ## Features List
 <sub>[↑ Index](#index)</sub>
