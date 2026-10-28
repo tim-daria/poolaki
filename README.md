@@ -201,7 +201,7 @@ The first line lists the 42 logins. The names below are those used in the reposi
 | 42 login   | Member            | Role(s)                                | Responsibilities                                                                                                                               |
 | ---------- | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `albetanc` | Alicia Betancourt | Product Owner & AI Lead                | Product scope and documentation, AI service and RAG, notification system lead, privacy policy, frontend support                                |
-| `cwick`    | cwick             | Infrastructure & Security Lead         | Docker Compose, Vault, Caddy/Coraza WAF, Cloudflare Tunnel, monitoring, backups, CI infrastructure                                             |
+| `cwick`    | Christian Wick    | Infrastructure & Security Lead         | Docker Compose, Vault, Caddy/Coraza WAF, Cloudflare Tunnel, monitoring, backups, CI infrastructure                                             |
 | `dtimofee` | Daria Timofeeva   | Tech Lead, Backend Lead & Scrum Master | Django/DRF architecture, database schema, authentication and OAuth, organizations, transactions, reports, notification backend, AI integration |
 | `nefimov`  | Nikolai Efimov    | Backend Developer                      | Goals and goal transfers, transaction restrictions, balance calculations, goal report data, backend tests and documentation                    |
 | `tsemenov` | Tanya Semenova      | Frontend Lead & QA                     | UX/UI and design system, React application, responsive and accessible layouts, frontend tests, frontend CI and documentation                   |
@@ -346,7 +346,7 @@ The team claims the following 42 modules. Major modules are worth 2 points and m
 | 2p     | Monitoring system                   | Major | cwick              | Prometheus, Grafana dashboards and alerts, postgres_exporter and cAdvisor                                          | [monitoring](docs/backend/monitoring.md)                                                           |
 | 2p     | WAF and secrets management          | Major | cwick              | Coraza/OWASP CRS in Caddy; Vault AppRole, secret templates and dynamic PostgreSQL credentials                      | [vault](docs/backend/vault.md), [infrastructure](docs/backend/infrastructure.md)                   |
 | 1p     | Custom: Reports and analytics       | Minor | dtimofee, tsemenov | Yearly report endpoint, database aggregation, custom charts, print layout and accessibility                        | [module report](docs/modules/reports-and-analytics.md)                                             |
-| 2p     | Custom: Cloudflare Tunnel           | Major | cwick    | Outbound-only `cloudflared` container, Vault-rendered token, no inbound ports, tunnel health and metrics           | [infrastructure](docs/backend/infrastructure.md)                                                   |
+| 1p     | Custom: Cloudflare Tunnel           | Minor | cwick    | Outbound-only `cloudflared` container, Vault-rendered token, no inbound ports, tunnel health and metrics           | [infrastructure](docs/backend/infrastructure.md)                                                   |
 
 <!-- TEAM: add new custom modules to this table and mirror their ownership in docs/team-organization.md#4-module-ownership. -->
 
@@ -356,7 +356,7 @@ The team claims the following 42 modules. Major modules are worth 2 points and m
 - **Reports and analytics (custom).** Users need to see where their money went, not only record transactions. The module is deliberately scoped as a minor: one aggregation endpoint, one page and a print layout, with no arbitrary date ranges or pushed updates. The full justification is in [the module report](docs/modules/reports-and-analytics.md).
 - **Cloudflare Tunnel (custom).** The public deployment must not open inbound ports. `cloudflared` dials out, Vault renders the token, and Cloudflare terminates TLS at the edge. See [infrastructure](docs/backend/infrastructure.md).
 
-**Total: 22 points** — 6 Major modules × 2 points + 10 Minor modules × 1 point.
+**Total: 21 points** — 5 Major modules × 2 points + 11 Minor modules × 1 point.
 
 ## Individual Contributions
 <sub>[↑ Index](#index)</sub>
@@ -368,14 +368,10 @@ Detailed responsibilities, feature ownership and challenges are in [team organiz
 | Member                         | Main contribution areas                                                                | Details                                                         |
 | ------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `albetanc` (Alicia Betancourt) | AI service and RAG, notification system, product documentation, frontend support       | [details](docs/team-organization.md#albetanc-alicia-betancourt) |
-| `cwick`                        | Docker, Vault, WAF, Cloudflare Tunnel, monitoring, backups                             | [details](docs/team-organization.md#cwick)                      |
+| `cwick` (Christian Wick)       | Docker, Vault, WAF, Cloudflare Tunnel, monitoring, backups                             | [details](docs/team-organization.md#cwick)                      |
 | `dtimofee` (Daria Timofeeva)   | Django/DRF backend, database, auth/OAuth, organizations, reports, notification backend | [details](docs/team-organization.md#dtimofee-daria-timofeeva)   |
 | `nefimov` (Nikolai Efimov)     | Goals, transactions, balances, goal reports                                            | [details](docs/team-organization.md#nefimov-nikolai-efimov)     |
-| `tsemenov` (Tanya Semenova)      | Frontend, UX/UI, design system, tests, CI                                              | [details](docs/team-organization.md#tsemenov-tanya-semenova)      |
-
-<!-- TEAM: keep this table as the summary; add detailed contribution notes and challenges in docs/team-organization.md#7-individual-contributions. -->
-
-> **Note.** Add detailed contribution notes and challenges in [team organization → Individual contributions](docs/team-organization.md#7-individual-contributions).
+| `tsemenov` (Tanya Semenova)    | Frontend, UX/UI, design system, tests, CI                                              | [details](docs/team-organization.md#tsemenov-tanya-semenova)    |
 
 ## Contributing
 <sub>[↑ Index](#index)</sub>
