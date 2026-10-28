@@ -15,7 +15,6 @@ import { useCurrentOrg } from "../../context/useCurrentOrg";
 import { NAV_DESKTOP } from "../../lib/layout";
 import { MAX_ORGS } from "../../lib/organizations";
 import { CreateOrgForm } from "../Modals/CreateOrgForm";
-import { truncateName } from "../../lib/text";
 
 /**
  * Switching workspaces is a navigation — OrgLayout resolves :orgId against the
@@ -51,7 +50,7 @@ export function OrgSwitcher() {
             }}
           />
         }
-        // Truncation hides the full name, so keep it reachable on hover.
+        // The CSS ellipsis hides the full name, so keep it reachable on hover.
         title={currentOrg.name}
         sx={{
           color: "text.primary",
@@ -87,7 +86,7 @@ export function OrgSwitcher() {
             whiteSpace: "nowrap",
           }}
         >
-          {truncateName(currentOrg.name)}
+          {currentOrg.name}
         </Box>
       </Button>
 
@@ -103,7 +102,7 @@ export function OrgSwitcher() {
       >
         {organizations.map((org) => (
           <MenuItem
-            // Truncation hides the full name, so keep it reachable on hover.
+            // The CSS ellipsis hides the full name, so keep it reachable on hover.
             title={org.name}
             key={org.id}
             selected={org.id === currentOrg.id}

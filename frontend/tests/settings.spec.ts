@@ -108,7 +108,10 @@ test.describe.serial("Settings", () => {
 
   // Still on the shared workspace's settings from the test above.
   test("the owner can rename the workspace", async () => {
-    const renamed = `${sharedName} renamed`;
+    // Same length as before: toasts cut names over MAX_TOAST_NAME_LENGTH
+    // (lib/text.ts), and this and the later "Joined" / "removed from" /
+    // "You left" toasts are matched on the whole name.
+    const renamed = sharedName.replace(/^Crew /, "Team ");
 
     await owner.getByRole("button", { name: "Rename" }).click();
     // By role: getByLabel("Name") also matches the dialog, whose accessible
