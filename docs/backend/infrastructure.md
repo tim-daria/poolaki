@@ -62,7 +62,7 @@ Grafana and Prometheus are intentionally **not** published through the tunnel. T
 
 ## Networking
 
-`tunnel_net` is shared by `cloudflared`, `caddy`, `prometheus` and `grafana`. `cloudflared` is on no other network, so it can only reach Caddy, never the backend, database or Vault directly. Caddy fans out to `frontend_net` and `backend_net`.
+`tunnel_net` is shared by `cloudflared`, `caddy`, `prometheus` and `cadvisor`. `cloudflared` is on no other network, so it can only reach Caddy, never the backend, database or Vault directly. Caddy fans out to `frontend_net` and `backend_net`. Grafana sits on `backend_net` only; `grafana.localhost` reaches it through Caddy.
 
 The local hostnames (`poolaki.localhost`, `grafana.localhost`, `prometheus.localhost`) are served on `localhost:8080` over plain HTTP. If a browser insists on redirecting to `https`, it has cached an HSTS entry from an earlier setup: clear the site data for that host and try again.
 
