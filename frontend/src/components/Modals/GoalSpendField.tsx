@@ -78,7 +78,6 @@ export function GoalSpendField({
     <FieldLabel
       label="Pay from goal"
       info={RULE}
-      htmlFor="transaction-spend-goal"
       id="transaction-spend-goal-label"
       action={
         !disabled && (

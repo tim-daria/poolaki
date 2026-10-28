@@ -15,8 +15,9 @@ interface FieldLabelProps {
   /** The `id` of the control below, so clicking the label focuses it. */
   htmlFor?: string;
   /**
-   * Id for the label itself. Needed by a MUI select, whose visible control is
-   * a div that `htmlFor` cannot reach: pass the same value as its `labelId`.
+   * Id for the label itself. For a MUI select pass this as its `labelId` and
+   * omit `htmlFor`: the select's visible control is a div, which a label's
+   * `for` cannot reach, and Chrome flags a `for` that points at one.
    */
   id?: string;
   children: ReactNode;
