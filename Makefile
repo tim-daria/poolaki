@@ -2,7 +2,9 @@
 COMPOSE_FILE=./docker-compose.yml
 COMPOSE_FILE_DEV=./docker-compose-dev.yml
 
-.PHONY: up re prod re-prod down stop start start-prod stop-prod build status status_all logs clean fclean rmVolumes \
+.PHONY: up re full re-full down build stop start start-full stop-full dev re-dev full-dev re-full-dev \
+		down-dev build-dev stop-dev start-dev stop-full-dev start-full-dev \
+		status status_all logs clean fclean \
 		Tcaddy Tdjango Tdb Tnode Tvault Tvault_agent Tdb_backup Tai \
 		readVault wafLog auditLog aiAudit
 
@@ -131,11 +133,8 @@ clean:
 fclean:
 	@echo "=== 🗑️  Remove all container, build cache objects, untagged images and networks 🗑️  ==="
 	@docker compose --profile full down;
-	@docker system prune -af
-
-rmVolumes:
-	@echo "=== 🗑️  Remove all volumes 🗑️  ==="
-	@docker compose --profile full down -v;
+	@docker system prune -af;
+	@docker volume prune -af
 
 readVault:
 	@./vault/read_vault.sh
