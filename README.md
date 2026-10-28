@@ -27,10 +27,8 @@ Each user gets a personal budget space on sign-up and can create shared workspac
 
 ### Key features:
 
-**Accounts.** Email/password registration and login, plus 42 OAuth (`intra42`). Sessions are handled by django-allauth; passwords are hashed and salted.
-
+- **Accounts.** Email/password registration and login, plus 42 OAuth (`intra42`). Sessions are handled by django-allauth; passwords are hashed and salted.
 - **Transactions.** Income, expenses, goal contributions and withdrawals per workspace, with description, amount, date, category and tax flag. Server-side filtering, search, sorting and pagination.
-
 - **Categories.** Workspace-scoped labels typed as income, expense or contribution.
 - **Goals.** Savings targets with a target amount and date. Contributions and withdrawals are transactions linked to a goal; progress and status (`active`, `completed`, `archived`) are tracked per goal.
 - **Reports.** Yearly report per workspace: income/expense totals, monthly distribution, per-category breakdown and goal balance. Charts and a print-ready layout.
@@ -202,8 +200,8 @@ The first line lists the 42 logins. The names below are those used in the reposi
 | ---------- | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `albetanc` | Alicia Betancourt | Product Owner & AI Lead                | Product scope and documentation, AI service and RAG, notification system lead, privacy policy, frontend support                                |
 | `cwick`    | Christian Wick    | Infrastructure & Security Lead         | Docker Compose, Vault, Caddy/Coraza WAF, Cloudflare Tunnel, monitoring, backups, CI infrastructure                                             |
-| `dtimofee` | Daria Timofeeva   | Tech Lead, Backend Lead & Scrum Master | Django/DRF architecture, database schema, authentication and OAuth, organizations, transactions, reports, notification backend, AI integration |
-| `nefimov`  | Nikolai Efimov    | Backend Developer                      | Goals and goal transfers, transaction restrictions, balance calculations, goal report data, backend tests and documentation                    |
+| `dtimofee` | Daria Timofeeva   | Tech Lead, Backend Lead & Scrum Master | Django/DRF architecture, database schema, authentication and OAuth, organization's management, transaction's filtering, reports, notifications backend, AI integration, backend CI |
+| `nefimov`  | Nikolai Efimov    | Backend Developer                      | Goals and goal transfers, transactions, balance calculations, goal report data, backend tests and documentation                    |
 | `tsemenov` | Tanya Semenova      | Frontend Lead & QA                     | UX/UI and design system, React application, responsive and accessible layouts, frontend tests, frontend CI and documentation                   |
 
 Full role descriptions, feature ownership and review responsibilities are in [team organization → Roles and responsibilities](docs/team-organization.md#2-roles-and-responsibilities).
