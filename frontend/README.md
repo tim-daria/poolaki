@@ -4,19 +4,19 @@ The browser side of Poolaki: a React single-page app that talks to the Django
 API over the same origin. This page is the map; the docs under
 [`docs/frontend/`](../docs/frontend/) go deeper on single topics.
 
-| Topic                                                                         | Read                                                              |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| How the app talks to Django: proxying, sessions, CSRF, the `lib/` fetch shape | [backend-integration.md](../docs/frontend/backend-integration.md) |
-| MUI: where a style belongs, the theme, `sx`                                   | [mui-and-styles.md](../docs/frontend/mui-and-styles.md)           |
-| Routes, workspaces, the `/o/:orgId` rule                                      | [routing.md](../docs/frontend/routing.md)                         |
-| The design system: tokens, variants, the component inventory                  | [design-system.md](../docs/frontend/design-system.md)             |
-| Drawers and bottom sheets                                                     | [drawers.md](../docs/frontend/drawers.md)                         |
-| Money input and formatting                                                    | [money.md](../docs/frontend/money.md)                             |
-| Password change: what the browser checks, what Django checks                  | [password-change.md](../docs/frontend/password-change.md)         |
-| Unit tests (Vitest)                                                           | [vitest.md](../docs/frontend/vitest.md)                           |
-| End-to-end tests (Playwright)                                                 | [playwright.md](../docs/frontend/playwright.md)                   |
-| Browser support: engine matrix, manual checklist, known limitations           | [browser-support.md](../docs/frontend/browser-support.md)         |
-| Judging performance against the real bundle                                   | [production-build.md](../docs/frontend/production-build.md)       |
+| Topic                                                                         | Read                                                             |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| How the app talks to Django: proxying, sessions, CSRF, the `lib/` fetch shape | [backend-integration.md](../docs/modules/backend-integration.md) |
+| MUI: where a style belongs, the theme, `sx`                                   | [mui-and-styles.md](../docs/frontend/mui-and-styles.md)          |
+| Routes, workspaces, the `/o/:orgId` rule                                      | [routing.md](../docs/frontend/routing.md)                        |
+| The design system: tokens, variants, the component inventory                  | [design-system.md](../docs/modules/design-system.md)             |
+| Drawers and bottom sheets                                                     | [drawers.md](../docs/frontend/drawers.md)                        |
+| Money input and formatting                                                    | [money.md](../docs/frontend/money.md)                            |
+| Password change: what the browser checks, what Django checks                  | [password-change.md](../docs/frontend/password-change.md)        |
+| Unit tests (Vitest)                                                           | [vitest.md](../docs/frontend/vitest.md)                          |
+| End-to-end tests (Playwright)                                                 | [playwright.md](../docs/frontend/playwright.md)                  |
+| Browser support: engine matrix, manual checklist, known limitations           | [browser-support.md](../docs/frontend/browser-support.md)        |
+| Judging performance against the real bundle                                   | [production-build.md](../docs/frontend/production-build.md)      |
 
 ---
 
@@ -116,7 +116,7 @@ Ask-AI button is the shell's too; a route hides it with
 **Data is fetched in a `useEffect` with an `AbortController`,** through a
 `lib/` function, never with a bare `fetch` in a component. The shape, with
 the reasons, is in
-[backend-integration.md](../docs/frontend/backend-integration.md#the-page-side).
+[backend-integration.md](../docs/modules/backend-integration.md#the-page-side).
 
 **The current workspace comes from `useCurrentOrg()`.** It throws outside
 `/o/:orgId`, on purpose. Never pass an org id down as a prop from the URL
@@ -149,6 +149,6 @@ Today the `frontend` container runs `npm run dev` in every environment,
 including the deploy behind the Cloudflare tunnel. A multistage Docker build
 (`vite build`, then Caddy serving `dist/` with an SPA fallback) is planned;
 what changes and what doesn't is written up in
-[backend-integration.md](../docs/frontend/backend-integration.md#production-the-multistage-build).
+[backend-integration.md](../docs/modules/backend-integration.md#production-the-multistage-build).
 Until then, [production-build.md](../docs/frontend/production-build.md) says
 how to serve the real bundle locally to judge performance.

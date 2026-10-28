@@ -161,7 +161,7 @@ switch only shows the in-page spinner.
 **The order is not what protects access.** The guards decide what to _render_,
 not what to _request_. Every scoped endpoint re-checks `IsAuthenticated` and
 `IsOrgMember` on its own; the guards are UX, not security (see
-[backend-integration.md](backend-integration.md)). Sending the workspace or page
+[backend-integration.md](../modules/backend-integration.md)). Sending the workspace or page
 requests earlier would only earn a 401/403 in a logged-out browser, and
 `ProtectedRoute` would still redirect. Starting them in parallel is safe; it is
 just not done yet (see "Open ideas").
@@ -199,7 +199,7 @@ build never does this.
 The finance endpoints all exist now and follow the scoped shape:
 `organizations/<int:org_id>/…` with `permission_classes = [IsAuthenticated,
 IsOrgMember]`. How the frontend calls them is in
-[backend-integration.md](backend-integration.md).
+[backend-integration.md](../modules/backend-integration.md).
 
 > **IMPORTANT:** scope from the URL, never from the session. A view that receives
 > `org_id` but forgets `IsOrgMember` still runs its queries perfectly — and hands any

@@ -70,7 +70,7 @@ in `routes.tsx` may assume `user` exists. The server re-checks on every
 request regardless (`IsAuthenticated`, `IsOrgMember` in `core/permissions.py`);
 the guards are UX, not security. The same gating is why a full reload loads in
 series rather than in parallel — see "Why a reload shows Loading…" in
-[routing.md](routing.md).
+[routing.md](../frontend/routing.md).
 
 `useLogout` sends the `DELETE` _before_ clearing the local user. Order
 matters: `setUser(null)` unmounts the protected tree, and the request needs
@@ -95,11 +95,11 @@ localStorage is a different store: a key-value map per origin that a page
 writes with `localStorage.setItem()` and reads back with `getItem()`. The two
 differ in exactly the ways that matter for a credential:
 
-|                | Cookie store                                   | localStorage                              |
-| -------------- | ---------------------------------------------- | ----------------------------------------- |
-| Who can read   | Script never, when the cookie is `HttpOnly`    | Any script running on the origin          |
-| Who sends it   | The browser, on every request, automatically   | Only your own code, copied into a header  |
-| Lifetime       | The server decides; logout deletes it          | Until cleared, across tabs and restarts   |
+|              | Cookie store                                 | localStorage                             |
+| ------------ | -------------------------------------------- | ---------------------------------------- |
+| Who can read | Script never, when the cookie is `HttpOnly`  | Any script running on the origin         |
+| Who sends it | The browser, on every request, automatically | Only your own code, copied into a header |
+| Lifetime     | The server decides; logout deletes it        | Until cleared, across tabs and restarts  |
 
 The app writes one localStorage key, the setup-banner flag
 `home:setup-dismissed:<orgId>` in `pages/Home/Home.tsx`. No credential or
@@ -229,7 +229,7 @@ the same anti-corruption idea as `fromDTO`, applied to the request.
 
 ### The error contract
 
-Which rules are checked on which side is in [../validation.md](../validation.md).
+Which rules are checked on which side is in [input-validation.md](input-validation.md).
 Two kinds of failure, deliberately kept apart:
 
 - **The user did something fixable** — Django answered `400` or `403` with a

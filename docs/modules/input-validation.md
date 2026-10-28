@@ -23,7 +23,7 @@ form details in [docs/frontend/](frontend/).
 - A backend `400`/`403` is shown inline by the form, so a rule that lives only
   on the server still produces a readable message. How that reaches the form is
   the error contract in
-  [frontend/backend-integration.md](frontend/backend-integration.md#the-error-contract).
+  [frontend/backend-integration.md](backend-integration.md#the-error-contract).
 
 ---
 
@@ -64,7 +64,7 @@ never `fetch` directly.
 | Report year             | none                                                                                                  | `ReportQuerySerializer`: integer 1900..2099                                                                                                                                 |
 | Invite username         | `InvitationForm`: non-empty after trim                                                                | `InvitationCreateSerializer`: `max_length=150`; `services/invitation.py`: user exists, not a member, no pending invite, not a personal budget, ≤ 5 members, ≤ 10 workspaces |
 | AI question             | `lib/aiChat.ts` `MAX_QUESTION_LENGTH` (1000)                                                          | `AiChatRequestSerializer`: 1..1000 chars, trimmed; `ai_chat` throttle 5/min                                                                                                 |
-| Password                | native `required` only                                                                                | Django `AUTH_PASSWORD_VALIDATORS`, see [frontend/password-change.md](frontend/password-change.md)                                                                           |
+| Password                | native `required` only                                                                                | Django `AUTH_PASSWORD_VALIDATORS`, see [frontend/password-change.md](../frontend/password-change.md)                                                                           |
 
 The frontend's `MAX_AMOUNT` (12 integer digits + 2 decimals) is the same width
 as the backend's `max_digits=14`; keep them in step.
@@ -107,7 +107,7 @@ not have, or they would be two copies of one rule.
 
 - `CreateOrgForm` still uses `parseFloat` and no length check for the name
   (`RenameOrgForm` has both). Tracked in
-  [frontend/money.md](frontend/money.md#still-to-do).
+  [frontend/money.md](../frontend/money.md#still-to-do).
 - Category create/update endpoints are commented out in `views/category.py`
   and `serializers.py`. Every workspace gets the fixed list in
   `services/category.py` (`create_default_categories`) when it is created, and

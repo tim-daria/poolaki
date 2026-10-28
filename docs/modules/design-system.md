@@ -4,7 +4,7 @@ Poolaki's UI is built from one set of design tokens, a small number of
 theme-level variants, and a library of reusable components composed on top of
 MUI. This page is the inventory: what the tokens are, which components exist,
 what each is for, and the rules that keep new UI consistent. How to _use_ the
-theme and `sx` day to day is in [mui-and-styles.md](mui-and-styles.md).
+theme and `sx` day to day is in [mui-and-styles.md](../frontend/mui-and-styles.md).
 
 Everything here is defined once, in `frontend/src/theme.ts`,
 `frontend/src/lib/layout.ts` and `frontend/src/components/`, and consumed by
@@ -129,15 +129,15 @@ writing.
 
 ### Form controls
 
-| Component                      | Purpose                                                                                                  | Used by |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------- |
-| `TextInput` + `useTextInput`   | Text field with the behaviour in a headless hook                                                         | 2 files |
-| `FieldLabel`                   | Label above a control, replacing MUI's floating label                                                    | 6 files |
-| `AuthField`                    | Labelled input for the auth pages                                                                        | 2 files |
-| `MoneyField` + `useMoneyField` | Locale-aware amount input: typing filter, paste parser, focus/blur formatting (see [money.md](money.md)) | 3 files |
-| `IsoDatePicker`                | DatePicker whose value is the ISO string the API stores                                                  | 3 files |
-| `Segmented`                    | Exclusive segmented control on the themed `ToggleButtonGroup`; hidden in print                           | 2 files |
-| `TransferDirection`            | Two card-like toggles: into a goal or back out                                                           | 1 file  |
+| Component                      | Purpose                                                                                                              | Used by |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------- |
+| `TextInput` + `useTextInput`   | Text field with the behaviour in a headless hook                                                                     | 2 files |
+| `FieldLabel`                   | Label above a control, replacing MUI's floating label                                                                | 6 files |
+| `AuthField`                    | Labelled input for the auth pages                                                                                    | 2 files |
+| `MoneyField` + `useMoneyField` | Locale-aware amount input: typing filter, paste parser, focus/blur formatting (see [money.md](../frontend/money.md)) | 3 files |
+| `IsoDatePicker`                | DatePicker whose value is the ISO string the API stores                                                              | 3 files |
+| `Segmented`                    | Exclusive segmented control on the themed `ToggleButtonGroup`; hidden in print                                       | 2 files |
+| `TransferDirection`            | Two card-like toggles: into a goal or back out                                                                       | 1 file  |
 
 ### Data display
 
@@ -151,11 +151,11 @@ writing.
 
 ### Overlays
 
-| Component                        | Purpose                                                                          | Used by    |
-| -------------------------------- | -------------------------------------------------------------------------------- | ---------- |
-| `AiChatDrawer` + `AiChatMessage` | Assistant conversation; fill-mode sheet on phones (see [drawers.md](drawers.md)) | the shell  |
-| `NotificationPanel`              | Notification popover                                                             | the header |
-| `GoalInfoCard`                   | A goal's details and activity, fit-mode sheet                                    | 1 file     |
+| Component                        | Purpose                                                                                      | Used by    |
+| -------------------------------- | -------------------------------------------------------------------------------------------- | ---------- |
+| `AiChatDrawer` + `AiChatMessage` | Assistant conversation; fill-mode sheet on phones (see [drawers.md](../frontend/drawers.md)) | the shell  |
+| `NotificationPanel`              | Notification popover                                                                         | the header |
+| `GoalInfoCard`                   | A goal's details and activity, fit-mode sheet                                                | 1 file     |
 
 Form modals built on `ModalShell` — `TransactionForm`, `GoalForm`,
 `CreateOrgForm`, `RenameOrgForm`, `InvitationForm`, `StartingBalanceForm`,
@@ -222,8 +222,8 @@ reusable components)_. Point by point:
   used consistently across every component, plus a custom favicon.
 - **Reusable components, minimum ten** About thirty components in `src/components/`;
   more than twenty are used from two or more places (`Money` from fourteen,
-	`ModalShell` from seven, `FieldLabel` and `DiscardChangesDialog` from six).
-	Fifteen of them render with no application state at all.
+  `ModalShell` from seven, `FieldLabel` and `DiscardChangesDialog` from six).
+  Fifteen of them render with no application state at all.
 - **Theme-level variants** Six looks defined once on MUI components
   (`Paper` card variants, pill buttons, the segmented control, Dialog and
   Alert layout), so no call site restyles them.
