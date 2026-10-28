@@ -88,13 +88,10 @@ clean:
 	@docker system prune -f
 
 fclean:
-	@echo "=== 🗑️  Remove all container, build cache objects, untagged images and networks 🗑️  ==="
+	@echo "=== 🗑️  Remove all container, volumes, build cache objects, untagged images and networks 🗑️  ==="
 	@docker compose --profile prod down;
-	@docker system prune -af
-
-rmVolumes:
-	@echo "=== 🗑️  Remove all volumes 🗑️  ==="
-	@docker compose --profile prod down -v;
+	@docker system prune -af;
+	@docker volume prune -af
 
 readVault:
 	@./vault/read_vault.sh
