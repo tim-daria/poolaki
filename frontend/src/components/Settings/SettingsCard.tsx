@@ -47,7 +47,12 @@ export function SettingsRow({
           {title}
         </Typography>
         {subtitle && (
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          <Typography
+            variant="body2"
+            // anywhere: the subtitle can be a workspace name, one word up to
+            // 100 characters, which would otherwise push past the card.
+            sx={{ color: "text.secondary", overflowWrap: "anywhere" }}
+          >
             {subtitle}
           </Typography>
         )}
