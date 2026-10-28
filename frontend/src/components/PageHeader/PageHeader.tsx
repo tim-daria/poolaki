@@ -140,13 +140,7 @@ export function PageTitle({ title, subtitle, back }: PageTitleProps) {
           {back.label}
         </Link>
       )}
-      <Typography
-        variant="h2"
-        component="h1"
-        // anywhere: a workspace name is one word up to 100 characters, and a
-        // word has no break opportunity, so it would widen the page instead.
-        sx={{ lineHeight: 1.2, overflowWrap: "anywhere" }}
-      >
+      <Typography variant="h2" component="h1" sx={{ lineHeight: 1.2 }}>
         {heading}
       </Typography>
       {sub && (

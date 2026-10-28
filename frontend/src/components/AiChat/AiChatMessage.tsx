@@ -45,10 +45,7 @@ export function AiChatMessage({ message }: { message: ChatMessage }) {
         <Typography
           component="div"
           variant="body2"
-          sx={{
-            overflowWrap: "anywhere",
-            ...(isUser ? { whiteSpace: "pre-wrap" } : assistantSx),
-          }}
+          sx={isUser ? { whiteSpace: "pre-wrap" } : assistantSx}
         >
           {isUser ? (
             message.content

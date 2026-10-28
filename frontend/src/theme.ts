@@ -123,6 +123,12 @@ export const theme = createTheme({
         body: {
           // AppLayout's root Box sets the same colour; keep the two in step.
           backgroundColor: "var(--mui-palette-primary-light)",
+          // A user-typed name (workspace, goal, username, description) can be
+          // one unbroken word up to its length limit, and a word has no break
+          // opportunity. Inherited, so this one rule reaches every text node,
+          // dialogs and menus in portals included; `noWrap` sites are
+          // untouched because nowrap never wraps.
+          overflowWrap: "anywhere",
         },
       },
     },

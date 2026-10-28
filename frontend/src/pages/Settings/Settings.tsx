@@ -108,10 +108,7 @@ function Settings() {
                 <Typography sx={{ fontWeight: 600 }}>
                   {user?.username}
                 </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: "text.secondary", wordBreak: "break-all" }}
-                >
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {user?.email}
                 </Typography>
               </Box>

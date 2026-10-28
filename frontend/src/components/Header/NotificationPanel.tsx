@@ -367,11 +367,7 @@ export function NotificationPanel({
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{
-                        fontSize: "0.825rem",
-                        mt: 0.2,
-                        overflowWrap: "anywhere",
-                      }}
+                      sx={{ fontSize: "0.825rem", mt: 0.2 }}
                     >
                       {typeText(n.type, payload)}
                     </Typography>
