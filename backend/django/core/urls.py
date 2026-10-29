@@ -2,8 +2,8 @@ from django.urls import path
 
 from core.views.ai_chat import AiChatView
 from core.views.category import (
-    CategoryListCreateView,
-    CategoryReadUpdateDeleteView,
+    CategoryListView,
+    CategoryReadView,
 )
 from core.views.goal import (
     GoalBalanceView,
@@ -127,12 +127,12 @@ urlpatterns = [
     # Categories
     path(
         "organizations/<int:org_id>/categories/",
-        CategoryListCreateView.as_view(),
+        CategoryListView.as_view(),
         name="category-list-create",
     ),
     path(
         "organizations/<int:org_id>/categories/<int:category_id>/",
-        CategoryReadUpdateDeleteView.as_view(),
+        CategoryReadView.as_view(),
         name="category-detail",
     ),
     path(
