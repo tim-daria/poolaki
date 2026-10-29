@@ -63,11 +63,11 @@ This repository is the team monorepo: `frontend/` (React SPA), `backend/` (Djang
    | Group            | Keys                                                                                      | Used by                   |
    | ---------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
    | PostgreSQL       | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_HOST`, `DB_PORT`, `DATABASE_URL` | database, Django, backups |
-   | Django           | `DJANGO_SUPERUSER_*`, `INTRA42_CLIENT_ID`, `INTRA42_CLIENT_SECRET`                        | admin account, 42 OAuth   |
+   | Django           | `SECRET_KEY`, `DJANGO_SUPERUSER_*`, `INTRA42_CLIENT_ID`, `INTRA42_CLIENT_SECRET`          | Django, admin account, 42 OAuth |
    | Grafana / alerts | `GF_ADMIN_*`, `SMTP_*`, `ALERT_RECIPIENT_EMAIL`                                           | `prod` profile            |
    | Cloudflare       | `TUNNEL_TOKEN`                                                                            | `cloudflared`             |
    | Vault            | `VAULT_ADDR`                                                                              | backend, Vault Agent      |
-   | AI / LLM         | `LLM_MODEL`, `LLM_API_KEY`, `LLM_BASE_URL`, `DJANGO_BASE_URL`, `LOG_LEVEL`                | `ai-service`              |
+   | AI / LLM         | `LLM_MODEL`, `LLM_API_KEY`, `LLM_BASE_URL`, `DJANGO_BASE_URL`, `INTERNAL_API_TOKEN`, `LOG_LEVEL` | `ai-service`              |
    | Embeddings / RAG | `EMBEDDING_MODEL` (required), `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY` (optional)        | `ai-service`              |
 
    `EMBEDDING_MODEL` is required. `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY` are optional; when unset, the AI service uses the LLM provider. The same embedding model is used for document ingestion and query retrieval, so changing it requires re-ingesting the knowledge chunks. See [AI decisions](docs/ai/decisions.md) and [ai-service/README.md](ai-service/README.md).
@@ -88,7 +88,7 @@ This repository is the team monorepo: `frontend/` (React SPA), `backend/` (Djang
    make status
    ```
 
-3. Open the app at <http://poolaki.localhost:8080>. Vault initialises and unseals itself on first start; the backend waits for it.
+3. Open the app at <https://poolaki.de> or at <http://poolaki.localhost:8080> on the server. Vault initialises and unseals itself on first start; the backend waits for it.
 
 4. Stop the stack.
 
@@ -112,23 +112,24 @@ This adds `prometheus`, `grafana`, `postgres_exporter`, `cadvisor` and `db_backu
 | ----------------- | -------------------------------------- | ------------------------------- |
 | App               | <http://poolaki.localhost:8080>        | dev                             |
 | Django admin      | <http://poolaki.localhost:8080/admin/> | dev                             |
-| Vault UI          | <http://localhost:8200/ui>             | dev                             |
+| Vault UI          | <http://vault.localhost:8200>          | dev                             |
 | Grafana           | <http://grafana.localhost:8080>        | prod                            |
 | Prometheus        | <http://prometheus.localhost:8080>     | prod                            |
 | Public deployment | <https://poolaki.de>                   | prod, through Cloudflare Tunnel |
 
 ### Useful Make targets
 
-```bash
-make logs        # compose logs for the dev stack
-make status      # running containers
-make Tdjango     # shell in the backend container (also: Tnode, Tdb, Tvault, Tai, Tcaddy)
-make readVault   # print Vault status and stored credentials (debugging only)
-make wafLog      # last Coraza WAF audit entry
-make rmVolumes   # stop everything and delete volumes (database, Vault state, Grafana data)
-```
+| Target | Description |
+| ------ | ----------- |
+| `make logs`      | Compose logs for the dev stack. |
+| `make status`    | Running containers. |
+| `make Tdjango`   | Shell in the backend container (also: Tnode, Tdb, Tvault, Tai, Tcaddy). |
+| `make readVault` | Print Vault status and stored credentials (debugging only). |
+| `make wafLog`    | Last Coraza WAF audit entry. |
+| `make clean`     | Remove containers, build cache objects, and networks. |
+| `make fclean`    | Remove containers, volumes, build cache objects, untagged images, and networks. |
 
-`make rmVolumes` is destructive. It removes the database and Vault state.
+`make clean` and `make fclean` are destructive. `make fclean` also removes persistent volumes, including database, Vault, and Grafana state.
 
 ### Tests
 
