@@ -104,7 +104,7 @@ export const router = createBrowserRouter([
                         path: "reports",
                         handle: {
                           title: "Reports",
-                          subtitle: "Complete Financial Activity & History",
+                          subtitle: "Income, expenses and savings for the year",
                         },
                         lazy: () => import("./pages/Reports/Reports"),
                       },
@@ -129,14 +129,6 @@ export const router = createBrowserRouter([
                           width: "narrow",
                         },
                         lazy: () => import("./pages/Settings/OrgSettings"),
-                      },
-                      {
-                        path: "reports",
-                        handle: {
-                          title: "Reports",
-                          subtitle: "Income, expenses and savings for the year",
-                        },
-                        lazy: () => import("./pages/Reports/Reports"),
                       },
                     ],
                   },

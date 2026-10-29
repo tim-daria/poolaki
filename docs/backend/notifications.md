@@ -247,7 +247,7 @@ is idempotent: it only flips `is_read` from `false` to `true`).
 #### Invitation notifications: special read logic
 
 Invitation notifications are **not** marked read by
-`POST /api/notifications/clear-all/`. They become read only when the
+`POST /api/v1/notifications/clear-all/`. They become read only when the
 invitation is resolved — when the invited user accepts or declines it, or
 when the owner cancels it:
 
@@ -278,10 +278,11 @@ There is no push channel, so the frontend should poll.
 - Render each row as: icon by `type` (fall back to a generic icon for
   unknown types), short human text, and relative time.
 - `is_read === false` → highlight the row (e.g. bold + dot).
-- When the user closes the inbox or clicks a "Mark all as read" /"Clear all"
-  button, send the ids of the rows you actually rendered to
+- When the user clicks "Mark all as read", send the ids of the unread
+  non-invitation rows you actually rendered to
   `POST /api/v1/notifications/clear-all/`, then refetch
-  `GET /api/v1/notifications/unread-count/` to update the badge.
+  `GET /api/v1/notifications/` (its `unread_count` updates the badge).
+  Closing the inbox without clicking does not mark anything read.
 - To show only things the user has not seen yet (e.g. a small "recently"
   widget), use `GET /api/v1/notifications/?is_read=false`.
 
@@ -293,20 +294,24 @@ There is no push channel, so the frontend should poll.
 
 ### Rendering the different types
 
-| `type`              | Suggested UI                                                                                     |
-|---------------------|--------------------------------------------------------------------------------------------------|
-| `invitation`        | Text like "bob invited you to **Trip**", buttons **Accept** / **Decline** (see below).            |
-| `transaction_added` | Text like "bob added a new €20 transaction to **Family Account**"                                 |
-| `goal_completed`    | Info text.                                                                                        |
-| `member_left`       | "carol left **Trip**" (attributed to `user`)                                                      |
-| `member_removed`    | "bob removed alice from **Trip**" (attributed to `removed_by`)                                   |
-| `removed_from_org`  | "bob removed you from **Trip**" (attributed to `removed_by`)                                     |
-| `ownership_transferred` | "bob left **Trip** — you're now the owner" (sent to the new owner; attributed to `previous_owner`) |
-| `owner_changed`     | "bob left **Trip** — dana is now the owner" (sent to remaining members; attributed to `previous_owner`) |
-| `organization_deleted` | "**Trip** was deleted after bob left, so your invitation no longer stands" (sent to pending invitees; attributed to `last_member`) |
+| `type`                  | Rendered text                                                                        | Attributed to    |
+|-------------------------|--------------------------------------------------------------------------------------|------------------|
+| `invitation`            | "bob invited you to Trip workspace", plus **Accept** / **Decline** buttons (see below) | `invited_by`     |
+| `transaction_added`     | "bob added a transaction in Trip"                                                    | `added_by`       |
+| `goal_created`          | "bob created the goal "Laptop" in Trip"                                              | `user`           |
+| `goal_completed`        | "bob completed the goal "Laptop" in Trip"                                            | `user`           |
+| `goal_archived`         | "bob archived the goal "Laptop" in Trip"                                             | `user`           |
+| `member_left`           | "carol left Trip"                                                                    | `user`           |
+| `member_removed`        | "bob removed alice from Trip"                                                        | `removed_by`     |
+| `removed_from_org`      | "bob removed you from Trip"                                                          | `removed_by`     |
+| `ownership_transferred` | "Ownership of Trip was passed to you" (sent to the new owner)                        | `previous_owner` |
+| `owner_changed`         | "bob left Trip — dana is now the owner" (sent to remaining members)                   | `previous_owner` |
+| `organization_deleted`  | "Trip was deleted after bob left, so your invitation no longer stands" (sent to pending invitees) | `last_member` |
 
-The copy above is what `frontend/src/lib/notificationText.ts` renders; each
-type degrades to generic wording when its payload is missing a field.
+The copy above is what `frontend/src/lib/notificationText.ts` renders. Each
+type degrades to generic wording (e.g. "A new transaction was added") when its
+payload is missing a field, and unknown types render as "Notification"
+attributed to "User".
 
 ### Accept / Decline flow (from a notification)
 
@@ -315,7 +320,8 @@ type degrades to generic wording when its payload is missing a field.
    - Accept → `POST /api/v1/invitations/{invitation_id}/accept/`
    - Decline → `POST /api/v1/invitations/{invitation_id}/decline/`
 3. On success (200) refetch:
-   - the badge (`GET /api/v1/notifications/unread-count/`), and
+   - the list (`GET /api/v1/notifications/`, whose `unread_count` updates the
+     badge), and
    - the organization list (`GET /api/v1/organizations/`) — after accepting,
      the new organization appears there and the user may want to switch to it.
 4. On `400 Bad Request` (invitation no longer pending, e.g. the owner
@@ -325,10 +331,12 @@ type degrades to generic wording when its payload is missing a field.
 
 ### Polling cadence
 
-- `unread-count`: every 60 s is a good default; 30 s is acceptable. Gate the
-  interval on `document.visibilityState` and stop polling when the tab is
-  hidden or the user logs out.
+- `unread-count`: every 60 s (`POLL_INTERVAL_MS` in
+  `frontend/src/context/NotificationProvider.tsx`). The provider is mounted
+  inside the protected routes, so polling stops on logout. It is not gated
+  on `document.visibilityState`.
 - The full list only on user interaction (opening the inbox) — the
   `unread-count` endpoint is cheaper.
-- Do one immediate `unread-count` poll after any action that changes
-  read state: `clear-all`, `accept`, `decline`.
+- After any action that changes read state (`clear-all`, `accept`,
+  `decline`) the frontend refetches `GET /api/v1/notifications/`, whose
+  `unread_count` refreshes the badge.

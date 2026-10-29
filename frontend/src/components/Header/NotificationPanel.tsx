@@ -338,7 +338,10 @@ export function NotificationPanel({
                     {initials(userName)}
                   </Avatar>
 
-                  <Box sx={{ flexGrow: 1 }}>
+                  {/* minWidth 0: a flex child otherwise refuses to shrink
+                      below its longest word, so an unbroken workspace name
+                      would push the column past the card. */}
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Box
                       sx={{
                         display: "flex",

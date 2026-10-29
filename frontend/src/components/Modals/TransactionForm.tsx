@@ -387,11 +387,7 @@ export function TransactionForm({
                   onChange={(direction) => set("entry_type", direction)}
                   disabled={editing}
                 />
-                <FieldLabel
-                  label="Goal"
-                  htmlFor="transaction-goal"
-                  id="transaction-goal-label"
-                >
+                <FieldLabel label="Goal" id="transaction-goal-label">
                   <TextField
                     id="transaction-goal"
                     select
@@ -467,11 +463,7 @@ export function TransactionForm({
                 </FieldLabel>
               </>
             ) : (
-              <FieldLabel
-                label="Category"
-                htmlFor="transaction-category"
-                id="transaction-category-label"
-              >
+              <FieldLabel label="Category" id="transaction-category-label">
                 <TextField
                   disabled={foreign}
                   id="transaction-category"

@@ -10,7 +10,7 @@ version: 0
 
 ## Definition
 
-Categories are predefined labels assigned to income and expense transactions to classify financial movements and track spending habits. Contributions use the fixed Contribution category and are not chosen by the user.
+Categories are predefined labels assigned to income and expense transactions to classify financial movements and track spending habits. Contributions and Incomes use the fixed category per each type, but are selected by the user (this is a mandatory field), it's never assigned automatically for now.
 
 ## Default Categories and When to Use Them
 

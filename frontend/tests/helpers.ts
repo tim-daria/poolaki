@@ -183,8 +183,15 @@ export async function inviteMember(
 const AUTH_DIR = fileURLToPath(
   new URL("../playwright/.auth/", import.meta.url),
 );
-export const OWNER_STATE = `${AUTH_DIR}owner.json`;
-export const OWNER_INFO = `${AUTH_DIR}owner-info.json`;
+/**
+ * One owner per browser project: the backend caps a user at 10 workspaces and
+ * each project's specs create about eight, so three engines sharing one owner
+ * ran out of workspaces mid-run.
+ */
+export const ownerState = (browserName: string) =>
+  `${AUTH_DIR}owner-${browserName}.json`;
+export const ownerInfo = (browserName: string) =>
+  `${AUTH_DIR}owner-${browserName}-info.json`;
 
 export type SharedOwner = { user: TestUser; personalUrl: string };
 
@@ -196,8 +203,13 @@ export type SharedOwner = { user: TestUser; personalUrl: string };
 export async function openAsSharedOwner(
   browser: Browser,
 ): Promise<SharedOwner & { page: Page }> {
-  const owner: SharedOwner = JSON.parse(readFileSync(OWNER_INFO, "utf8"));
-  const page = await browser.newPage({ storageState: OWNER_STATE });
+  const browserName = browser.browserType().name();
+  const owner: SharedOwner = JSON.parse(
+    readFileSync(ownerInfo(browserName), "utf8"),
+  );
+  const page = await browser.newPage({
+    storageState: ownerState(browserName),
+  });
   // Helpers such as createSharedWorkspace start from the current workspace.
   await page.goto(owner.personalUrl);
   return { ...owner, page };

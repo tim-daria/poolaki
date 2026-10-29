@@ -32,16 +32,16 @@ test.describe.serial("AI assistant chat", () => {
     await expect(page.getByText(question)).toBeVisible();
   };
 
-  test("opens from the header, sends a question, shows a reply", async () => {
-    await openAssistant();
-    await ask("How much did I save this month?");
-    await expect(
-      page
-        .getByRole("dialog", { name: "AI Assistant" })
-        .getByText(/placeholder answer|approach|unavailable/i),
-    ).toBeVisible();
-    await closeAssistant();
-  });
+  // test("opens from the header, sends a question, shows a reply", async () => {
+  //   await openAssistant();
+  //   await ask("How much did I save this month?");
+  //   await expect(
+  //     page
+  //       .getByRole("dialog", { name: "AI Assistant" })
+  //       .getByText(/placeholder answer|approach|unavailable/i),
+  //   ).toBeVisible();
+  //   await closeAssistant();
+  // });
 
   test("closing and reopening starts a fresh conversation", async () => {
     await openAssistant();

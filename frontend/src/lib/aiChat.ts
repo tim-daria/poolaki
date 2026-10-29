@@ -36,12 +36,15 @@ export const ACCESS_DENIED =
  * { answer, metadata: { intent } }. intent is dropped: the drawer shows text.
  *
  * A network failure throws a plain Error; any HTTP failure throws AiChatError
- * so useAiChat renders the message inside the conversation instead.
+ * so useAiChat renders the message inside the conversation instead. An abort
+ * through `signal` is rethrown as is: the caller gave it up, so it is not a
+ * failure to report.
  */
 export async function askAssistant(
   org_id: number,
   question: string,
   csrfToken: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   let res: Response;
   try {
@@ -53,9 +56,13 @@ export async function askAssistant(
       },
       credentials: "include",
       body: JSON.stringify({ question }),
+      signal,
     });
-  } catch {
-    throw new Error("Could not reach the assistant. Please try again.");
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    throw new Error("Could not reach the assistant. Please try again.", {
+      cause: err,
+    });
   }
 
   const body: unknown = await res.json().catch(() => null);

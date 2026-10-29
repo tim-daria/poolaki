@@ -21,6 +21,7 @@ import { useToast } from "../../context/useToast";
 import { ModalShell } from "./ModalShell";
 import { DiscardChangesDialog } from "./CloseGuard";
 import { useCloseGuard } from "./useCloseGuard";
+import { truncateName } from "../../lib/text";
 
 interface Props {
   open: boolean;
@@ -64,7 +65,7 @@ export function RenameOrgForm({ open, onClose, org }: Props) {
       await refresh();
       setSubmitting(false);
       onClose();
-      showToast(`Workspace renamed to "${renamed.name}"`);
+      showToast(`Workspace renamed to "${truncateName(renamed.name)}"`);
     } catch (err) {
       setError(
         err instanceof WorkspaceRequestError

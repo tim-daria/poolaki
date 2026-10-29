@@ -169,4 +169,16 @@ describe("askAssistant", () => {
     );
     await expect(promise).rejects.not.toBeInstanceOf(AiChatError);
   });
+
+  it("passes the signal to fetch and rethrows an abort unchanged", async () => {
+    const ac = new AbortController();
+    const abort = new DOMException("The operation was aborted.", "AbortError");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() => {
+      ac.abort();
+      return Promise.reject(abort);
+    });
+    const promise = askAssistant(1, "q", "t", ac.signal);
+    await expect(promise).rejects.toBe(abort);
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ signal: ac.signal });
+  });
 });

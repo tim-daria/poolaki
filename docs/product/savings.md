@@ -58,7 +58,7 @@ Expenses can be paid from a goal when the goal is spendable: an active goal with
 
 ## Permissions and Notifications
 
-- All workspace members can view goals and create new ones.
+**Off limits:** A goal whose balance has gone below zero, because expenses paid from it exceeded what it held. The card marks it with an "Off limits" chip, a red negative amount and "Over by €X" in place of the deadline; its progress reads 0%. The general available balance does not reflect the overdraft while the goal is open: it is settled from the balance only when the goal is archived, as a contribution in the transactions list with an outlined "Overdraft" chip, a muted amount, "Overdraft settlement" under its name and an info icon explaining that it is not new spending. It does not count towards savings. Topping the goal up with a contribution clears the state earlier.
 
 - Any member can contribute to or withdraw from an active goal. Each transfer is a transaction, so only its creator can edit or delete it.
 

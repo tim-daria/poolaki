@@ -50,7 +50,7 @@ export function OrgSwitcher() {
             }}
           />
         }
-        // Truncation hides the full name, so keep it reachable on hover.
+        // The CSS ellipsis hides the full name, so keep it reachable on hover.
         title={currentOrg.name}
         sx={{
           color: "text.primary",
@@ -96,10 +96,14 @@ export function OrgSwitcher() {
         onClose={() => setAnchor(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        slotProps={{ paper: { sx: { mt: 1 } } }}
+        // maxWidth: the Paper otherwise grows to its widest item, so one
+        // long workspace name would stretch the menu across the viewport.
+        slotProps={{ paper: { sx: { mt: 1, maxWidth: 360 } } }}
       >
         {organizations.map((org) => (
           <MenuItem
+            // The CSS ellipsis hides the full name, so keep it reachable on hover.
+            title={org.name}
             key={org.id}
             selected={org.id === currentOrg.id}
             onClick={() => {
@@ -107,12 +111,22 @@ export function OrgSwitcher() {
               navigate(`/o/${org.id}`);
             }}
           >
-            {org.name}
+            <Box
+              component="span"
+              sx={{
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {org.name}
+            </Box>
             <Typography
               component="span"
               variant="body2"
               color="text.secondary"
-              sx={{ ml: 0.75 }}
+              sx={{ ml: 0.75, flexShrink: 0 }}
             >
               ({org.is_personal ? "personal" : org.role})
             </Typography>

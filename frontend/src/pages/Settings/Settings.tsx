@@ -60,6 +60,7 @@ import {
   fetchMyInvitations,
   fetchPendingInvitations,
 } from "../../lib/organizations";
+import { truncateName } from "../../lib/text";
 
 const accountButtonSx = {
   ...outlinedActionSx,
@@ -107,10 +108,7 @@ function Settings() {
                 <Typography sx={{ fontWeight: 600 }}>
                   {user?.username}
                 </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: "text.secondary", wordBreak: "break-all" }}
-                >
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {user?.email}
                 </Typography>
               </Box>
@@ -381,7 +379,7 @@ function InvitationsBanner() {
       if (accept) {
         await acceptInvitation(inv.id, getCsrfToken());
         await refreshOrgs();
-        showToast(`Joined ${inv.organization_name}`);
+        showToast(`Joined ${truncateName(inv.organization_name)}`);
       } else {
         await declineInvitation(inv.id, getCsrfToken());
         showToast("Invitation declined");
