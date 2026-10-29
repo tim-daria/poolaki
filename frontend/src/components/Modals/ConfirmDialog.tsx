@@ -1,6 +1,7 @@
 /** @file Confirmation prompt for a destructive action, shared by every modal. */
 
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -48,7 +49,12 @@ export function ConfirmDialog({
       slotProps={{ transition: { onExited: restoreFocus } }}
     >
       {/* Overrides the theme's title/close-button spread; there is no close button. */}
-      <DialogTitle sx={{ justifyContent: "center" }}>{title}</DialogTitle>
+      <DialogTitle sx={{ justifyContent: "center" }}>
+        {/* See ModalShell: bare text in the flex title cannot shrink. */}
+        <Box component="span" sx={{ minWidth: 0 }}>
+          {title}
+        </Box>
+      </DialogTitle>
       <DialogContent>
         <Typography sx={{ textAlign: "center" }}>{message}</Typography>
       </DialogContent>

@@ -331,7 +331,7 @@ Two browsers: A owns the shared workspace, B is invited.
 
 Resize to 390 px wide, then repeat the main actions of sections 2, 6, 7 and 9.
 
-1. Below 860 px: the tabs leave the header and a bottom bar "Workspace pages"
+1. Below 980 px: the tabs leave the header and a bottom bar "Workspace pages"
    shows Home, Transactions, Savings, Reports; the account menu holds
    Notifications, Settings, Logout.
 2. The page action becomes a floating button that collapses to a circle while
@@ -342,7 +342,7 @@ Resize to 390 px wide, then repeat the main actions of sections 2, 6, 7 and 9.
 4. Confirm and discard dialogs stay centred and sit above the sheet.
 5. Showing and hiding the browser's address bar leaves no gap under the
    sheet.
-6. Above 860 px: tabs in the header, forms as centred dialogs, drawers from
+6. Above 980 px: tabs in the header, forms as centred dialogs, drawers from
    the right.
 7. Toasts: one at a time, bottom right, gone after 4 s, the X closes it, a
    click on the page does not. Two in a row (rename, then cancel an

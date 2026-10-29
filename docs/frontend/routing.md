@@ -71,7 +71,7 @@ for a pasted URL and a refresh. One code path, three entry points.
         └── <NotificationProvider>
             ├── <OrgRedirect>   handles "/"
             └── <OrgLayout>     handles "/o/:orgId"
-                └── <AppLayout> header (tabs above 860px, bottom bar below), page area, AI drawer
+                └── <AppLayout> header (tabs above 980px, bottom bar below), page area, AI drawer
                     └── the page
 ```
 

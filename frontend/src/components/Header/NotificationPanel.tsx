@@ -349,16 +349,22 @@ export function NotificationPanel({
                         alignItems: "baseline",
                       }}
                     >
+                      {/* minWidth 0 / flexShrink 0: a long username wraps
+                          instead of pushing the time out of the panel. */}
                       <Typography
                         variant="subtitle2"
-                        sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: "0.875rem",
+                          minWidth: 0,
+                        }}
                       >
                         {userName}
                       </Typography>
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ fontSize: "0.75rem" }}
+                        sx={{ fontSize: "0.75rem", flexShrink: 0 }}
                       >
                         {timeAgo(n.created_at)}
                       </Typography>

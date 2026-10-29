@@ -82,6 +82,10 @@ function Settings() {
       <Box
         sx={{
           display: "grid",
+          // minmax(0, 1fr), not the implicit auto column: auto takes the
+          // cards' min-content width, so an unbroken username or email
+          // would widen the column past the page instead of wrapping.
+          gridTemplateColumns: "minmax(0, 1fr)",
           gap: 2.5,
           [DESKTOP]: {
             gridTemplateColumns: "minmax(280px, 4fr) minmax(0, 9fr)",

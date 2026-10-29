@@ -22,10 +22,13 @@ export const PRINT = "@media print";
 
 /**
  * Header tabs appear from here; below it the bottom bar takes over. Separate
- * from TABLET/DESKTOP on purpose: the header needs room for four tabs and
- * the switcher, the overview grid needs room for its columns.
+ * from TABLET/DESKTOP on purpose: the header needs room for the switcher,
+ * four tabs and the controls, the overview grid needs room for its columns.
+ * 980: the tabs sit on the page's centre line, so the wider side (switcher
+ * 240 or the controls 224, plus a 16px gap) must fit beside half the tabs
+ * (197) within half the bar; below ~975px a side column overlaps the tabs.
  */
-export const NAV_DESKTOP_MIN_WIDTH = 860;
+export const NAV_DESKTOP_MIN_WIDTH = 980;
 export const NAV_DESKTOP = `@media (min-width:${NAV_DESKTOP_MIN_WIDTH}px)`;
 export const NAV_MOBILE_QUERY = `(max-width:${NAV_DESKTOP_MIN_WIDTH - 0.05}px)`;
 

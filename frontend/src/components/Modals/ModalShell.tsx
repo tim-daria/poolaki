@@ -5,7 +5,7 @@
  */
 
 import { useId } from "react";
-import { Dialog, DialogTitle, Drawer, IconButton } from "@mui/material";
+import { Box, Dialog, DialogTitle, Drawer, IconButton } from "@mui/material";
 import Close from "@mui/icons-material/Close";
 import { useRestoreFocus } from "../../hooks/useRestoreFocus";
 import { useBottomSheet } from "../../hooks/useSheet";
@@ -42,7 +42,11 @@ export function ModalShell({
 
   const header = (
     <DialogTitle id={titleId}>
-      {title}
+      {/* A real flex item: bare text in the flex DialogTitle cannot take
+          minWidth 0, so an unbroken workspace name would widen the dialog. */}
+      <Box component="span" sx={{ minWidth: 0 }}>
+        {title}
+      </Box>
       <IconButton onClick={onClose} aria-label="close">
         <Close />
       </IconButton>
