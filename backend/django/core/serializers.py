@@ -498,7 +498,7 @@ class AiQuerySerializer(serializers.Serializer[dict[str, Any]]):
 
 class AiAnalyticsSummaryResponseSerializer(serializers.Serializer[dict[str, Any]]):
     year = serializers.IntegerField()
-    balance = serializers.DecimalField(max_digits=14, decimal_places=2)
+    balance = serializers.DecimalField(max_digits=None, decimal_places=2)
     totals = ReportAmountsSerializer()
     months = ReportMonthlySerializer(many=True)
 
@@ -515,7 +515,7 @@ class AiTransactionSerializer(serializers.Serializer[dict[str, Any]]):
     entry_type = serializers.ChoiceField(choices=EntryType.choices)
     category = serializers.CharField(allow_null=True)
     goal = serializers.CharField(allow_null=True)
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    amount = serializers.DecimalField(max_digits=None, decimal_places=2)
 
 
 class AiTransactionsResponseSerializer(serializers.Serializer[dict[str, Any]]):
