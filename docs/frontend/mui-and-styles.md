@@ -113,7 +113,7 @@ Breakpoints are named constants in `src/lib/layout.ts`, not literal pixels in
 | --------------------------------------------- | ------------------------------------------------------ | --------------------------------- |
 | `TABLET` (`≥600px`) / `DESKTOP` (`≥1024px`)   | overview grid columns                                  | `sx={{ [TABLET]: { px: 3 } }}`    |
 | `PHONE` (`<600px`)                            | one-column layouts                                     | same                              |
-| `NAV_DESKTOP` (`≥860px`) / `NAV_MOBILE_QUERY` | header tabs vs bottom bar; side drawer vs bottom sheet | `useMediaQuery(NAV_MOBILE_QUERY)` |
+| `NAV_DESKTOP` (`≥980px`) / `NAV_MOBILE_QUERY` | header tabs vs bottom bar; side drawer vs bottom sheet | `useMediaQuery(NAV_MOBILE_QUERY)` |
 | `PRINT`                                       | `@media print`                                         | hide controls, fix heights        |
 | `PAGE_PADDING`                                | the side padding every page and the header share       | spread into a page's root `sx`    |
 

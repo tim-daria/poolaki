@@ -14,7 +14,7 @@ because above the breakpoint they are centred Dialogs, not side drawers. No
 component sets a drawer's height, width or corner radius itself. The rule has to live in one place or it stops being a
 rule: the first panel to override it becomes the template for the next.
 
-Below the navigation breakpoint (860px, `NAV_MOBILE_QUERY`), where the bottom
+Below the navigation breakpoint (980px, `NAV_MOBILE_QUERY`), where the bottom
 bar replaces the header tabs, a drawer is a **bottom sheet**. From there on it
 is a **side drawer** sliding in from the right at the width the caller asks
 for. Phones and tablets therefore share the sheet; the split is by navigation

@@ -128,7 +128,13 @@ export const theme = createTheme({
           // opportunity. Inherited, so this one rule reaches every text node,
           // dialogs and menus in portals included; `noWrap` sites are
           // untouched because nowrap never wraps.
-          overflowWrap: "anywhere",
+          //
+          // break-word, not anywhere: anywhere counts its break points toward
+          // min-content width, so any flex or grid item holding text (a
+          // button label, a chip, a toggle) could be squeezed to one glyph
+          // per line. break-word only applies once the box has a width, so a
+          // text-bearing flex child still needs `minWidth: 0` to shrink.
+          overflowWrap: "break-word",
         },
       },
     },
@@ -170,7 +176,14 @@ export const theme = createTheme({
       defaultProps: { disableElevation: true },
       // Pill shape for every Button; IconButton is separate and stays round.
       styleOverrides: {
-        root: { borderRadius: 999, paddingLeft: 20, paddingRight: 20 },
+        root: {
+          borderRadius: 999,
+          paddingLeft: 20,
+          paddingRight: 20,
+          // A label is one line: squeezed in a flex row (the header's
+          // controls, a dialog footer) it would otherwise wrap mid-label.
+          whiteSpace: "nowrap",
+        },
       },
     },
     MuiToggleButtonGroup: {
